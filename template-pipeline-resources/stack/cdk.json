@@ -1,0 +1,7 @@
+{
+  "app": "../../gradlew :template-pipeline-resources:stack:run",
+
+  "context": {
+
+  }
+}
