@@ -7,10 +7,9 @@
  * in the user manual at https://docs.gradle.org/7.4.2/userguide/multi_project_builds.html
  */
 
-rootProject.name = "daws-lambda-stream-kotlin"
+rootProject.name = "aws-lambda-stream-kotlin"
 
-val cdkVersion = "2.211.0"
-
+include("common-stack")
 include("template-pipeline-resources")
 include("template-pipeline-resources:serverless")
 include("template-pipeline-resources:stack")

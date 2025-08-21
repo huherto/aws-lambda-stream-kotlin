@@ -1,8 +1,8 @@
 
 plugins {
-    kotlin("jvm") version "2.2.10"
-    kotlin("plugin.serialization") version "1.5.20"
-    id("com.gradleup.shadow") version "9.0.2"
+    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.serialization)
+    alias(libs.plugins.shadow)
 }
 
 
@@ -14,10 +14,11 @@ repositories {
 }
 
 dependencies {
-    implementation("com.amazonaws:aws-lambda-java-events:3.11.0")
-    implementation("com.amazonaws:aws-lambda-java-core:1.2.1")
-    implementation("org.jetbrains.kotlin:kotlin-stdlib:1.8.0")
-    implementation("org.apache.logging.log4j:log4j-to-slf4j:2.8.2")
+    implementation(libs.aws.java.core)
+    implementation(libs.aws.java.events)
+    implementation(libs.kotlin.stdlib)
+    // Use LambdaLogger and avoid Log4j which is bigger.
+    // implementation("org.apache.logging.log4j:log4j-to-slf4j:2.8.2")
     testImplementation(kotlin("test"))
 }
 
@@ -25,6 +26,10 @@ tasks.shadowJar {
     archiveBaseName.set("serverless")
     archiveClassifier.set("")
     archiveVersion.set("")
+}
+
+kotlin {
+    jvmToolchain(21)
 }
 
 tasks.getByName<Test>("test") {

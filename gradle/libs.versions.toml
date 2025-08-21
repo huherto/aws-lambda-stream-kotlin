@@ -1,0 +1,23 @@
+[versions]
+cdkVersion = "2.211.0"
+kotlinVersion = "2.2.10"
+kotlinSerializationVersion = "1.5.20"
+
+
+[libraries]
+aws-cdk = { module="software.amazon.awscdk:aws-cdk-lib", version.ref = "cdkVersion" }
+aws-java-core = { module="com.amazonaws:aws-lambda-java-core", version="1.2.1" }
+aws-java-events = { module="com.amazonaws:aws-lambda-java-events", version="3.11.0" }
+kotlin-stdlib = { module="org.jetbrains.kotlin:kotlin-stdlib", version.ref="kotlinVersion"}
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlinVersion" }
+serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlinVersion" }
+shadow = { id = "com.gradleup.shadow", version = "9.0.2"}
+
+[bundles]
+
+#implementation("com.amazonaws:aws-lambda-java-events:3.11.0")
+#implementation("com.amazonaws:aws-lambda-java-core:1.2.1")
+#implementation("org.jetbrains.kotlin:kotlin-stdlib:1.8.0")
+#implementation("org.apache.logging.log4j:log4j-to-slf4j:2.8.2")

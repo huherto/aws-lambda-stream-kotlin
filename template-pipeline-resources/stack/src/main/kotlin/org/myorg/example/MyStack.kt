@@ -2,7 +2,6 @@ package org.myorg.example
 
 import software.amazon.awscdk.Duration
 import software.amazon.awscdk.RemovalPolicy
-import software.amazon.awscdk.Stack
 import software.amazon.awscdk.services.dynamodb.Attribute
 import software.amazon.awscdk.services.dynamodb.AttributeType
 import software.amazon.awscdk.services.dynamodb.StreamViewType
@@ -14,7 +13,8 @@ import software.amazon.awscdk.services.lambda.StartingPosition
 import software.amazon.awscdk.services.lambda.eventsources.DynamoEventSource
 import software.constructs.Construct
 
-class MyStack(scope: Construct, id: String) : Stack(scope, id) {
+class MyStack(scope: Construct, id: String) : BaseStack(scope, id) {
+
     private val myTable: Table = newDynamoDbTable()
     private  val myLambda: Function = newLambda()
 

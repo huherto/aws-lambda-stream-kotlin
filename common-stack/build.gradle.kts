@@ -2,8 +2,6 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.serialization)
-    alias(libs.plugins.shadow)
-    application
 }
 
 group = "org.myorg"
@@ -16,14 +14,9 @@ repositories {
 dependencies {
     implementation(libs.aws.cdk)
     testImplementation(kotlin("test"))
-    implementation(project(":common-stack"))
 }
 
 tasks.test {
     useJUnitPlatform()
-}
-
-application {
-    mainClass.set("org.myorg.example.AppKt")
 }
 
