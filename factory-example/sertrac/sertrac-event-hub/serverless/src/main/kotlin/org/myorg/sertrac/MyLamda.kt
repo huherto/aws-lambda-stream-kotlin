@@ -1,4 +1,4 @@
-package org.myorg.strack
+package org.myorg.sertrac
 
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.LambdaLogger

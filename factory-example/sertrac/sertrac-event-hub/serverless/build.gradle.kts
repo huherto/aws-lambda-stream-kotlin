@@ -5,7 +5,6 @@ plugins {
     alias(libs.plugins.shadow)
 }
 
-
 group = "org.myorg"
 version = "1.0"
 

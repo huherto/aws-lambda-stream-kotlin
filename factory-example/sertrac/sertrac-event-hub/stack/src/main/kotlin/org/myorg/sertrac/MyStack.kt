@@ -1,4 +1,4 @@
-package org.myorg.strack
+package org.myorg.sertrac
 
 import software.amazon.awscdk.Duration
 import software.amazon.awscdk.RemovalPolicy
@@ -18,7 +18,6 @@ import software.amazon.awscdk.services.iam.Role
 import software.amazon.awscdk.services.iam.ServicePrincipal
 import software.amazon.awscdk.services.kinesis.Stream
 import software.amazon.awscdk.services.kinesis.StreamEncryption
-import software.amazon.awscdk.services.kms.Alias
 import software.amazon.awscdk.services.lambda.Code
 import software.amazon.awscdk.services.lambda.Function
 import software.amazon.awscdk.services.lambda.Runtime
@@ -46,14 +45,11 @@ class MyStack(scope: Construct, serviceProps: ServiceProps) : BaseStack(scope, s
 
     private fun sendEventsToKinesis() {
 
-        //val ekey = Alias.fromAliasName(this, "alias/aws/kinesis", "aws/kinesis")
-
         val stream1 = Stream.Builder.create(this, "Stream1")
             .streamName("${service()}-${stage()}-s1")
             .retentionPeriod(Duration.days(1))
             .shardCount(1)
             .encryption(StreamEncryption.MANAGED)
-            //.encryptionKey(ekey)
             .build()
 
         val appRole: Role = Role.Builder.create(this, "BusRole")
@@ -79,8 +75,8 @@ class MyStack(scope: Construct, serviceProps: ServiceProps) : BaseStack(scope, s
             .message(RuleTargetInput.fromEventPath("$.detail"))
             .build()
 
-        val kinesisRule =
-            Rule.Builder.create(this, "${service()}-${stage()}-rule")
+        val stream1EventRule =
+            Rule.Builder.create(this, "Stream1EventRule")
                 .eventBus(myBus)
                 .eventPattern(
                     EventPattern.builder()

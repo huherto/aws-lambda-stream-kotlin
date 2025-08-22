@@ -24,7 +24,7 @@ tasks.test {
 }
 
 application {
-    mainClass.set("org.myorg.strack.AppKt")
+    mainClass.set("org.myorg.sertrac.AppKt")
 }
 
 tasks.register<Exec>("cdk_deploy") {

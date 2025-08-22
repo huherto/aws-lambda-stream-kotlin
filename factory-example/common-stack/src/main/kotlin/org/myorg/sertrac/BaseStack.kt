@@ -1,4 +1,4 @@
-package org.myorg.strack
+package org.myorg.sertrac
 
 import software.amazon.awscdk.Stack
 import software.constructs.Construct
@@ -11,7 +11,7 @@ enum class Stage(val id: String) {
     override fun toString(): String = id
 
     companion object {
-        fun parse(value: String): org.myorg.strack.Stage =
+        fun parse(value: String): org.myorg.sertrac.Stage =
             entries.firstOrNull { it.id.equals(value, ignoreCase = true) }
                 ?: throw IllegalArgumentException("Unknown stage: $value")
     }

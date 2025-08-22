@@ -1,4 +1,4 @@
-package org.myorg.strack
+package org.myorg.sertrac
 
 import software.amazon.awscdk.App
 
@@ -9,8 +9,8 @@ fun main() {
     println("Starting CDK App")
     val serviceProps = ServiceProps(
         org = "myorg",
-        subsys = "strack",
-        service = "strack-event-hub",
+        subsys = "sertrac",
+        service = "sertrac-event-hub",
         stage = Stage.DEV,
         region = "us-east-1")
     MyStack(app, serviceProps)

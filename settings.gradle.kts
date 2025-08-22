@@ -10,7 +10,7 @@
 rootProject.name = "aws-lambda-stream-kotlin"
 
 include("factory-example:common-stack")
-include("factory-example:strack:strack-event-hub")
-include("factory-example:strack:strack-event-hub:serverless")
-include("factory-example:strack:strack-event-hub:stack")
+include("factory-example:sertrac:sertrac-event-hub")
+include("factory-example:sertrac:sertrac-event-hub:serverless")
+include("factory-example:sertrac:sertrac-event-hub:stack")
 
