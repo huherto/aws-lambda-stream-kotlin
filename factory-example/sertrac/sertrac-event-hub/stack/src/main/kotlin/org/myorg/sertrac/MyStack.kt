@@ -27,15 +27,10 @@ import software.constructs.Construct
 
 class MyStack(scope: Construct, serviceProps: ServiceProps) : BaseStack(scope, serviceProps) {
 
-    // private val myTable: Table = newDynamoDbTable()
-    // private  val myLambda: Function = newLambda()
-    private val myBus: EventBus = newBus()
-
-    private fun deviceIdKey() =
-        Attribute.builder().name("id").type(AttributeType.STRING).build()
+    internal val myBus: EventBus = newBus()
 
     init {
-        sendEventsToKinesis()
+        this.sendEventsToKinesis()
     }
 
     private fun newBus() : EventBus = EventBus.Builder
@@ -43,78 +38,4 @@ class MyStack(scope: Construct, serviceProps: ServiceProps) : BaseStack(scope, s
         .eventBusName("${service()}-${stage()}-bus")
         .build()
 
-    private fun sendEventsToKinesis() {
-
-        val stream1 = Stream.Builder.create(this, "Stream1")
-            .streamName("${service()}-${stage()}-s1")
-            .retentionPeriod(Duration.days(1))
-            .shardCount(1)
-            .encryption(StreamEncryption.MANAGED)
-            .build()
-
-        val appRole: Role = Role.Builder.create(this, "BusRole")
-            .assumedBy(ServicePrincipal("events.amazonaws.com"))
-//            .managedPolicies(listOf(
-//                ManagedPolicy.fromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole")
-//            ))
-            .inlinePolicies(mapOf(
-                "${service()}-${stage()}-internal" to PolicyDocument.Builder.create()
-                    .statements(listOf(
-                        PolicyStatement.Builder.create()
-                            .actions(listOf("kinesis:PutRecord", "kinesis:PutRecords"))
-                            .resources(listOf(stream1.streamArn))
-                            .build()
-                    ))
-                    .build()
-            ))
-            .build()
-
-        val kinesisStream1 = KinesisStream.Builder
-            .create(stream1)
-            .partitionKeyPath("$.detail.partitionKey")
-            .message(RuleTargetInput.fromEventPath("$.detail"))
-            .build()
-
-        val stream1EventRule =
-            Rule.Builder.create(this, "Stream1EventRule")
-                .eventBus(myBus)
-                .eventPattern(
-                    EventPattern.builder()
-                        .source(Match.anythingBut("external"))
-                        .detailType(Match.anythingBut("fault"))
-                        .build()
-                )
-                .targets(listOf(kinesisStream1))
-                .role(appRole)
-                .build()
-
-    }
-
-    private fun newDynamoDbTable(): Table = Table.Builder
-        .create(this, "my-table")
-        .tableName("my-table")
-        .partitionKey(deviceIdKey())
-        .removalPolicy(RemovalPolicy.DESTROY)
-        .stream(StreamViewType.NEW_IMAGE)
-        .build()
-
-    private fun newLambda(): Function =
-        Function.Builder.create(this, "my-lambda")
-            .functionName("my-lambda")
-            .code(Code.fromAsset("../serverless/build/libs/serverless.jar"))
-            .handler("org.myorg.example.MyLambda::handleRequest")
-            .timeout(Duration.seconds(50))
-            .memorySize(1024)
-            .runtime(Runtime.JAVA_21)
-            .build()
-
-    private fun addDynamoDBStreamToLambda(function: Function, table: Table) {
-        function.addEventSource(
-            DynamoEventSource.Builder.create(table)
-                .startingPosition(StartingPosition.TRIM_HORIZON)
-                .batchSize(5)
-                .bisectBatchOnError(true)
-                .build()
-        )
-    }
 }
