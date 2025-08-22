@@ -6,7 +6,7 @@ fun main() {
     val app = App()
 
     println("Working Directory = " + System.getProperty("user.dir"))
-    MyStack(app, "template-pipeline-resources")
+    MyStack(app, "strack-event-hub")
     app.synth()
     println("Finished CDK App")
 }

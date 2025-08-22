@@ -6,6 +6,7 @@ import software.amazon.awscdk.services.dynamodb.Attribute
 import software.amazon.awscdk.services.dynamodb.AttributeType
 import software.amazon.awscdk.services.dynamodb.StreamViewType
 import software.amazon.awscdk.services.dynamodb.Table
+import software.amazon.awscdk.services.events.EventBus
 import software.amazon.awscdk.services.lambda.Code
 import software.amazon.awscdk.services.lambda.Function
 import software.amazon.awscdk.services.lambda.Runtime
@@ -17,6 +18,7 @@ class MyStack(scope: Construct, id: String) : BaseStack(scope, id) {
 
     private val myTable: Table = newDynamoDbTable()
     private  val myLambda: Function = newLambda()
+    private val myBus: EventBus = newBus()
 
     private fun deviceIdKey() =
         Attribute.builder().name("id").type(AttributeType.STRING).build()
@@ -24,6 +26,10 @@ class MyStack(scope: Construct, id: String) : BaseStack(scope, id) {
     init {
         addDynamoDBStreamToLambda(myLambda, myTable)
     }
+
+    private fun newBus() : EventBus = EventBus.Builder
+        .create(this, "my-bus")
+        .build()
 
     private fun newDynamoDbTable(): Table = Table.Builder
         .create(this, "my-table")
@@ -52,4 +58,7 @@ class MyStack(scope: Construct, id: String) : BaseStack(scope, id) {
                 .build()
         )
     }
+
+    // Implement a method that creates an event bridge bus
+
 }

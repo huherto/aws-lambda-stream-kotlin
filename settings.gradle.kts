@@ -9,7 +9,8 @@
 
 rootProject.name = "aws-lambda-stream-kotlin"
 
-include("common-stack")
-include("template-pipeline-resources")
-include("template-pipeline-resources:serverless")
-include("template-pipeline-resources:stack")
+include("factory-example:common-stack")
+include("factory-example:strack:strack-event-hub")
+include("factory-example:strack:strack-event-hub:serverless")
+include("factory-example:strack:strack-event-hub:stack")
+
