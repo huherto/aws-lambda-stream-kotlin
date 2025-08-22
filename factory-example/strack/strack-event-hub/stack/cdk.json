@@ -1,5 +1,5 @@
 {
-  "app": "../../../gradlew factory-example:strack:strack-event-hub:stack:run",
+  "app": "../../../../gradlew run",
 
   "context": {
 
