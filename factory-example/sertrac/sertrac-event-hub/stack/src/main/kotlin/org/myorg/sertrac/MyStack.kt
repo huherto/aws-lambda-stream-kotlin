@@ -1,10 +1,6 @@
 package org.myorg.sertrac
 
-import software.amazon.awscdk.Duration
-import software.amazon.awscdk.services.events.Archive
 import software.amazon.awscdk.services.events.EventBus
-import software.amazon.awscdk.services.events.EventPattern
-import software.amazon.awscdk.services.events.Match
 import software.constructs.Construct
 
 class MyStack(scope: Construct, serviceProps: ServiceProps) : BaseStack(scope, serviceProps) {
@@ -14,7 +10,7 @@ class MyStack(scope: Construct, serviceProps: ServiceProps) : BaseStack(scope, s
     init {
         this.sendEventsToKinesis()
         this.logEventsInCloudWatch()
-        // this.archiveEvents()
+        this.archiveEvents()
     }
 
     private fun newBus() : EventBus = EventBus.Builder
