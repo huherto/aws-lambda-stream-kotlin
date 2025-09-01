@@ -16,7 +16,7 @@ import software.amazon.awscdk.services.kinesis.StreamEncryption
 fun MyStack.sendEventsToKinesis() {
 
     val stream1 = Stream.Builder.create(this, "Stream1")
-        .streamName("${BaseStack.service()}-${BaseStack.stage()}-s1")
+        .streamName("${service()}-${stage()}-s1")
         .retentionPeriod(Duration.days(1))
         .shardCount(1)
         .encryption(StreamEncryption.MANAGED)
@@ -25,7 +25,7 @@ fun MyStack.sendEventsToKinesis() {
     val appRole: Role = Role.Builder.create(this, "BusRole")
         .assumedBy(ServicePrincipal("events.amazonaws.com"))
         .inlinePolicies(mapOf(
-            "${BaseStack.service()}-${BaseStack.stage()}-internal" to PolicyDocument.Builder.create()
+            "${service()}-${stage()}-internal" to PolicyDocument.Builder.create()
                 .statements(listOf(
                     PolicyStatement.Builder.create()
                         .actions(listOf("kinesis:PutRecord", "kinesis:PutRecords"))

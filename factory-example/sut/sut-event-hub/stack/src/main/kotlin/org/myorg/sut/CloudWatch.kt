@@ -14,19 +14,19 @@ fun MyStack.logEventsInCloudWatch() {
 
     val logGroupEvents = LogGroup.Builder
         .create(this, "LogGroupEvents")
-        .logGroupName("/aws/events/${BaseStack.service()}-${BaseStack.stage()}-events")
+        .logGroupName("/aws/events/${service()}-${stage()}-events")
         .retention(RetentionDays.ONE_MONTH)
         .build()
 
     val logGroupFaults = LogGroup.Builder
         .create(this, "LogGroupFaults")
-        .logGroupName("/aws/events/${BaseStack.service()}-${BaseStack.stage()}-faults")
+        .logGroupName("/aws/events/${service()}-${stage()}-faults")
         .retention(RetentionDays.ONE_MONTH)
         .build()
 
     ResourcePolicy.Builder
         .create(this, "LogResourcePolicy")
-        .resourcePolicyName("${BaseStack.service()}-${BaseStack.stage()}-log")
+        .resourcePolicyName("${service()}-${stage()}-log")
         .policyStatements(listOf(
             PolicyStatement.Builder.create()
                 .actions(listOf("logs:CreateLogStream", "logs:PutLogEvents"))

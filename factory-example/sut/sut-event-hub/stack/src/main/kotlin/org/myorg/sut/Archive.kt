@@ -8,7 +8,7 @@ import software.amazon.awscdk.services.events.Match
 fun MyStack.archiveEvents() {
     val archive = Archive.Builder
         .create(this, "Archive")
-        .archiveName("${BaseStack.service()}-${BaseStack.stage()}-archive")
+        .archiveName("${service()}-${stage()}-archive")
         .sourceEventBus(myBus)
         .eventPattern(
             EventPattern.builder()
