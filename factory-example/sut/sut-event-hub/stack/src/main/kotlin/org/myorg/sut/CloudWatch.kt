@@ -10,7 +10,7 @@ import software.amazon.awscdk.services.logs.LogGroup
 import software.amazon.awscdk.services.logs.ResourcePolicy
 import software.amazon.awscdk.services.logs.RetentionDays
 
-fun MyStack.logEventsInCloudWatch() {
+fun HubStack.logEventsInCloudWatch() {
 
     val logGroupEvents = LogGroup.Builder
         .create(this, "LogGroupEvents")
@@ -41,6 +41,7 @@ fun MyStack.logEventsInCloudWatch() {
     val logRuleEvents =
         Rule.Builder.create(this, "LogRuleEvents")
             .eventBus(this.myBus)
+            .ruleName("${service()}-${stage()}-bus-events-rule")
             .eventPattern(
                 EventPattern.builder()
                     .detailType(Match.anythingBut("fault"))
@@ -52,6 +53,7 @@ fun MyStack.logEventsInCloudWatch() {
     val logRuleFaults =
         Rule.Builder.create(this, "LogRuleFaults")
             .eventBus(this.myBus)
+            .ruleName("${service()}-${stage()}-bus-faults-rule")
             .eventPattern(
                 EventPattern.builder()
                     .detailType(listOf("fault"))

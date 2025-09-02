@@ -13,7 +13,7 @@ import software.amazon.awscdk.services.lambda.eventsources.DynamoEventSource
 import software.amazon.awscdk.services.lambda.Runtime
 import software.constructs.Construct
 
-class MyStack(scope: Construct, serviceProps: ServiceProps) : BaseStack(scope, serviceProps) {
+class ControlStack(scope: Construct, serviceProps: ServiceProps) : BaseStack(scope, serviceProps) {
 
     val tableName = "${service()}-${stage()}-events"
     val listener = newListenerLambda()

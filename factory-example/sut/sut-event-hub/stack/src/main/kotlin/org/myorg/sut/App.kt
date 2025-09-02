@@ -14,7 +14,7 @@ fun main() {
         stage = Stage.DEV,
         region = "us-east-1"
     )
-    MyStack(app, serviceProps)
+    HubStack(app, serviceProps)
     app.synth()
     println("Finished CDK App")
 }

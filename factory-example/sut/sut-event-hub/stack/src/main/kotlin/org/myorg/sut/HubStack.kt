@@ -3,7 +3,7 @@ package org.myorg.sut
 import software.amazon.awscdk.services.events.EventBus
 import software.constructs.Construct
 
-class MyStack(scope: Construct, serviceProps: ServiceProps) : BaseStack(scope, serviceProps) {
+class HubStack(scope: Construct, serviceProps: ServiceProps) : BaseStack(scope, serviceProps) {
 
     internal val myBus: EventBus = newBus()
 

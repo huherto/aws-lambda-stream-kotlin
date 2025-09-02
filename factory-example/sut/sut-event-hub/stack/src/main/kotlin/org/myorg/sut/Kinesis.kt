@@ -13,7 +13,7 @@ import software.amazon.awscdk.services.iam.ServicePrincipal
 import software.amazon.awscdk.services.kinesis.Stream
 import software.amazon.awscdk.services.kinesis.StreamEncryption
 
-fun MyStack.sendEventsToKinesis() {
+fun HubStack.sendEventsToKinesis() {
 
     val stream1 = Stream.Builder.create(this, "Stream1")
         .streamName("${service()}-${stage()}-s1")
@@ -23,6 +23,7 @@ fun MyStack.sendEventsToKinesis() {
         .build()
 
     val appRole: Role = Role.Builder.create(this, "BusRole")
+        .roleName("${service()}-${stage()}-bus-s1-role")
         .assumedBy(ServicePrincipal("events.amazonaws.com"))
         .inlinePolicies(mapOf(
             "${service()}-${stage()}-internal" to PolicyDocument.Builder.create()
@@ -44,6 +45,7 @@ fun MyStack.sendEventsToKinesis() {
 
     val stream1EventRule =
         Rule.Builder.create(this, "Stream1EventRule")
+            .ruleName("${service()}-${stage()}-bus-s1-rule")
             .eventBus(this.myBus)
             .eventPattern(
                 EventPattern.builder()

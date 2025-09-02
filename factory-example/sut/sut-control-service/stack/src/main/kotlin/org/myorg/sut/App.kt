@@ -10,10 +10,10 @@ fun main() {
     val serviceProps = ServiceProps(
         org = "myorg",
         subsys = "sut",
-        service = "sut-event-hub",
+        service = "sut-control-service",
         stage = Stage.DEV,
         region = "us-east-1")
-    MyStack(app, serviceProps)
+    ControlStack(app, serviceProps)
     app.synth()
     println("Finished CDK App")
 }
