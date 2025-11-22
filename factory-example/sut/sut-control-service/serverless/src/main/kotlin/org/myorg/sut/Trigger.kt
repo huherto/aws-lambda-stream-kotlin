@@ -5,7 +5,7 @@ import com.amazonaws.services.lambda.runtime.LambdaLogger
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 
-class Listener : RequestHandler<DynamodbEvent, String> {
+class Trigger : RequestHandler<DynamodbEvent, String> {
 
     override fun handleRequest(ddbEvent: DynamodbEvent, context: Context): String {
         val logger: LambdaLogger = context.logger

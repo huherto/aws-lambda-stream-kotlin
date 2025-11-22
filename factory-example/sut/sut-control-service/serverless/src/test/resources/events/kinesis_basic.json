@@ -1,0 +1,36 @@
+{
+  "Records": [
+    {
+      "kinesis": {
+        "kinesisSchemaVersion": "1.0",
+        "partitionKey": "user-42",
+        "sequenceNumber": "1",
+        "data": "eyJldmVudCI6ImNyZWF0ZSIsImlkIjoiYWJjMTIzIn0=",
+        "approximateArrivalTimestamp": 1731012000.0
+      },
+      "eventSource": "aws:kinesis",
+      "eventVersion": "1.0",
+      "eventName": "aws:kinesis:record",
+      "invokeIdentityArn": "arn:aws:iam::<account-id>:role/<role-name>",
+      "awsRegion": "<region>",
+      "eventSourceARN": "arn:aws:kinesis:<region>:<account-id>:stream/<stream-name>",
+      "eventID": "shardId-000000000000:1"
+    },
+    {
+      "kinesis": {
+        "kinesisSchemaVersion": "1.0",
+        "partitionKey": "user-42",
+        "sequenceNumber": "2",
+        "data": "eyJldmVudCI6InVwZGF0ZSIsImlkIjoiYWJjMTIzIn0=",
+        "approximateArrivalTimestamp": 1731012060.0
+      },
+      "eventSource": "aws:kinesis",
+      "eventVersion": "1.0",
+      "eventName": "aws:kinesis:record",
+      "invokeIdentityArn": "arn:aws:iam::<account-id>:role/<role-name>",
+      "awsRegion": "<region>",
+      "eventSourceARN": "arn:aws:kinesis:<region>:<account-id>:stream/<stream-name>",
+      "eventID": "shardId-000000000000:2"
+    }
+  ]
+}

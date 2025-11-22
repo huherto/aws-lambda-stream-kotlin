@@ -5,6 +5,9 @@ import com.amazonaws.services.lambda.runtime.LambdaLogger
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 
+
+// As far as I remember we dont need this lambda. It is here in case it is needed
+// later as an example.
 class MyLambda : RequestHandler<DynamodbEvent, String> {
 
     override fun handleRequest(ddbEvent: DynamodbEvent, context: Context): String {

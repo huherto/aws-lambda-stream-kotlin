@@ -18,6 +18,4 @@ class HubStack(scope: Construct, serviceProps: ServiceProps) : BaseStack(scope, 
         .eventBusName("${service()}-${stage()}-bus")
         .build()
 
-
-
 }
