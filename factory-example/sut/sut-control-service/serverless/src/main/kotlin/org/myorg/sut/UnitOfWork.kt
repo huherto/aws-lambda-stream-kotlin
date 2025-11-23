@@ -3,9 +3,8 @@ package org.myorg.sut
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
 
 interface Thing {
-    public fun id() : String?;
-    public fun setId(id: String?);
-    public fun timestamp() : String?;
+    var id: String?
+    val timestamp: String?
 }
 
 class UnitOfWork<T : Thing > {

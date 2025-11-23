@@ -18,9 +18,6 @@ class KinesisHandlerTest {
     private var kinesisHandler : KinesisHandler? = KinesisHandler(eventsMicrostore, kinesisAdapter)
 
     class MyKinesisAdapter : KinesisAdapter<TrackedUnit>() {
-        override inline fun <reified T> decodePayload(data: ByteBuffer): T {
-            return parseJson<T>(utf8Decode(data))
-        }
     }
 
     @BeforeEach

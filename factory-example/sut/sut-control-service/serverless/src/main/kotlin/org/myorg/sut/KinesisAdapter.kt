@@ -17,9 +17,9 @@ open class KinesisAdapter<T : Thing> {
             // val payload = StandardCharsets.UTF_8.decode(uow.record?.kinesis?.data).toString()
             val payload = uow.record?.kinesis?.data
             val event: T = decodePayload(payload)
-            if (event.id().isNullOrEmpty()) {
+            if (event.id.isNullOrEmpty()) {
                 if (uow.record != null) {
-                    event.setId(uow.record?.eventID)
+                    event.id = (uow.record?.eventID)
                 }
             }
             uow
@@ -29,15 +29,15 @@ open class KinesisAdapter<T : Thing> {
         }
     }
 
-    private fun utf8Decode(bb : ByteBuffer?) : String {
+     fun utf8Decode(bb : ByteBuffer?) : String {
         return StandardCharsets.UTF_8.decode(bb).toString()
     }
 
-    private inline fun <reified T> parseJson(str : String) : T {
+    inline fun <reified T> parseJson(str : String) : T {
         return Json.decodeFromString<T>(str)
     }
 
-    private inline fun <reified T> decodePayload(payload : ByteBuffer?) : T {
+    inline fun <reified T> decodePayload(payload : ByteBuffer?) : T {
         return parseJson<T>(utf8Decode(payload))
     }
 }

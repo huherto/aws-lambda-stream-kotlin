@@ -13,17 +13,21 @@ repositories {
 }
 
 dependencies {
+    implementation(libs.aws.dynamodb)
+    implementation(libs.aws.dynamodb.enhanced)
     implementation(libs.aws.java.core)
     implementation(libs.aws.java.events)
+    implementation(libs.aws.java.sdk.xray)
+    implementation(libs.aws.xray.recorder.sdk.aws.sdk.v2)
     implementation(libs.kotlin.stdlib)
-    implementation(libs.aws.dynamodb.enhanced)
-    implementation(libs.aws.dynamodb)
     implementation(libs.kotlinx.serialization.json)
 
     // Use LambdaLogger and avoid Log4j which is bigger.
     // implementation("org.apache.logging.log4j:log4j-to-slf4j:2.8.2")
+
     testImplementation(kotlin("test"))
     testImplementation(libs.aws.lambda.java.tests)
+    testImplementation(libs.mockk)
 }
 
 tasks.shadowJar {
