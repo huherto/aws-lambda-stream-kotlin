@@ -1,4 +1,4 @@
-
+@file:Suppress("UnstableApiUsage")
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.serialization)
@@ -13,9 +13,14 @@ repositories {
 }
 
 dependencies {
-    implementation(libs.aws.dynamodb)
-    implementation(libs.aws.dynamodb.enhanced)
+
+    implementation(platform(libs.aws.sdk.bom))
+
+    implementation(libs.aws.sdk.dynamodb)
+    implementation(libs.aws.sdk.dynamodb.enhanced)
+    implementation(libs.aws.sdk.lambda)
     implementation(libs.aws.java.core)
+    implementation(libs.aws.java.eventbridge)
     implementation(libs.aws.java.events)
     implementation(libs.aws.java.sdk.xray)
     implementation(libs.aws.xray.recorder.sdk.aws.sdk.v2)
@@ -40,6 +45,25 @@ kotlin {
     jvmToolchain(21)
 }
 
-tasks.getByName<Test>("test") {
-    useJUnitPlatform()
+testing {
+    suites {
+        val test by getting(JvmTestSuite::class) {
+            useJUnitJupiter()
+        }
+
+        register<JvmTestSuite>("integrationTest") {
+            useJUnitJupiter()
+            dependencies {
+                implementation(project())
+                implementation(libs.aws.java.eventbridge)
+            }
+        }
+    }
+}
+
+//tasks.getByName<Test>("test") {
+//    useJUnitPlatform()
+//}
+tasks.named("check") {
+    dependsOn(testing.suites.named("integrationTest"))
 }

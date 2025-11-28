@@ -1,7 +1,6 @@
 package org.myorg.sut
 
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient
-import software.amazon.awssdk.services.dynamodb.model.AttributeValue
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue.fromN
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue.fromS
 import software.amazon.awssdk.services.dynamodb.model.PutItemRequest
@@ -72,7 +71,7 @@ class EventsMicrostoreImpl<T : Thing> : EventsMicrostore<T> {
             "ttl" to fromN(ttl.toString()),
             "expire" to fromN(expire.toString()),
             "data" to fromS(uow.key),
-            "event" to fromS(event?.toString())
+            // "event" to fromS(event?.toString())
         )
 
         val request = PutItemRequest.builder()

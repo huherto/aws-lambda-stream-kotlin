@@ -22,6 +22,7 @@ open class KinesisAdapter<T : Thing> {
                     event.id = (uow.record?.eventID)
                 }
             }
+            uow.event = event
             uow
         }.map { uow ->
             // TODO: call claim_check processing

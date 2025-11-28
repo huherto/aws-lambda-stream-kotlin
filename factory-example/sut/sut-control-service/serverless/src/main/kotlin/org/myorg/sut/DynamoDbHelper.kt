@@ -3,10 +3,10 @@ package org.myorg.sut
 import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider
 import software.amazon.awssdk.core.SdkSystemSetting
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient
 import software.amazon.awssdk.regions.Region
-import software.amazon.awssdk.services.dynamodb.DynamoDbClient
 import com.amazonaws.xray.interceptors.TracingInterceptor
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient
 
 fun getEnhancedClient(): DynamoDbEnhancedClient? {
     val ddb: DynamoDbClient? = getDynamoDbClient()

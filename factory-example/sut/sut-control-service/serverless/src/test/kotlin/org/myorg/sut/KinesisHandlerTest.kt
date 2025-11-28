@@ -2,6 +2,7 @@ package org.myorg.sut
 
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
 import com.amazonaws.services.lambda.runtime.tests.annotations.Event
+import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.params.ParameterizedTest
 import java.nio.ByteBuffer
@@ -29,14 +30,16 @@ class KinesisHandlerTest {
     @Event(value = "events/kinesis_basic.json", type = KinesisEvent::class)
     fun testBasicKinesisEvent(event: KinesisEvent): Unit {
         val context = TestContext()
-        val payload = """{"orderId":123,"status":"NEW"}"""
+        val tu = TrackedUnit().apply { id = "123" }
+        val payload = Json.encodeToString(tu)
         event.records.get(0).kinesis.setData(encodePayload(payload))
+        event.records.get(1).kinesis.setData(encodePayload(payload))
         kinesisHandler!!.handleRequest(event, context)
-        assertEquals(1,eventsMicrostore.getEvents().size)
+        assertEquals(2,eventsMicrostore.getEvents().size)
         val processedEvent = eventsMicrostore.getEvents().first()
-        val data = processedEvent.records.first().kinesis.data.asReadOnlyBuffer().rewind()
-        val decoded = StandardCharsets.UTF_8.decode(data).toString()
-        assertTrue(decoded.contains("123"))
+        val data = processedEvent.event
+//        val decoded = StandardCharsets.UTF_8.decode(data).toString()
+        assertTrue(data!!.id.equals("123"))
         return
     }
 
