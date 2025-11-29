@@ -4,7 +4,6 @@ import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsPro
 import software.amazon.awssdk.core.SdkSystemSetting
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration
 import software.amazon.awssdk.regions.Region
-import com.amazonaws.xray.interceptors.TracingInterceptor
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient
 
@@ -22,7 +21,6 @@ fun getDynamoDbClient(): DynamoDbClient? {
         .region(Region.of(System.getenv(SdkSystemSetting.AWS_REGION.environmentVariable())))
         .overrideConfiguration(
             ClientOverrideConfiguration.builder()
-                .addExecutionInterceptor(TracingInterceptor())
                 .build()
         )
         .build()

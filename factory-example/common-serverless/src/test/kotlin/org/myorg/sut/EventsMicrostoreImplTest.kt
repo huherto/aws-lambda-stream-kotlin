@@ -7,15 +7,13 @@ import org.junit.jupiter.api.Assertions.*
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient
 import software.amazon.awssdk.services.dynamodb.model.PutItemRequest
 import software.amazon.awssdk.services.dynamodb.model.PutItemResponse
+import java.time.Clock
+import java.time.Instant
 import java.util.stream.Stream
 import kotlin.test.Test
-import kotlin.time.Clock
-import kotlin.time.ExperimentalTime
-import kotlin.time.Instant
 
 class EventsMicrostoreImplTest {
 
-    @OptIn(ExperimentalTime::class)
     @Test
     fun testSave() {
 
@@ -26,7 +24,7 @@ class EventsMicrostoreImplTest {
         val putRequestSlot = slot<PutItemRequest>()
 
         every { ddbClient.putItem(capture(putRequestSlot)) } returns mockk<PutItemResponse>()
-        every { clock.now() } returns Instant.parse("2025-01-01T00:00:00.000Z")
+        every { clock.instant() } returns Instant.parse("2025-01-01T00:00:00.000Z")
         every { envConfig.awsRegion() } returns "us-east-1"
         every { envConfig.tableName() } returns "events"
 

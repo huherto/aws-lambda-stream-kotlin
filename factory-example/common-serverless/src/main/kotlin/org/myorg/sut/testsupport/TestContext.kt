@@ -1,4 +1,4 @@
-package org.myorg.sut
+package org.myorg.sut.testsupport
 
 import com.amazonaws.services.lambda.runtime.ClientContext
 import com.amazonaws.services.lambda.runtime.CognitoIdentity

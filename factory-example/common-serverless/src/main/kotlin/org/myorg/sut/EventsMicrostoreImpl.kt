@@ -4,11 +4,9 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue.fromN
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue.fromS
 import software.amazon.awssdk.services.dynamodb.model.PutItemRequest
+import java.time.Clock
 import java.util.stream.Stream
-import kotlin.time.Clock
-import kotlin.time.ExperimentalTime
 
-@ExperimentalTime
 class EventsMicrostoreImpl<T : Thing> : EventsMicrostore<T> {
 
     constructor(dynamoDbClient : DynamoDbClient, clock : Clock, envConfig : EnvironmentConfig) : super() {
@@ -28,7 +26,7 @@ class EventsMicrostoreImpl<T : Thing> : EventsMicrostore<T> {
     }
 
     fun nowInSecs() : Long {
-        return clock.now().toEpochMilliseconds() / 1000L;
+        return clock.instant().toEpochMilli() / 1000L;
     }
 
     fun ttl(start: Long, days: Int?) : Long {

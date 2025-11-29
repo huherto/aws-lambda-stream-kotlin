@@ -16,8 +16,6 @@ dependencies {
 
     implementation(platform(libs.aws.sdk.bom))
 
-    implementation(project(":factory-example:common-serverless"))
-
     implementation(libs.aws.java.core)
     implementation(libs.aws.java.eventbridge)
     implementation(libs.aws.java.events)
@@ -50,20 +48,5 @@ testing {
         val test by getting(JvmTestSuite::class) {
             useJUnitJupiter()
         }
-
-        register<JvmTestSuite>("integrationTest") {
-            useJUnitJupiter()
-            dependencies {
-                implementation(project())
-                implementation(libs.aws.java.eventbridge)
-            }
-        }
     }
-}
-
-//tasks.getByName<Test>("test") {
-//    useJUnitPlatform()
-//}
-tasks.named("check") {
-    dependsOn(testing.suites.named("integrationTest"))
 }
