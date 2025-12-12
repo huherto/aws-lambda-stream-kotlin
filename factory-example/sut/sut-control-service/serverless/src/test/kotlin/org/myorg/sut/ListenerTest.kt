@@ -1,7 +1,6 @@
 package org.myorg.sut
 
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
-import com.amazonaws.services.lambda.runtime.tests.annotations.Event
 import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.params.ParameterizedTest
@@ -11,9 +10,25 @@ import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets.UTF_8
 import kotlin.test.assertEquals
 
+typealias TestEvent = com.amazonaws.services.lambda.runtime.tests.annotations.Event
+
+class TrackedUnitEvent : Event<TrackedUnit> {
+    var location : String? = null
+    var result : String? = null
+
+    override var id: String? = null
+    override var type: String? = null
+    override var timestamp: Long? = null
+    override var partitionKey: String? = null
+    override var tags: Map<String, String>? = HashMap<String, String>()
+    override var entity: TrackedUnit? = null
+    override var raw: Any? = null
+    override var eem: Any? = null
+}
+
 class ListenerTest {
 
-    class MyKinesisAdapter : KinesisAdapter<TrackedUnit>() {
+    class MyKinesisAdapter : KinesisAdapter<TrackedUnitEvent, TrackedUnit>() {
     }
 
     private var eventsMicrostore = EventsMicrostoreFake<TrackedUnit>()
@@ -28,7 +43,7 @@ class ListenerTest {
     }
 
     @ParameterizedTest
-    @Event(value = "events/kinesis_basic.json", type = KinesisEvent::class)
+    @TestEvent(value = "events/kinesis_basic.json", type = KinesisEvent::class)
     fun testBasicKinesisEvent(event: KinesisEvent): Unit {
         val context = TestContext()
 
@@ -54,7 +69,6 @@ class ListenerTest {
 
     val shipment1 = TrackedUnit().apply {
         id = "SHIP-001"
-        timestamp = "2025-01-01T10:00:00Z"
         senderFullName = "Alice Sender"
         returnAddress = TrackedUnit.Address(
             street = "123 Main St",
@@ -79,7 +93,6 @@ class ListenerTest {
 
     val shipment2 = TrackedUnit().apply {
         id = "SHIP-002"
-        timestamp = "2025-01-02T14:30:00Z"
         senderFullName = "Bob Warehouse"
         returnAddress = TrackedUnit.Address(
             street = "500 Warehouse Rd",
@@ -104,7 +117,6 @@ class ListenerTest {
 
     val shipment3 = TrackedUnit().apply {
         id = "SHIP-003"
-        timestamp = "2025-01-03T08:15:00Z"
         senderFullName = "Charlie Returns"
         returnAddress = TrackedUnit.Address(
             street = "10 Return Ln",

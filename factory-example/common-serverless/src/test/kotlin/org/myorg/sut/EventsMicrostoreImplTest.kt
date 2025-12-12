@@ -20,29 +20,34 @@ class EventsMicrostoreImplTest {
         val ddbClient = mockk<DynamoDbClient>()
         val clock = mockk<Clock>()
         val envConfig = mockk<EnvironmentConfig>()
-        val microstore = EventsMicrostoreImpl<TrackedUnit>(ddbClient, clock, envConfig)
+        val microstore = EventsMicrostoreImpl<MyEvent>(ddbClient, clock, envConfig)
         val putRequestSlot = slot<PutItemRequest>()
-
+        //  Given
         every { ddbClient.putItem(capture(putRequestSlot)) } returns mockk<PutItemResponse>()
         every { clock.instant() } returns Instant.parse("2025-01-01T00:00:00.000Z")
         every { envConfig.awsRegion() } returns "us-east-1"
         every { envConfig.tableName() } returns "events"
 
+        // When
         val stream = Stream.of(
-            UnitOfWork<TrackedUnit>().apply {
-                event = TrackedUnit().apply {
-                    id = "id1"
-                    timestamp = "2022-01-01T00:00:00.000Z"
+            UnitOfWork<MyEvent>().apply {
+                event = MyEvent().apply {
+                    id = "my-event-id-001"
+                    timestamp = Instant.parse("2022-01-01T00:00:00.000Z").toEpochMilli()
+                    entity = MyThing().apply {
+                        id = "my-thing-id-01"
+                    }
                 }
             },
         )
         microstore.save(stream, EventsMicrostore.SaveOptions(expire = 90))
 
+        // Then
         putRequestSlot.captured.item().apply {
             assertEquals("id1", this["pk"]?.s())
             assertEquals("EVENT", this["sk"]?.s().toString())
             assertEquals("EVENT", this["discriminator"]?.s().toString())
-            assertEquals("2022-01-01T00:00:00.000Z", this["timestamp"]?.s().toString())
+            assertEquals("1640995200000", this["timestamp"]?.s().toString())
             assertEquals("us-east-1", this["awsregion"]?.s().toString())
             assertEquals("1743465600", this["ttl"]?.n().toString())
             assertEquals("1743465600", this["expire"]?.n().toString())

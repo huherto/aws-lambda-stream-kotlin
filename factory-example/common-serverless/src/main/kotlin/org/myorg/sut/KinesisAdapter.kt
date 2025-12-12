@@ -6,21 +6,18 @@ import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.util.stream.Stream
 
-open class KinesisAdapter<T : Thing> {
+open class KinesisAdapter<E : Event> {
 
-    inline fun <reified T : Thing> fromKinesis(kinesisEvent: KinesisEvent): Stream<UnitOfWork<T>> {
+    fun  fromKinesis(kinesisEvent: KinesisEvent): Stream<UnitOfWork<E>> {
         return kinesisEvent.records.map { record ->
-            UnitOfWork<T>().apply {
+            UnitOfWork<E>().apply {
                 this.record = record
             }
         }.stream().map { uow ->
-            // val payload = StandardCharsets.UTF_8.decode(uow.record?.kinesis?.data).toString()
             val payload = uow.record?.kinesis?.data
-            val event: T = decodePayload(payload)
-            if (event.id.isNullOrEmpty()) {
-                if (uow.record != null) {
+            val event: Event = decodePayload(payload)
+            if (uow.record != null && event.entity != null) {
                     event.id = (uow.record?.eventID)
-                }
             }
             uow.event = event
             uow
@@ -31,14 +28,11 @@ open class KinesisAdapter<T : Thing> {
     }
 
      fun utf8Decode(bb : ByteBuffer?) : String {
+         if (bb == null) return ""
         return StandardCharsets.UTF_8.decode(bb).toString()
     }
 
-    inline fun <reified T> parseJson(str : String) : T {
-        return Json.decodeFromString<T>(str)
-    }
-
-    inline fun <reified T> decodePayload(payload : ByteBuffer?) : T {
-        return parseJson<T>(utf8Decode(payload))
+    inline fun <reified E> decodePayload(payload : ByteBuffer?) : E {
+        return Json.decodeFromString<E>(utf8Decode(payload))
     }
 }

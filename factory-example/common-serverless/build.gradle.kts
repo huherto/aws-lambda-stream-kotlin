@@ -31,6 +31,7 @@ dependencies {
     testImplementation(kotlin("test"))
     testImplementation(libs.aws.lambda.java.tests)
     testImplementation(libs.mockk)
+    testImplementation("org.slf4j:slf4j-simple:1.7.36")
 }
 
 tasks.shadowJar {

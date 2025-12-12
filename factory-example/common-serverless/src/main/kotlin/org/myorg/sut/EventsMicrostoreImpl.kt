@@ -7,7 +7,7 @@ import software.amazon.awssdk.services.dynamodb.model.PutItemRequest
 import java.time.Clock
 import java.util.stream.Stream
 
-class EventsMicrostoreImpl<T : Thing> : EventsMicrostore<T> {
+class EventsMicrostoreImpl<E : Event> : EventsMicrostore<E> {
 
     constructor(dynamoDbClient : DynamoDbClient, clock : Clock, envConfig : EnvironmentConfig) : super() {
         this.dynamoDbClient = dynamoDbClient
@@ -40,12 +40,11 @@ class EventsMicrostoreImpl<T : Thing> : EventsMicrostore<T> {
         return ttl(start, days).toString()
     }
 
-    override fun save(stream: Stream<UnitOfWork<T>>, options: EventsMicrostore.SaveOptions) {
+    override fun save(stream: Stream<UnitOfWork<E>>, options: EventsMicrostore.SaveOptions) {
         stream.forEach { uow -> save(uow, options) }
     }
 
-
-    fun save(uow: UnitOfWork<T>, ops: EventsMicrostore.SaveOptions) {
+    fun save(uow: UnitOfWork<E>, ops: EventsMicrostore.SaveOptions) {
 
         if (uow.event == null) {
             return
@@ -54,22 +53,20 @@ class EventsMicrostoreImpl<T : Thing> : EventsMicrostore<T> {
         val now = nowInSecs()
         val ttl = now + daysInSecs(90)
         val expire = now + daysInSecs(90)
-        val timeStamp = uow.event?.let{
-            it.timestamp?:now.toString()
-        }
-        val awsRegion = envConfig.awsRegion()
         val event = uow.event
+        val timeStamp = event?.timestamp
+        val awsRegion = envConfig.awsRegion()
 
         val itemValues = mapOf(
-            "pk" to fromS(uow.event?.id),
+            "pk" to fromS(event?.id),
             "sk" to fromS("EVENT"),
             "discriminator" to fromS("EVENT"),
-            "timestamp" to fromS(timeStamp),
+            "timestamp" to fromS(timeStamp.toString()),
             "awsregion" to fromS(awsRegion),
             "ttl" to fromN(ttl.toString()),
             "expire" to fromN(expire.toString()),
             "data" to fromS(uow.key),
-            // "event" to fromS(event?.toString())
+            "event" to fromS(event?.toString())
         )
 
         val request = PutItemRequest.builder()

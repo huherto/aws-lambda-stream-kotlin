@@ -7,7 +7,6 @@ import kotlinx.serialization.json.Json
 class TrackedUnit : Thing {
 
     override var id: String? = null
-    override var timestamp: String? = null
 
     var senderFullName : String? = null
     var returnAddress : Address? = null

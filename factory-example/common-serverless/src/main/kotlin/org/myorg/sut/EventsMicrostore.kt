@@ -2,10 +2,10 @@ package org.myorg.sut
 
 import java.util.stream.Stream
 
-interface EventsMicrostore<T : Thing > {
+interface EventsMicrostore<E : Event > {
 
     class SaveOptions(val expire: Long) {}
 
-    fun save(stream: Stream<UnitOfWork<T>>, options: SaveOptions)
+    fun save(stream: Stream<UnitOfWork<E>>, options: SaveOptions)
 
 }
