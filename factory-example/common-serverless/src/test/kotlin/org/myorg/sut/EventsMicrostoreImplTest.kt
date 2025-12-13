@@ -33,24 +33,24 @@ class EventsMicrostoreImplTest {
             UnitOfWork<MyEvent>().apply {
                 event = MyEvent().apply {
                     id = "my-event-id-001"
-                    timestamp = Instant.parse("2022-01-01T00:00:00.000Z").toEpochMilli()
+                    timestamp = Instant.parse("2022-01-01T00:00:00.000Z").toEpochMilli()/1000
                     entity = MyThing().apply {
                         id = "my-thing-id-01"
                     }
                 }
             },
         )
-        microstore.save(stream, EventsMicrostore.SaveOptions(expire = 90))
+        microstore.save(stream, EventsMicrostore.SaveOptions(expireDays = 90))
 
         // Then
         putRequestSlot.captured.item().apply {
-            assertEquals("id1", this["pk"]?.s())
+            assertEquals("my-event-id-001", this["pk"]?.s())
             assertEquals("EVENT", this["sk"]?.s().toString())
             assertEquals("EVENT", this["discriminator"]?.s().toString())
-            assertEquals("1640995200000", this["timestamp"]?.s().toString())
+            assertEquals("1640995200", this["timestamp"]?.n())
             assertEquals("us-east-1", this["awsregion"]?.s().toString())
-            assertEquals("1743465600", this["ttl"]?.n().toString())
-            assertEquals("1743465600", this["expire"]?.n().toString())
+            assertEquals("1743465600", this["ttl"]?.n())
+            assertEquals("1743465600", this["expire"]?.n())
             assertEquals("null", this["data"]?.s().toString())
             // assertEquals("{\"id\":\"id1\",\"timestamp\":\"2022-01-01T00:00:00.000Z\"}", this["event"]?.s().toString())
         }

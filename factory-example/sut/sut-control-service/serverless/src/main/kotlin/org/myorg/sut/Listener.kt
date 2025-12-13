@@ -3,24 +3,34 @@ package org.myorg.sut
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
+import java.nio.ByteBuffer
 import java.time.Clock
 import java.util.stream.Stream
 
-typealias UOW = UnitOfWork<TrackedUnit>
+typealias UOW = UnitOfWork<TrackedUnitEvent>
 
-fun getEventMicroStore() : EventsMicrostore<TrackedUnit> {
-    return EventsMicrostoreImpl<TrackedUnit>(getDynamoDbClient()!!, Clock.systemDefaultZone(), EnvironmentConfig())
+fun getEventMicroStore() : EventsMicrostore<TrackedUnitEvent> {
+    return EventsMicrostoreImpl<TrackedUnitEvent>(getDynamoDbClient()!!, Clock.systemDefaultZone(), EnvironmentConfig())
+}
+
+class MyKinesisAdapter : KinesisAdapter<TrackedUnitEvent>() {
+    override fun decodePayload(payload: ByteBuffer?): TrackedUnitEvent {
+        return sutJson.decodeFromString<TrackedUnitEvent>(utf8Decode(payload));
+    }
+}
+
+fun getKinesisAdapter(): KinesisAdapter<TrackedUnitEvent> {
+    return MyKinesisAdapter()
 }
 
 class Listener(
-    val eventsMicrostore: EventsMicrostore<TrackedUnit>,
-    val kinesisAdapter: KinesisAdapter<TrackedUnit>) : RequestHandler<KinesisEvent, Void?>
+    val eventsMicrostore: EventsMicrostore<TrackedUnitEvent>,
+    val kinesisAdapter: KinesisAdapter<TrackedUnitEvent>) : RequestHandler<KinesisEvent, Void?>
 {
-    constructor() : this(getEventMicroStore(), KinesisAdapter<TrackedUnit>())
+    constructor() : this(getEventMicroStore(), getKinesisAdapter())
 
     override fun handleRequest(kinesisEvent: KinesisEvent, context: Context): Void? {
-        val stream: Stream<UOW> =
-            kinesisAdapter.fromKinesis(kinesisEvent)
+        val stream: Stream<UOW> = kinesisAdapter.fromKinesis(kinesisEvent)
 
         eventsMicrostore.save(
             stream,

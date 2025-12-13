@@ -4,9 +4,9 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 @Serializable
-class TrackedUnit : Thing {
+class TrackedUnit {
 
-    override var id: String? = null
+    var id: String? = null
 
     var senderFullName : String? = null
     var returnAddress : Address? = null

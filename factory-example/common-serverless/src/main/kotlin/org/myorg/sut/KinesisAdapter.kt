@@ -1,12 +1,11 @@
 package org.myorg.sut
 
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
-import kotlinx.serialization.json.Json
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.util.stream.Stream
 
-open class KinesisAdapter<E : Event> {
+abstract class KinesisAdapter<E : Event> {
 
     fun  fromKinesis(kinesisEvent: KinesisEvent): Stream<UnitOfWork<E>> {
         return kinesisEvent.records.map { record ->
@@ -15,8 +14,8 @@ open class KinesisAdapter<E : Event> {
             }
         }.stream().map { uow ->
             val payload = uow.record?.kinesis?.data
-            val event: Event = decodePayload(payload)
-            if (uow.record != null && event.entity != null) {
+            val event: E = decodePayload(payload)
+            if (event.id == null && uow.record != null) {
                     event.id = (uow.record?.eventID)
             }
             uow.event = event
@@ -32,7 +31,6 @@ open class KinesisAdapter<E : Event> {
         return StandardCharsets.UTF_8.decode(bb).toString()
     }
 
-    inline fun <reified E> decodePayload(payload : ByteBuffer?) : E {
-        return Json.decodeFromString<E>(utf8Decode(payload))
-    }
+    abstract fun decodePayload(payload : ByteBuffer?) : E
+
 }

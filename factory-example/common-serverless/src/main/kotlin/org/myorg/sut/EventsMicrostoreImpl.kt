@@ -29,17 +29,6 @@ class EventsMicrostoreImpl<E : Event> : EventsMicrostore<E> {
         return clock.instant().toEpochMilli() / 1000L;
     }
 
-    fun ttl(start: Long, days: Int?) : Long {
-        var d = days;
-        if (days == null) { d = 33}
-
-        return start / 1000 + 60 * 60 * 24 * d
-    }
-
-    fun expire(start: Long, days: Int?) : String {
-        return ttl(start, days).toString()
-    }
-
     override fun save(stream: Stream<UnitOfWork<E>>, options: EventsMicrostore.SaveOptions) {
         stream.forEach { uow -> save(uow, options) }
     }
@@ -52,8 +41,8 @@ class EventsMicrostoreImpl<E : Event> : EventsMicrostore<E> {
 
         val now = nowInSecs()
         val ttl = now + daysInSecs(90)
-        val expire = now + daysInSecs(90)
-        val event = uow.event
+        val expire = now + daysInSecs(ops.expireDays)
+        val event : E? = uow.event
         val timeStamp = event?.timestamp
         val awsRegion = envConfig.awsRegion()
 
@@ -61,7 +50,7 @@ class EventsMicrostoreImpl<E : Event> : EventsMicrostore<E> {
             "pk" to fromS(event?.id),
             "sk" to fromS("EVENT"),
             "discriminator" to fromS("EVENT"),
-            "timestamp" to fromS(timeStamp.toString()),
+            "timestamp" to fromN(timeStamp.toString()),
             "awsregion" to fromS(awsRegion),
             "ttl" to fromN(ttl.toString()),
             "expire" to fromN(expire.toString()),

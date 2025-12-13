@@ -3,8 +3,8 @@ package org.myorg.sut
 import kotlinx.serialization.Serializable
 
 @Serializable
-class MyThing : Thing {
-    override var id: String? = null
+class MyThing {
+    var id: String? = null
 }
 
 class MyEvent : Event {
@@ -13,7 +13,7 @@ class MyEvent : Event {
     override var timestamp: Long? = 0
     override var partitionKey: String? = null
     override var tags: Map<String, String>? = null
-    override var entity: Thing? = null
+    var entity: MyThing? = null
     override var raw: Any? = null
     override var eem: Any? = null
 }

@@ -2,7 +2,6 @@ package org.myorg.sut.testsupport
 
 import org.myorg.sut.Event
 import org.myorg.sut.EventsMicrostore
-import org.myorg.sut.Thing
 import org.myorg.sut.UnitOfWork
 import java.util.stream.Stream
 
