@@ -9,6 +9,7 @@ import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets.UTF_8
 import java.time.Instant
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 
 typealias TestEvent = com.amazonaws.services.lambda.runtime.tests.annotations.Event
 
@@ -30,15 +31,17 @@ class ListenerTest {
     fun testBasicKinesisEvent(event: KinesisEvent) {
         val context = TestContext()
 
-        event.records[0].kinesis.setData(encodePayload(ship1Event1))
-        event.records[1].kinesis.setData(encodePayload(ship1Event2))
+        event.records[0].kinesis.data = encodePayload(ship1Event1)
+        event.records[1].kinesis.data = encodePayload(ship1Event2)
 
         listener!!.handleRequest(event, context)
 
         assertEquals(2,eventsMicrostore.getEvents().size)
-        val uow1 = eventsMicrostore.getEvents()[0]
-        val uow2 = eventsMicrostore.getEvents()[1]
+        val uow1 = eventsMicrostore.getEvents()["SHIP-001-2025"]
+        val uow2 = eventsMicrostore.getEvents()["SHIP-002-2025"]
 
+        assertNotNull(uow1)
+        assertNotNull(uow2)
         assertEquals(ship1Event1.toString(), uow1.event.toString())
         assertEquals(ship1Event2.toString(), uow2.event.toString())
 

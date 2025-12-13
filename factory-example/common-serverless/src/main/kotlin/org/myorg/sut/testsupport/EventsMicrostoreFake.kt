@@ -7,20 +7,22 @@ import java.util.stream.Stream
 
 class EventsMicrostoreFake<E : Event> : EventsMicrostore<E> {
 
-    private val events: MutableList< UnitOfWork<E> > = mutableListOf()
+    private val events: MutableMap< String, UnitOfWork<E> > = mutableMapOf()
 
     fun reset() {
         events.clear()
     }
 
     // What should we return here ?
-    fun getEvents(): List< UnitOfWork<E> > = events.toList()
+    fun getEvents(): Map< String, UnitOfWork<E> > = events.toMap()
 
     override fun save(
         stream: Stream<UnitOfWork<E>>,
         options: EventsMicrostore.SaveOptions
     ) {
-        stream.forEach { events.add(it) }
+        stream.forEach {
+            it?.event?.id?.let { key -> events.put(key, it) }
+        }
     }
 
 }
