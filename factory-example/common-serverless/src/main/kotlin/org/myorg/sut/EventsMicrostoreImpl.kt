@@ -26,7 +26,7 @@ class EventsMicrostoreImpl<E : Event> : EventsMicrostore<E> {
     }
 
     fun nowInSecs() : Long {
-        return clock.instant().toEpochMilli() / 1000L;
+        return clock.instant().toEpochMilli() / 1000L
     }
 
     override fun save(stream: Stream<UnitOfWork<E>>, options: EventsMicrostore.SaveOptions) {

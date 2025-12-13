@@ -15,7 +15,7 @@ fun getEventMicroStore() : EventsMicrostore<TrackedUnitEvent> {
 
 class MyKinesisAdapter : KinesisAdapter<TrackedUnitEvent>() {
     override fun decodePayload(payload: ByteBuffer?): TrackedUnitEvent {
-        return sutJson.decodeFromString<TrackedUnitEvent>(utf8Decode(payload));
+        return sutJson.decodeFromString<TrackedUnitEvent>(utf8Decode(payload))
     }
 }
 

@@ -22,7 +22,7 @@ abstract class KinesisAdapter<E : Event> {
             uow
         }.map { uow ->
             // TODO: call claim_check processing
-            uow;
+            uow
         }
     }
 

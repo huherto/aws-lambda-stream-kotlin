@@ -6,7 +6,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.myorg.sut.testsupport.EventsMicrostoreFake
 import org.myorg.sut.testsupport.TestContext
 import java.nio.ByteBuffer
-import java.nio.charset.StandardCharsets
 import java.nio.charset.StandardCharsets.UTF_8
 import java.time.Instant
 import kotlin.test.assertEquals
