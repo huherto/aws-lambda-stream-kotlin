@@ -11,9 +11,6 @@ import kotlinx.serialization.modules.subclass
 @Serializable
 class TrackedUnitEvent() : Event {
 
-    var location : String? = null
-    var result : String? = null
-
     override var id: String? = null
     override var type: String? = null
     override var timestamp: Long? = null
@@ -26,6 +23,9 @@ class TrackedUnitEvent() : Event {
 
     @Contextual
     override var eem: Any? = null
+
+    var location : String? = null
+    var result : String? = null
 
     override fun toString(): String {
         return sutJson.encodeToString(this)

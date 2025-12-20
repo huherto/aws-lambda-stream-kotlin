@@ -20,7 +20,7 @@ dependencies {
     implementation(libs.aws.java.eventbridge)
     implementation(libs.aws.java.events)
     implementation(libs.aws.sdk.dynamodb)
-    implementation(libs.aws.sdk.dynamodb.enhanced)
+    // implementation(libs.aws.sdk.dynamodb.enhanced)
     implementation(libs.aws.sdk.lambda)
     implementation(libs.kotlin.stdlib)
     implementation(libs.kotlinx.serialization.json)

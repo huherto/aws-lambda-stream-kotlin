@@ -1,8 +1,12 @@
 @file:Suppress("UnstableApiUsage")
+
+import org.gradle.kotlin.dsl.invoke
+
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.serialization)
     alias(libs.plugins.shadow)
+    `jvm-test-suite`
 }
 
 group = "org.myorg"
@@ -19,10 +23,9 @@ dependencies {
     implementation(project(":factory-example:common-serverless"))
 
     implementation(libs.aws.java.core)
-    implementation(libs.aws.java.eventbridge)
     implementation(libs.aws.java.events)
     implementation(libs.aws.sdk.dynamodb)
-    implementation(libs.aws.sdk.dynamodb.enhanced)
+    // remove implementation(libs.aws.sdk.dynamodb.enhanced)
     implementation(libs.aws.sdk.lambda)
     implementation(libs.kotlin.stdlib)
     implementation(libs.kotlinx.serialization.json)
@@ -45,6 +48,7 @@ kotlin {
     jvmToolchain(21)
 }
 
+// Taken from https://docs.gradle.org/current/userguide/jvm_test_suite_plugin.html#sec:declare_an_additional_test_suite
 testing {
     suites {
         val test by getting(JvmTestSuite::class) {
@@ -54,9 +58,19 @@ testing {
         register<JvmTestSuite>("integrationTest") {
             useJUnitJupiter()
             dependencies {
+                implementation(platform(libs.aws.sdk.bom))
                 implementation(project())
-                implementation(libs.aws.java.eventbridge)
+                implementation(libs.aws.sdk.kinesis)
             }
+            targets {
+                all {
+                    testTask.configure {
+                        // Ensure integration tests run after unit tests
+                        shouldRunAfter(test)
+                    }
+                }
+            }
+
         }
     }
 }

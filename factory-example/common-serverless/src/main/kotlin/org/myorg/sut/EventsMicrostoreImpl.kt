@@ -1,9 +1,15 @@
 package org.myorg.sut
 
-import software.amazon.awssdk.services.dynamodb.DynamoDbClient
-import software.amazon.awssdk.services.dynamodb.model.AttributeValue.fromN
-import software.amazon.awssdk.services.dynamodb.model.AttributeValue.fromS
-import software.amazon.awssdk.services.dynamodb.model.PutItemRequest
+//import software.amazon.awssdk.services.dynamodb.DynamoDbClient
+//import software.amazon.awssdk.services.dynamodb.model.AttributeValue.fromN
+//import software.amazon.awssdk.services.dynamodb.model.AttributeValue.fromS
+//import software.amazon.awssdk.services.dynamodb.model.PutItemRequest
+import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
+import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
+import aws.sdk.kotlin.services.dynamodb.model.AttributeValue.S
+import aws.sdk.kotlin.services.dynamodb.model.AttributeValue.N
+import aws.sdk.kotlin.services.dynamodb.model.PutItemRequest
+import kotlinx.coroutines.runBlocking
 import java.time.Clock
 import java.util.stream.Stream
 
@@ -30,7 +36,13 @@ class EventsMicrostoreImpl<E : Event> : EventsMicrostore<E> {
     }
 
     override fun save(stream: Stream<UnitOfWork<E>>, options: EventsMicrostore.SaveOptions) {
+
+        // Should be able to send in batches.
         stream.forEach { uow -> save(uow, options) }
+    }
+
+    fun nullableS(s: String?) : AttributeValue {
+        return s?.let { S(it) } ?: AttributeValue.Null(true)
     }
 
     fun save(uow: UnitOfWork<E>, ops: EventsMicrostore.SaveOptions) {
@@ -47,23 +59,30 @@ class EventsMicrostoreImpl<E : Event> : EventsMicrostore<E> {
         val awsRegion = envConfig.awsRegion()
 
         val itemValues = mapOf(
-            "pk" to fromS(event?.id),
-            "sk" to fromS("EVENT"),
-            "discriminator" to fromS("EVENT"),
-            "timestamp" to fromN(timeStamp.toString()),
-            "awsregion" to fromS(awsRegion),
-            "ttl" to fromN(ttl.toString()),
-            "expire" to fromN(expire.toString()),
-            "data" to fromS(uow.key),
-            "event" to fromS(event?.toString())
+            "pk" to nullableS(event?.id),
+            "sk" to S("EVENT"),
+            "discriminator" to S("EVENT"),
+            "timestamp" to N(timeStamp.toString()),
+            "awsregion" to S(awsRegion),
+            "ttl" to N(ttl.toString()),
+            "expire" to N(expire.toString()),
+            "data" to nullableS(uow.key),
+            "event" to nullableS(event?.toString())
         )
 
-        val request = PutItemRequest.builder()
-            .tableName(envConfig.tableName())
-            .item(itemValues)
-            .build()
 
-        dynamoDbClient.putItem(request)
+        val request = PutItemRequest {
+            tableName = envConfig.tableName()
+            item = itemValues
+        }
+
+        // This is here just to be able to call a suspend function.
+        // Possibly all should be thought out to be used as co-routines,
+        // but I am still learning how to do that.
+        runBlocking {
+            dynamoDbClient.putItem(request)
+        }
+
     }
 
 }

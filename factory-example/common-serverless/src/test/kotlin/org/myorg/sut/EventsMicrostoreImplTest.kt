@@ -1,12 +1,14 @@
 package org.myorg.sut
 
+import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
+import aws.sdk.kotlin.services.dynamodb.model.PutItemRequest
+import aws.sdk.kotlin.services.dynamodb.model.PutItemResponse
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.*
-import software.amazon.awssdk.services.dynamodb.DynamoDbClient
-import software.amazon.awssdk.services.dynamodb.model.PutItemRequest
-import software.amazon.awssdk.services.dynamodb.model.PutItemResponse
+
 import java.time.Clock
 import java.time.Instant
 import java.util.stream.Stream
@@ -23,7 +25,7 @@ class EventsMicrostoreImplTest {
         val microstore = EventsMicrostoreImpl<MyEvent>(ddbClient, clock, envConfig)
         val putRequestSlot = slot<PutItemRequest>()
         //  Given
-        every { ddbClient.putItem(capture(putRequestSlot)) } returns mockk<PutItemResponse>()
+        every { runBlocking {  ddbClient.putItem(capture(putRequestSlot)) } } returns mockk<PutItemResponse>()
         every { clock.instant() } returns Instant.parse("2025-01-01T00:00:00.000Z")
         every { envConfig.awsRegion() } returns "us-east-1"
         every { envConfig.tableName() } returns "events"
@@ -43,18 +45,19 @@ class EventsMicrostoreImplTest {
         microstore.save(stream, EventsMicrostore.SaveOptions(expireDays = 90))
 
         // Then
-        putRequestSlot.captured.item().apply {
-            assertEquals("my-event-id-001", this["pk"]?.s())
-            assertEquals("EVENT", this["sk"]?.s().toString())
-            assertEquals("EVENT", this["discriminator"]?.s().toString())
-            assertEquals("1640995200", this["timestamp"]?.n())
-            assertEquals("us-east-1", this["awsregion"]?.s().toString())
-            assertEquals("1743465600", this["ttl"]?.n())
-            assertEquals("1743465600", this["expire"]?.n())
-            assertEquals("null", this["data"]?.s().toString())
-            // assertEquals("{\"id\":\"id1\",\"timestamp\":\"2022-01-01T00:00:00.000Z\"}", this["event"]?.s().toString())
+        putRequestSlot.captured.item?.apply {
+
+            assertEquals("my-event-id-001", this["pk"]?.asS())
+            assertEquals("EVENT", this["sk"]?.asS().toString())
+            assertEquals("EVENT", this["discriminator"]?.asS().toString())
+            assertEquals("1640995200", this["timestamp"]?.asN())
+            assertEquals("us-east-1", this["awsregion"]?.asS().toString())
+            assertEquals("1743465600", this["ttl"]?.asN())
+            assertEquals("1743465600", this["expire"]?.asN())
+            assertEquals("null", this["data"]?.asS().toString())
+            assertEquals("{\"id\":\"id1\",\"timestamp\":\"2022-01-01T00:00:00.000Z\"}", this["event"]?.asS().toString())
         }
-        putRequestSlot.captured.tableName().apply {
+        putRequestSlot.captured.tableName.apply {
             assertEquals("events", this)
         }
 
