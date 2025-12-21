@@ -25,7 +25,7 @@ class TrackedUnitEvent() : Event {
     override var eem: Any? = null
 
     override fun encoded(): String {
-        sutJson.encodeToString(this)
+        return sutJson.encodeToString(this)
     }
 
     var location : String? = null

@@ -48,7 +48,6 @@ class EventsMicrostoreImplTest {
         microstore.save(stream, EventsMicrostore.SaveOptions(expireDays = 90))
 
         // Then
-        val json = Json { ignoreUnknownKeys = true }
         putRequestSlot.captured.item?.apply {
 
             assertEquals("my-event-id-001", this["pk"]?.asS())
