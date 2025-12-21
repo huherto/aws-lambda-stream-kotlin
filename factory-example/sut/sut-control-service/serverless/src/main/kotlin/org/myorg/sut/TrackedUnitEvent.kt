@@ -24,11 +24,15 @@ class TrackedUnitEvent() : Event {
     @Contextual
     override var eem: Any? = null
 
+    override fun encoded(): String {
+        sutJson.encodeToString(this)
+    }
+
     var location : String? = null
     var result : String? = null
 
     override fun toString(): String {
-        return sutJson.encodeToString(this)
+        return encoded()
     }
 }
 

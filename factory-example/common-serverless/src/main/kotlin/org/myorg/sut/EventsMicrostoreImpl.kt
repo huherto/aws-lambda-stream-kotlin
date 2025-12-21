@@ -55,6 +55,7 @@ class EventsMicrostoreImpl<E : Event> : EventsMicrostore<E> {
         val ttl = now + daysInSecs(90)
         val expire = now + daysInSecs(ops.expireDays)
         val event : E? = uow.event
+        val encodedEvent = event?.encoded()
         val timeStamp = event?.timestamp
         val awsRegion = envConfig.awsRegion()
 
@@ -67,9 +68,8 @@ class EventsMicrostoreImpl<E : Event> : EventsMicrostore<E> {
             "ttl" to N(ttl.toString()),
             "expire" to N(expire.toString()),
             "data" to nullableS(uow.key),
-            "event" to nullableS(event?.toString())
+            "event" to nullableS(encodedEvent)
         )
-
 
         val request = PutItemRequest {
             tableName = envConfig.tableName()

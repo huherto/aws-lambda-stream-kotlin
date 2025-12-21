@@ -7,6 +7,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Assertions.*
 
 import java.time.Clock
@@ -19,11 +20,13 @@ class EventsMicrostoreImplTest {
     @Test
     fun testSave() {
 
+        // Set up
         val ddbClient = mockk<DynamoDbClient>()
         val clock = mockk<Clock>()
         val envConfig = mockk<EnvironmentConfig>()
         val microstore = EventsMicrostoreImpl<MyEvent>(ddbClient, clock, envConfig)
         val putRequestSlot = slot<PutItemRequest>()
+
         //  Given
         every { runBlocking {  ddbClient.putItem(capture(putRequestSlot)) } } returns mockk<PutItemResponse>()
         every { clock.instant() } returns Instant.parse("2025-01-01T00:00:00.000Z")
@@ -45,6 +48,7 @@ class EventsMicrostoreImplTest {
         microstore.save(stream, EventsMicrostore.SaveOptions(expireDays = 90))
 
         // Then
+        val json = Json { ignoreUnknownKeys = true }
         putRequestSlot.captured.item?.apply {
 
             assertEquals("my-event-id-001", this["pk"]?.asS())
@@ -54,8 +58,23 @@ class EventsMicrostoreImplTest {
             assertEquals("us-east-1", this["awsregion"]?.asS().toString())
             assertEquals("1743465600", this["ttl"]?.asN())
             assertEquals("1743465600", this["expire"]?.asN())
-            assertEquals("null", this["data"]?.asS().toString())
-            assertEquals("{\"id\":\"id1\",\"timestamp\":\"2022-01-01T00:00:00.000Z\"}", this["event"]?.asS().toString())
+            assertEquals("null", this["data"]?.asSOrNull().toString())
+
+            val actualEventAsJson = this["event"]?.asS()
+
+            val expectedEventAsJson = """
+                {
+                    "id":"my-event-id-001",
+                    "timestamp":1640995200,
+                    "entity": {
+                        "id":"my-thing-id-01"
+                    }
+                }
+            """
+
+            assertEquals(
+                cleanUpString(expectedEventAsJson),
+                cleanUpString(actualEventAsJson.toString()))
         }
         putRequestSlot.captured.tableName.apply {
             assertEquals("events", this)
@@ -63,4 +82,7 @@ class EventsMicrostoreImplTest {
 
     }
 
+    fun cleanUpString(s : String) : String {
+        return s.replace("\\s".toRegex(), "")
+    }
 }

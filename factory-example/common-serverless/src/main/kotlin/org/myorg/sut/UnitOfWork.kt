@@ -10,6 +10,9 @@ interface Event {
     var tags: Map<String, String>?
     var raw: Any?
     var eem: Any?
+
+    fun encoded()  : String
+
 }
 
 class UnitOfWork<E : Event > {
