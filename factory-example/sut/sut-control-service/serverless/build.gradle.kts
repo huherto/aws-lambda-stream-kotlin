@@ -61,6 +61,8 @@ testing {
                 implementation(platform(libs.aws.sdk.bom))
                 implementation(project())
                 implementation(libs.aws.sdk.kinesis)
+                implementation(libs.testcon.localstack)
+                implementation(project(":factory-example:common-serverless"))
             }
             targets {
                 all {

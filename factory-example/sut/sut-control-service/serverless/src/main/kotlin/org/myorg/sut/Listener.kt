@@ -9,8 +9,18 @@ import java.util.stream.Stream
 
 typealias UOW = UnitOfWork<TrackedUnitEvent>
 
-fun getEventMicroStore() : EventsMicrostore<TrackedUnitEvent> {
-    return EventsMicrostoreImpl<TrackedUnitEvent>(getDynamoDbClient()!!, Clock.systemDefaultZone(), EnvironmentConfig())
+fun getEventMicroStore(): EventsMicrostore<TrackedUnitEvent> {
+    val client = getDynamoDbClient()
+        ?: throw IllegalStateException(
+            "DynamoDB client is not configured. " +
+                "Ensure environment/region/endpoint is set, or inject a fake EventsMicrostore in tests."
+        )
+
+    return EventsMicrostoreImpl(
+        client,
+        Clock.systemDefaultZone(),
+        EnvironmentConfig()
+    )
 }
 
 class MyKinesisAdapter : KinesisAdapter<TrackedUnitEvent>() {
@@ -32,12 +42,9 @@ class Listener(
     override fun handleRequest(kinesisEvent: KinesisEvent, context: Context): Void? {
         val stream: Stream<UOW> = kinesisAdapter.fromKinesis(kinesisEvent)
 
-        eventsMicrostore.save(
-            stream,
-            EventsMicrostore.SaveOptions(90))
+        eventsMicrostore.save(stream, EventsMicrostore.SaveOptions(90))
 
         // When not using reportBatchItemFailures, return null to acknowledge the entire batch.
         return null
     }
-
 }

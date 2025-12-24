@@ -1,4 +1,7 @@
 @file:Suppress("UnstableApiUsage")
+
+import org.gradle.kotlin.dsl.invoke
+
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.serialization)
@@ -20,10 +23,11 @@ dependencies {
     implementation(libs.aws.java.eventbridge)
     implementation(libs.aws.java.events)
     implementation(libs.aws.sdk.dynamodb)
-    // implementation(libs.aws.sdk.dynamodb.enhanced)
+    implementation(libs.aws.sdk.kinesis)
     implementation(libs.aws.sdk.lambda)
     implementation(libs.kotlin.stdlib)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.testcon.localstack)
 
     // Use LambdaLogger and avoid Log4j which is bigger.
     // implementation("org.apache.logging.log4j:log4j-to-slf4j:2.8.2")
