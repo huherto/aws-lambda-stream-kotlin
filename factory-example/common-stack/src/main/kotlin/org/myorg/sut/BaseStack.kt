@@ -4,6 +4,7 @@ import software.amazon.awscdk.Stack
 import software.constructs.Construct
 
 enum class Stage(val id: String) {
+    LOCAL("local"),
     DEV("dev"),
     QA("qa"),
     PROD("prod");

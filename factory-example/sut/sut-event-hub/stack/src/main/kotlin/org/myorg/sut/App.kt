@@ -15,6 +15,7 @@ fun main() {
         region = "us-east-1"
     )
     HubStack(app, serviceProps)
+    HubStack(app, serviceProps.copy(stage = Stage.LOCAL))
     app.synth()
     println("Finished CDK App")
 }

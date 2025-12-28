@@ -61,9 +61,9 @@ class ControlStack(scope: Construct, serviceProps: ServiceProps) : BaseStack(sco
 
     private fun newListenerLambda(): Function =
         Function.Builder.create(this, "listener")
-            .functionName("listener")
+            .functionName("Listener")
             .code(Code.fromAsset("../serverless/build/libs/serverless.jar"))
-            .handler("org.myorg.sut.KinesisHandler::handleRequest")
+            .handler("org.myorg.sut.Listener::handleRequest")
             .timeout(Duration.seconds(50))
             .memorySize(1024)
             .runtime(Runtime.JAVA_21)

@@ -58,11 +58,13 @@ testing {
         register<JvmTestSuite>("integrationTest") {
             useJUnitJupiter()
             dependencies {
-                implementation(platform(libs.aws.sdk.bom))
-                implementation(project())
                 implementation(libs.aws.sdk.kinesis)
+                implementation(libs.aws.sdk.lambda)
                 implementation(libs.testcon.localstack)
+                implementation(libs.testcon.junit.jupiter)
+                implementation(platform(libs.aws.sdk.bom))
                 implementation(project(":factory-example:common-serverless"))
+                implementation(project())
             }
             targets {
                 all {

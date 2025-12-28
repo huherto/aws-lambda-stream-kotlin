@@ -14,6 +14,7 @@ fun main() {
         stage = Stage.DEV,
         region = "us-east-1")
     ControlStack(app, serviceProps)
+    ControlStack(app, serviceProps.copy(stage = Stage.LOCAL))
     app.synth()
     println("Finished CDK App")
 }

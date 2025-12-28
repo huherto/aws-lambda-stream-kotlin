@@ -15,7 +15,8 @@ class KinesisHelper {
     companion object {
 
         fun createKinesisClient(localstack : LocalStackContainer): KinesisClient {
-            val endpoint = localstack.getEndpointOverride(LocalStackContainer.Service.KINESIS)
+            // val endpoint = localstack.getEndpointOverride(LocalStackContainer.Service.KINESIS)
+            val endpoint = localstack.endpoint
             return KinesisClient {
                 this.region = localstack.region
                 this.endpointUrl = Url.parse(endpoint.toString())
