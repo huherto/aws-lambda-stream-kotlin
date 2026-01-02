@@ -17,4 +17,4 @@ include("factory-example:sut:sut-event-hub:stack")
 include("factory-example:sut:sut-control-service")
 include("factory-example:sut:sut-control-service:serverless")
 include("factory-example:sut:sut-control-service:stack")
-
+include("factory-example:sut:sut-subsys-test")

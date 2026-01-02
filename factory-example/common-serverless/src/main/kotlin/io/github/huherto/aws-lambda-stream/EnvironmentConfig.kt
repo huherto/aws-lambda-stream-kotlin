@@ -1,4 +1,4 @@
-package org.myorg.sut
+package io.github.huherto.`aws-lambda-stream`
 
 class EnvironmentConfig {
 

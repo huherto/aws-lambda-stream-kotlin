@@ -1,4 +1,4 @@
-package org.myorg.sut
+package io.github.huherto.`aws-lambda-stream`
 
 //import software.amazon.awssdk.services.dynamodb.DynamoDbClient
 //import software.amazon.awssdk.services.dynamodb.model.AttributeValue.fromN

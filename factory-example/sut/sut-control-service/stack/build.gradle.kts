@@ -27,20 +27,9 @@ application {
     mainClass.set("org.myorg.sut.AppKt")
 }
 
-tasks.register<Exec>("cdk_deploy") {
-    // Define the command and its arguments
-
-    commandLine("../../gradlew", "shadowJar")
-    commandLine("cdk", "deploy")
-
-    // Optionally, set the working directory for the command
-    // workingDir = file("path/to/your/directory")
-
-    // Optionally, capture the output of the command
-    // standardOutput = ByteArrayOutputStream()
-    // errorOutput = ByteArrayOutputStream()
-
-    // Optionally, configure what happens on command failure
-    // ignoreExitValue = true // Don't fail the build if the command exits with a non-zero code
+tasks.register<Exec>("cdklocal_deploy") {
+    //dependsOn(":factory-example:sut:sut-event-hub:serverless:shadowJar")
+    dependsOn("shadowJar")
+    commandLine("cdklocal", "deploy", "sut-control-service-local")
 }
 

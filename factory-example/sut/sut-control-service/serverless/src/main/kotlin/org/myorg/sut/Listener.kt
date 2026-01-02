@@ -3,6 +3,12 @@ package org.myorg.sut
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
+import io.github.huherto.`aws-lambda-stream`.EnvironmentConfig
+import io.github.huherto.`aws-lambda-stream`.EventsMicrostore
+import io.github.huherto.`aws-lambda-stream`.EventsMicrostoreImpl
+import io.github.huherto.`aws-lambda-stream`.KinesisAdapter
+import io.github.huherto.`aws-lambda-stream`.UnitOfWork
+import io.github.huherto.`aws-lambda-stream`.getDynamoDbClient
 import java.nio.ByteBuffer
 import java.time.Clock
 import java.util.stream.Stream
@@ -35,7 +41,8 @@ fun getKinesisAdapter(): KinesisAdapter<TrackedUnitEvent> {
 
 class Listener(
     val eventsMicrostore: EventsMicrostore<TrackedUnitEvent>,
-    val kinesisAdapter: KinesisAdapter<TrackedUnitEvent>) : RequestHandler<KinesisEvent, Void?>
+    val kinesisAdapter: KinesisAdapter<TrackedUnitEvent>
+) : RequestHandler<KinesisEvent, Void?>
 {
     constructor() : this(getEventMicroStore(), getKinesisAdapter())
 

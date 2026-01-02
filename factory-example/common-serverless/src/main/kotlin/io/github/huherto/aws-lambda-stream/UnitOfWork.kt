@@ -1,4 +1,4 @@
-package org.myorg.sut
+package io.github.huherto.`aws-lambda-stream`
 
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
 

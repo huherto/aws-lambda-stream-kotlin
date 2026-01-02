@@ -1,4 +1,4 @@
-package org.myorg.sut.testsupport
+package io.github.huherto.`aws-lambda-stream`.testsupport
 
 import com.amazonaws.services.lambda.runtime.ClientContext
 import com.amazonaws.services.lambda.runtime.CognitoIdentity

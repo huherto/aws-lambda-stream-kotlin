@@ -1,4 +1,4 @@
-package org.myorg.sut
+package io.github.huherto.`aws-lambda-stream`
 
 import aws.sdk.kotlin.runtime.auth.credentials.EnvironmentCredentialsProvider
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient

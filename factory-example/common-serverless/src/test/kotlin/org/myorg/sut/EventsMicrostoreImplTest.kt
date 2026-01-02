@@ -3,11 +3,14 @@ package org.myorg.sut
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.PutItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.PutItemResponse
+import io.github.huherto.`aws-lambda-stream`.EnvironmentConfig
+import io.github.huherto.`aws-lambda-stream`.EventsMicrostore
+import io.github.huherto.`aws-lambda-stream`.EventsMicrostoreImpl
+import io.github.huherto.`aws-lambda-stream`.UnitOfWork
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.runBlocking
-import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Assertions.*
 
 import java.time.Clock

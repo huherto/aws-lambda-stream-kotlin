@@ -3,8 +3,8 @@ package org.myorg.sut
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.params.ParameterizedTest
-import org.myorg.sut.testsupport.EventsMicrostoreFake
-import org.myorg.sut.testsupport.TestContext
+import io.github.huherto.`aws-lambda-stream`.testsupport.EventsMicrostoreFake
+import io.github.huherto.`aws-lambda-stream`.testsupport.TestContext
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets.UTF_8
 import java.time.Instant

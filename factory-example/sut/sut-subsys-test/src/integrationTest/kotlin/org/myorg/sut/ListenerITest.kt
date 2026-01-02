@@ -8,7 +8,7 @@ import aws.sdk.kotlin.services.lambda.model.FunctionCode
 import aws.smithy.kotlin.runtime.net.url.Url
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
-import org.myorg.sut.testsupport.KinesisHelper
+import io.github.huherto.`aws-lambda-stream`.testsupport.KinesisHelper
 import org.testcontainers.containers.localstack.LocalStackContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers

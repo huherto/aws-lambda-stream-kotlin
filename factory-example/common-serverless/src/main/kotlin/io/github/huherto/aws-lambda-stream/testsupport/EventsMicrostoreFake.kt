@@ -1,8 +1,8 @@
-package org.myorg.sut.testsupport
+package io.github.huherto.`aws-lambda-stream`.testsupport
 
-import org.myorg.sut.Event
-import org.myorg.sut.EventsMicrostore
-import org.myorg.sut.UnitOfWork
+import io.github.huherto.`aws-lambda-stream`.Event
+import io.github.huherto.`aws-lambda-stream`.EventsMicrostore
+import io.github.huherto.`aws-lambda-stream`.UnitOfWork
 import java.util.stream.Stream
 
 class EventsMicrostoreFake<E : Event> : EventsMicrostore<E> {
