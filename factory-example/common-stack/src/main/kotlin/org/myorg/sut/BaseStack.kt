@@ -18,16 +18,15 @@ enum class Stage(val id: String) {
     }
 }
 
-data class ServiceProps(val org : String, val subsys: String, val service: String, val stage: Stage, val region : String) {
-}
+data class ServiceProps(val org : String, val subsys: String, val service: String, val stage: Stage, val region : String)
 
 open class BaseStack(scope: Construct, val serviceProps: ServiceProps) :
     Stack(scope, "${serviceProps.service}-${serviceProps.stage}") {
 
-    public fun org() = serviceProps.org
-    public fun subsys() = serviceProps.subsys
-    public fun service() = serviceProps.service
-    public fun stage() = serviceProps.stage
-    public fun regionName() = serviceProps.region
+    fun org() = serviceProps.org
+    fun subsys() = serviceProps.subsys
+    fun service() = serviceProps.service
+    fun stage() = serviceProps.stage
+    fun regionName() = serviceProps.region
 
 }

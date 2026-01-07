@@ -25,7 +25,6 @@ dependencies {
     implementation(libs.aws.java.core)
     implementation(libs.aws.java.events)
     implementation(libs.aws.sdk.dynamodb)
-    // remove implementation(libs.aws.sdk.dynamodb.enhanced)
     implementation(libs.aws.sdk.lambda)
     implementation(libs.kotlin.stdlib)
     implementation(libs.kotlinx.serialization.json)
@@ -60,11 +59,14 @@ testing {
             dependencies {
                 implementation(libs.aws.sdk.kinesis)
                 implementation(libs.aws.sdk.lambda)
+                implementation(libs.aws.sdk.eventbridge)
                 implementation(libs.testcon.localstack)
                 implementation(libs.testcon.junit.jupiter)
+                implementation(libs.slf4j.simple)
                 implementation(platform(libs.aws.sdk.bom))
                 implementation(project(":factory-example:common-serverless"))
                 implementation(project())
+
             }
             targets {
                 all {
@@ -82,12 +84,5 @@ tasks.named("check") {
     dependsOn(testing.suites.named("integrationTest"))
 }
 
-tasks.register<Exec>("cdklocal_deploy_all") {
-    dependsOn(":factory-example:sut:sut-event-hub:stack:cdklocal_deploy")
-    dependsOn(":factory-example:sut:sut-control-service:stack:cdklocal_deploy")
-    commandLine("echo", "All stacks deployed")
-}
-
 tasks.named("integrationTest") {
-    dependsOn("cdklocal_deploy_all")
 }

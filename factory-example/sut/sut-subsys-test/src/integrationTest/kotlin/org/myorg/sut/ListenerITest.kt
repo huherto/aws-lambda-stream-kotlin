@@ -1,87 +1,60 @@
 package org.myorg.sut
 
 import aws.sdk.kotlin.runtime.auth.credentials.StaticCredentialsProvider
-import aws.sdk.kotlin.services.kinesis.model.PutRecordRequest
-import aws.sdk.kotlin.services.lambda.LambdaClient
-import aws.sdk.kotlin.services.lambda.model.CreateFunctionRequest
-import aws.sdk.kotlin.services.lambda.model.FunctionCode
+import aws.sdk.kotlin.services.eventbridge.EventBridgeClient
+import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequest
+import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequestEntry
 import aws.smithy.kotlin.runtime.net.url.Url
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
-import io.github.huherto.`aws-lambda-stream`.testsupport.KinesisHelper
-import org.testcontainers.containers.localstack.LocalStackContainer
-import org.testcontainers.junit.jupiter.Container
-import org.testcontainers.junit.jupiter.Testcontainers
-import org.testcontainers.utility.DockerImageName
-import java.io.File
-import java.net.URI
+
 
 
 // Components tested.
-//   - Connection from Kinesis Stream to Lambda Listener.
-//   - Listener being able to write to Dynamodb.
-//  Possibly also but not sure
-//    - Trigger lambda consuming from Dynamodb stream.
-//    - Trigger sending messages to EventBridge.
-@Testcontainers
+//   - Send event to event bridge. sut-event-hub-local-bus.
+//   - Event bridge will send event to kinesis stream. sut-event-hub-local-s1
+//   - sut-control-service-local-listener will read event from kinesis stream.
+//   - sut-control-service-local-listener will insert event in DynamoDB. sut-control-service-local-events
+//@Testcontainers
 class ListenerITest {
-    @Container
-    val localstack: LocalStackContainer = LocalStackContainer(DockerImageName.parse("localstack/localstack:stable"))
-        .withServices(LocalStackContainer.Service.KINESIS)
-        .withExposedPorts(4566)
 
     @Test
-    fun sendEvents(): Unit {
+    fun sendEvents() {
+//        val localstack: LocalStackContainer = LocalStackContainer(DockerImageName.parse("localstack/localstack:stable"))
+//            .withServices(LocalStackContainer.Service.KINESIS, LocalStackContainer.EnabledService.named("eventbridge"))
+//            .withExposedPorts(4566)
+
         runBlocking<Unit> {
-
-            val streamName = "my-kinesis-stream"
-            val kinesisClient = KinesisHelper.createKinesisClient(localstack)
-            val lambdaClient = createLambdaClient(localstack)
-            kinesisClient.use { kinesis ->
-                KinesisHelper.createKinesisStream(kinesis, streamName)
-                val payload = """{"event":"create","id":"abc123"}"""
-                val resp = kinesis.putRecord(
-                    PutRecordRequest {
-                        this.streamName = streamName
-                        this.partitionKey = "user-42"
-                        this.data = payload.encodeToByteArray()
-                    }
-                )
-
-                println("PutRecord shardId=${resp.shardId} sequenceNumber=${resp.sequenceNumber}")
+            val eventBridgeClient = createEventBridgeClient(Url.parse("http://localhost:4566"))
+            eventBridgeClient.use { eventBridgeClient ->
+                val res = eventBridgeClient.putEvents(PutEventsRequest{
+                    entries = listOf(
+                        PutEventsRequestEntry {
+                            eventBusName = "sut-event-hub-local-bus"
+                            detail = """{"event":"create","id":"abc123"}"""
+                            detailType = "my-event"
+                            source = "integration-test"
+                        }
+                    )
+                })
+                println("failedEntryCount=${res.failedEntryCount}")
+                for (entry in res.entries!!) {
+                    println("eventID=${entry.eventId}")
+                }
             }
         }
     }
 
-    public fun createLambdaClient(localstack : LocalStackContainer): LambdaClient {
-        val endpoint = localstack.getEndpoint().toString()
-        return LambdaClient {
-            this.region = localstack.region
-            this.endpointUrl = Url.parse(endpoint)
+    fun createEventBridgeClient(endpointUrl : Url): EventBridgeClient {
+
+        return EventBridgeClient {
+            this.region = "us-east-1"
+            this.endpointUrl = endpointUrl
             credentialsProvider =
                 StaticCredentialsProvider {
-                    this.accessKeyId = localstack.accessKey
-                    this.secretAccessKey = localstack.secretKey
+                    this.accessKeyId = "test"
+                    this.secretAccessKey = "test"
                 }
-
         }
     }
-
-    suspend fun createLambdaFunction(lambdaClient : LambdaClient): URI {
-        val functionName = "Listener"
-        val roleArn = "arn:aws:iam::000000000000:role/lambda-role" // LocalStack IAM is simple
-        val functionZip = File("./build/libs/serverless.jar")
-        val functionRequest = CreateFunctionRequest {
-            this.functionName = functionName
-            this.runtime = aws.sdk.kotlin.services.lambda.model.Runtime.Java21
-            this.role = roleArn
-            this.handler = "org.myorg.sut.Listener::handleRequest"
-            this.code = FunctionCode {
-                this.zipFile = functionZip.readBytes()
-            }
-        }
-        val resp = lambdaClient.createFunction(functionRequest)
-    }
-
-
 }

@@ -27,9 +27,4 @@ application {
     mainClass.set("org.myorg.sut.AppKt")
 }
 
-tasks.register<Exec>("cdklocal_deploy") {
-    //dependsOn(":factory-example:sut:sut-event-hub:serverless:shadowJar")
-    dependsOn("shadowJar")
-    commandLine("cdklocal", "deploy", "sut-control-service-local")
-}
 

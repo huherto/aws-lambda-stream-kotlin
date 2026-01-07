@@ -16,6 +16,7 @@ repositories {
 dependencies {
     implementation(libs.aws.cdk)
     testImplementation(kotlin("test"))
+    implementation("org.apache.logging.log4j:log4j-slf4j2-impl:2.25.3")
     implementation(project(":factory-example:common-stack"))
 }
 
@@ -26,10 +27,3 @@ tasks.test {
 application {
     mainClass.set("org.myorg.sut.AppKt")
 }
-
-tasks.register<Exec>("cdklocal_deploy") {
-    //dependsOn(":factory-example:sut:sut-event-hub:serverless:shadowJar")
-    dependsOn("shadowJar")
-    commandLine("cdklocal", "deploy", "sut-event-hub-local")
-}
-

@@ -10,7 +10,7 @@ import kotlinx.serialization.modules.subclass
 
 
 @Serializable
-class TrackedUnitEvent() : Event {
+open class TrackedUnitEvent() : Event {
 
     override var id: String? = null
     override var type: String? = null
@@ -37,14 +37,72 @@ class TrackedUnitEvent() : Event {
     }
 }
 
+@Serializable
+class ShipmentCreatedEvent : TrackedUnitEvent() {
+    init { type = "SHIPMENT_CREATED" }
+}
+
+@Serializable
+class ShipmentPickedUpEvent(var carrierName: String? = null) : TrackedUnitEvent() {
+    init { type = "SHIPMENT_PICKED_UP" }
+}
+
+@Serializable
+class ShipmentInTransitEvent : TrackedUnitEvent() {
+    init { type = "SHIPMENT_IN_TRANSIT" }
+}
+
+@Serializable
+class ArrivalAtHubEvent(var hubId: String? = null) : TrackedUnitEvent() {
+    init { type = "ARRIVAL_AT_HUB" }
+}
+
+@Serializable
+class DepartureFromHubEvent(var nextDestination: String? = null) : TrackedUnitEvent() {
+    init { type = "DEPARTURE_FROM_HUB" }
+}
+
+@Serializable
+class CustomsClearedEvent(var countryCode: String? = null) : TrackedUnitEvent() {
+    init { type = "CUSTOMS_CLEARED" }
+}
+
+@Serializable
+class OutForDeliveryEvent(var estimatedArrival: String? = null) : TrackedUnitEvent() {
+    init { type = "OUT_FOR_DELIVERY" }
+}
+
+@Serializable
+class DeliveryAttemptedEvent(var reason: String? = null) : TrackedUnitEvent() {
+    init { type = "DELIVERY_ATTEMPTED" }
+}
+
+@Serializable
+class ShipmentDeliveredEvent(var signedBy: String? = null) : TrackedUnitEvent() {
+    init { type = "SHIPMENT_DELIVERED" }
+}
+
+@Serializable
+class ShipmentExceptionEvent(var exceptionType: String? = null, var description: String? = null) : TrackedUnitEvent() {
+    init { type = "SHIPMENT_EXCEPTION" }
+}
+
 val sutJson: Json = Json {
     ignoreUnknownKeys = true
     prettyPrint = true
-    classDiscriminator = "mtype" // ensure your payload uses this key OR adjust to what your JSON contains
     serializersModule = SerializersModule {
         polymorphic(Event::class) {
             subclass(TrackedUnitEvent::class)
+            subclass(ShipmentCreatedEvent::class)
+            subclass(ShipmentPickedUpEvent::class)
+            subclass(ShipmentInTransitEvent::class)
+            subclass(ArrivalAtHubEvent::class)
+            subclass(DepartureFromHubEvent::class)
+            subclass(CustomsClearedEvent::class)
+            subclass(OutForDeliveryEvent::class)
+            subclass(DeliveryAttemptedEvent::class)
+            subclass(ShipmentDeliveredEvent::class)
+            subclass(ShipmentExceptionEvent::class)
         }
     }
 }
-

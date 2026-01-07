@@ -3,12 +3,12 @@ package org.myorg.sut
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
-import io.github.huherto.`aws-lambda-stream`.EnvironmentConfig
-import io.github.huherto.`aws-lambda-stream`.EventsMicrostore
-import io.github.huherto.`aws-lambda-stream`.EventsMicrostoreImpl
-import io.github.huherto.`aws-lambda-stream`.KinesisAdapter
-import io.github.huherto.`aws-lambda-stream`.UnitOfWork
-import io.github.huherto.`aws-lambda-stream`.getDynamoDbClient
+import io.github.huherto.`aws-lambda-stream`.*
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import org.slf4j.MarkerFactory
+import software.amazon.lambda.powertools.logging.PowertoolsLogging
+import software.amazon.lambda.powertools.logging.argument.StructuredArguments.entry
 import java.nio.ByteBuffer
 import java.time.Clock
 import java.util.stream.Stream
@@ -47,11 +47,22 @@ class Listener(
     constructor() : this(getEventMicroStore(), getKinesisAdapter())
 
     override fun handleRequest(kinesisEvent: KinesisEvent, context: Context): Void? {
-        val stream: Stream<UOW> = kinesisAdapter.fromKinesis(kinesisEvent)
+        val logger: Logger = LoggerFactory.getLogger(Listener::class.java)!!
 
-        eventsMicrostore.save(stream, EventsMicrostore.SaveOptions(90))
+        return PowertoolsLogging.withLogging(context, {
 
-        // When not using reportBatchItemFailures, return null to acknowledge the entire batch.
-        return null
+            try {
+                logger.info("Handling request: {}", entry("kinesisEvent", kinesisEvent))
+                val stream: Stream<UOW> = kinesisAdapter.fromKinesis(kinesisEvent)
+
+                eventsMicrostore.save(stream, EventsMicrostore.SaveOptions(90))
+
+            } catch (e: Throwable) {
+                logger.error(MarkerFactory.getMarker("FATAL"), "Exception in lambda handler", e)
+            }
+
+            // When not using reportBatchItemFailures, return null to acknowledge the entire batch.
+            null
+        })
     }
 }

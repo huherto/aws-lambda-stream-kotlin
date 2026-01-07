@@ -28,6 +28,8 @@ dependencies {
     implementation(libs.aws.sdk.lambda)
     implementation(libs.kotlin.stdlib)
     implementation(libs.kotlinx.serialization.json)
+    implementation("com.google.code.gson:gson:2.13.2")
+    implementation("software.amazon.lambda:powertools-logging-log4j:2.9.0")
 
     // Use LambdaLogger and avoid Log4j which is bigger.
     // implementation("org.apache.logging.log4j:log4j-to-slf4j:2.8.2")

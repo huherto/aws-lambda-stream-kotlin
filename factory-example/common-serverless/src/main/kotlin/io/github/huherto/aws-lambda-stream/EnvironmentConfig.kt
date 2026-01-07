@@ -7,7 +7,7 @@ class EnvironmentConfig {
         if (tableName == null || tableName.isEmpty()) {
             tableName = System.getenv("ENTITY_TABLE_NAME")
         }
-        return tableName;
+        return tableName
     }
 
     fun awsRegion() : String {
