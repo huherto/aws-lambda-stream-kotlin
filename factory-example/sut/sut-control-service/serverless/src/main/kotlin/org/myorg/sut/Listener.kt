@@ -9,7 +9,6 @@ import org.slf4j.LoggerFactory
 import org.slf4j.MarkerFactory
 import java.nio.ByteBuffer
 import java.time.Clock
-import java.util.stream.Stream
 
 typealias UOW = UnitOfWork<TrackedUnitEvent>
 
@@ -25,7 +24,6 @@ class Listener(
 ) : RequestHandler<KinesisEvent, Void?> {
 
     // AWS Lambda requires a no-arg constructor
-    constructor() : this(null, null)
 
     private val eventsMicrostore: EventsMicrostore<TrackedUnitEvent> by lazy {
         initialStore ?: run {
