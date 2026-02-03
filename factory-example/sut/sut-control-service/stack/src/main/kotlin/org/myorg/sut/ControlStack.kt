@@ -76,7 +76,7 @@ class ControlStack(scope: Construct, serviceProps: ServiceProps) : BaseStack(sco
         val streamName = "${subsys()}-event-hub-${stage()}-s1"
         val accountId = Aws.ACCOUNT_ID
         val regionName = Aws.REGION
-        val streamArn = "arn:aws:kinesis:${regionName}:${accountId}:stream/${streamName}";
+        val streamArn = "arn:aws:kinesis:${regionName}:${accountId}:stream/${streamName}"
         val stream1 = Stream.fromStreamArn(this, "Stream1", streamArn)
 
         listener.addEventSource(

@@ -68,6 +68,6 @@ class Listener : RequestHandler<KinesisEvent, Void?>
             Clock.systemDefaultZone(),
             EnvironmentConfig()
         )
-        return  eventsMicrostore!!;
+        return  eventsMicrostore!!
     }
 }
