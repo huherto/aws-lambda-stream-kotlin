@@ -50,3 +50,6 @@ cdk.out
 
 # other CDK files
 cdk.context.json
+
+# docker
+volume/

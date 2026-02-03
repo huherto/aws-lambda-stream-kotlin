@@ -7,27 +7,11 @@ import io.github.huherto.`aws-lambda-stream`.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.MarkerFactory
-import software.amazon.lambda.powertools.logging.PowertoolsLogging
-import software.amazon.lambda.powertools.logging.argument.StructuredArguments.entry
 import java.nio.ByteBuffer
 import java.time.Clock
 import java.util.stream.Stream
 
 typealias UOW = UnitOfWork<TrackedUnitEvent>
-
-fun getEventMicroStore(): EventsMicrostore<TrackedUnitEvent> {
-    val client = getDynamoDbClient()
-        ?: throw IllegalStateException(
-            "DynamoDB client is not configured. " +
-                "Ensure environment/region/endpoint is set, or inject a fake EventsMicrostore in tests."
-        )
-
-    return EventsMicrostoreImpl(
-        client,
-        Clock.systemDefaultZone(),
-        EnvironmentConfig()
-    )
-}
 
 class MyKinesisAdapter : KinesisAdapter<TrackedUnitEvent>() {
     override fun decodePayload(payload: ByteBuffer?): TrackedUnitEvent {
@@ -35,34 +19,55 @@ class MyKinesisAdapter : KinesisAdapter<TrackedUnitEvent>() {
     }
 }
 
-fun getKinesisAdapter(): KinesisAdapter<TrackedUnitEvent> {
-    return MyKinesisAdapter()
-}
-
-class Listener(
-    val eventsMicrostore: EventsMicrostore<TrackedUnitEvent>,
-    val kinesisAdapter: KinesisAdapter<TrackedUnitEvent>
-) : RequestHandler<KinesisEvent, Void?>
+class Listener : RequestHandler<KinesisEvent, Void?>
 {
-    constructor() : this(getEventMicroStore(), getKinesisAdapter())
+    private var eventsMicrostore: EventsMicrostore<TrackedUnitEvent>? = null
+    private var kinesisAdapter: KinesisAdapter<TrackedUnitEvent>? = null
+
+    constructor(eventsMicrostore: EventsMicrostore<TrackedUnitEvent>, kinesisAdapter: KinesisAdapter<TrackedUnitEvent>) {
+        this.eventsMicrostore = eventsMicrostore
+        this.kinesisAdapter = kinesisAdapter
+    }
 
     override fun handleRequest(kinesisEvent: KinesisEvent, context: Context): Void? {
         val logger: Logger = LoggerFactory.getLogger(Listener::class.java)!!
+        try {
+            logger.info("Handling request: {}",  kinesisEvent)
+            val stream: Stream<UOW> = getKinesisAdapter().fromKinesis(kinesisEvent)
 
-        return PowertoolsLogging.withLogging(context, {
+            getEventMicroStore().save(stream, EventsMicrostore.SaveOptions(90))
 
-            try {
-                logger.info("Handling request: {}", entry("kinesisEvent", kinesisEvent))
-                val stream: Stream<UOW> = kinesisAdapter.fromKinesis(kinesisEvent)
+        } catch (e: Throwable) {
+            logger.error(MarkerFactory.getMarker("FATAL"), "Exception in lambda handler", e)
+        }
 
-                eventsMicrostore.save(stream, EventsMicrostore.SaveOptions(90))
+        // When not using reportBatchItemFailures, return null to acknowledge the entire batch.
+        return null
+    }
 
-            } catch (e: Throwable) {
-                logger.error(MarkerFactory.getMarker("FATAL"), "Exception in lambda handler", e)
-            }
+    fun getKinesisAdapter(): KinesisAdapter<TrackedUnitEvent> {
+        println("Getting Kinesis adapter")
+        return MyKinesisAdapter()
+    }
 
-            // When not using reportBatchItemFailures, return null to acknowledge the entire batch.
-            null
-        })
+    fun getEventMicroStore(): EventsMicrostore<TrackedUnitEvent> {
+        if (eventsMicrostore != null) {
+            return eventsMicrostore!!
+        }
+
+        println("Getting DynamoDB client")
+        val client = getDynamoDbClient()
+        ?: throw IllegalStateException(
+            "DynamoDB client is not configured. " +
+                "Ensure environment/region/endpoint is set, or inject a fake EventsMicrostore in tests."
+        )
+
+        println("Using DynamoDB client: $client")
+        eventsMicrostore = EventsMicrostoreImpl(
+            client,
+            Clock.systemDefaultZone(),
+            EnvironmentConfig()
+        )
+        return  eventsMicrostore!!;
     }
 }

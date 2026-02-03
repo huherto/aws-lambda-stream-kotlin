@@ -28,6 +28,7 @@ dependencies {
     implementation(libs.aws.sdk.lambda)
     implementation(libs.kotlin.stdlib)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.lambda.json.logger)
 
     // Use LambdaLogger and avoid Log4j which is bigger.
     // implementation("org.apache.logging.log4j:log4j-to-slf4j:2.8.2")

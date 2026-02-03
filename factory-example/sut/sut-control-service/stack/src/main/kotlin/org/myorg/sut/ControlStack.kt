@@ -68,9 +68,7 @@ class ControlStack(scope: Construct, serviceProps: ServiceProps) : BaseStack(sco
             .memorySize(1024)
             .runtime(Runtime.JAVA_21)
             .environment(mapOf(
-                "POWERTOOLS_LOG_LEVEL" to "DEBUG",
-                "POWERTOOLS_SERVICE_NAME" to "sut-control-service",
-                "JAVA_TOOL_OPTIONS" to "-Dlog4j2.debug=true"))
+                "JAVA_TOOL_OPTIONS" to "-Dslf4j.provider=io.github.vitalijr2.aws.lambda.slf4j.AWSLambdaServiceProvider"))
             .build()
 
 
