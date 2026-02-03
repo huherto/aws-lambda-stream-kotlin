@@ -19,55 +19,48 @@ class MyKinesisAdapter : KinesisAdapter<TrackedUnitEvent>() {
     }
 }
 
-class Listener : RequestHandler<KinesisEvent, Void?>
-{
-    private var eventsMicrostore: EventsMicrostore<TrackedUnitEvent>? = null
-    private var kinesisAdapter: KinesisAdapter<TrackedUnitEvent>? = null
+class Listener(
+    private val initialStore: EventsMicrostore<TrackedUnitEvent>? = null,
+    private val initialAdapter: KinesisAdapter<TrackedUnitEvent>? = null
+) : RequestHandler<KinesisEvent, Void?> {
 
-    constructor(eventsMicrostore: EventsMicrostore<TrackedUnitEvent>, kinesisAdapter: KinesisAdapter<TrackedUnitEvent>) {
-        this.eventsMicrostore = eventsMicrostore
-        this.kinesisAdapter = kinesisAdapter
+    // AWS Lambda requires a no-arg constructor
+    constructor() : this(null, null)
+
+    private val eventsMicrostore: EventsMicrostore<TrackedUnitEvent> by lazy {
+        initialStore ?: run {
+            println("Getting DynamoDB client")
+            val client = getDynamoDbClient()
+                ?: throw IllegalStateException("DynamoDB client is not configured.")
+
+            println("Using DynamoDB client: $client")
+            EventsMicrostoreImpl(
+                client,
+                Clock.systemDefaultZone(),
+                EnvironmentConfig()
+            )
+        }
+    }
+
+    private val kinesisAdapter: KinesisAdapter<TrackedUnitEvent> by lazy {
+        initialAdapter ?: run {
+            println("Getting Kinesis adapter")
+            MyKinesisAdapter()
+        }
     }
 
     override fun handleRequest(kinesisEvent: KinesisEvent, context: Context): Void? {
         val logger: Logger = LoggerFactory.getLogger(Listener::class.java)!!
         try {
-            logger.info("Handling request: {}",  kinesisEvent)
-            val stream: Stream<UOW> = getKinesisAdapter().fromKinesis(kinesisEvent)
+            logger.info("Handling request: {}", kinesisEvent)
 
-            getEventMicroStore().save(stream, EventsMicrostore.SaveOptions(90))
+            // properties are now non-nullable and initialized on first access
+            val stream = kinesisAdapter.fromKinesis(kinesisEvent)
+            eventsMicrostore.save(stream, EventsMicrostore.SaveOptions(90))
 
         } catch (e: Throwable) {
             logger.error(MarkerFactory.getMarker("FATAL"), "Exception in lambda handler", e)
         }
-
-        // When not using reportBatchItemFailures, return null to acknowledge the entire batch.
         return null
-    }
-
-    fun getKinesisAdapter(): KinesisAdapter<TrackedUnitEvent> {
-        println("Getting Kinesis adapter")
-        return MyKinesisAdapter()
-    }
-
-    fun getEventMicroStore(): EventsMicrostore<TrackedUnitEvent> {
-        if (eventsMicrostore != null) {
-            return eventsMicrostore!!
-        }
-
-        println("Getting DynamoDB client")
-        val client = getDynamoDbClient()
-        ?: throw IllegalStateException(
-            "DynamoDB client is not configured. " +
-                "Ensure environment/region/endpoint is set, or inject a fake EventsMicrostore in tests."
-        )
-
-        println("Using DynamoDB client: $client")
-        eventsMicrostore = EventsMicrostoreImpl(
-            client,
-            Clock.systemDefaultZone(),
-            EnvironmentConfig()
-        )
-        return  eventsMicrostore!!
     }
 }
