@@ -21,7 +21,6 @@ sealed class TrackedUnitEvent() : Event {
     }
 
     override var id: String? = null
-    //override var type: String? = null
     override var timestamp: Long? = null
     override var partitionKey: String? = null
     override var tags: Map<String, String>? = HashMap<String, String>()

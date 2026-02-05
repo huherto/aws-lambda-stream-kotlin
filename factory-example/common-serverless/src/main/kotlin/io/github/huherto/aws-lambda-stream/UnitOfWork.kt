@@ -19,6 +19,7 @@ class UnitOfWork<E : Event > {
     var record: KinesisEvent.KinesisEventRecord? = null
     var event : E? = null
     var key : String? = null
+
     var sequenceNumber : String? = null
     var shardId : String? = null
     var timestamp : String? = null

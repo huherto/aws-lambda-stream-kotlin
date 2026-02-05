@@ -2,7 +2,6 @@ package io.github.huherto.`aws-lambda-stream`
 
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
 import java.nio.ByteBuffer
-import java.nio.charset.StandardCharsets
 import java.util.stream.Stream
 
 abstract class KinesisAdapter<E : Event> {
