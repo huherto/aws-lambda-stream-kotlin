@@ -23,15 +23,15 @@ class Listener(
     private val initialAdapter: KinesisAdapter<TrackedUnitEvent>? = null
 ) : RequestHandler<KinesisEvent, Void?> {
 
-    // AWS Lambda requires a no-arg constructor
+    private val logger: Logger = LoggerFactory.getLogger(Listener::class.java)!!
 
     private val eventsMicrostore: EventsMicrostore<TrackedUnitEvent> by lazy {
         initialStore ?: run {
-            println("Getting DynamoDB client")
+            logger.info("Getting DynamoDB client")
             val client = getDynamoDbClient()
                 ?: throw IllegalStateException("DynamoDB client is not configured.")
 
-            println("Using DynamoDB client: $client")
+            logger.info("Using DynamoDB client: $client")
             EventsMicrostoreImpl(
                 client,
                 Clock.systemDefaultZone(),
@@ -42,17 +42,16 @@ class Listener(
 
     private val kinesisAdapter: KinesisAdapter<TrackedUnitEvent> by lazy {
         initialAdapter ?: run {
-            println("Getting Kinesis adapter")
+            logger.info("Getting Kinesis adapter")
             MyKinesisAdapter()
         }
     }
 
     override fun handleRequest(kinesisEvent: KinesisEvent, context: Context): Void? {
-        val logger: Logger = LoggerFactory.getLogger(Listener::class.java)!!
+
         try {
             logger.info("Handling request: {}", kinesisEvent)
 
-            // properties are now non-nullable and initialized on first access
             val stream = kinesisAdapter.fromKinesis(kinesisEvent)
             eventsMicrostore.save(stream, EventsMicrostore.SaveOptions(90))
 

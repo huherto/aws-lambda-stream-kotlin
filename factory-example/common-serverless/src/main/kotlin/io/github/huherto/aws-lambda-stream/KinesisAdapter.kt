@@ -26,11 +26,6 @@ abstract class KinesisAdapter<E : Event> {
         }
     }
 
-     fun utf8Decode(bb : ByteBuffer?) : String {
-         if (bb == null) return ""
-        return StandardCharsets.UTF_8.decode(bb).toString()
-    }
-
     abstract fun decodePayload(payload : ByteBuffer?) : E
 
 }

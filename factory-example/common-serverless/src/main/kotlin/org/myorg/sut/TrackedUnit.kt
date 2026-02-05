@@ -22,6 +22,6 @@ class TrackedUnit {
     class PackageDimensions(val length : Double, val width : Double, val height : Double){}
 
     override fun toString() : String {
-        return Json.encodeToString(this)
+        return Json.Default.encodeToString(this)
     }
 }

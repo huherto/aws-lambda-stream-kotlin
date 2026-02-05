@@ -4,7 +4,7 @@ import com.amazonaws.services.lambda.runtime.events.KinesisEvent
 
 interface Event {
     var id: String?
-    var type: String?
+    //var type: String?
     var timestamp: Long?
     var partitionKey: String?
     var tags: Map<String, String>?

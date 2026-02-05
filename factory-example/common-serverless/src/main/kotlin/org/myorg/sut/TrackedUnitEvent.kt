@@ -2,18 +2,26 @@ package org.myorg.sut
 
 import io.github.huherto.`aws-lambda-stream`.Event
 import kotlinx.serialization.Contextual
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
-
+import java.nio.ByteBuffer
+import java.nio.charset.StandardCharsets
 
 @Serializable
-open class TrackedUnitEvent() : Event {
+sealed class TrackedUnitEvent() : Event {
+
+    companion object {
+        fun fromString(s: String): TrackedUnitEvent {
+            return jsonDecode(s)
+        }
+    }
 
     override var id: String? = null
-    override var type: String? = null
+    //override var type: String? = null
     override var timestamp: Long? = null
     override var partitionKey: String? = null
     override var tags: Map<String, String>? = HashMap<String, String>()
@@ -26,7 +34,7 @@ open class TrackedUnitEvent() : Event {
     override var eem: Any? = null
 
     override fun encoded(): String {
-        return sutJson.encodeToString(this)
+        return jsonEncode(this)
     }
 
     var location : String? = null
@@ -37,62 +45,81 @@ open class TrackedUnitEvent() : Event {
     }
 }
 
-@Serializable
+fun jsonEncode(event : TrackedUnitEvent) : String {
+    return sutJson.encodeToString(TrackedUnitEvent.serializer(), event)
+}
+
+fun jsonDecode(s: String): TrackedUnitEvent {
+    return sutJson.decodeFromString(TrackedUnitEvent.serializer(), s)
+}
+
+// Not sure if we need this
+fun utf8Encode(s : String) : String {
+    return StandardCharsets.UTF_8.encode(s).toString()
+}
+
+// .. or this.
+fun utf8Decode(bb : ByteBuffer?) : String {
+    if (bb == null) return ""
+    return StandardCharsets.UTF_8.decode(bb).toString()
+}
+
+@Serializable()
+@SerialName("SHIPMENT_CREATED")
 class ShipmentCreatedEvent : TrackedUnitEvent() {
-    init { type = "SHIPMENT_CREATED" }
 }
 
 @Serializable
+@SerialName("SHIPMENT_PICKED_UP")
 class ShipmentPickedUpEvent(var carrierName: String? = null) : TrackedUnitEvent() {
-    init { type = "SHIPMENT_PICKED_UP" }
 }
 
 @Serializable
+@SerialName("SHIPMENT_IN_TRANSIT")
 class ShipmentInTransitEvent : TrackedUnitEvent() {
-    init { type = "SHIPMENT_IN_TRANSIT" }
 }
 
 @Serializable
+@SerialName("ARRIVAL_AT_HUB")
 class ArrivalAtHubEvent(var hubId: String? = null) : TrackedUnitEvent() {
-    init { type = "ARRIVAL_AT_HUB" }
 }
 
 @Serializable
+@SerialName("DEPARTURE_FROM_HUB")
 class DepartureFromHubEvent(var nextDestination: String? = null) : TrackedUnitEvent() {
-    init { type = "DEPARTURE_FROM_HUB" }
 }
 
 @Serializable
+@SerialName("CUSTOMS_CLEARED")
 class CustomsClearedEvent(var countryCode: String? = null) : TrackedUnitEvent() {
-    init { type = "CUSTOMS_CLEARED" }
 }
 
 @Serializable
+@SerialName("OUT_FOR_DELIVERY")
 class OutForDeliveryEvent(var estimatedArrival: String? = null) : TrackedUnitEvent() {
-    init { type = "OUT_FOR_DELIVERY" }
 }
 
 @Serializable
+@SerialName("DELIVERY_ATTEMPTED")
 class DeliveryAttemptedEvent(var reason: String? = null) : TrackedUnitEvent() {
-    init { type = "DELIVERY_ATTEMPTED" }
 }
 
 @Serializable
+@SerialName("SHIPMENT_DELIVERED")
 class ShipmentDeliveredEvent(var signedBy: String? = null) : TrackedUnitEvent() {
-    init { type = "SHIPMENT_DELIVERED" }
 }
 
 @Serializable
+@SerialName("SHIPMENT_EXCEPTION")
 class ShipmentExceptionEvent(var exceptionType: String? = null, var description: String? = null) : TrackedUnitEvent() {
-    init { type = "SHIPMENT_EXCEPTION" }
 }
 
 val sutJson: Json = Json {
     ignoreUnknownKeys = true
     prettyPrint = true
+    isLenient = true
     serializersModule = SerializersModule {
-        polymorphic(Event::class) {
-            subclass(TrackedUnitEvent::class)
+        polymorphic(TrackedUnitEvent::class) {
             subclass(ShipmentCreatedEvent::class)
             subclass(ShipmentPickedUpEvent::class)
             subclass(ShipmentInTransitEvent::class)

@@ -68,7 +68,9 @@ class ControlStack(scope: Construct, serviceProps: ServiceProps) : BaseStack(sco
             .memorySize(1024)
             .runtime(Runtime.JAVA_21)
             .environment(mapOf(
-                "JAVA_TOOL_OPTIONS" to "-Dslf4j.provider=io.github.vitalijr2.aws.lambda.slf4j.AWSLambdaServiceProvider"))
+                "JAVA_TOOL_OPTIONS" to "-Dslf4j.provider=io.github.vitalijr2.aws.lambda.slf4j.AWSLambdaServiceProvider",
+                "ENTITY_TABLE_NAME" to tableName
+            ))
             .build()
 
 
