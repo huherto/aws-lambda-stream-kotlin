@@ -13,4 +13,8 @@ class EnvironmentConfig {
     fun awsRegion() : String {
         return System.getenv("AWS_REGION")
     }
+
+    fun endPointUrl() : String? {
+        return System.getenv("AWS_ENDPOINT_URL")
+    }
 }

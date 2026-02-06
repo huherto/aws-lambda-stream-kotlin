@@ -1,13 +1,21 @@
 package io.github.huherto.`aws-lambda-stream`
 
-import aws.sdk.kotlin.runtime.auth.credentials.EnvironmentCredentialsProvider
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
+import aws.sdk.kotlin.runtime.auth.credentials.EnvironmentCredentialsProvider
+import aws.smithy.kotlin.runtime.net.url.Url
 
-fun getDynamoDbClient(): DynamoDbClient? {
+fun getDynamoDbClient(envConfig : EnvironmentConfig): DynamoDbClient {
+    val endpoint = envConfig.endPointUrl()
+    val region = envConfig.awsRegion()
 
-    val dynamoDbClient = DynamoDbClient{
-        credentialsProvider = EnvironmentCredentialsProvider()
-        region = System.getenv("AWS_REGION")
+    return DynamoDbClient {
+        // Explicitly set the region
+        this.region = region
+        this.credentialsProvider = EnvironmentCredentialsProvider()
+        
+        // If an endpoint URL is provided (like http://localhost:4566), use it
+        if (!endpoint.isNullOrEmpty()) {
+            this.endpointUrl = Url.parse(endpoint)
+        }
     }
-    return dynamoDbClient
 }

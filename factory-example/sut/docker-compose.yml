@@ -11,6 +11,9 @@ services:
       - DEBUG=${DEBUG:-0}
       # - LAMBDA_JAVA_OPTS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
       # - LAMBDA_DOCKER_FLAGS=-p 127.0.0.1:5005:5005 -e DEBUG=1
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_REGION=us-east-1
 
     volumes:
       - "${LOCALSTACK_VOLUME_DIR:-./volume}:/var/lib/localstack"

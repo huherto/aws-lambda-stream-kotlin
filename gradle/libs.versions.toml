@@ -19,6 +19,7 @@ aws-sdk-kinesis = { module = "aws.sdk.kotlin:kinesis" }
 aws-sdk-lambda = { module = "aws.sdk.kotlin:lambda" }
 
 kotlin-stdlib = { module="org.jetbrains.kotlin:kotlin-stdlib", version.ref="kotlinVersion" }
+kotlin-logging = { module="io.github.microutils:kotlin-logging", version="3.0.5"}
 kotlinx-serialization-json = { module="org.jetbrains.kotlinx:kotlinx-serialization-json", version="1.9.0" }
 lambda-json-logger = { module = "io.github.vitalijr2.aws-lambda:aws-lambda-slf4j-json-logger", version="1.1.4"}
 mockk = { module="io.mockk:mockk", version="1.14.6" }

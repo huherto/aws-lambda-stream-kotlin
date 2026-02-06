@@ -25,17 +25,19 @@ class Listener(
 
     private val logger: Logger = LoggerFactory.getLogger(Listener::class.java)!!
 
+    private val envConfig = EnvironmentConfig()
+
     private val eventsMicrostore: EventsMicrostore<TrackedUnitEvent> by lazy {
         initialStore ?: run {
             logger.info("Getting DynamoDB client")
-            val client = getDynamoDbClient()
+            val client = getDynamoDbClient(envConfig)
                 ?: throw IllegalStateException("DynamoDB client is not configured.")
 
             logger.info("Using DynamoDB client: $client")
             EventsMicrostoreImpl(
                 client,
                 Clock.systemDefaultZone(),
-                EnvironmentConfig()
+                envConfig
             )
         }
     }

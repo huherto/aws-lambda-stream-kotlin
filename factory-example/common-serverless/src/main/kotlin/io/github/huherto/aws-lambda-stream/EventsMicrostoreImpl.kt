@@ -1,15 +1,12 @@
 package io.github.huherto.`aws-lambda-stream`
 
-//import software.amazon.awssdk.services.dynamodb.DynamoDbClient
-//import software.amazon.awssdk.services.dynamodb.model.AttributeValue.fromN
-//import software.amazon.awssdk.services.dynamodb.model.AttributeValue.fromS
-//import software.amazon.awssdk.services.dynamodb.model.PutItemRequest
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue.S
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue.N
 import aws.sdk.kotlin.services.dynamodb.model.PutItemRequest
 import kotlinx.coroutines.runBlocking
+import mu.KotlinLogging
 import java.time.Clock
 import java.util.stream.Stream
 
@@ -20,6 +17,8 @@ class EventsMicrostoreImpl<E : Event> : EventsMicrostore<E> {
         this.clock = clock
         this.envConfig = envConfig
     }
+
+    private val logger = KotlinLogging.logger {  }
 
     private var dynamoDbClient : DynamoDbClient
 

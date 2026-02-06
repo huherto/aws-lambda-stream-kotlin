@@ -69,7 +69,7 @@ class ControlStack(scope: Construct, serviceProps: ServiceProps) : BaseStack(sco
             .runtime(Runtime.JAVA_21)
             .environment(mapOf(
                 "JAVA_TOOL_OPTIONS" to "-Dslf4j.provider=io.github.vitalijr2.aws.lambda.slf4j.AWSLambdaServiceProvider",
-                "ENTITY_TABLE_NAME" to tableName
+                "ENTITY_TABLE_NAME" to tableName,
             ))
             .build()
 

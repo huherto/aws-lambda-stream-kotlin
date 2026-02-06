@@ -28,9 +28,7 @@ dependencies {
     implementation(libs.kotlin.stdlib)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.testcon.localstack)
-
-    // Use LambdaLogger and avoid Log4j which is bigger.
-    // implementation("org.apache.logging.log4j:log4j-to-slf4j:2.8.2")
+    implementation(libs.kotlin.logging)
 
     testImplementation(kotlin("test"))
     testImplementation(libs.aws.lambda.java.tests)
