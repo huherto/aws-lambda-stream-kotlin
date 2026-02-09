@@ -53,3 +53,6 @@ cdk.context.json
 
 # docker
 volume/
+.volume/
+
+.awslocal_logs/

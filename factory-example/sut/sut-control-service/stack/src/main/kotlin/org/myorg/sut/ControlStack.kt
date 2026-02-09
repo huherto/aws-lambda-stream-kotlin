@@ -3,16 +3,13 @@ package org.myorg.sut
 import software.amazon.awscdk.Aws
 import software.amazon.awscdk.Duration
 import software.amazon.awscdk.RemovalPolicy
-import software.amazon.awscdk.services.dynamodb.Attribute
-import software.amazon.awscdk.services.dynamodb.AttributeType
-import software.amazon.awscdk.services.dynamodb.StreamViewType
-import software.amazon.awscdk.services.dynamodb.Table
+import software.amazon.awscdk.services.dynamodb.*
 import software.amazon.awscdk.services.kinesis.Stream
 import software.amazon.awscdk.services.lambda.Code
 import software.amazon.awscdk.services.lambda.Function
+import software.amazon.awscdk.services.lambda.Runtime
 import software.amazon.awscdk.services.lambda.StartingPosition
 import software.amazon.awscdk.services.lambda.eventsources.DynamoEventSource
-import software.amazon.awscdk.services.lambda.Runtime
 import software.amazon.awscdk.services.lambda.eventsources.KinesisEventSource
 import software.constructs.Construct
 
@@ -20,11 +17,13 @@ class ControlStack(scope: Construct, serviceProps: ServiceProps) : BaseStack(sco
 
     val tableName = "${service()}-${stage()}-events"
     val trigger = newTriggerLambda()
-    val dynamoDb = newDynamoDbTable()
+    val eventsTable = newDynamoDbTable()
     val listener = newListenerLambda()
 
     init {
-        addDynamoDBStreamToLambda(trigger, dynamoDb)
+        addDynamoDBStreamToLambda(trigger, eventsTable)
+        addGSI(eventsTable)
+        // addReplicas(eventsTable)
         addKinesisEventSourceToListener(listener)
     }
 
@@ -41,15 +40,27 @@ class ControlStack(scope: Construct, serviceProps: ServiceProps) : BaseStack(sco
             .runtime(Runtime.JAVA_21)
             .build()
 
-    private fun newDynamoDbTable(): Table = Table.Builder
-        .create(this, tableName)
+    private fun newDynamoDbTable() : TableV2 = TableV2.Builder.create(this, "EventsTable")
         .tableName(tableName)
-        .partitionKey(deviceIdKey())
-        .removalPolicy(RemovalPolicy.DESTROY)
-        .stream(StreamViewType.NEW_IMAGE)
+        .partitionKey(
+            Attribute.builder()
+                .name("pk")
+                .type(AttributeType.STRING)
+                .build()
+        )
+        .sortKey(
+            Attribute.builder()
+                .name("sk")
+                .type(AttributeType.STRING)
+                .build()
+        )
+        .billing(Billing.onDemand())
+        .removalPolicy(RemovalPolicy.RETAIN)
+        .timeToLiveAttribute("ttl")
+        .dynamoStream(StreamViewType.NEW_AND_OLD_IMAGES)
         .build()
 
-    private fun addDynamoDBStreamToLambda(function: Function, table: Table) {
+    private fun addDynamoDBStreamToLambda(function: Function, table: TableV2) {
         function.addEventSource(
             DynamoEventSource.Builder.create(table)
                 .startingPosition(StartingPosition.TRIM_HORIZON)
@@ -57,6 +68,28 @@ class ControlStack(scope: Construct, serviceProps: ServiceProps) : BaseStack(sco
                 .bisectBatchOnError(true)
                 .build()
         )
+    }
+
+    private fun addGSI(eventsTable: TableV2) {
+        eventsTable.addGlobalSecondaryIndex(GlobalSecondaryIndexPropsV2.builder()
+            .indexName("gsi1")
+            .partitionKey(Attribute.builder()
+                .name("discriminator")
+                .type(AttributeType.STRING)
+                .build())
+            .sortKey(Attribute.builder()
+                .name("pk")
+                .type(AttributeType.STRING)
+                .build())
+            .projectionType(ProjectionType.ALL)
+            .build());
+    }
+
+    private fun addReplicas(eventsTable: TableV2) {
+        eventsTable.addReplica(
+            ReplicaTableProps.builder()
+                .region("us-east-1")
+                .build())
     }
 
     private fun newListenerLambda(): Function =
