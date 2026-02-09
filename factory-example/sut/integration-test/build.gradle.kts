@@ -30,9 +30,6 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.lambda.json.logger)
 
-    // Use LambdaLogger and avoid Log4j which is bigger.
-    // implementation("org.apache.logging.log4j:log4j-to-slf4j:2.8.2")
-
     testImplementation(kotlin("test"))
     testImplementation(libs.aws.lambda.java.tests)
     testImplementation(libs.mockk)
@@ -61,6 +58,7 @@ testing {
                 implementation(libs.aws.sdk.kinesis)
                 implementation(libs.aws.sdk.lambda)
                 implementation(libs.aws.sdk.eventbridge)
+                implementation(libs.aws.sdk.dynamodb)
                 implementation(libs.testcon.localstack)
                 implementation(libs.testcon.junit.jupiter)
                 implementation(libs.slf4j.simple)
