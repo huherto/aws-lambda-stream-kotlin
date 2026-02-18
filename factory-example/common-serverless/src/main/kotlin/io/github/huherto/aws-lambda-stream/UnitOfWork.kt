@@ -16,7 +16,7 @@ interface Event {
 }
 
 class UnitOfWork<E : Event > {
-    var record: KinesisEvent.KinesisEventRecord? = null
+    var record: Any? = null
     var event : E? = null
     var key : String? = null
 

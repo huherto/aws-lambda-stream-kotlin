@@ -5,10 +5,9 @@ import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue.S
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue.N
 import aws.sdk.kotlin.services.dynamodb.model.PutItemRequest
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.flow.Flow
 import mu.KotlinLogging
 import java.time.Clock
-import java.util.stream.Stream
 
 class EventsMicrostoreImpl<E : Event> : EventsMicrostore<E> {
 
@@ -34,17 +33,17 @@ class EventsMicrostoreImpl<E : Event> : EventsMicrostore<E> {
         return clock.instant().toEpochMilli() / 1000L
     }
 
-    override fun save(stream: Stream<UnitOfWork<E>>, options: EventsMicrostore.SaveOptions) {
+    override suspend fun save(flow: Flow<UnitOfWork<E>>, options: EventsMicrostore.SaveOptions) {
 
         // Should be able to send in batches.
-        stream.forEach { uow -> save(uow, options) }
+        flow.collect { uow -> save(uow, options) }
     }
 
     fun nullableS(s: String?) : AttributeValue {
         return s?.let { S(it) } ?: AttributeValue.Null(true)
     }
 
-    fun save(uow: UnitOfWork<E>, ops: EventsMicrostore.SaveOptions) {
+    suspend fun save(uow: UnitOfWork<E>, ops: EventsMicrostore.SaveOptions) {
 
         if (uow.event == null) {
             return
@@ -75,12 +74,7 @@ class EventsMicrostoreImpl<E : Event> : EventsMicrostore<E> {
             item = itemValues
         }
 
-        // This is here just to be able to call a suspend function.
-        // Possibly all should be thought out to be used as co-routines,
-        // but I am still learning how to do that.
-        runBlocking {
-            dynamoDbClient.putItem(request)
-        }
+        dynamoDbClient.putItem(request)
 
     }
 

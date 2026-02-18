@@ -2,36 +2,26 @@ package org.myorg.sut
 
 import io.github.huherto.`aws-lambda-stream`.Event
 import kotlinx.serialization.Contextual
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
+import kotlinx.serialization.modules.subclass
 
 @Serializable
 class MyThing {
     var id: String? = null
 }
 
-val myJson: Json = Json {
-    ignoreUnknownKeys = true
-    prettyPrint = true
-    classDiscriminator = "mtype" // ensure your payload uses this key OR adjust to what your JSON contains
-    serializersModule = SerializersModule {
-        polymorphic(Event::class) {
-        }
-    }
-    fun decoded(s: String): MyEvent {
-        return myJson.decodeFromString<MyEvent>(s)
-    }
-}
-
 @Serializable
-class MyEvent : Event {
+sealed class MyEvent() : Event {
+
     override var id: String? = null
-    override var type: String? = null
-    override var timestamp: Long? = 0
+    override var timestamp: Long? = null
     override var partitionKey: String? = null
-    override var tags: Map<String, String>? = null
+    override var tags: Map<String, String>? = HashMap<String, String>()
+
     var entity: MyThing? = null
 
     @Contextual
@@ -40,8 +30,32 @@ class MyEvent : Event {
     override var eem: Any? = null
 
     override fun encoded(): String {
-        return myJson.encodeToString(this)
+        return jsonEncode(this)
     }
+}
 
+fun jsonEncode(event : MyEvent) : String {
+    return sutJson.encodeToString(MyEvent.serializer(), event)
+}
 
+@Serializable
+@SerialName("MY_EVENT_A")
+class MyEventA(var foo: String? = null, var bar: String? = null) : MyEvent() {
+}
+
+@Serializable
+@SerialName("MY_EVENT_B")
+class MyEventB(var foo: String? = null, var bar: String? = null) : MyEvent() {
+}
+
+val sutJson: Json = Json {
+    ignoreUnknownKeys = true
+    prettyPrint = true
+    isLenient = true
+    serializersModule = SerializersModule {
+        polymorphic(MyEvent::class) {
+            subclass(MyEventA::class)
+            subclass(MyEventB::class)
+        }
+    }
 }

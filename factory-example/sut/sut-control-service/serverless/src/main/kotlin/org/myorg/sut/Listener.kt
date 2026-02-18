@@ -1,14 +1,23 @@
 package org.myorg.sut
 
+import aws.smithy.kotlin.runtime.util.type
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
 import io.github.huherto.`aws-lambda-stream`.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.fold
+import kotlinx.coroutines.flow.reduce
+import kotlinx.coroutines.runBlocking
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.MarkerFactory
 import java.nio.ByteBuffer
 import java.time.Clock
+import kotlin.reflect.KClass
 
 typealias UOW = UnitOfWork<TrackedUnitEvent>
 
@@ -31,8 +40,6 @@ class Listener(
         initialStore ?: run {
             logger.info("Getting DynamoDB client")
             val client = getDynamoDbClient(envConfig)
-                ?: throw IllegalStateException("DynamoDB client is not configured.")
-
             logger.info("Using DynamoDB client: $client")
             EventsMicrostoreImpl(
                 client,
@@ -49,17 +56,16 @@ class Listener(
         }
     }
 
-    override fun handleRequest(kinesisEvent: KinesisEvent, context: Context): Void? {
+    override fun handleRequest(kinesisEvent: KinesisEvent, context: Context): Void? = runBlocking{
 
         try {
             logger.info("Handling request: {}", kinesisEvent)
-
-            val stream = kinesisAdapter.fromKinesis(kinesisEvent)
-            eventsMicrostore.save(stream, EventsMicrostore.SaveOptions(90))
-
+            val flow = kinesisAdapter.fromKinesis(kinesisEvent)
+                .filterEventTypes(ShipmentCreatedEvent::class, ShipmentPickedUpEvent::class)
+            eventsMicrostore.save(flow, EventsMicrostore.SaveOptions(90))
         } catch (e: Throwable) {
             logger.error(MarkerFactory.getMarker("FATAL"), "Exception in lambda handler", e)
         }
-        return null
+        null
     }
 }

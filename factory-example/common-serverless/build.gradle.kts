@@ -1,6 +1,7 @@
 @file:Suppress("UnstableApiUsage")
 
 import org.gradle.kotlin.dsl.invoke
+import org.gradle.api.tasks.testing.Test
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
@@ -33,7 +34,8 @@ dependencies {
     testImplementation(kotlin("test"))
     testImplementation(libs.aws.lambda.java.tests)
     testImplementation(libs.mockk)
-    testImplementation("org.slf4j:slf4j-simple:1.7.36")
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.slf4j.simple)
 }
 
 tasks.shadowJar {
@@ -52,4 +54,8 @@ testing {
             useJUnitJupiter()
         }
     }
+}
+
+tasks.withType<Test> {
+    jvmArgs("-XX:+EnableDynamicAgentLoading")
 }
