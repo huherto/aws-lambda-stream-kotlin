@@ -1,7 +1,5 @@
 package io.github.huherto.`aws-lambda-stream`
 
-import com.amazonaws.services.lambda.runtime.events.KinesisEvent
-
 interface Event {
     var id: String?
     //var type: String?

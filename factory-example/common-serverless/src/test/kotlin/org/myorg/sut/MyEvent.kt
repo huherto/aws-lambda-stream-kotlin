@@ -48,6 +48,11 @@ class MyEventA(var foo: String? = null, var bar: String? = null) : MyEvent() {
 class MyEventB(var foo: String? = null, var bar: String? = null) : MyEvent() {
 }
 
+@Serializable
+@SerialName("MY_EVENT_C")
+class MyEventC(var foo: String? = null, var bar: String? = null) : MyEvent() {
+}
+
 val sutJson: Json = Json {
     ignoreUnknownKeys = true
     prettyPrint = true
@@ -56,6 +61,7 @@ val sutJson: Json = Json {
         polymorphic(MyEvent::class) {
             subclass(MyEventA::class)
             subclass(MyEventB::class)
+            subclass(MyEventC::class)
         }
     }
 }

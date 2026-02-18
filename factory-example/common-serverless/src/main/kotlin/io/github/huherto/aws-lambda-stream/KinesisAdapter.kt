@@ -5,7 +5,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.map
 import java.nio.ByteBuffer
-import java.util.stream.Stream
 
 abstract class KinesisAdapter<E : Event> {
 
