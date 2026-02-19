@@ -2,7 +2,7 @@ package io.github.huherto.`aws-lambda-stream`
 
 interface Event {
     var id: String?
-    //var type: String?
+    var type: String
     var timestamp: Long?
     var partitionKey: String?
     var tags: Map<String, String>?

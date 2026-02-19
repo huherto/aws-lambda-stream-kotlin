@@ -15,48 +15,42 @@ class MyThing {
 }
 
 @Serializable
-sealed class MyEvent() : Event {
-
+sealed class MyEvent(override var type: String) : Event {
     override var id: String? = null
     override var timestamp: Long? = null
     override var partitionKey: String? = null
-    override var tags: Map<String, String>? = HashMap<String, String>()
+    override var tags: Map<String, String>? = mutableMapOf()
 
     var entity: MyThing? = null
 
     @Contextual
     override var raw: Any? = null
+
     @Contextual
     override var eem: Any? = null
 
     override fun encoded(): String {
-        return jsonEncode(this)
+        return sutJson.encodeToString(MyEvent.serializer(), this)
     }
-}
-
-fun jsonEncode(event : MyEvent) : String {
-    return sutJson.encodeToString(MyEvent.serializer(), event)
 }
 
 @Serializable
 @SerialName("MY_EVENT_A")
-class MyEventA(var foo: String? = null, var bar: String? = null) : MyEvent() {
-}
+data class MyEventA(var foo: String? = null, var bar: String? = null) : MyEvent("MY_EVENT_A")
 
 @Serializable
 @SerialName("MY_EVENT_B")
-class MyEventB(var foo: String? = null, var bar: String? = null) : MyEvent() {
-}
+data class MyEventB(var foo: String? = null, var bar: String? = null) : MyEvent("MY_EVENT_B")
 
 @Serializable
 @SerialName("MY_EVENT_C")
-class MyEventC(var foo: String? = null, var bar: String? = null) : MyEvent() {
-}
+data class MyEventC(var foo: String? = null, var bar: String? = null) : MyEvent("MY_EVENT_C")
 
 val sutJson: Json = Json {
     ignoreUnknownKeys = true
     prettyPrint = true
     isLenient = true
+    classDiscriminator = "type"
     serializersModule = SerializersModule {
         polymorphic(MyEvent::class) {
             subclass(MyEventA::class)

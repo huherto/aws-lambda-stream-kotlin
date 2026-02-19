@@ -12,7 +12,7 @@ import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 
 @Serializable
-sealed class TrackedUnitEvent() : Event {
+sealed class TrackedUnitEvent(override var type: String) : Event {
 
     companion object {
         fun fromString(s: String): TrackedUnitEvent {
@@ -65,52 +65,52 @@ fun utf8Decode(bb : ByteBuffer?) : String {
 
 @Serializable()
 @SerialName("SHIPMENT_CREATED")
-class ShipmentCreatedEvent : TrackedUnitEvent() {
+class ShipmentCreatedEvent : TrackedUnitEvent("SHIPMENT_CREATED") {
 }
 
 @Serializable
 @SerialName("SHIPMENT_PICKED_UP")
-class ShipmentPickedUpEvent(var carrierName: String? = null) : TrackedUnitEvent() {
+class ShipmentPickedUpEvent(var carrierName: String? = null) : TrackedUnitEvent("SHIPMENT_PICKED_UP") {
 }
 
 @Serializable
 @SerialName("SHIPMENT_IN_TRANSIT")
-class ShipmentInTransitEvent : TrackedUnitEvent() {
+class ShipmentInTransitEvent : TrackedUnitEvent("SHIPMENT_IN_TRANSIT") {
 }
 
 @Serializable
 @SerialName("ARRIVAL_AT_HUB")
-class ArrivalAtHubEvent(var hubId: String? = null) : TrackedUnitEvent() {
+class ArrivalAtHubEvent(var hubId: String? = null) : TrackedUnitEvent("ARRIVAL_AT_HUB") {
 }
 
 @Serializable
 @SerialName("DEPARTURE_FROM_HUB")
-class DepartureFromHubEvent(var nextDestination: String? = null) : TrackedUnitEvent() {
+class DepartureFromHubEvent(var nextDestination: String? = null) : TrackedUnitEvent("DEPARTURE_FROM_HUB") {
 }
 
 @Serializable
 @SerialName("CUSTOMS_CLEARED")
-class CustomsClearedEvent(var countryCode: String? = null) : TrackedUnitEvent() {
+class CustomsClearedEvent(var countryCode: String? = null) : TrackedUnitEvent("DEPARTURE_FROM_HUB") {
 }
 
 @Serializable
 @SerialName("OUT_FOR_DELIVERY")
-class OutForDeliveryEvent(var estimatedArrival: String? = null) : TrackedUnitEvent() {
+class OutForDeliveryEvent(var estimatedArrival: String? = null) : TrackedUnitEvent("DEPARTURE_FROM_HUB") {
 }
 
 @Serializable
 @SerialName("DELIVERY_ATTEMPTED")
-class DeliveryAttemptedEvent(var reason: String? = null) : TrackedUnitEvent() {
+class DeliveryAttemptedEvent(var reason: String? = null) : TrackedUnitEvent("DELIVERY_ATTEMPTED") {
 }
 
 @Serializable
 @SerialName("SHIPMENT_DELIVERED")
-class ShipmentDeliveredEvent(var signedBy: String? = null) : TrackedUnitEvent() {
+class ShipmentDeliveredEvent(var signedBy: String? = null) : TrackedUnitEvent("SHIPMENT_DELIVERED") {
 }
 
 @Serializable
 @SerialName("SHIPMENT_EXCEPTION")
-class ShipmentExceptionEvent(var exceptionType: String? = null, var description: String? = null) : TrackedUnitEvent() {
+class ShipmentExceptionEvent(var exceptionType: String? = null, var description: String? = null) : TrackedUnitEvent("SHIPMENT_EXCEPTION") {
 }
 
 val sutJson: Json = Json {
