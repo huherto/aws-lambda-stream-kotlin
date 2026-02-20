@@ -17,4 +17,8 @@ class EnvironmentConfig {
     fun endPointUrl() : String? {
         return System.getenv("AWS_ENDPOINT_URL")
     }
+
+    fun awsLambdaFunctionName(): String? {
+        return System.getenv("AWS_LAMBDA_FUNCTION_NAME")
+    }
 }
