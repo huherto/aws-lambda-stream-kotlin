@@ -9,17 +9,17 @@ import java.util.stream.Stream
 
 class EventsMicrostoreFake<E : Event> : EventsMicrostore<E> {
 
-    private val events: MutableMap< String, UnitOfWork<E> > = mutableMapOf()
+    private val events: MutableMap< String, UnitOfWork > = mutableMapOf()
 
     fun reset() {
         events.clear()
     }
 
     // What should we return here ?
-    fun getEvents(): Map< String, UnitOfWork<E> > = events.toMap()
+    fun getEvents(): Map< String, UnitOfWork > = events.toMap()
 
     override suspend fun save(
-        flow: Flow<UnitOfWork<E>>,
+        flow: Flow<UnitOfWork>,
         options: EventsMicrostore.SaveOptions
     ) {
         flow.collect { it ->

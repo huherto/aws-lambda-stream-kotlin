@@ -4,6 +4,7 @@ import io.github.huherto.`aws-lambda-stream`.Event
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
@@ -15,7 +16,7 @@ class MyThing {
 }
 
 @Serializable
-sealed class MyEvent(override var type: String) : Event {
+sealed class MyEvent(@Transient override var type: String = "") : Event {
     override var id: String? = null
     override var timestamp: Long? = null
     override var partitionKey: String? = null

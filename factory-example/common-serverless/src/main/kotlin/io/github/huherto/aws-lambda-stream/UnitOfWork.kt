@@ -15,9 +15,9 @@ interface Event {
 
 }
 
-class UnitOfWork<E : Event > {
+class UnitOfWork{
     var record: Any? = null
-    var event : E? = null
+    var event : Event? = null
     var key : String? = null
 
     var sequenceNumber : String? = null
@@ -26,7 +26,7 @@ class UnitOfWork<E : Event > {
 }
 
 class FailureException(
-    val uom: UnitOfWork<*>, 
+    val uom: UnitOfWork,
     cause: Throwable?
 ) : RuntimeException( cause)
 

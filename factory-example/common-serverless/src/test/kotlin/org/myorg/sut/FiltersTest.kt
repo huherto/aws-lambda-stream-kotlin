@@ -22,12 +22,11 @@ class FiltersTest {
         var foundMyEventB = false
         var foundMyEventC = false
 
-        flow {
-            emit(UnitOfWork<MyEvent>().apply { event = myEventA })
-            emit(UnitOfWork<MyEvent>().apply { event = myEventB })
-            emit(UnitOfWork<MyEvent>().apply { event = myEventC })
-        }
-            .filterEventTypes(MyEventA::class, MyEventB::class)
+        flow{
+            emit(UnitOfWork().apply { event = myEventA })
+            emit(UnitOfWork().apply { event = myEventB })
+            emit(UnitOfWork().apply { event = myEventC })
+        }.filterEventTypes(MyEventA::class, MyEventB::class)
             .onEach {
                 when (it.event) {
                     is MyEventA -> foundMyEventA = true

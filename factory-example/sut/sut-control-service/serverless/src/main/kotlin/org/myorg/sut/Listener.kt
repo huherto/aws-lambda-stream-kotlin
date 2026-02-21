@@ -17,9 +17,6 @@ import org.slf4j.LoggerFactory
 import org.slf4j.MarkerFactory
 import java.nio.ByteBuffer
 import java.time.Clock
-import kotlin.reflect.KClass
-
-typealias UOW = UnitOfWork<TrackedUnitEvent>
 
 class MyKinesisAdapter : KinesisAdapter<TrackedUnitEvent>() {
     override fun decodePayload(payload: ByteBuffer?): TrackedUnitEvent {

@@ -4,15 +4,13 @@ import io.github.huherto.`aws-lambda-stream`.Event
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.modules.SerializersModule
-import kotlinx.serialization.modules.polymorphic
-import kotlinx.serialization.modules.subclass
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 
 @Serializable
-sealed class TrackedUnitEvent(override var type: String) : Event {
+sealed class TrackedUnitEvent(@Transient override var type: String = "") : Event {
 
     companion object {
         fun fromString(s: String): TrackedUnitEvent {
@@ -90,12 +88,12 @@ class DepartureFromHubEvent(var nextDestination: String? = null) : TrackedUnitEv
 
 @Serializable
 @SerialName("CUSTOMS_CLEARED")
-class CustomsClearedEvent(var countryCode: String? = null) : TrackedUnitEvent("DEPARTURE_FROM_HUB") {
+class CustomsClearedEvent(var countryCode: String? = null) : TrackedUnitEvent("CUSTOMS_CLEARED") {
 }
 
 @Serializable
 @SerialName("OUT_FOR_DELIVERY")
-class OutForDeliveryEvent(var estimatedArrival: String? = null) : TrackedUnitEvent("DEPARTURE_FROM_HUB") {
+class OutForDeliveryEvent(var estimatedArrival: String? = null) : TrackedUnitEvent("OUT_FOR_DELIVERY") {
 }
 
 @Serializable
@@ -117,18 +115,4 @@ val sutJson: Json = Json {
     ignoreUnknownKeys = true
     prettyPrint = true
     isLenient = true
-    serializersModule = SerializersModule {
-        polymorphic(TrackedUnitEvent::class) {
-            subclass(ShipmentCreatedEvent::class)
-            subclass(ShipmentPickedUpEvent::class)
-            subclass(ShipmentInTransitEvent::class)
-            subclass(ArrivalAtHubEvent::class)
-            subclass(DepartureFromHubEvent::class)
-            subclass(CustomsClearedEvent::class)
-            subclass(OutForDeliveryEvent::class)
-            subclass(DeliveryAttemptedEvent::class)
-            subclass(ShipmentDeliveredEvent::class)
-            subclass(ShipmentExceptionEvent::class)
-        }
-    }
 }

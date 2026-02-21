@@ -33,7 +33,7 @@ class EventsMicrostoreImpl<E : Event> : EventsMicrostore<E> {
         return clock.instant().toEpochMilli() / 1000L
     }
 
-    override suspend fun save(flow: Flow<UnitOfWork<E>>, options: EventsMicrostore.SaveOptions) {
+    override suspend fun save(flow: Flow<UnitOfWork>, options: EventsMicrostore.SaveOptions) {
 
         // Should be able to send in batches.
         flow.collect { uow -> save(uow, options) }
@@ -43,7 +43,7 @@ class EventsMicrostoreImpl<E : Event> : EventsMicrostore<E> {
         return s?.let { S(it) } ?: AttributeValue.Null(true)
     }
 
-    suspend fun save(uow: UnitOfWork<E>, ops: EventsMicrostore.SaveOptions) {
+    suspend fun save(uow: UnitOfWork, ops: EventsMicrostore.SaveOptions) {
 
         if (uow.event == null) {
             return
@@ -52,7 +52,7 @@ class EventsMicrostoreImpl<E : Event> : EventsMicrostore<E> {
         val now = nowInSecs()
         val ttl = now + daysInSecs(90)
         val expire = now + daysInSecs(ops.expireDays)
-        val event : E? = uow.event
+        val event : Event? = uow.event
         val encodedEvent = event?.encoded()
         val timeStamp = event?.timestamp
         val awsRegion = envConfig.awsRegion()

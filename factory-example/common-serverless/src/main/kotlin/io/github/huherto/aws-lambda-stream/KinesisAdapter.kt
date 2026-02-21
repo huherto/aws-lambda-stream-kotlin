@@ -8,10 +8,10 @@ import java.nio.ByteBuffer
 
 abstract class KinesisAdapter<E : Event> {
 
-    fun  fromKinesis(kinesisEvent: KinesisEvent): Flow<UnitOfWork<E>> {
+    fun  fromKinesis(kinesisEvent: KinesisEvent): Flow<UnitOfWork> {
         return kinesisEvent.records.asFlow()
             .map{ record ->
-                UnitOfWork<E>().apply {
+                UnitOfWork().apply {
                     this.record = record
                 }
             }.map { uow ->
