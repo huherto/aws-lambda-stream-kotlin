@@ -4,8 +4,6 @@ import io.github.huherto.`aws-lambda-stream`.Event
 import io.github.huherto.`aws-lambda-stream`.EventsMicrostore
 import io.github.huherto.`aws-lambda-stream`.UnitOfWork
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.onEach
-import java.util.stream.Stream
 
 class EventsMicrostoreFake<E : Event> : EventsMicrostore<E> {
 
