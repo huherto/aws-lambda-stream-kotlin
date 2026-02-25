@@ -23,9 +23,9 @@ class FiltersTest {
         var foundMyEventC = false
 
         flow{
-            emit(UnitOfWork().apply { event = myEventA })
-            emit(UnitOfWork().apply { event = myEventB })
-            emit(UnitOfWork().apply { event = myEventC })
+            emit(UnitOfWork(event = myEventA ))
+            emit(UnitOfWork(event = myEventB ))
+            emit(UnitOfWork(event = myEventC ))
         }.filterEventTypes(MyEventA::class, MyEventB::class)
             .onEach {
                 when (it.event) {

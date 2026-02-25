@@ -11,9 +11,9 @@ abstract class KinesisAdapter {
     fun  fromKinesis(kinesisEvent: KinesisEvent): Flow<UnitOfWork> {
         return kinesisEvent.records.asFlow()
             .map{ record ->
-                UnitOfWork().apply {
-                    this.record = record
-                }
+                UnitOfWork().copy(
+                    record = record,
+                )
             }.map { uow ->
                 val record = uow.record as KinesisEvent.KinesisEventRecord
                 val payload = record.kinesis?.data
@@ -22,8 +22,7 @@ abstract class KinesisAdapter {
                 if (event.id == null) {
                     event.id = (record.eventID)
                 }
-                uow.event = event
-                uow
+                uow.copy( event = event)
             }.map { uow ->
                 // TODO: call claim_check processing
                 uow

@@ -42,7 +42,7 @@ class EventsMicrostoreImplTest {
         // When
         // Fix: Use flowOf to ensure the UnitOfWork is actually emitted to the flow
         val flow = flowOf(
-            UnitOfWork().apply {
+            UnitOfWork().copy(
                 event = MyEventA().apply {
                     id = "my-event-id-001"
                     timestamp = Instant.parse("2022-01-01T00:00:00.000Z").toEpochMilli() / 1000
@@ -50,7 +50,7 @@ class EventsMicrostoreImplTest {
                         id = "my-thing-id-01"
                     }
                 }
-            }
+            )
         )
 
         microstore.save(flow, EventsMicrostore.SaveOptions(expireDays = 90))

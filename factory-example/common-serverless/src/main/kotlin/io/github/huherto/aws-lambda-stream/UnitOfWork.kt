@@ -15,15 +15,14 @@ interface Event {
 
 }
 
-class UnitOfWork{
-    var record: Any? = null
-    var event : Event? = null
-    var key : String? = null
-
-    var sequenceNumber : String? = null
-    var shardId : String? = null
-    var timestamp : String? = null
-}
+data class UnitOfWork(
+    val record: Any? = null,
+    val event: Event? = null,
+    val key: String? = null,
+    val sequenceNumber: String? = null,
+    val shardId: String? = null,
+    val timestamp: String? = null
+)
 
 class FailureException(
     val uom: UnitOfWork,

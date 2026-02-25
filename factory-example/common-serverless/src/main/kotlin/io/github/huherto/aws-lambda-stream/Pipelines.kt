@@ -3,12 +3,30 @@ package io.github.huherto.`aws-lambda-stream`
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
+import mu.KotlinLogging
 import kotlin.reflect.KClass
 
-class Pipelines {
+abstract class Pipeline {
+
+    protected val logger = KotlinLogging.logger {  }
+
+    fun printStartPipeline(uom: UnitOfWork) {
+        logger.debug { "start type: ${uom.event?.type}, eid: ${uom.event?.id}" }
+    }
+
+    fun printEndPipeline(uom: UnitOfWork) {
+        val redacted = trimAndRedacted(uom)
+        logger.debug { "end type: ${uom.event?.type}, eid: ${uom.event?.id}, uow: $redacted" }
+    }
+
+    fun trimAndRedacted(uom: UnitOfWork) {
+        uom
+    }
+
 }
 
-class CollectPipeline(var eventsMicrostore: EventsMicrostore) {
+class CollectPipeline(var eventsMicrostore: EventsMicrostore) : Pipeline() {
 
     private var onContentType: (UnitOfWork) -> Boolean = { true }
 
@@ -23,6 +41,7 @@ class CollectPipeline(var eventsMicrostore: EventsMicrostore) {
         val flow = fromFlow
             .filter { uom -> uom.event != null }
             .filterEventTypes(*onEventClass.toTypedArray())
+            .onEach {  printStartPipeline(it) }
             .filter {
                 faulty(it) {
                     onContentType(it)
@@ -30,14 +49,15 @@ class CollectPipeline(var eventsMicrostore: EventsMicrostore) {
             }
             .map {
                 faulty(it) {
-                    // TODO: Should use it.copy(). uom should be an immutable class.
-                    it.key = correlationKey(it)
-                    it
+                    it.copy(key = correlationKey(it))
                 }
             }
+            .onEach {  printEndPipeline(it) }
 
         eventsMicrostore.save(flow, EventsMicrostore.SaveOptions(90))
     }
 
 }
+
+
 
