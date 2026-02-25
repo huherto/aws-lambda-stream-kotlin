@@ -5,7 +5,7 @@ import io.github.huherto.`aws-lambda-stream`.EventsMicrostore
 import io.github.huherto.`aws-lambda-stream`.UnitOfWork
 import kotlinx.coroutines.flow.Flow
 
-class EventsMicrostoreFake<E : Event> : EventsMicrostore<E> {
+class EventsMicrostoreFake : EventsMicrostore {
 
     private val events: MutableMap< String, UnitOfWork > = mutableMapOf()
 

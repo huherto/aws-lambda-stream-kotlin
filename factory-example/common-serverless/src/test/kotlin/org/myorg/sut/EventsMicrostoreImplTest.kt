@@ -30,7 +30,7 @@ class EventsMicrostoreImplTest {
         val ddbClient = mockk<DynamoDbClient>()
         val clock = mockk<Clock>()
         val envConfig = mockk<EnvironmentConfig>()
-        val microstore = EventsMicrostoreImpl<MyEvent>(ddbClient, clock, envConfig)
+        val microstore = EventsMicrostoreImpl(ddbClient, clock, envConfig)
         val putRequestSlot = slot<PutItemRequest>()
 
         // Given

@@ -15,7 +15,7 @@ typealias TestEvent = com.amazonaws.services.lambda.runtime.tests.annotations.Ev
 
 class ListenerTest {
 
-    private var eventsMicrostore = EventsMicrostoreFake<TrackedUnitEvent>()
+    private var eventsMicrostore = EventsMicrostoreFake()
 
     private var kinesisAdapter = MyKinesisAdapter()
 
@@ -75,22 +75,20 @@ class ListenerTest {
         )
     }
 
-    val ship1Event1 = TrackedUnitEvent().apply {
+    val ship1Event1 = ShipmentCreatedEvent().apply {
         id = "SHIP-001-2025"
         entity = shipment1
         timestamp = Instant.now().toEpochMilli() / 1000
         location = "Springfield, IL"
-        type = "SHIPMENT_CREATED"
         result = "SUCCESS"
 
     }
 
-    val ship1Event2 = TrackedUnitEvent().apply {
+    val ship1Event2 = ShipmentDeliveredEvent().apply {
         id = "SHIP-002-2025"
         entity = shipment1
         timestamp = Instant.now().toEpochMilli() / 1000
         location = "Chicago, IL"
-        type = "SHIPMENT_RECEIVED_AT_WAREHOUSE"
         result = "SUCCESS"
     }
 
