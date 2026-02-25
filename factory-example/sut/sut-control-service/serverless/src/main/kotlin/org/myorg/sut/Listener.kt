@@ -9,37 +9,32 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.MarkerFactory
 import java.nio.ByteBuffer
-import java.time.Clock
 
-class MyKinesisAdapter : KinesisAdapter<TrackedUnitEvent>() {
+class MyKinesisAdapter : KinesisAdapter() {
     override fun decodePayload(payload: ByteBuffer?): TrackedUnitEvent {
         return sutJson.decodeFromString<TrackedUnitEvent>(utf8Decode(payload))
     }
 }
 
 class Listener(
-    private val initialStore: EventsMicrostore<TrackedUnitEvent>? = null,
-    private val initialAdapter: KinesisAdapter<TrackedUnitEvent>? = null
+    private val initialStore: EventsMicrostore? = null,
+    private val initialAdapter: KinesisAdapter? = null
 ) : RequestHandler<KinesisEvent, Void?> {
 
     private val logger: Logger = LoggerFactory.getLogger(Listener::class.java)!!
 
     private val envConfig = EnvironmentConfig()
 
-    private val eventsMicrostore: EventsMicrostore<TrackedUnitEvent> by lazy {
+    private val eventsMicrostore: EventsMicrostore by lazy {
         initialStore ?: run {
             logger.info("Getting DynamoDB client")
             val client = getDynamoDbClient(envConfig)
             logger.info("Using DynamoDB client: $client")
-            EventsMicrostoreImpl(
-                client,
-                Clock.systemDefaultZone(),
-                envConfig
-            )
+            EventsMicrostoreImpl(client)
         }
     }
 
-    private val kinesisAdapter: KinesisAdapter<TrackedUnitEvent> by lazy {
+    private val kinesisAdapter: KinesisAdapter by lazy {
         initialAdapter ?: run {
             logger.info("Getting Kinesis adapter")
             MyKinesisAdapter()
@@ -50,9 +45,10 @@ class Listener(
 
         try {
             logger.info("Handling request: {}", kinesisEvent)
-            val flow = kinesisAdapter.fromKinesis(kinesisEvent)
-                .filterEventTypes(ShipmentCreatedEvent::class, ShipmentPickedUpEvent::class)
-            eventsMicrostore.save(flow, EventsMicrostore.SaveOptions(90))
+
+            CollectPipeline(eventsMicrostore)
+                .collect(kinesisAdapter.fromKinesis(kinesisEvent))
+
         } catch (e: Throwable) {
             logger.error(MarkerFactory.getMarker("FATAL"), "Exception in lambda handler", e)
         }

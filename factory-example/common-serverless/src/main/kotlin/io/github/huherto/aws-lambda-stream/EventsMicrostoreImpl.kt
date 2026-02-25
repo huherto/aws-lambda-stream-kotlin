@@ -9,9 +9,9 @@ import kotlinx.coroutines.flow.Flow
 import mu.KotlinLogging
 import java.time.Clock
 
-class EventsMicrostoreImpl<E : Event> : EventsMicrostore<E> {
+class EventsMicrostoreImpl : EventsMicrostore {
 
-    constructor(dynamoDbClient : DynamoDbClient, clock : Clock, envConfig : EnvironmentConfig) : super() {
+    constructor(dynamoDbClient : DynamoDbClient, clock : Clock = Clock.systemDefaultZone(), envConfig : EnvironmentConfig = EnvironmentConfig()) : super() {
         this.dynamoDbClient = dynamoDbClient
         this.clock = clock
         this.envConfig = envConfig

@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.map
 import java.nio.ByteBuffer
 
-abstract class KinesisAdapter<E : Event> {
+abstract class KinesisAdapter {
 
     fun  fromKinesis(kinesisEvent: KinesisEvent): Flow<UnitOfWork> {
         return kinesisEvent.records.asFlow()
@@ -18,7 +18,7 @@ abstract class KinesisAdapter<E : Event> {
                 val record = uow.record as KinesisEvent.KinesisEventRecord
                 val payload = record.kinesis?.data
 
-                val event: E = decodePayload(payload)
+                val event: Event = decodePayload(payload)
                 if (event.id == null) {
                     event.id = (record.eventID)
                 }
@@ -30,6 +30,6 @@ abstract class KinesisAdapter<E : Event> {
             }
     }
 
-    abstract fun decodePayload(payload : ByteBuffer?) : E
+    abstract fun decodePayload(payload : ByteBuffer?) : Event
 
 }

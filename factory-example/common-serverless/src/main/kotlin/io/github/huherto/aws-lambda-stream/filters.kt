@@ -39,7 +39,6 @@ fun Flow<UnitOfWork>.catchFailures(): Flow<UnitOfWork> = catch { exception ->
             )
             failureException = exception
         }
-        //emit(UnitOfWork().apply { event = failureEvent as E})
     }
     else {
         // Not sure what to do here.

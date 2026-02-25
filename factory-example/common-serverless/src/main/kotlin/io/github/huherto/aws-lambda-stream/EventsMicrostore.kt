@@ -2,7 +2,7 @@ package io.github.huherto.`aws-lambda-stream`
 
 import kotlinx.coroutines.flow.Flow
 
-interface EventsMicrostore<E : Event > {
+interface EventsMicrostore {
 
     class SaveOptions(val expireDays: Int = 90) {}
 
