@@ -1,6 +1,6 @@
 package org.myorg.sut
 
-import io.github.huherto.`aws-lambda-stream`.Event
+import io.github.huherto.awsLambdaStream.Event
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable

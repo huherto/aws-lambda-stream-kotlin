@@ -1,8 +1,7 @@
-package io.github.huherto.`aws-lambda-stream`.testsupport
+package io.github.huherto.awsLambdaStream.testsupport
 
-import io.github.huherto.`aws-lambda-stream`.Event
-import io.github.huherto.`aws-lambda-stream`.EventsMicrostore
-import io.github.huherto.`aws-lambda-stream`.UnitOfWork
+import io.github.huherto.awsLambdaStream.EventsMicrostore
+import io.github.huherto.awsLambdaStream.UnitOfWork
 import kotlinx.coroutines.flow.Flow
 
 class EventsMicrostoreFake : EventsMicrostore {

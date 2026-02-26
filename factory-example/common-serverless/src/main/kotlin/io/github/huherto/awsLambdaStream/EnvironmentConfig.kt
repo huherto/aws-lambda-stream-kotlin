@@ -1,4 +1,4 @@
-package io.github.huherto.`aws-lambda-stream`
+package io.github.huherto.awsLambdaStream
 
 class EnvironmentConfig {
 

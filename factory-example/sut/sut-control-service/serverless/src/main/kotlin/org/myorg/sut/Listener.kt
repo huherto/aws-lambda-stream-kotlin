@@ -3,7 +3,7 @@ package org.myorg.sut
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
-import io.github.huherto.`aws-lambda-stream`.*
+import io.github.huherto.awsLambdaStream.*
 import kotlinx.coroutines.runBlocking
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory

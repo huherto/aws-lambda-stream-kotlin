@@ -1,4 +1,4 @@
-package io.github.huherto.`aws-lambda-stream`.testsupport
+package io.github.huherto.awsLambdaStream.testsupport
 
 import aws.sdk.kotlin.runtime.auth.credentials.StaticCredentialsProvider
 import aws.smithy.kotlin.runtime.net.url.Url
