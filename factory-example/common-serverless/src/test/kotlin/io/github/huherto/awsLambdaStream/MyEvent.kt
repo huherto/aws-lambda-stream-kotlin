@@ -1,6 +1,5 @@
-package org.myorg.sut
+package io.github.huherto.awsLambdaStream
 
-import io.github.huherto.awsLambdaStream.Event
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -31,7 +30,7 @@ sealed class MyEvent(@Transient override var type: String = "") : Event {
     override var eem: Any? = null
 
     override fun encoded(): String {
-        return sutJson.encodeToString(MyEvent.serializer(), this)
+        return sutJson.encodeToString(serializer(), this)
     }
 }
 

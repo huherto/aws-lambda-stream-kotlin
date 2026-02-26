@@ -1,18 +1,18 @@
 package io.github.huherto.awsLambdaStream
 
+import aws.sdk.kotlin.services.dynamodb.model.PutItemRequest
 import kotlinx.serialization.Contextual
 
 interface Event {
     var id: String?
     var type: String
-    var timestamp: Long?
+    var timestamp: Long? // In milliseconds since epoch
     var partitionKey: String?
     var tags: Map<String, String>?
     var raw: Any?
     var eem: Any?
 
     fun encoded()  : String
-
 }
 
 data class UnitOfWork(
@@ -21,7 +21,8 @@ data class UnitOfWork(
     val key: String? = null,
     val sequenceNumber: String? = null,
     val shardId: String? = null,
-    val timestamp: String? = null
+    val timestamp: String? = null,
+    val putRequest: PutItemRequest? = null,
 )
 
 class FailureException(

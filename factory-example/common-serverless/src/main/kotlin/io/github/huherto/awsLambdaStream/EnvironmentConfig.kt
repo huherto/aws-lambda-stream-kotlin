@@ -21,4 +21,8 @@ class EnvironmentConfig {
     fun awsLambdaFunctionName(): String? {
         return System.getenv("AWS_LAMBDA_FUNCTION_NAME")
     }
+
+    fun ttl() : Int? {
+        return System.getenv("TTL")?.toInt()
+    }
 }

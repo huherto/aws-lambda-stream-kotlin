@@ -1,10 +1,16 @@
 package io.github.huherto.awsLambdaStream
 
+import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
+import aws.sdk.kotlin.services.dynamodb.model.AttributeValue.N
+import aws.sdk.kotlin.services.dynamodb.model.AttributeValue.S
+import aws.sdk.kotlin.services.dynamodb.model.PutItemRequest
+import aws.sdk.kotlin.services.dynamodb.model.PutItemRequest.Companion.invoke
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import mu.KotlinLogging
+import java.time.Clock
 import kotlin.reflect.KClass
 
 abstract class Pipeline {
@@ -36,6 +42,58 @@ class CollectPipeline(var eventsMicrostore: EventsMicrostore) : Pipeline() {
             uom -> uom.event?.partitionKey
     }
 
+    private var ttlDays : Int? = null
+
+    private var includeRaw: Boolean = false
+
+    private var expire: String? = null // Any value here means "true".
+
+    private var envConfig : EnvironmentConfig = EnvironmentConfig()
+
+    fun daysInSecs(days: Int) : Long {
+        return days * 24 * 60 * 60L
+    }
+
+    private fun ttlRule(uow: UnitOfWork) : Long {
+        val ttl = this.ttlDays?: envConfig.ttl()?: 33
+        return uow.event?.timestamp?.let { it/1000 + daysInSecs(ttl) } ?: 0
+    }
+
+    private fun nullableS(s: String?) : AttributeValue {
+        return s?.let { S(it) } ?: AttributeValue.Null(true)
+    }
+
+    private fun omitRaw(Event: Event?) : String {
+        throw RuntimeException("Not implemented yet")
+    }
+
+    private var putRequest: (UnitOfWork) -> UnitOfWork = {
+        uow ->
+        val event : Event? = uow.event
+        val encodedEvent = if (includeRaw) event?.encoded() else omitRaw(event)
+        val ttl = ttlRule(uow)
+        val timeStamp = event?.timestamp
+        val awsRegion = envConfig.awsRegion()
+
+        val itemValues = mapOf(
+            "pk" to nullableS(event?.id),
+            "sk" to S("EVENT"),
+            "discriminator" to S("EVENT"),
+            "timestamp" to N(timeStamp.toString()),
+            "awsregion" to S(awsRegion),
+            "ttl" to N(ttl.toString()),
+            "expire" to nullableS(expire),
+            "data" to nullableS(uow.key),
+            "event" to nullableS(encodedEvent)
+        )
+
+        val putRequest = PutItemRequest {
+            tableName = envConfig.tableName()
+            item = itemValues
+        }
+        uow.copy(putRequest = putRequest)
+    }
+
     suspend fun collect(fromFlow: Flow<UnitOfWork>) {
 
         val flow = fromFlow
@@ -52,9 +110,9 @@ class CollectPipeline(var eventsMicrostore: EventsMicrostore) : Pipeline() {
                     it.copy(key = correlationKey(it))
                 }
             }
+            .onEach { uom -> putRequest(uom) }
             .onEach {  printEndPipeline(it) }
 
-        eventsMicrostore.save(flow, EventsMicrostore.SaveOptions(90))
     }
 
 }

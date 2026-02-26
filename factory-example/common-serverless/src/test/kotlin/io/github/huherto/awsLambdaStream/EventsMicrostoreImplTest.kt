@@ -1,12 +1,8 @@
-package org.myorg.sut
+package io.github.huherto.awsLambdaStream
 
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.PutItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.PutItemResponse
-import io.github.huherto.awsLambdaStream.EnvironmentConfig
-import io.github.huherto.awsLambdaStream.EventsMicrostore
-import io.github.huherto.awsLambdaStream.EventsMicrostoreImpl
-import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk

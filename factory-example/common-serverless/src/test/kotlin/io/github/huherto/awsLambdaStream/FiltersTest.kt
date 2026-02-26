@@ -1,7 +1,5 @@
-package org.myorg.sut
+package io.github.huherto.awsLambdaStream
 
-import io.github.huherto.awsLambdaStream.UnitOfWork
-import io.github.huherto.awsLambdaStream.filterEventTypes
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.test.runTest
