@@ -1,16 +1,18 @@
 package io.github.huherto.awsLambdaStream
 
+import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue.N
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue.S
 import aws.sdk.kotlin.services.dynamodb.model.PutItemRequest
-import aws.sdk.kotlin.services.dynamodb.model.PutItemRequest.Companion.invoke
+import aws.sdk.kotlin.services.lambda.model.InvokeMode
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import mu.KotlinLogging
-import java.time.Clock
 import kotlin.reflect.KClass
 
 abstract class Pipeline {
@@ -32,7 +34,7 @@ abstract class Pipeline {
 
 }
 
-class CollectPipeline(var eventsMicrostore: EventsMicrostore) : Pipeline() {
+class CollectPipeline() : Pipeline() {
 
     private var onContentType: (UnitOfWork) -> Boolean = { true }
 
@@ -49,6 +51,8 @@ class CollectPipeline(var eventsMicrostore: EventsMicrostore) : Pipeline() {
     private var expire: String? = null // Any value here means "true".
 
     private var envConfig : EnvironmentConfig = EnvironmentConfig()
+    
+    private var bufferCapacity: Int = Channel.BUFFERED
 
     fun daysInSecs(days: Int) : Long {
         return days * 24 * 60 * 60L
@@ -94,25 +98,30 @@ class CollectPipeline(var eventsMicrostore: EventsMicrostore) : Pipeline() {
         uow.copy(putRequest = putRequest)
     }
 
-    suspend fun collect(fromFlow: Flow<UnitOfWork>) {
+    private var putDynamoDb: suspend (UnitOfWork) -> UnitOfWork = {
+        uow ->
+        if (dynamoDbClient == null) {
+            dynamoDbClient = getDynamoDbClient(envConfig)
+        }
+        val putResponse = uow.putRequest?.let {
+            dynamoDbClient?.putItem(uow.putRequest)
+        }
+        uow.copy(putResponse = putResponse)
+    }
+
+    private var dynamoDbClient : DynamoDbClient? = null
+
+    fun collect(fromFlow: Flow<UnitOfWork>) {
 
         val flow = fromFlow
-            .filter { uom -> uom.event != null }
             .filterEventTypes(*onEventClass.toTypedArray())
-            .onEach {  printStartPipeline(it) }
-            .filter {
-                faulty(it) {
-                    onContentType(it)
-                }
-            }
-            .map {
-                faulty(it) {
-                    it.copy(key = correlationKey(it))
-                }
-            }
-            .onEach { uom -> putRequest(uom) }
-            .onEach {  printEndPipeline(it) }
-
+            .onEach { uow -> printStartPipeline(uow) }
+            .filter { uow -> faulty(uow) { onContentType(uow) } }
+            .map { uow -> faulty(uow) { uow.copy(key = correlationKey(uow)) } }
+            .onEach { uow -> faulty(uow) { putRequest(uow) } }
+            .buffer(bufferCapacity)
+            .onEach { uow -> faulty(uow) { putDynamoDb(uow) } }
+            .onEach { uow -> printEndPipeline(uow) }
     }
 
 }

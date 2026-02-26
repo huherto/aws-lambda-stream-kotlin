@@ -1,6 +1,7 @@
 package io.github.huherto.awsLambdaStream
 
 import aws.sdk.kotlin.services.dynamodb.model.PutItemRequest
+import aws.sdk.kotlin.services.dynamodb.model.PutItemResponse
 import kotlinx.serialization.Contextual
 
 interface Event {
@@ -23,6 +24,7 @@ data class UnitOfWork(
     val shardId: String? = null,
     val timestamp: String? = null,
     val putRequest: PutItemRequest? = null,
+    val putResponse: PutItemResponse? = null,
 )
 
 class FailureException(
