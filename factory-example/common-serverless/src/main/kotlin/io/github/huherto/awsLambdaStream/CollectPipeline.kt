@@ -103,15 +103,16 @@ class CollectPipeline private constructor(builder: Builder) : Pipeline() {
         uow.copy(putResponse = putResponse)
     }
 
-    fun collect(fromFlow: Flow<UnitOfWork>) {
+    fun collect(fromFlow: Flow<UnitOfWork>) : Flow<UnitOfWork>{
         val flow = fromFlow
             .filterEventTypes(*onEventClass.toTypedArray())
             .onEach { uow -> printStartPipeline(uow) }
             .filter { uow -> faulty(uow) { onContentType(uow) } }
             .map { uow -> faulty(uow) { uow.copy(key = correlationKey(uow)) } }
-            .onEach { uow -> faulty(uow) { putRequest(uow) } }
+            .map { uow -> faulty(uow) { putRequest(uow) } }
             .buffer(bufferCapacity)
-            .onEach { uow -> faulty(uow) { putDynamoDb(uow) } }
+            .map { uow -> faulty(uow) { putDynamoDb(uow) } }
             .onEach { uow -> printEndPipeline(uow) }
+        return flow
     }
 }
