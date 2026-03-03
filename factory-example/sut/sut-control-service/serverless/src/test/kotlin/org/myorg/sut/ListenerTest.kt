@@ -1,10 +1,18 @@
 package org.myorg.sut
 
+import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
+import aws.sdk.kotlin.services.dynamodb.model.PutItemRequest
+import aws.sdk.kotlin.services.dynamodb.model.PutItemResponse
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
+import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.params.ParameterizedTest
 import io.github.huherto.awsLambdaStream.testsupport.EventsMicrostoreFake
 import io.github.huherto.awsLambdaStream.testsupport.TestContext
+import io.mockk.coEvery
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.slot
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets.UTF_8
 import java.time.Instant
@@ -19,7 +27,17 @@ class ListenerTest {
 
     private var kinesisAdapter = MyKinesisAdapter()
 
-    private var listener : Listener? = Listener(eventsMicrostore, kinesisAdapter)
+    private val listener : Listener by lazy {
+        val envConfig = mockk<EnvironmentConfig>()
+        every { envConfig.awsRegion() } returns "us-east-1"
+        every { envConfig.tableName() } returns "events"
+        val dynamoDbClient = mockk<DynamoDbClient>()
+        val putRequestSlot = slot<PutItemRequest>()
+
+        coEvery { dynamoDbClient.putItem(capture(putRequestSlot)) } coAnswers { mockk<PutItemResponse>() }
+        coEvery { dynamoDbClient.putItem(any()) } coAnswers { mockk<PutItemResponse>() }
+        Listener(eventsMicrostore, kinesisAdapter, envConfig, dynamoDbClient)
+    } 
 
     @BeforeEach
     fun beforeEach() {
@@ -34,7 +52,9 @@ class ListenerTest {
         event.records[0].kinesis.data = encodePayload(ship1Event1)
         event.records[1].kinesis.data = encodePayload(ship1Event2)
 
-        listener!!.handleRequest(event, context)
+        listener.handleRequest(event, context)
+
+
 
         assertEquals(2,eventsMicrostore.getEvents().size)
         val uow1 = eventsMicrostore.getEvents()["SHIP-001-2025"]

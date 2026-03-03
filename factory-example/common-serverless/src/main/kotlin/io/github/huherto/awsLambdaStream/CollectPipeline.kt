@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlin.reflect.KClass
 
-class CollectPipeline private constructor(builder: Builder) : Pipeline() {
+class CollectPipeline private constructor(builder: Builder) : Pipeline(builder.id) {
 
     private val onContentType: (UnitOfWork) -> Boolean = builder.onContentType
     private val onEventClass: List<KClass<Event>> = builder.onEventClass
@@ -23,8 +23,9 @@ class CollectPipeline private constructor(builder: Builder) : Pipeline() {
     private val bufferCapacity: Int = builder.bufferCapacity
     private var dynamoDbClient: DynamoDbClient? = builder.dynamoDbClient
     private var putRequest: (UnitOfWork) -> UnitOfWork = builder.putRequest?: ::defaultPutRequest
+    private var eventsMicrostore: EventsMicrostore = builder.eventsMicrostore ?: EventsMicrostoreImpl(dynamoDbClient ?: getDynamoDbClient(envConfig), envConfig = envConfig)
 
-    class Builder {
+    class Builder(internal var id: String) {
         internal var onContentType: (UnitOfWork) -> Boolean = { true }
         internal var onEventClass: List<KClass<Event>> = listOf(Event::class)
         internal var correlationKey: (UnitOfWork) -> String? = { uom -> uom.event?.partitionKey }
@@ -35,6 +36,7 @@ class CollectPipeline private constructor(builder: Builder) : Pipeline() {
         internal var bufferCapacity: Int = Channel.Factory.BUFFERED
         internal var dynamoDbClient: DynamoDbClient? = null
         internal var putRequest: ((UnitOfWork) -> UnitOfWork)? = null
+        internal var eventsMicrostore: EventsMicrostore? = null
 
         fun onContentType(onContentType: (UnitOfWork) -> Boolean) = apply { this.onContentType = onContentType }
         fun onEventClass(onEventClass: List<KClass<Event>>) = apply { this.onEventClass = onEventClass }
@@ -103,12 +105,13 @@ class CollectPipeline private constructor(builder: Builder) : Pipeline() {
         uow.copy(putResponse = putResponse)
     }
 
-    fun collect(fromFlow: Flow<UnitOfWork>) : Flow<UnitOfWork>{
+    override fun connect(fromFlow: Flow<UnitOfWork>) : Flow<UnitOfWork>{
         val flow = fromFlow
             .filterEventTypes(*onEventClass.toTypedArray())
             .onEach { uow -> printStartPipeline(uow) }
             .filter { uow -> faulty(uow) { onContentType(uow) } }
             .map { uow -> faulty(uow) { uow.copy(key = correlationKey(uow)) } }
+            .map {  uow-> m}
             .map { uow -> faulty(uow) { putRequest(uow) } }
             .buffer(bufferCapacity)
             .map { uow -> faulty(uow) { putDynamoDb(uow) } }

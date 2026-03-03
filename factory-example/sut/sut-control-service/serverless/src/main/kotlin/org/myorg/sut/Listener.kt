@@ -1,5 +1,6 @@
 package org.myorg.sut
 
+import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
@@ -18,12 +19,12 @@ class MyKinesisAdapter : KinesisAdapter() {
 
 class Listener(
     private val initialStore: EventsMicrostore? = null,
-    private val initialAdapter: KinesisAdapter? = null
+    private val initialAdapter: KinesisAdapter? = null,
+    val envConfig: EnvironmentConfig = EnvironmentConfig(),
+    val dynamoDbClient: DynamoDbClient = getDynamoDbClient(envConfig),
 ) : RequestHandler<KinesisEvent, Void?> {
 
     private val logger: Logger = LoggerFactory.getLogger(Listener::class.java)!!
-
-    private val envConfig = EnvironmentConfig()
 
     private val eventsMicrostore: EventsMicrostore by lazy {
         initialStore ?: run {
@@ -41,14 +42,27 @@ class Listener(
         }
     }
 
-    override fun handleRequest(kinesisEvent: KinesisEvent, context: Context): Void? = runBlocking{
+    private val assembler: PipelineAssembler by lazy {
+        val pipeline =
+            CollectPipeline.Builder("col1")
+                .dynamoDbClient(dynamoDbClient).
+            build()
+        val assembler = PipelineAssembler
+            .builder()
+                .addPipeline(pipeline)
+            .build()
+        assembler
+    }
 
+    override fun handleRequest(kinesisEvent: KinesisEvent, context: Context): Void? = runBlocking{
+        
         try {
             logger.info("Handling request: {}", kinesisEvent)
-
-            CollectPipeline(eventsMicrostore)
-                .collect(kinesisAdapter.fromKinesis(kinesisEvent))
-
+            val headFlow = kinesisAdapter.fromKinesis(kinesisEvent)
+            val completeFlow = assembler
+                .assemble(headFlow, true)
+                .collect {  }
+        //    eventsMicrostore.save(completeFlow, EventsMicrostore.SaveOptions(33))
         } catch (e: Throwable) {
             logger.error(MarkerFactory.getMarker("FATAL"), "Exception in lambda handler", e)
         }

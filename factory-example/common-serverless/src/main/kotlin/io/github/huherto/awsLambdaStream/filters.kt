@@ -22,9 +22,6 @@ fun Flow<UnitOfWork>.filterEventTypes(vararg klassList: KClass<out Event>): Flow
     }
 }
 
-/*
- * Catch all the vents
- */
 fun Flow<UnitOfWork>.catchFailures(): Flow<UnitOfWork> = catch { exception ->
     logError(exception)
     if (exception is FailureException) {
@@ -42,7 +39,7 @@ fun Flow<UnitOfWork>.catchFailures(): Flow<UnitOfWork> = catch { exception ->
     }
     else {
         // Not sure what to do here.
-        throw exception
+        // throw exception
     }
 }
 

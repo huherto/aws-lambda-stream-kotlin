@@ -41,7 +41,7 @@ class CollectionPipelineTest {
         every { envConfig.awsRegion() } returns "us-east-1"
         every { envConfig.tableName() } returns "events"
         val ttlDaysTest = 5
-        val pipeline = CollectPipeline.Builder()
+        val pipeline = CollectPipeline.Builder("collection-pipeline-test")
             .includeRaw(true)
             .expire("test-expire")
             .ttlDays(ttlDaysTest)
@@ -75,7 +75,7 @@ class CollectionPipelineTest {
     @Test
     fun `test defaultPutRequest without raw event throws exception`() {
         // Given
-        val pipeline = CollectPipeline.Builder()
+        val pipeline = CollectPipeline.Builder("collection-pipeline-test")
             .includeRaw(false) // This will trigger omitRaw()
             .build()
 
@@ -93,7 +93,7 @@ class CollectionPipelineTest {
     @Test
     fun `test builder configures pipeline with custom values correctly`() = runBlocking {
         // Arrange & Act
-        val pipeline = CollectPipeline.Builder()
+        val pipeline = CollectPipeline.Builder("collection-pipeline-test")
             .bufferCapacity(42)
             .ttlDays(10)
             .includeRaw(true)
@@ -107,7 +107,7 @@ class CollectionPipelineTest {
 
         System.out.println(pipeline)
         val uowFlow = flowOf(UnitOfWork(event = myEventA()))
-        pipeline.collect(uowFlow).collect { uow ->
+        pipeline.connect(uowFlow).collect { uow ->
             System.out.println(uow)
         }
         System.out.println("Done")
@@ -116,12 +116,12 @@ class CollectionPipelineTest {
     @Test
     fun `test collect executes without crashing`() = runBlocking {
         // Arrange
-        val pipeline = CollectPipeline.Builder().build()
+        val pipeline = CollectPipeline.Builder("collection-pipeline-test").build()
         val uowFlow = flowOf(UnitOfWork(event = myEventA()))
 
         // Act & Assert
         assertDoesNotThrow {
-            pipeline.collect(uowFlow)
+            pipeline.connect(uowFlow)
         }
     }
 }

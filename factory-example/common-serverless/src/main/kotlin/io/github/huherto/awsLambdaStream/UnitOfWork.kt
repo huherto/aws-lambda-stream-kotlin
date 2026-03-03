@@ -11,12 +11,13 @@ interface Event {
     var partitionKey: String?
     var tags: Map<String, String>?
     var raw: Any?
-    var eem: Any?
+    var eem: Any? // Envelope Encryption Metadata. See SAP4SS page 347
 
     fun encoded()  : String
 }
 
 data class UnitOfWork(
+    val pipeline: Pipeline? = null,
     val record: Any? = null,
     val event: Event? = null,
     val key: String? = null,
