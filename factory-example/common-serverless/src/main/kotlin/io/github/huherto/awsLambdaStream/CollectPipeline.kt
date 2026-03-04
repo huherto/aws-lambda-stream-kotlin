@@ -35,7 +35,6 @@ class CollectPipeline private constructor(builder: Builder) : Pipeline(builder.i
         internal var bufferCapacity: Int = Channel.Factory.BUFFERED
         internal var dynamoDbClient: DynamoDbClient? = null
         internal var putRequest: ((UnitOfWork) -> UnitOfWork)? = null
-        internal var eventsMicrostore: EventsMicrostore? = null
 
         fun onContentType(onContentType: (UnitOfWork) -> Boolean) = apply { this.onContentType = onContentType }
         fun onEventClass(onEventClass: List<KClass<Event>>) = apply { this.onEventClass = onEventClass }

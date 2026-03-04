@@ -1,8 +1,6 @@
 package org.myorg.sut
 
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
-import aws.sdk.kotlin.services.dynamodb.model.PutItemRequest
-import aws.sdk.kotlin.services.dynamodb.model.PutRequest
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.testsupport.DynamDbClientFake

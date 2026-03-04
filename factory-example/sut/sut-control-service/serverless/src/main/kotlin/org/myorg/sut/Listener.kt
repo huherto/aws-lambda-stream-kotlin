@@ -26,15 +26,6 @@ class Listener(
 
     private val logger: Logger = LoggerFactory.getLogger(Listener::class.java)!!
 
-    private val eventsMicrostore: EventsMicrostore by lazy {
-        initialStore ?: run {
-            logger.info("Getting DynamoDB client")
-            val client = getDynamoDbClient(envConfig)
-            logger.info("Using DynamoDB client: $client")
-            EventsMicrostoreImpl(client)
-        }
-    }
-
     private val kinesisAdapter: KinesisAdapter by lazy {
         initialAdapter ?: run {
             logger.info("Getting Kinesis adapter")

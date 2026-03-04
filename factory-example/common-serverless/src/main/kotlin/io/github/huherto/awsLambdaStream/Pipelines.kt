@@ -1,6 +1,5 @@
 package io.github.huherto.awsLambdaStream
 
-import aws.smithy.kotlin.runtime.http.Headers
 import kotlinx.coroutines.flow.Flow
 import mu.KotlinLogging
 

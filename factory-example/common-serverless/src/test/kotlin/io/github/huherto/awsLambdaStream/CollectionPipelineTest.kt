@@ -20,14 +20,14 @@ class CollectionPipelineTest {
     }
 
     fun mockEnvConfig()  : EnvironmentConfig {
-        var envConfig = mockk<EnvironmentConfig>()
+        val envConfig = mockk<EnvironmentConfig>()
         every { envConfig.awsRegion() } returns "us-east-1"
         every { envConfig.tableName() } returns "events"
         return envConfig
     }
 
     fun mockDynamoDbClient() : DynamoDbClient {
-        var dynamoDbClient = mockk<DynamoDbClient>()
+        val dynamoDbClient = mockk<DynamoDbClient>()
         coEvery { dynamoDbClient.putItem(any()) } coAnswers { mockk<PutItemResponse>() }
         return dynamoDbClient
     }
@@ -121,7 +121,8 @@ class CollectionPipelineTest {
 
         // Act & Assert
         assertDoesNotThrow {
-            pipeline.connect(uowFlow)
+            val flow = pipeline.connect(uowFlow)
+            assertNotNull(flow)
         }
     }
 }
