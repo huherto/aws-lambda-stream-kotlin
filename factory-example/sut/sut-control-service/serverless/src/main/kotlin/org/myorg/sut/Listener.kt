@@ -18,7 +18,6 @@ class MyKinesisAdapter : KinesisAdapter() {
 }
 
 class Listener(
-    private val initialStore: EventsMicrostore? = null,
     private val initialAdapter: KinesisAdapter? = null,
     val envConfig: EnvironmentConfig = EnvironmentConfig(),
     val dynamoDbClient: DynamoDbClient = getDynamoDbClient(envConfig),

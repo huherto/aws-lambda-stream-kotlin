@@ -67,7 +67,7 @@ class CollectPipeline private constructor(builder: Builder) : Pipeline(builder.i
         throw RuntimeException("Not implemented yet")
     }
 
-    public fun defaultPutRequest(uow: UnitOfWork) : UnitOfWork {
+    fun defaultPutRequest(uow: UnitOfWork) : UnitOfWork {
         val event: Event? = uow.event
         val encodedEvent = if (includeRaw) event?.encoded() else omitRaw(event)
         val ttl = ttlRule(uow)

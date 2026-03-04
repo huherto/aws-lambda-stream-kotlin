@@ -29,7 +29,7 @@ data class UnitOfWork(
 )
 
 class FailureException(
-    private val uom: UnitOfWork,
+    val uom: UnitOfWork,
     cause: Throwable?
 ) : RuntimeException( cause)
 

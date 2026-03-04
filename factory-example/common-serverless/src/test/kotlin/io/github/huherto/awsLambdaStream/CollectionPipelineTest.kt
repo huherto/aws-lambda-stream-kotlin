@@ -37,7 +37,7 @@ class CollectionPipelineTest {
     fun `test defaultPutRequest generates correct put request with raw event`() {
         
         // Given
-        var envConfig = mockk<EnvironmentConfig>()
+        val envConfig = mockk<EnvironmentConfig>()
         every { envConfig.awsRegion() } returns "us-east-1"
         every { envConfig.tableName() } returns "events"
         val ttlDaysTest = 5
