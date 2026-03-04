@@ -29,7 +29,7 @@ class ListenerTest {
         every { envConfig.awsRegion() } returns "us-east-1"
         every { envConfig.tableName() } returns "events"
         every { envConfig.ttl() } returns null
-        Listener(null, kinesisAdapter, envConfig, dynamoDbClient)
+        Listener(kinesisAdapter, envConfig, dynamoDbClient)
     } 
 
     @BeforeEach
