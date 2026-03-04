@@ -6,6 +6,7 @@ import aws.sdk.kotlin.services.dynamodb.model.PutItemResponse
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.spyk
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.*
@@ -37,7 +38,7 @@ class CollectionPipelineTest {
     fun `test defaultPutRequest generates correct put request with raw event`() {
         
         // Given
-        val envConfig = mockk<EnvironmentConfig>()
+        val envConfig = spyk<EnvironmentConfig>()
         every { envConfig.awsRegion() } returns "us-east-1"
         every { envConfig.tableName() } returns "events"
         val ttlDaysTest = 5

@@ -7,7 +7,7 @@ import io.github.huherto.awsLambdaStream.testsupport.DynamDbClientFake
 import io.github.huherto.awsLambdaStream.testsupport.TestContext
 import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.runBlocking
+import io.mockk.spyk
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.params.ParameterizedTest
 import java.nio.ByteBuffer
@@ -25,12 +25,11 @@ class ListenerTest {
     private val dynamoDbClient = DynamDbClientFake(mockk<DynamoDbClient>())
 
     private val listener : Listener by lazy {
-        val envConfig = mockk<EnvironmentConfig>()
+        val envConfig = spyk<EnvironmentConfig>()
         every { envConfig.awsRegion() } returns "us-east-1"
         every { envConfig.tableName() } returns "events"
-        every { envConfig.ttl() } returns null
         Listener(kinesisAdapter, envConfig, dynamoDbClient)
-    } 
+    }
 
     @BeforeEach
     fun beforeEach() {
@@ -39,7 +38,7 @@ class ListenerTest {
 
     @ParameterizedTest
     @TestEvent(value = "events/kinesis_basic.json", type = KinesisEvent::class)
-    fun testBasicKinesisEvent(event: KinesisEvent) = runBlocking {
+    fun testBasicKinesisEvent(event: KinesisEvent) {
         val context = TestContext()
 
         event.records[0].kinesis.data = encodePayload(ship1Event1)

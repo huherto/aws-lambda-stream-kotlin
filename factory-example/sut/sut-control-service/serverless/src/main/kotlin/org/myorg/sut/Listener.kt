@@ -47,12 +47,12 @@ class Listener(
     }
 
     override fun handleRequest(kinesisEvent: KinesisEvent, context: Context): Void? = runBlocking{
-        
+        // Is this try..catch even needed anymore ?
         try {
-            logger.info("Handling request: {}", kinesisEvent)
+            //logger.info("Handling request: {}", kinesisEvent)
             val headFlow = kinesisAdapter.fromKinesis(kinesisEvent)
             val completeFlow = assembler
-                .assemble(headFlow, false)
+                .assemble(headFlow, true)
             completeFlow.collect { println(">" + it.event.toString().replace("\\s".toRegex(), "")) }
         } catch (e: Throwable) {
             logger.error(MarkerFactory.getMarker("FATAL"), "Exception in lambda handler", e)

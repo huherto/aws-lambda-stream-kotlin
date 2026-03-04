@@ -22,28 +22,3 @@ fun Flow<UnitOfWork>.filterEventTypes(vararg klassList: KClass<out Event>): Flow
     }
 }
 
-fun Flow<UnitOfWork>.catchFailures(): Flow<UnitOfWork> = catch { exception ->
-    logError(exception)
-    if (exception is FailureException) {
-        val functionName = EnvironmentConfig().awsLambdaFunctionName()?: "undefined"
-        val failureEvent = FailureEvent().apply {
-            id = UUID.randomUUID().toString()
-            partitionKey = UUID.randomUUID().toString()
-            type = "FAILURE_EVENT"
-            timestamp = System.currentTimeMillis()
-            tags = mutableMapOf(
-                "functionname" to functionName
-            )
-            failureException = exception
-        }
-    }
-    else {
-        // Not sure what to do here.
-        // throw exception
-    }
-}
-
-fun logError(exception: Throwable) {
-    println("Exception in lambda handler: $exception")
-}
-

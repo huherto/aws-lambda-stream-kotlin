@@ -16,6 +16,12 @@ repositories {
     mavenCentral()
 }
 
+// Exclude the production logger from all test configurations
+configurations.matching { it.name.startsWith("test") }.configureEach {
+    val loggerModule = libs.lambda.json.logger.get().module
+    exclude(group = loggerModule.group, module = loggerModule.name)
+}
+
 dependencies {
 
     implementation(platform(libs.aws.sdk.bom))
@@ -35,6 +41,7 @@ dependencies {
     testImplementation(kotlin("test"))
     testImplementation(libs.aws.lambda.java.tests)
     testImplementation(libs.mockk)
+    testImplementation(libs.slf4j.simple)
 }
 
 tasks.shadowJar {
@@ -55,4 +62,3 @@ testing {
         }
     }
 }
-
