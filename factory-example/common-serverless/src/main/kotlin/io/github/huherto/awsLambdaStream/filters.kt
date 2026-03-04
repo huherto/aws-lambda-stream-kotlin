@@ -1,10 +1,8 @@
 package io.github.huherto.awsLambdaStream
 
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.filter
 import kotlin.reflect.KClass
-import java.util.UUID
 
 inline fun <T, R> T.faulty(uom: UnitOfWork, block: T.() -> R): R {
     return try {
