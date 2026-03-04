@@ -23,14 +23,13 @@ class CollectPipeline private constructor(builder: Builder) : Pipeline(builder.i
     private val bufferCapacity: Int = builder.bufferCapacity
     private var dynamoDbClient: DynamoDbClient? = builder.dynamoDbClient
     private var putRequest: (UnitOfWork) -> UnitOfWork = builder.putRequest?: ::defaultPutRequest
-    private var eventsMicrostore: EventsMicrostore = builder.eventsMicrostore ?: EventsMicrostoreImpl(dynamoDbClient ?: getDynamoDbClient(envConfig), envConfig = envConfig)
 
     class Builder(internal var id: String) {
         internal var onContentType: (UnitOfWork) -> Boolean = { true }
         internal var onEventClass: List<KClass<Event>> = listOf(Event::class)
         internal var correlationKey: (UnitOfWork) -> String? = { uom -> uom.event?.partitionKey }
         internal var ttlDays: Int? = null
-        internal var includeRaw: Boolean = false
+        internal var includeRaw: Boolean = true
         internal var expire: String? = null
         internal var envConfig: EnvironmentConfig = EnvironmentConfig()
         internal var bufferCapacity: Int = Channel.Factory.BUFFERED
@@ -106,12 +105,12 @@ class CollectPipeline private constructor(builder: Builder) : Pipeline(builder.i
     }
 
     override fun connect(fromFlow: Flow<UnitOfWork>) : Flow<UnitOfWork>{
+        logger.info { "CollectPipeline.connect: id=$id" }
         val flow = fromFlow
             .filterEventTypes(*onEventClass.toTypedArray())
             .onEach { uow -> printStartPipeline(uow) }
             .filter { uow -> faulty(uow) { onContentType(uow) } }
             .map { uow -> faulty(uow) { uow.copy(key = correlationKey(uow)) } }
-            .map {  uow-> m}
             .map { uow -> faulty(uow) { putRequest(uow) } }
             .buffer(bufferCapacity)
             .map { uow -> faulty(uow) { putDynamoDb(uow) } }

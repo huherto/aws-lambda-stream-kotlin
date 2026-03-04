@@ -1,0 +1,94 @@
+package io.github.huherto.awsLambdaStream
+
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.runBlocking
+import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Test
+
+class PipelineAssemblerTest {
+
+    // A mock pipeline to test how the assembler routes flows
+    class MockPipeline(id: String) : Pipeline(id) {
+        override fun connect(fromFlow: Flow<UnitOfWork>): Flow<UnitOfWork> {
+            return fromFlow.map { it.copy(key = "processed_by_$id") }
+        }
+    }
+
+    @Test
+    fun `test builder creates assembler with added pipelines`() {
+        val pipeline1 = MockPipeline("p1")
+        val pipeline2 = MockPipeline("p2")
+
+        val assembler = PipelineAssembler.builder()
+            .addPipeline(pipeline1)
+            .addPipeline(pipeline2)
+            .build()
+
+        assertNotNull(assembler)
+    }
+
+    @Test
+    fun `test assemble routes UnitOfWork through all pipelines`() = runBlocking {
+        val pipeline1 = MockPipeline("p1")
+        val pipeline2 = MockPipeline("p2")
+
+        val assembler = PipelineAssembler.builder()
+            .addPipeline(pipeline1)
+            .addPipeline(pipeline2)
+            .build()
+
+        // Provide a mock flow
+        val headFlow = flowOf(UnitOfWork(record = "test_record"))
+
+        // Disable fault handler to focus on routing and processing 
+        val resultFlow = assembler.assemble(headFlow, includeFaultHandler = false)
+        val results = resultFlow.toList()
+
+        // It should duplicate the UoW into every pipeline, resulting in 2 outputs
+        assertEquals(2, results.size, "Should produce two outputs, one from each pipeline")
+
+        val keys = results.map { it.key }.toSet()
+        assertTrue(keys.contains("processed_by_p1"), "Pipeline 1 should have processed an item")
+        assertTrue(keys.contains("processed_by_p2"), "Pipeline 2 should have processed an item")
+
+        // Assert that the `pipeline` field was populated correctly on `onEach`
+        val p1Result = results.find { it.key == "processed_by_p1" }
+        assertEquals(pipeline1, p1Result?.pipeline)
+
+        val p2Result = results.find { it.key == "processed_by_p2" }
+        assertEquals(pipeline2, p2Result?.pipeline)
+    }
+
+    @Test
+    fun `test assemble with includeFaultHandler set to true`() = runBlocking {
+        val pipeline1 = MockPipeline("p1")
+
+        val assembler = PipelineAssembler.builder()
+            .addPipeline(pipeline1)
+            .build()
+
+        val headFlow = flowOf(UnitOfWork(record = "test_record"))
+
+        // Implicitly checks that catchFailures doesn't break standard flow processing
+        val resultFlow = assembler.assemble(headFlow, includeFaultHandler = true)
+        val results = resultFlow.toList()
+
+        assertEquals(1, results.size)
+        assertEquals("processed_by_p1", results.first().key)
+    }
+
+    @Test
+    fun `test startPipeline and endPipeline simply return uow`() {
+        val assembler = PipelineAssembler.builder().build()
+        val uow = UnitOfWork(key = "test")
+
+        val startedUow = assembler.startPipeline(uow)
+        assertEquals(uow, startedUow)
+
+        val endedUow = assembler.endPipeline(uow)
+        assertEquals(uow, endedUow)
+    }
+}

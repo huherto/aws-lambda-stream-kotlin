@@ -2,17 +2,16 @@ package org.myorg.sut
 
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.PutItemRequest
-import aws.sdk.kotlin.services.dynamodb.model.PutItemResponse
+import aws.sdk.kotlin.services.dynamodb.model.PutRequest
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.params.ParameterizedTest
-import io.github.huherto.awsLambdaStream.testsupport.EventsMicrostoreFake
+import io.github.huherto.awsLambdaStream.testsupport.DynamDbClientFake
 import io.github.huherto.awsLambdaStream.testsupport.TestContext
-import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.slot
+import kotlinx.coroutines.runBlocking
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.params.ParameterizedTest
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets.UTF_8
 import java.time.Instant
@@ -23,30 +22,26 @@ typealias TestEvent = com.amazonaws.services.lambda.runtime.tests.annotations.Ev
 
 class ListenerTest {
 
-    private var eventsMicrostore = EventsMicrostoreFake()
-
     private var kinesisAdapter = MyKinesisAdapter()
+
+    private val dynamoDbClient = DynamDbClientFake(mockk<DynamoDbClient>())
 
     private val listener : Listener by lazy {
         val envConfig = mockk<EnvironmentConfig>()
         every { envConfig.awsRegion() } returns "us-east-1"
         every { envConfig.tableName() } returns "events"
-        val dynamoDbClient = mockk<DynamoDbClient>()
-        val putRequestSlot = slot<PutItemRequest>()
-
-        coEvery { dynamoDbClient.putItem(capture(putRequestSlot)) } coAnswers { mockk<PutItemResponse>() }
-        coEvery { dynamoDbClient.putItem(any()) } coAnswers { mockk<PutItemResponse>() }
-        Listener(eventsMicrostore, kinesisAdapter, envConfig, dynamoDbClient)
+        every { envConfig.ttl() } returns null
+        Listener(null, kinesisAdapter, envConfig, dynamoDbClient)
     } 
 
     @BeforeEach
     fun beforeEach() {
-        eventsMicrostore.reset()
+        dynamoDbClient.reset()
     }
 
     @ParameterizedTest
     @TestEvent(value = "events/kinesis_basic.json", type = KinesisEvent::class)
-    fun testBasicKinesisEvent(event: KinesisEvent) {
+    fun testBasicKinesisEvent(event: KinesisEvent) = runBlocking {
         val context = TestContext()
 
         event.records[0].kinesis.data = encodePayload(ship1Event1)
@@ -54,17 +49,22 @@ class ListenerTest {
 
         listener.handleRequest(event, context)
 
+        assertEquals(2,dynamoDbClient.putRequests.size)
+        val putRequest1 = dynamoDbClient.putRequests["SHIP-001-2025"]
+        val putRequest2 = dynamoDbClient.putRequests["SHIP-002-2025"]
 
+        assertNotNull(putRequest1)
+        assertNotNull(putRequest2)
+        assertJsonString(ship1Event1.toString(), putRequest1.item?.get("event")!!.asS())
+        assertJsonString(ship1Event2.toString(), putRequest2.item?.get("event")!!.asS())
+    }
 
-        assertEquals(2,eventsMicrostore.getEvents().size)
-        val uow1 = eventsMicrostore.getEvents()["SHIP-001-2025"]
-        val uow2 = eventsMicrostore.getEvents()["SHIP-002-2025"]
+    private fun cleanUpString(s: String): String {
+        return s.replace("\\s".toRegex(), "")
+    }
 
-        assertNotNull(uow1)
-        assertNotNull(uow2)
-        assertEquals(ship1Event1.toString(), uow1.event.toString())
-        assertEquals(ship1Event2.toString(), uow2.event.toString())
-
+    private fun assertJsonString(expected: String, actual: String) {
+        assertEquals(cleanUpString(expected), cleanUpString(actual))
     }
 
     private fun encodePayload(payload: TrackedUnitEvent): ByteBuffer? {

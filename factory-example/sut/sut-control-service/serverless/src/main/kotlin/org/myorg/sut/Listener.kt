@@ -45,12 +45,14 @@ class Listener(
     private val assembler: PipelineAssembler by lazy {
         val pipeline =
             CollectPipeline.Builder("col1")
-                .dynamoDbClient(dynamoDbClient).
-            build()
+                .dynamoDbClient(dynamoDbClient)
+                .onEventClass(listOf(Event::class))
+                .envConfig(envConfig)
+                .build()
         val assembler = PipelineAssembler
             .builder()
                 .addPipeline(pipeline)
-            .build()
+                .build()
         assembler
     }
 
@@ -60,9 +62,8 @@ class Listener(
             logger.info("Handling request: {}", kinesisEvent)
             val headFlow = kinesisAdapter.fromKinesis(kinesisEvent)
             val completeFlow = assembler
-                .assemble(headFlow, true)
-                .collect {  }
-        //    eventsMicrostore.save(completeFlow, EventsMicrostore.SaveOptions(33))
+                .assemble(headFlow, false)
+            completeFlow.collect { println(">" + it.event.toString().replace("\\s".toRegex(), "")) }
         } catch (e: Throwable) {
             logger.error(MarkerFactory.getMarker("FATAL"), "Exception in lambda handler", e)
         }
