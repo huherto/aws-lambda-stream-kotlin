@@ -12,7 +12,7 @@ enum class Stage(val id: String) {
     override fun toString(): String = id
 
     companion object {
-        fun parse(value: String): org.myorg.sut.Stage =
+        fun parse(value: String): Stage =
             entries.firstOrNull { it.id.equals(value, ignoreCase = true) }
                 ?: throw IllegalArgumentException("Unknown stage: $value")
     }

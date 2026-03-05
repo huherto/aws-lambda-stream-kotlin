@@ -82,7 +82,7 @@ class ControlStack(scope: Construct, serviceProps: ServiceProps) : BaseStack(sco
                 .type(AttributeType.STRING)
                 .build())
             .projectionType(ProjectionType.ALL)
-            .build());
+            .build())
     }
 
     private fun addReplicas(eventsTable: TableV2) {
