@@ -15,6 +15,10 @@ cdklocal_deploy() {
 }
 
 (
+  cd $SCRIPT_DIR/../common-serverless
+  $GW clean build
+  cd $SCRIPT_DIR/../common-stack
+  $GW clean build
 	cd $SCRIPT_DIR
 	$GW clean shadowJar
 )

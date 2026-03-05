@@ -102,7 +102,9 @@ class ControlStack(scope: Construct, serviceProps: ServiceProps) : BaseStack(sco
             .runtime(Runtime.JAVA_21)
             .environment(mapOf(
                 "JAVA_TOOL_OPTIONS" to "-Dslf4j.provider=io.github.vitalijr2.aws.lambda.slf4j.AWSLambdaServiceProvider",
+                //"JAVA_TOOL_OPTIONS" to "-Dorg.slf4j.simpleLogger.defaultLogLevel=DEBUG",
                 "ENTITY_TABLE_NAME" to tableName,
+                "LOG_DEFAULT_LEVEL" to "DEBUG",
             ))
             .build()
 

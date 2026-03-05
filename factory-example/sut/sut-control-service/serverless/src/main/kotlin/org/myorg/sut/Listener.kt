@@ -53,7 +53,7 @@ class Listener(
             val headFlow = kinesisAdapter.fromKinesis(kinesisEvent)
             val completeFlow = assembler
                 .assemble(headFlow, true)
-            completeFlow.collect { println(">" + it.event.toString().replace("\\s".toRegex(), "")) }
+            completeFlow.collect { println("" + it.event.toString().replace("\\s".toRegex(), "")) }
         } catch (e: Throwable) {
             logger.error(MarkerFactory.getMarker("FATAL"), "Exception in lambda handler", e)
         }

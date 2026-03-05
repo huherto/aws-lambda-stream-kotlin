@@ -36,6 +36,8 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines)
     implementation(libs.lambda.json.logger)
+    implementation(libs.slf4j.api)
+    //implementation(libs.slf4j.simple)
 
 
     testImplementation(kotlin("test"))

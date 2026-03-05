@@ -26,6 +26,7 @@ kotlinx-serialization-json = { module="org.jetbrains.kotlinx:kotlinx-serializati
 lambda-json-logger = { module = "io.github.vitalijr2.aws-lambda:aws-lambda-slf4j-json-logger", version="1.1.4"}
 mockk = { module="io.mockk:mockk", version="1.14.6" }
 slf4j-simple = { module="org.slf4j:slf4j-simple", version.ref="slf4jVer" }
+slf4j-api = { module="org.slf4j:slf4j-api", version.ref="slf4jVer" }
 testcon-junit-jupiter = { module ="org.testcontainers:junit-jupiter", version.ref="testcontVersion" }
 testcon-localstack = { module ="org.testcontainers:localstack", version.ref="testcontVersion" }
 
