@@ -1,11 +1,8 @@
 package io.github.huherto.awsLambdaStream
 
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.merge
-import kotlinx.coroutines.flow.onEach
-import java.util.UUID
+import kotlinx.coroutines.flow.*
+import java.util.*
+import java.util.concurrent.ConcurrentLinkedQueue
 
 class PipelineAssembler private constructor(
     private val pipelines: MutableList<Pipeline>
@@ -54,6 +51,12 @@ class PipelineAssembler private constructor(
         if (includeFaultHandler) {
             merged = merged
                 .catchFailures()
+                .onCompletion { cause ->
+                    if (cause != null) {
+                        logger.warn { "PipelineAssembler.onCompletion: cause=$cause" }
+                    }
+                    flushFaults()
+                }
         }
 
         return merged
@@ -69,6 +72,8 @@ class PipelineAssembler private constructor(
         }
     }
 
+    val theFaults = ConcurrentLinkedQueue<FailureEvent>()
+
     fun Flow<UnitOfWork>.catchFailures(): Flow<UnitOfWork> = catch { exception ->
         logError(exception)
         if (exception is FailureException) {
@@ -83,10 +88,34 @@ class PipelineAssembler private constructor(
                 )
                 failureException = exception
             }
+            theFaults.add(failureEvent)
         }
         else {
             // Not sure what to do here.
             // throw exception
         }
+    }
+
+    val published =  ConcurrentLinkedQueue<FailureEvent>()
+
+    fun publish(fault: FailureEvent) {
+        published.add(fault)
+    }
+
+    suspend fun flushFaults() {
+
+        val count = flow {
+            while (true) {
+                val fault = theFaults.poll()
+                if (fault == null) {
+                    break
+                }
+                emit(fault)
+            }
+        }
+            .buffer()
+            .onEach { fault -> publish(fault)}.count()
+
+        logger.info { "PipelineAssembler.flushFaults: count=$count" }
     }
 }

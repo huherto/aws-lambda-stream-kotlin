@@ -17,6 +17,15 @@ class PipelineAssemblerTest {
         }
     }
 
+    // A mock pipeline that intentionally throws a FailureException to test error handling
+    class FailingPipeline(id: String) : Pipeline(id) {
+        override fun connect(fromFlow: Flow<UnitOfWork>): Flow<UnitOfWork> {
+            return fromFlow.map {
+                throw FailureException(it, RuntimeException("Intentional failure for $id"))
+            }
+        }
+    }
+
     @Test
     fun `test builder creates assembler with added pipelines`() {
         val pipeline1 = MockPipeline("p1")
@@ -78,6 +87,39 @@ class PipelineAssemblerTest {
 
         assertEquals(1, results.size)
         assertEquals("processed_by_p1", results.first().key)
+    }
+
+    @Test
+    fun `test assemble handles FailureException and publishes FailureEvent`() = runBlocking {
+        val failingPipeline = FailingPipeline("fail1")
+
+        val assembler = PipelineAssembler.builder()
+            .addPipeline(failingPipeline)
+            .build()
+
+        val uow = UnitOfWork(record = "test_record")
+        val headFlow = flowOf(uow)
+
+        // When the flow is assembled, it will be mapped into the FailingPipeline and throw an exception
+        val resultFlow = assembler.assemble(headFlow, includeFaultHandler = true)
+        val results = resultFlow.toList()
+
+        // The resulting flow itself should be empty because the exception was thrown before it could emit
+        assertEquals(0, results.size, "Flow should be empty due to failure")
+
+        // Verify that flushFaults() successfully moved the caught exception from `theFaults` queue into the `published` queue
+        assertEquals(1, assembler.published.size, "Should publish one failure event")
+        
+        val failureEvent = assembler.published.peek()
+        assertNotNull(failureEvent)
+        assertEquals("FAILURE_EVENT", failureEvent.type)
+        
+        // Assert that the proper exception type is saved within the FailureEvent
+        val exception = failureEvent.failureException as? FailureException
+        assertNotNull(exception)
+        
+        // Check that the UnitOfWork matches the failing UoW
+        assertEquals(uow.record, exception?.uom?.record)
     }
 
     @Test
