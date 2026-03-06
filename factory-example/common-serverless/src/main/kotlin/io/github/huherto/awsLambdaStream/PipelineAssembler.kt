@@ -1,18 +1,21 @@
 package io.github.huherto.awsLambdaStream
 
+import aws.smithy.kotlin.runtime.SdkBaseException
 import kotlinx.coroutines.flow.*
 import java.util.*
 import java.util.concurrent.ConcurrentLinkedQueue
 
-class PipelineAssembler private constructor(
-    private val pipelines: MutableList<Pipeline>
-)
+class PipelineAssembler private constructor(private val builder : Builder)
 {
 
     private val logger = mu.KotlinLogging.logger {  }
 
+    private val pipelines = builder.pipelines
+
+    private val envConfig = EnvironmentConfig()
+
     class Builder {
-        private val pipelines = mutableListOf<Pipeline>()
+        internal val pipelines = mutableListOf<Pipeline>()
 
         fun addPipeline(pipeline: Pipeline): Builder {
             pipelines.add(pipeline)
@@ -20,7 +23,7 @@ class PipelineAssembler private constructor(
         }
 
         fun build(): PipelineAssembler {
-            return PipelineAssembler(pipelines)
+            return PipelineAssembler(this)
         }
     }
 
@@ -76,8 +79,9 @@ class PipelineAssembler private constructor(
 
     fun Flow<UnitOfWork>.catchFailures(): Flow<UnitOfWork> = catch { exception ->
         logError(exception)
-        if (exception is FailureException) {
-            val functionName = EnvironmentConfig().awsLambdaFunctionName()?: "undefined"
+
+        if (exception is FailureException && !isRetriableException(exception)) {
+            val functionName = envConfig.awsLambdaFunctionName()?: "undefined"
             val failureEvent = FailureEvent().apply {
                 id = UUID.randomUUID().toString()
                 partitionKey = UUID.randomUUID().toString()
@@ -91,9 +95,17 @@ class PipelineAssembler private constructor(
             theFaults.add(failureEvent)
         }
         else {
-            // Not sure what to do here.
-            // throw exception
+            // It continues to be caught later.
+            throw exception
         }
+    }
+
+    private fun isRetriableException(exception: FailureException) : Boolean{
+        if (!envConfig.streamRetryEnabled()) return false
+        if (exception.cause is SdkBaseException) {
+           return (exception.cause as SdkBaseException).sdkErrorMetadata.isRetryable
+        }
+        return false
     }
 
     val published =  ConcurrentLinkedQueue<FailureEvent>()

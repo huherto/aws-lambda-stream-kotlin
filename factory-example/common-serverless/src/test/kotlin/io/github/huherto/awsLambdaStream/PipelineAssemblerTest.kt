@@ -109,13 +109,14 @@ class PipelineAssemblerTest {
 
         // Verify that flushFaults() successfully moved the caught exception from `theFaults` queue into the `published` queue
         assertEquals(1, assembler.published.size, "Should publish one failure event")
-        
+        assertEquals(0, assembler.theFaults.size, "Faults should be empty after publishing")
+
         val failureEvent = assembler.published.peek()
         assertNotNull(failureEvent)
         assertEquals("FAILURE_EVENT", failureEvent.type)
         
         // Assert that the proper exception type is saved within the FailureEvent
-        val exception = failureEvent.failureException as? FailureException
+        val exception = failureEvent.failureException
         assertNotNull(exception)
         
         // Check that the UnitOfWork matches the failing UoW
