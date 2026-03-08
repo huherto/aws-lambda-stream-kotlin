@@ -1,6 +1,9 @@
 package io.github.huherto.awsLambdaStream
 
+import aws.smithy.kotlin.runtime.util.type
 import kotlinx.coroutines.flow.Flow
+import kotlinx.serialization.InternalSerializationApi
+import kotlinx.serialization.serializerOrNull
 import mu.KotlinLogging
 
 abstract class Pipeline(val id : String) {
@@ -8,12 +11,20 @@ abstract class Pipeline(val id : String) {
     protected val logger = KotlinLogging.logger {  }
 
     fun printStartPipeline(uom: UnitOfWork) {
-        logger.debug { "start type: ${uom.event?.type}, eid: ${uom.event?.id}" }
+        val eventType = eventType(uom.event)
+        logger.debug { "start type:${eventType}, eid:${uom.event?.id ?: "null"}" }
+    }
+
+    @OptIn(InternalSerializationApi::class)
+    private fun eventType(event: Event?): String {
+        val type = event?.let { it::class.serializerOrNull()?.descriptor?.serialName } ?: "unknown"
+        return type
     }
 
     fun printEndPipeline(uom: UnitOfWork) {
         val redacted = trimAndRedacted(uom)
-        logger.debug { "end type: ${uom.event?.type}, eid: ${uom.event?.id}, uow: $redacted" }
+        val eventType = eventType(uom.event)
+        logger.debug { "end type:${eventType}, eid:${uom.event?.id}, uow: $redacted" }
     }
 
     // Not implemented yet. Redefine manually to redact specific fields.

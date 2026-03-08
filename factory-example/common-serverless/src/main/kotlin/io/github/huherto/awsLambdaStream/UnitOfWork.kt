@@ -3,15 +3,18 @@ package io.github.huherto.awsLambdaStream
 import aws.sdk.kotlin.services.dynamodb.model.PutItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.PutItemResponse
 import kotlinx.serialization.Contextual
+import kotlinx.serialization.serializerOrNull
 
 interface Event {
     var id: String?
-    var type: String
     var timestamp: Long? // In milliseconds since epoch
     var partitionKey: String?
     var tags: Map<String, String>?
     var raw: Any?
-    var eem: Any? // Envelope Encryption Metadata. See SAP4SS page 347
+    var eem: Any?
+    // Envelope Encryption Metadata. See SAP4SS page 347
+
+    fun eventType(): String
 
     fun encoded()  : String
 }
@@ -33,10 +36,11 @@ class FailureException(
     cause: Throwable?
 ) : RuntimeException( cause)
 
+val FAULT_EVENT_TYPE : String = "fault"
+
 class FailureEvent() : Event {
 
     override var id: String? = null
-    override var type: String = "FAILURE_EVENT"
     override var timestamp: Long? = null
     override var partitionKey: String? = null
     override var tags: Map<String, String>? = mutableMapOf()
@@ -47,6 +51,10 @@ class FailureEvent() : Event {
 
     @Contextual
     override var eem: Any? = null
+    override fun eventType(): String {
+        return FAULT_EVENT_TYPE
+    }
+
     override fun encoded(): String {
         TODO("Not yet implemented")
     }

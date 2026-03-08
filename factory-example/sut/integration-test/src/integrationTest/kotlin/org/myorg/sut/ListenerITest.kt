@@ -23,32 +23,30 @@ class ListenerITest {
     fun endPointUrl() = Url.parse("http://localhost:4566")
 
     @Test
-    fun sendEvents() {
+    fun sendEvents() = runBlocking{
 
-        runBlocking {
-            val eventBridgeClient = createEventBridgeClient()
-            eventBridgeClient.use { eventBridgeClient ->
-                val event = createShipmentCreatedEvent(createTrackedUnit())
+        val eventBridgeClient = createEventBridgeClient()
+        eventBridgeClient.use { eventBridgeClient ->
+            val event = createShipmentCreatedEvent(createTrackedUnit())
 
-                val res = eventBridgeClient.putEvents(PutEventsRequest{
-                    entries = listOf(
-                        PutEventsRequestEntry {
-                            eventBusName = "sut-event-hub-local-bus"
-                            detail = event.encoded()
-                            detailType = "my-event"
-                            source = "integration-test"
-                        }
-                    )
-                })
-                println("failedEntryCount=${res.failedEntryCount}")
-                for (entry in res.entries!!) {
-                    println("eventID=${entry.eventId}")
-                }
-                val dynamoDbClient = createDynamoDbClient()
-                dynamoDbClient.use { dynamoDbClient ->
-                    val savedEvent = findEvent(dynamoDbClient, event.id!!)
-                    assert(savedEvent != null)
-                }
+            val res = eventBridgeClient.putEvents(PutEventsRequest{
+                entries = listOf(
+                    PutEventsRequestEntry {
+                        eventBusName = "sut-event-hub-local-bus"
+                        detail = event.encoded()
+                        detailType = "my-event"
+                        source = "integration-test"
+                    }
+                )
+            })
+            println("failedEntryCount=${res.failedEntryCount}")
+            for (entry in res.entries!!) {
+                println("eventID=${entry.eventId}")
+            }
+            val dynamoDbClient = createDynamoDbClient()
+            dynamoDbClient.use { dynamoDbClient ->
+                val savedEvent = findEvent(dynamoDbClient, event.id!!)
+                assert(savedEvent != null)
             }
         }
     }

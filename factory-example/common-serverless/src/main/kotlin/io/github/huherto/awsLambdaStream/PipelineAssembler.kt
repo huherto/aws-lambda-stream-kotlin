@@ -5,17 +5,19 @@ import kotlinx.coroutines.flow.*
 import java.util.*
 import java.util.concurrent.ConcurrentLinkedQueue
 
-class PipelineAssembler private constructor(private val builder : Builder)
+class PipelineAssembler private constructor(val builder : Builder)
 {
 
     private val logger = mu.KotlinLogging.logger {  }
 
     private val pipelines = builder.pipelines
 
-    private val envConfig = EnvironmentConfig()
+    private val envConfig = builder.envConfig
 
     class Builder {
         internal val pipelines = mutableListOf<Pipeline>()
+
+        internal val envConfig = EnvironmentConfig()
 
         fun addPipeline(pipeline: Pipeline): Builder {
             pipelines.add(pipeline)
@@ -85,7 +87,6 @@ class PipelineAssembler private constructor(private val builder : Builder)
             val failureEvent = FailureEvent().apply {
                 id = UUID.randomUUID().toString()
                 partitionKey = UUID.randomUUID().toString()
-                type = "FAILURE_EVENT"
                 timestamp = System.currentTimeMillis()
                 tags = mutableMapOf(
                     "functionname" to functionName
@@ -126,7 +127,8 @@ class PipelineAssembler private constructor(private val builder : Builder)
             }
         }
             .buffer()
-            .onEach { fault -> publish(fault)}.count()
+            .onEach { fault -> publish(fault)}
+            .count()
 
         logger.info { "PipelineAssembler.flushFaults: count=$count" }
     }

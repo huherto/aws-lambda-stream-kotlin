@@ -1,6 +1,7 @@
 package io.github.huherto.awsLambdaStream
 
 import kotlinx.serialization.Contextual
+import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
@@ -8,6 +9,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
+import kotlinx.serialization.serializerOrNull
 
 @Serializable
 class MyThing {
@@ -15,7 +17,7 @@ class MyThing {
 }
 
 @Serializable
-sealed class MyEvent(@Transient override var type: String = "") : Event {
+sealed class MyEvent() : Event {
     override var id: String? = null
     override var timestamp: Long? = null
     override var partitionKey: String? = null
@@ -29,6 +31,11 @@ sealed class MyEvent(@Transient override var type: String = "") : Event {
     @Contextual
     override var eem: Any? = null
 
+    @OptIn(InternalSerializationApi::class)
+    override fun eventType(): String {
+        return this::class.serializerOrNull()?.descriptor?.serialName ?: "unknown"
+    }
+
     override fun encoded(): String {
         return sutJson.encodeToString(serializer(), this)
     }
@@ -36,15 +43,15 @@ sealed class MyEvent(@Transient override var type: String = "") : Event {
 
 @Serializable
 @SerialName("MY_EVENT_A")
-data class MyEventA(var foo: String? = null, var bar: String? = null) : MyEvent("MY_EVENT_A")
+data class MyEventA(var foo: String? = null, var bar: String? = null) : MyEvent()
 
 @Serializable
 @SerialName("MY_EVENT_B")
-data class MyEventB(var foo: String? = null, var bar: String? = null) : MyEvent("MY_EVENT_B")
+data class MyEventB(var foo: String? = null, var bar: String? = null) : MyEvent()
 
 @Serializable
 @SerialName("MY_EVENT_C")
-data class MyEventC(var foo: String? = null, var bar: String? = null) : MyEvent("MY_EVENT_C")
+data class MyEventC(var foo: String? = null, var bar: String? = null) : MyEvent()
 
 val sutJson: Json = Json {
     ignoreUnknownKeys = true

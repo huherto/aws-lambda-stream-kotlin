@@ -113,7 +113,7 @@ class PipelineAssemblerTest {
 
         val failureEvent = assembler.published.peek()
         assertNotNull(failureEvent)
-        assertEquals("FAILURE_EVENT", failureEvent.type)
+        assertEquals(FAULT_EVENT_TYPE, failureEvent.eventType())
         
         // Assert that the proper exception type is saved within the FailureEvent
         val exception = failureEvent.failureException
