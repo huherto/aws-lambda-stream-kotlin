@@ -1,6 +1,5 @@
 package io.github.huherto.awsLambdaStream
 
-import aws.smithy.kotlin.runtime.util.type
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.serializerOrNull

@@ -1,13 +1,8 @@
 package org.myorg.sut
 
 import io.github.huherto.awsLambdaStream.Event
-import kotlinx.serialization.Contextual
-import kotlinx.serialization.InternalSerializationApi
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.Transient
+import kotlinx.serialization.*
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.serializerOrNull
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 

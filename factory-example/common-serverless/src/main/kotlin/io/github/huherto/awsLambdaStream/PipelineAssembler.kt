@@ -5,7 +5,7 @@ import kotlinx.coroutines.flow.*
 import java.util.*
 import java.util.concurrent.ConcurrentLinkedQueue
 
-class PipelineAssembler private constructor(val builder : Builder)
+class PipelineAssembler private constructor(builder : Builder)
 {
 
     private val logger = mu.KotlinLogging.logger {  }

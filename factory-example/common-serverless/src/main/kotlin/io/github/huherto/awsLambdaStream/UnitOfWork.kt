@@ -3,7 +3,6 @@ package io.github.huherto.awsLambdaStream
 import aws.sdk.kotlin.services.dynamodb.model.PutItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.PutItemResponse
 import kotlinx.serialization.Contextual
-import kotlinx.serialization.serializerOrNull
 
 interface Event {
     var id: String?
