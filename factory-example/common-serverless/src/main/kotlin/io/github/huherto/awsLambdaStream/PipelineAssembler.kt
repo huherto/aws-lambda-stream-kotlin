@@ -31,7 +31,7 @@ class PipelineAssembler private constructor(builder : Builder) {
 
     fun assemble(headFlow: Flow<UnitOfWork>, includeFaultHandler: Boolean = true): Flow<UnitOfWork> {
 
-        var headFlow = headFlow
+        val headFlow = headFlow
 
         val flows = mutableListOf<Flow<UnitOfWork>>()
         for (pipeline in pipelines) {

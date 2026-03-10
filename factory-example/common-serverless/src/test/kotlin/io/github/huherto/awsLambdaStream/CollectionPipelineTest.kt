@@ -1,6 +1,5 @@
 package io.github.huherto.awsLambdaStream
 
-import FaultManager
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
 import aws.sdk.kotlin.services.dynamodb.model.PutItemResponse
