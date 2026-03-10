@@ -8,12 +8,9 @@ import kotlinx.coroutines.flow.onEach
 import java.util.*
 import java.util.concurrent.ConcurrentLinkedQueue
 
-class FaultManager private constructor(
+class FaultManager constructor(
     private val envConfig: EnvironmentConfig = EnvironmentConfig()
 ) {
-    companion object {
-        val instance: FaultManager by lazy { FaultManager() }
-    }
 
     private val logger = mu.KotlinLogging.logger { }
     

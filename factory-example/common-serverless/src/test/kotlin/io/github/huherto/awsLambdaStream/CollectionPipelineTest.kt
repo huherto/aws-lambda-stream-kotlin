@@ -106,7 +106,7 @@ class CollectionPipelineTest {
         // Assert
         assertNotNull(pipeline)
 
-        val faultManager = FaultManager.instance
+        val faultManager = FaultManager()
         System.out.println(pipeline)
         val uowFlow = flowOf(UnitOfWork(event = myEventA()))
         pipeline.connect(faultManager, uowFlow).collect { uow ->
@@ -120,7 +120,7 @@ class CollectionPipelineTest {
         // Arrange
         val pipeline = CollectPipeline.Builder("collection-pipeline-test").build()
         val uowFlow = flowOf(UnitOfWork(event = myEventA()))
-        val faultManager = FaultManager.instance
+        val faultManager = FaultManager()
 
         // Act & Assert
         assertDoesNotThrow {

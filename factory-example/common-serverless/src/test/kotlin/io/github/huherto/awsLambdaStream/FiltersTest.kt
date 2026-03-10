@@ -12,7 +12,7 @@ class FiltersTest {
     @Test
     fun `test event types filter`() = runTest {
 
-        val faultManager = FaultManager.instance
+        val faultManager = FaultManager()
 
         val  myEventA = MyEventA()
         val  myEventB = MyEventB()

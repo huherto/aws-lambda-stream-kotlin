@@ -97,9 +97,11 @@ class PipelineAssemblerTest {
     @Test
     fun `test assemble handles FailureException and publishes FailureEvent`() = runBlocking {
         val failingPipeline = FailingPipeline("fail1")
+        val fm = FaultManager()
 
         val assembler = PipelineAssembler.builder()
             .addPipeline(failingPipeline)
+            .faultManager(fm)
             .build()
 
         val uow = UnitOfWork(record = "test_record")
@@ -112,7 +114,6 @@ class PipelineAssemblerTest {
         // The resulting flow itself should be empty because the exception was thrown before it could emit
         assertEquals(0, results.size, "Flow should be empty due to failure")
 
-        val fm = FaultManager.instance
         // Verify that flushFaults() successfully moved the caught exception from `theFaults` queue into the `published` queue
         assertEquals(1, fm.getPublished().size, "Should publish one failure event")
         assertEquals(0, fm.getFaults().size, "Faults should be empty after publishing")

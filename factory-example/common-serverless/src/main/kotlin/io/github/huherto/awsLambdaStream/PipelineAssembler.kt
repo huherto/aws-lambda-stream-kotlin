@@ -8,15 +8,23 @@ class PipelineAssembler private constructor(builder : Builder) {
 
     private val pipelines = builder.pipelines
 
-    private val faultManager = FaultManager.instance
+    private val faultManager = builder.faultManager
 
     class Builder {
         internal val pipelines = mutableListOf<Pipeline>()
+
+        internal var envConfig = EnvironmentConfig()
+
+        internal var faultManager = FaultManager(envConfig)
 
         fun addPipeline(pipeline: Pipeline): Builder {
             pipelines.add(pipeline)
             return this
         }
+
+        fun envConfig(envConfig: EnvironmentConfig) = apply { this.envConfig = envConfig }
+
+        fun faultManager(faultManager: FaultManager) = apply { this.faultManager = faultManager }
 
         fun build(): PipelineAssembler {
             return PipelineAssembler(this)
