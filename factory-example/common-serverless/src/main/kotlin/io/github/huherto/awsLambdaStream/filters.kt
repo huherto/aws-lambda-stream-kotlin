@@ -3,7 +3,6 @@ package io.github.huherto.awsLambdaStream
 import faulty
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filter
-import redirectFailure
 import kotlin.reflect.KClass
 
 

@@ -23,7 +23,7 @@ class DynamoDBClientWrapper(val dynamoDBClient: DynamoDbClient) : DynamoDbClient
     private val logger = KotlinLogging.logger {  }
 
     override suspend fun putItem(input: PutItemRequest): PutItemResponse {
-        val eventId = input.item?.get("pk")?.asS();
+        val eventId = input.item?.get("pk")?.asS()
         logger.info { "Checking for poison event: $eventId" }
         if (eventId?.contains("poison") == true) {
             throw RuntimeException("Poison event detected $eventId")

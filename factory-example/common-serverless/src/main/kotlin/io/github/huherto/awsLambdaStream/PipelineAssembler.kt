@@ -1,11 +1,7 @@
 package io.github.huherto.awsLambdaStream
 
-import aws.smithy.kotlin.runtime.SdkBaseException
-import aws.smithy.kotlin.runtime.retries.Outcome
 import flushFaults
 import kotlinx.coroutines.flow.*
-import java.util.*
-import java.util.concurrent.ConcurrentLinkedQueue
 
 class PipelineAssembler private constructor(builder : Builder) {
 
