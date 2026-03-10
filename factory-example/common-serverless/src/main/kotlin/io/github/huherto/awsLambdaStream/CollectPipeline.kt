@@ -3,12 +3,9 @@ package io.github.huherto.awsLambdaStream
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
 import aws.sdk.kotlin.services.dynamodb.model.PutItemRequest
+import faulty
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.buffer
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.*
 import kotlin.reflect.KClass
 
 class CollectPipeline private constructor(builder: Builder) : Pipeline(builder.id) {
@@ -106,13 +103,14 @@ class CollectPipeline private constructor(builder: Builder) : Pipeline(builder.i
     override fun connect(fromFlow: Flow<UnitOfWork>) : Flow<UnitOfWork>{
         logger.info { "CollectPipeline.connect: id=$id" }
         val flow = fromFlow
+            .filterNotNull()
             .filterEventTypes(*onEventClass.toTypedArray())
             .onEach { uow -> printStartPipeline(uow) }
-            .filter { uow -> faulty(uow) { onContentType(uow) } }
-            .map { uow -> faulty(uow) { uow.copy(key = correlationKey(uow)) } }
-            .map { uow -> faulty(uow) { putRequest(uow) } }
+            .filter { uow -> faulty(uow) { onContentType(uow) } == true }
+            .mapNotNull { uow -> faulty(uow) { uow.copy(key = correlationKey(uow)) } }
+            .mapNotNull { uow -> faulty(uow) { putRequest(uow) } }
             .buffer(bufferCapacity)
-            .map { uow -> faulty(uow) { putDynamoDb(uow) } }
+            .mapNotNull { uow -> faulty(uow) { putDynamoDb(uow) } }
             .onEach { uow -> printEndPipeline(uow) }
         return flow
     }

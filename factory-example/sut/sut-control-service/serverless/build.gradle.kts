@@ -37,6 +37,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines)
     implementation(libs.lambda.json.logger)
     implementation(libs.slf4j.api)
+    implementation(libs.kotlin.logging)
     //implementation(libs.slf4j.simple)
 
 

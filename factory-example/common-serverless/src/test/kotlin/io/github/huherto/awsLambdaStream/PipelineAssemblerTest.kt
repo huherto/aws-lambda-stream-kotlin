@@ -1,12 +1,16 @@
 package io.github.huherto.awsLambdaStream
 
+import faulty
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
+import published
+import theFaults
 
 class PipelineAssemblerTest {
 
@@ -20,8 +24,10 @@ class PipelineAssemblerTest {
     // A mock pipeline that intentionally throws a FailureException to test error handling
     class FailingPipeline(id: String) : Pipeline(id) {
         override fun connect(fromFlow: Flow<UnitOfWork>): Flow<UnitOfWork> {
-            return fromFlow.map {
-                throw FailureException(it, RuntimeException("Intentional failure for $id"))
+            return fromFlow.mapNotNull {
+                faulty(it) {
+                    throw FailureException(it, RuntimeException("Intentional failure for $id"))
+                }
             }
         }
     }
@@ -102,16 +108,16 @@ class PipelineAssemblerTest {
 
         // When the flow is assembled, it will be mapped into the FailingPipeline and throw an exception
         val resultFlow = assembler.assemble(headFlow, includeFaultHandler = true)
-        val results = resultFlow.toList()
 
+        val results = resultFlow.toList()
         // The resulting flow itself should be empty because the exception was thrown before it could emit
         assertEquals(0, results.size, "Flow should be empty due to failure")
 
         // Verify that flushFaults() successfully moved the caught exception from `theFaults` queue into the `published` queue
-        assertEquals(1, assembler.published.size, "Should publish one failure event")
-        assertEquals(0, assembler.theFaults.size, "Faults should be empty after publishing")
+        assertEquals(1, published.size, "Should publish one failure event")
+        assertEquals(0, theFaults.size, "Faults should be empty after publishing")
 
-        val failureEvent = assembler.published.peek()
+        val failureEvent = published.peek()
         assertNotNull(failureEvent)
         assertEquals(FAULT_EVENT_TYPE, failureEvent.eventType())
         

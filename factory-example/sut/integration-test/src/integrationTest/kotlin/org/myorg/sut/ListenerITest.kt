@@ -8,8 +8,11 @@ import aws.sdk.kotlin.services.eventbridge.EventBridgeClient
 import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequest
 import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequestEntry
 import aws.smithy.kotlin.runtime.net.url.Url
+import io.github.huherto.awsLambdaStream.Event
 import kotlinx.coroutines.runBlocking
+import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestInstance
 import kotlin.random.Random
 
 // Components tested.
@@ -17,7 +20,7 @@ import kotlin.random.Random
 //   - Event bridge will send event to kinesis stream. sut-event-hub-local-s1
 //   - sut-control-service-local-listener will read event from the kinesis stream.
 //   - sut-control-service-local-listener will insert the event in DynamoDB. sut-control-service-local-events
-//@Testcontainers
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ListenerITest {
 
     fun endPointUrl() = Url.parse("http://localhost:4566")
@@ -25,33 +28,52 @@ class ListenerITest {
     @Test
     fun sendEvents() = runBlocking{
 
-        val eventBridgeClient = createEventBridgeClient()
-        eventBridgeClient.use { eventBridgeClient ->
-            val event = createShipmentCreatedEvent(createTrackedUnit())
+        val event = createShipmentCreatedEvent(createTrackedUnit())
 
-            val res = eventBridgeClient.putEvents(PutEventsRequest{
-                entries = listOf(
-                    PutEventsRequestEntry {
-                        eventBusName = "sut-event-hub-local-bus"
-                        detail = event.encoded()
-                        detailType = "my-event"
-                        source = "integration-test"
-                    }
-                )
-            })
-            println("failedEntryCount=${res.failedEntryCount}")
-            for (entry in res.entries!!) {
-                println("eventID=${entry.eventId}")
-            }
-            val dynamoDbClient = createDynamoDbClient()
-            dynamoDbClient.use { dynamoDbClient ->
-                val savedEvent = findEvent(dynamoDbClient, event.id!!)
-                assert(savedEvent != null)
-            }
+        val res = eventBridgeClient.putEvents(PutEventsRequest{
+            entries = listOf(
+                PutEventsRequestEntry {
+                    eventBusName = "sut-event-hub-local-bus"
+                    detail = event.encoded()
+                    detailType = "my-event"
+                    source = "integration-test"
+                }
+            )
+        })
+        println("failedEntryCount=${res.failedEntryCount}")
+        for (entry in res.entries!!) {
+            println("eventID=${entry.eventId}")
         }
+        val savedEvent = findEvent( event.id!!)
+        assert(savedEvent != null)
+
     }
 
-    private suspend fun findEvent(dynamoDbClient: DynamoDbClient, eventId : String): Map<String, AttributeValue>? {
+    @Test
+    fun sendPoisonPillEvent() = runBlocking {
+
+        val event = createPoisonPillEvent(createTrackedUnit())
+
+        val res = eventBridgeClient.putEvents(PutEventsRequest{
+            entries = listOf(
+                PutEventsRequestEntry {
+                    eventBusName = "sut-event-hub-local-bus"
+                    detail = event.encoded()
+                    detailType = "my-event"
+                    source = "integration-test"
+                }
+            )
+        })
+        println("failedEntryCount=${res.failedEntryCount}")
+        for (entry in res.entries!!) {
+            println("eventID=${entry.eventId}")
+        }
+//        val savedEvent = findEvent( event.id!!)
+//        assert(savedEvent != null)
+
+    }
+
+    private suspend fun findEvent(eventId : String): Map<String, AttributeValue>? {
         println("Looking for event with id: $eventId")
         val startTime = System.currentTimeMillis()
         while (true) {
@@ -74,9 +96,8 @@ class ListenerITest {
         }
     }
 
-    fun createEventBridgeClient(): EventBridgeClient {
-
-        return EventBridgeClient {
+    private val eventBridgeClient: EventBridgeClient by lazy {
+        EventBridgeClient {
             this.region = "us-east-1"
             this.endpointUrl = endPointUrl()
             credentialsProvider =
@@ -87,8 +108,8 @@ class ListenerITest {
         }
     }
 
-    fun createDynamoDbClient(): DynamoDbClient {
-        return DynamoDbClient {
+    private val dynamoDbClient:  DynamoDbClient by lazy {
+        DynamoDbClient {
             this.region = "us-east-1"
             this.endpointUrl = endPointUrl()
             credentialsProvider =
@@ -97,6 +118,12 @@ class ListenerITest {
                     this.secretAccessKey = "test"
                 }
         }
+    }
+
+    @AfterAll
+    fun tearDownAll() {
+        eventBridgeClient.close()
+        dynamoDbClient.close()
     }
 
     private fun createTrackedUnit() = TrackedUnit().apply {
@@ -119,6 +146,14 @@ class ListenerITest {
         partitionKey = id
         timestamp = System.currentTimeMillis()
         location = "Atlanta Hub"
+        entity = trackedUnit
+    }
+
+    private fun createPoisonPillEvent(trackedUnit : TrackedUnit) = ShipmentCreatedEvent().apply {
+        id = "poison-"+generateRandomNumber()
+        partitionKey = id
+        timestamp = System.currentTimeMillis()
+        location = "poison-pill"
         entity = trackedUnit
     }
 }
