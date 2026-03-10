@@ -1,6 +1,5 @@
 package io.github.huherto.awsLambdaStream
 
-import flushFaults
 import kotlinx.coroutines.flow.*
 
 class PipelineAssembler private constructor(builder : Builder) {
@@ -9,12 +8,10 @@ class PipelineAssembler private constructor(builder : Builder) {
 
     private val pipelines = builder.pipelines
 
-    private val envConfig = builder.envConfig
+    private val faultManager = FaultManager.instance
 
     class Builder {
         internal val pipelines = mutableListOf<Pipeline>()
-
-        internal val envConfig = EnvironmentConfig()
 
         fun addPipeline(pipeline: Pipeline): Builder {
             pipelines.add(pipeline)
@@ -42,7 +39,7 @@ class PipelineAssembler private constructor(builder : Builder) {
                 .filterNotNull()
                 .mapNotNull { uow -> uow.copy(pipeline = pipeline) }
                 .onEach { uow -> startPipeline(uow) }
-            flow = pipeline.connect(flow)
+            flow = pipeline.connect(faultManager, flow)
                 .filterNotNull()
                 .onEach { uow -> endPipeline(uow) }
             flows.add(flow)
@@ -55,7 +52,7 @@ class PipelineAssembler private constructor(builder : Builder) {
                     if (cause != null) {
                         logger.warn { "PipelineAssembler.onCompletion: cause=$cause" }
                     }
-                    flushFaults()
+                    faultManager.flushFaults()
                 }
         }
 
@@ -68,12 +65,6 @@ class PipelineAssembler private constructor(builder : Builder) {
 
     fun endPipeline(uow: UnitOfWork): UnitOfWork {
         return uow
-    }
-
-    fun logError(exception: Throwable) {
-        logger.error {
-            "Exception in pipeline flow: ${exception.message}"
-        }
     }
 
 

@@ -26,12 +26,11 @@ abstract class Pipeline(val id : String) {
         logger.debug { "end type:${eventType}, eid:${uom.event?.id}, uow: $redacted" }
     }
 
-    // Not implemented yet. Redefine manually to redact specific fields.
+    // Not implemented yet. For now, redefine manually to redact specific fields.
     fun trimAndRedacted(uom: UnitOfWork) : UnitOfWork {
         return uom.copy()
     }
 
-    abstract fun connect(fromFlow: Flow<UnitOfWork>) : Flow<UnitOfWork>
-
+    abstract fun connect(fm: FaultManager, fromFlow: Flow<UnitOfWork>): Flow<UnitOfWork>
 }
 

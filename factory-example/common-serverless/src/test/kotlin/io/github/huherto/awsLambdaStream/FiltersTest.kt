@@ -12,6 +12,8 @@ class FiltersTest {
     @Test
     fun `test event types filter`() = runTest {
 
+        val faultManager = FaultManager.instance
+
         val  myEventA = MyEventA()
         val  myEventB = MyEventB()
         val  myEventC = MyEventC()
@@ -24,7 +26,7 @@ class FiltersTest {
             emit(UnitOfWork(event = myEventA ))
             emit(UnitOfWork(event = myEventB ))
             emit(UnitOfWork(event = myEventC ))
-        }.filterEventTypes(MyEventA::class, MyEventB::class)
+        }.filterEventTypes(faultManager, MyEventA::class, MyEventB::class)
             .onEach {
                 when (it.event) {
                     is MyEventA -> foundMyEventA = true

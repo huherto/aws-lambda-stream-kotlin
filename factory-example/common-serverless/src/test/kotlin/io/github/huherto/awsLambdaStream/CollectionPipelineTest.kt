@@ -1,5 +1,6 @@
 package io.github.huherto.awsLambdaStream
 
+import FaultManager
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
 import aws.sdk.kotlin.services.dynamodb.model.PutItemResponse
@@ -106,9 +107,10 @@ class CollectionPipelineTest {
         // Assert
         assertNotNull(pipeline)
 
+        val faultManager = FaultManager.instance
         System.out.println(pipeline)
         val uowFlow = flowOf(UnitOfWork(event = myEventA()))
-        pipeline.connect(uowFlow).collect { uow ->
+        pipeline.connect(faultManager, uowFlow).collect { uow ->
             System.out.println(uow)
         }
         System.out.println("Done")
@@ -119,10 +121,11 @@ class CollectionPipelineTest {
         // Arrange
         val pipeline = CollectPipeline.Builder("collection-pipeline-test").build()
         val uowFlow = flowOf(UnitOfWork(event = myEventA()))
+        val faultManager = FaultManager.instance
 
         // Act & Assert
         assertDoesNotThrow {
-            val flow = pipeline.connect(uowFlow)
+            val flow = pipeline.connect(faultManager, uowFlow)
             assertNotNull(flow)
         }
     }
