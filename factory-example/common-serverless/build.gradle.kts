@@ -30,6 +30,8 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.testcon.localstack)
     implementation(libs.kotlin.logging)
+    implementation("com.google.code.gson:gson:2.10.1")
+
 
     testImplementation(kotlin("test"))
     testImplementation(libs.aws.lambda.java.tests)

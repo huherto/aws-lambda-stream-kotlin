@@ -2,7 +2,13 @@ package io.github.huherto.awsLambdaStream
 
 import aws.sdk.kotlin.services.dynamodb.model.PutItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.PutItemResponse
+import com.google.gson.GsonBuilder
+import com.google.gson.TypeAdapter
+import com.google.gson.stream.JsonReader
+import com.google.gson.stream.JsonWriter
 import kotlinx.serialization.Contextual
+import java.nio.ByteBuffer
+import java.util.Base64
 
 interface Event {
     var id: String?
@@ -58,4 +64,30 @@ class FailureEvent() : Event {
         TODO("Not yet implemented")
     }
 
+}
+
+class ByteBufferAdapter : TypeAdapter<ByteBuffer>() {
+    override fun write(out: JsonWriter, value: ByteBuffer?) {
+        if (value == null) {
+            out.nullValue()
+        } else {
+            // Duplicate the buffer so we don't change the position of the original one
+            val duplicate = value.duplicate()
+            val bytes = ByteArray(duplicate.remaining())
+            duplicate.get(bytes)
+            out.value(Base64.getEncoder().encodeToString(bytes))
+        }
+    }
+
+    override fun read(`in`: JsonReader): ByteBuffer? {
+        return null // Deserialization is not needed for logging
+    }
+}
+
+fun Any?.asJson() : String {
+    val gson = GsonBuilder()
+        .registerTypeHierarchyAdapter(ByteBuffer::class.java, ByteBufferAdapter())
+        .setPrettyPrinting()
+        .create()
+    return gson.toJson(this)
 }
