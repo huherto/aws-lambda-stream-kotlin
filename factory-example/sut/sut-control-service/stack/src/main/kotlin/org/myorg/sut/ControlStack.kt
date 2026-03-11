@@ -32,12 +32,16 @@ class ControlStack(scope: Construct, serviceProps: ServiceProps) : BaseStack(sco
 
     private fun newTriggerLambda(): Function =
         Function.Builder.create(this, "trigger")
-            .functionName("trigger")
+            .functionName("${subsys()}-control-service-${stage()}-trigger")
             .code(Code.fromAsset("../serverless/build/libs/serverless.jar"))
             .handler("org.myorg.sut.Trigger::handleRequest")
             .timeout(Duration.seconds(50))
             .memorySize(1024)
             .runtime(Runtime.JAVA_21)
+            .environment(mapOf(
+                "JAVA_TOOL_OPTIONS" to "-Dslf4j.provider=io.github.vitalijr2.aws.lambda.slf4j.AWSLambdaServiceProvider",
+                "LOG_DEFAULT_LEVEL" to "DEBUG",
+            ))
             .build()
 
     private fun newDynamoDbTable() : TableV2 = TableV2.Builder.create(this, "EventsTable")
@@ -94,7 +98,7 @@ class ControlStack(scope: Construct, serviceProps: ServiceProps) : BaseStack(sco
 
     private fun newListenerLambda(): Function =
         Function.Builder.create(this, "listener")
-            .functionName("sut-control-service-${stage()}-listener")
+            .functionName("${subsys()}-control-service-${stage()}-listener")
             .code(Code.fromAsset("../serverless/build/libs/serverless.jar"))
             .handler("org.myorg.sut.Listener::handleRequest")
             .timeout(Duration.seconds(50))
@@ -102,7 +106,6 @@ class ControlStack(scope: Construct, serviceProps: ServiceProps) : BaseStack(sco
             .runtime(Runtime.JAVA_21)
             .environment(mapOf(
                 "JAVA_TOOL_OPTIONS" to "-Dslf4j.provider=io.github.vitalijr2.aws.lambda.slf4j.AWSLambdaServiceProvider",
-                //"JAVA_TOOL_OPTIONS" to "-Dorg.slf4j.simpleLogger.defaultLogLevel=DEBUG",
                 "ENTITY_TABLE_NAME" to tableName,
                 "LOG_DEFAULT_LEVEL" to "DEBUG",
             ))

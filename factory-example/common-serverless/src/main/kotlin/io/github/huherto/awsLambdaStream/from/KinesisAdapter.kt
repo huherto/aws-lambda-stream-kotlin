@@ -1,6 +1,8 @@
-package io.github.huherto.awsLambdaStream
+package io.github.huherto.awsLambdaStream.from
 
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
+import io.github.huherto.awsLambdaStream.Event
+import io.github.huherto.awsLambdaStream.UnitOfWork
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.map
@@ -10,7 +12,7 @@ abstract class KinesisAdapter {
 
     fun  fromKinesis(kinesisEvent: KinesisEvent): Flow<UnitOfWork> {
         return kinesisEvent.records.asFlow()
-            .map{ record ->
+            .map { record ->
                 UnitOfWork().copy(
                     record = record,
                 )

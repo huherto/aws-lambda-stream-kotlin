@@ -1,18 +1,19 @@
 package org.myorg.sut
 
 import com.amazonaws.services.lambda.runtime.Context
-import com.amazonaws.services.lambda.runtime.LambdaLogger
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
+import mu.KotlinLogging
 
 class Trigger : RequestHandler<DynamodbEvent, String> {
 
+    private val logger = KotlinLogging.logger {  }
+
     override fun handleRequest(ddbEvent: DynamodbEvent, context: Context): String {
-        val logger: LambdaLogger = context.logger
         if (ddbEvent.records != null) {
-            logger.log("Event received " + ddbEvent.records)
+            logger.info{"Event received " + ddbEvent.records}
             for (record in ddbEvent.records) {
-                logger.log("Record $record")
+                logger.info{"Record $record"}
             }
         }
         if (ddbEvent.records != null) {
