@@ -49,7 +49,9 @@ class Listener(
             .addPipeline(pipeline)
             .build()
 
-        val headFlow = kinesisAdapter.fromKinesis(kinesisEvent)
+        val headFlow = kinesisAdapter
+            .fromKinesis(assembler.getFaultManager(), kinesisEvent)
+
         assembler
             .assemble(headFlow, true)
             .collect { logger.info { "collected " + it.event?.id} }

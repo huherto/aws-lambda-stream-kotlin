@@ -10,6 +10,10 @@ class PipelineAssembler private constructor(builder : Builder) {
 
     private val faultManager = builder.faultManager
 
+    fun getFaultManager(): FaultManager {
+        return faultManager
+    }
+
     class Builder {
         internal val pipelines = mutableListOf<Pipeline>()
 

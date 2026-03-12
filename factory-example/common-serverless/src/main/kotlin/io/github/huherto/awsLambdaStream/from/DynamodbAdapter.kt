@@ -2,10 +2,11 @@ package io.github.huherto.awsLambdaStream.from
 
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue
+import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
 
 class DynamodbAdapter {
 
@@ -19,27 +20,37 @@ class DynamodbAdapter {
 
     private val skFn = "sk"
 
-    fun fromDynamoDB(dynamodbEvent: DynamodbEvent) : Flow<UnitOfWork> {
-        return dynamodbEvent.records.asFlow()
-            .map { dynamodbRecord ->
-                val event = TableEvent().apply {
-                    id = dynamodbRecord.eventID
-                    timestamp = deriveTimestamp(dynamodbRecord)
-                    partitionKey = dynamodbRecord.dynamodb.keys[pkFn]?.s
-                    type = calculateEventType(dynamodbRecord)
-                    tags = mapOf(
-                        "region" to dynamodbRecord.awsRegion
-                    )
-                    raw = mapOf(
-                        "new" to dynamodbRecord.dynamodb.newImage,
-                        "old" to dynamodbRecord.dynamodb.oldImage
+    fun fromDynamoDB(faultManager: FaultManager, dynamodbEvent: DynamodbEvent) : Flow<UnitOfWork> {
+        with(faultManager) {
+            return dynamodbEvent.records.asFlow()
+                .mapNotNull { dynamodbRecord -> UnitOfWork().copy(record = dynamodbRecord) }
+                .mapNotFaulty { uow ->
+                    val dynamodbRecord = uow.record as DynamodbEvent.DynamodbStreamRecord
+                    val event = buildEvent(dynamodbRecord)
+                    UnitOfWork().copy(
+                        record = dynamodbRecord,
+                        event = event
                     )
                 }
-                UnitOfWork().copy(
-                    record = dynamodbRecord,
-                    event = event
-                )
-            }
+        }
+
+    }
+
+    internal fun buildEvent(dynamodbRecord: DynamodbEvent.DynamodbStreamRecord): TableEvent {
+        val event = TableEvent().apply {
+            id = dynamodbRecord.eventID
+            timestamp = deriveTimestamp(dynamodbRecord)
+            partitionKey = dynamodbRecord.dynamodb.keys[pkFn]?.s
+            type = calculateEventType(dynamodbRecord)
+            tags = mapOf(
+                "region" to dynamodbRecord.awsRegion
+            )
+            raw = mapOf(
+                "new" to dynamodbRecord.dynamodb.newImage,
+                "old" to dynamodbRecord.dynamodb.oldImage
+            )
+        }
+        return event
     }
 
     private fun deriveTimestamp(dynamodbRecord: DynamodbEvent.DynamodbStreamRecord) : Long? {
@@ -60,14 +71,14 @@ class DynamodbAdapter {
         return "$eventTypePrefix-$eventTypeSuffix"
     }
 
-    private fun calculateEventTypePrefix(dynamodbRecord: DynamodbEvent.DynamodbStreamRecord): String? {
+    private fun calculateEventTypePrefix(dynamodbRecord: DynamodbEvent.DynamodbStreamRecord): String {
         val image = dynamodbRecord.dynamodb.newImage ?: dynamodbRecord.dynamodb.oldImage
         val discriminator : AttributeValue? = image?.get(discriminatorFn) ?: image?.get(skFn)
-        return discriminator?.s
+        return discriminator?.s ?: ""
 
     }
 
-    internal fun calculateEventTypeSuffix(dynamodbRecord: DynamodbEvent.DynamodbStreamRecord): String? {
+    internal fun calculateEventTypeSuffix(dynamodbRecord: DynamodbEvent.DynamodbStreamRecord): String {
         val eventNameMap = mapOf(
             "INSERT" to "created",
             "MODIFY" to "updated",

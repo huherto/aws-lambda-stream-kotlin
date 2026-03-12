@@ -1,9 +1,11 @@
 package io.github.huherto.awsLambdaStream
 
 import aws.smithy.kotlin.runtime.SdkBaseException
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.count
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.onEach
 import java.util.*
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -25,11 +27,21 @@ class FaultManager constructor(
         return theFaults.toList()
     }
 
-    inline fun <T, R> T.faulty(uom: UnitOfWork, block: T.() -> R): R? {
+    inline fun <R> Flow<UnitOfWork>.mapNotFaulty(
+        crossinline block: (UnitOfWork) -> R?
+    ): Flow<R> {
+        return this
+            .mapNotNull { item ->
+                faulty(item, block)
+            }
+    }
+
+
+    inline fun <R> faulty(uow: UnitOfWork, block: (UnitOfWork) -> R): R? {
         return try {
-            block()
+            block(uow)
         } catch (e: Throwable) {
-            val failureException = FailureException(uom, e)
+            val failureException = FailureException(uow, e)
             redirectFailure(failureException)
             null
         }
