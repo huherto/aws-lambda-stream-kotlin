@@ -3,6 +3,7 @@ package io.github.huherto.awsLambdaStream
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
 import aws.sdk.kotlin.services.dynamodb.model.PutItemResponse
+import io.github.huherto.awsLambdaStream.flavors.CollectPipeline
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk

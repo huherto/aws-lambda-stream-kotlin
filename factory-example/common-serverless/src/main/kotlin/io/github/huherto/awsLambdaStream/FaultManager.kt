@@ -36,7 +36,6 @@ class FaultManager constructor(
             }
     }
 
-
     inline fun <R> faulty(uow: UnitOfWork, block: (UnitOfWork) -> R): R? {
         return try {
             block(uow)

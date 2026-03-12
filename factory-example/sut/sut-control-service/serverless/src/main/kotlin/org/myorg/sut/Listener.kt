@@ -5,6 +5,8 @@ import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
 import io.github.huherto.awsLambdaStream.*
+import io.github.huherto.awsLambdaStream.flavors.CollectPipeline
+import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import io.github.huherto.awsLambdaStream.from.KinesisAdapter
 import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging

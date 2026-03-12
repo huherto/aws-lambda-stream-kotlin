@@ -1,10 +1,21 @@
-package io.github.huherto.awsLambdaStream
+package io.github.huherto.awsLambdaStream.flavors
 
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
 import aws.sdk.kotlin.services.dynamodb.model.PutItemRequest
+import io.github.huherto.awsLambdaStream.EnvironmentConfig
+import io.github.huherto.awsLambdaStream.Event
+import io.github.huherto.awsLambdaStream.FaultManager
+import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.filterEventTypes
+import io.github.huherto.awsLambdaStream.getDynamoDbClient
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.buffer
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.flow.onEach
 import kotlin.reflect.KClass
 
 class CollectPipeline private constructor(builder: Builder) : Pipeline(builder.id) {
@@ -99,7 +110,7 @@ class CollectPipeline private constructor(builder: Builder) : Pipeline(builder.i
         uow.copy(putResponse = putResponse)
     }
 
-    override fun connect(fm: FaultManager, fromFlow: Flow<UnitOfWork>) : Flow<UnitOfWork>{
+    override fun connect(fm: FaultManager, fromFlow: Flow<UnitOfWork>) : Flow<UnitOfWork> {
         logger.info { "CollectPipeline.connect: id=$id" }
         with(fm) {
             val flow = fromFlow
@@ -107,8 +118,8 @@ class CollectPipeline private constructor(builder: Builder) : Pipeline(builder.i
                 .filterEventTypes(this, *onEventClass.toTypedArray())
                 .onEach { uow -> printStartPipeline(uow) }
                 .filter { uow -> faulty(uow) { onContentType(uow) } == true }
-                .mapNotNull { uow -> faulty(uow) { uow.copy(key = correlationKey(uow)) } }
-                .mapNotNull { uow -> faulty(uow) { putRequest(uow) } }
+                .mapNotFaulty { uow -> uow.copy(key = correlationKey(uow)) }
+                .mapNotFaulty{ uow -> putRequest(uow) }
                 .buffer(bufferCapacity)
                 .mapNotNull { uow -> faulty(uow) { putDynamoDb(uow) } }
                 .onEach { uow -> printEndPipeline(uow) }

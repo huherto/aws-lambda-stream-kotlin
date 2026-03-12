@@ -1,5 +1,6 @@
 package io.github.huherto.awsLambdaStream
 
+import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map

@@ -1,5 +1,6 @@
 package io.github.huherto.awsLambdaStream
 
+import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import kotlinx.coroutines.flow.*
 
 class PipelineAssembler private constructor(builder : Builder) {
