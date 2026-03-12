@@ -2,12 +2,7 @@ package io.github.huherto.awsLambdaStream
 
 import aws.sdk.kotlin.services.dynamodb.model.PutItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.PutItemResponse
-import com.fasterxml.jackson.databind.JsonSerializer
-import com.fasterxml.jackson.databind.SerializationFeature
-import com.fasterxml.jackson.databind.module.SimpleModule
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import kotlinx.serialization.Contextual
-import java.nio.ByteBuffer
 
 interface Event {
     var id: String?

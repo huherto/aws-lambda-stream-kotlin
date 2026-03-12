@@ -67,8 +67,30 @@ class DynamodbAdapter {
 
     }
 
-    private fun calculateEventTypeSuffix(dynamodbRecord: DynamodbEvent.DynamodbStreamRecord): String? {
-        return ""
+    internal fun calculateEventTypeSuffix(dynamodbRecord: DynamodbEvent.DynamodbStreamRecord): String? {
+        val eventNameMap = mapOf(
+            "INSERT" to "created",
+            "MODIFY" to "updated",
+            "REMOVE" to "deleted"
+        )
+
+        val suffix = eventNameMap[dynamodbRecord.eventName] ?: ""
+
+        if (suffix != "deleted") {
+            val newImage = dynamodbRecord.dynamodb.newImage
+            val oldImage = dynamodbRecord.dynamodb.oldImage
+
+            if ((newImage?.containsKey("deleted") == true) || (oldImage?.containsKey("deleted") == true)) {
+                if (newImage?.get("deleted")?.bool == true) {
+                    return "deleted"
+                } else if (oldImage?.get("deleted")?.bool == true) {
+                    return "undeleted"
+                }
+            }
+        }
+
+        return suffix
     }
+
 
 }
