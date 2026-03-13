@@ -1,12 +1,6 @@
 package io.github.huherto.awsLambdaStream
 
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.long
+import kotlinx.serialization.json.*
 
 
 fun getJsonElementByPath(jsonObject: JsonObject, path: String): JsonElement? {
@@ -53,10 +47,6 @@ class JsonEvent(val jsonString: String) : Event {
     fun jsonPrimitive(path: String) : JsonPrimitive? {
         return getJsonPrimitiveByPath(jsonObject, path)
     }
-
-//    fun entity() : JsonObject? {
-//        return jsonObject["entity"]?.jsonObject
-//    }
 
     override fun eventType(): String {
         jsonObject["type"]?.jsonPrimitive?.content?.let { return it }
