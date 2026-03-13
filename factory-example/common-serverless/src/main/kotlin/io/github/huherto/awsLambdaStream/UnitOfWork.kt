@@ -3,7 +3,6 @@ package io.github.huherto.awsLambdaStream
 import aws.sdk.kotlin.services.dynamodb.model.PutItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.PutItemResponse
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
-import kotlinx.serialization.Contextual
 
 interface Event {
     var id: String?
@@ -38,7 +37,7 @@ class FailureException(
     cause: Throwable?
 ) : RuntimeException( cause)
 
-val FAULT_EVENT_TYPE : String = "fault"
+const val FAULT_EVENT_TYPE : String = "fault"
 
 class FailureEvent() : Event {
 
