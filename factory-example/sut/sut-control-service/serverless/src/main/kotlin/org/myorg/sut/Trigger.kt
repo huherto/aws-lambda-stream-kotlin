@@ -10,7 +10,6 @@ import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import io.github.huherto.awsLambdaStream.from.DynamodbAdapter
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonPrimitive
 import mu.KotlinLogging
 
 class Trigger : RequestHandler<DynamodbEvent, String> {

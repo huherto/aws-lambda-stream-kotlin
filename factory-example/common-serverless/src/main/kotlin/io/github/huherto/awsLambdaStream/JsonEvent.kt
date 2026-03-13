@@ -16,7 +16,7 @@ fun getJsonPrimitiveByPath(jsonObject: JsonObject, path: String): JsonPrimitive?
     return getJsonElementByPath(jsonObject, path) as? JsonPrimitive
 }
 
-class JsonEvent(val jsonString: String) : Event {
+class JsonEvent(jsonString: String) : Event {
 
     private val logger = mu.KotlinLogging.logger {  }
 

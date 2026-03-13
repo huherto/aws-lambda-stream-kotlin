@@ -4,7 +4,6 @@ import io.github.huherto.awsLambdaStream.Event
 import io.github.huherto.awsLambdaStream.asJson
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
-import org.myorg.sut.TrackedUnit
 
 @Serializable
 class TableEvent : Event {
