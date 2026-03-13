@@ -9,6 +9,8 @@ import io.github.huherto.awsLambdaStream.flavors.CorrelatePipeline
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import io.github.huherto.awsLambdaStream.from.DynamodbAdapter
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 import mu.KotlinLogging
 
 class Trigger : RequestHandler<DynamodbEvent, String> {
@@ -26,10 +28,14 @@ class Trigger : RequestHandler<DynamodbEvent, String> {
 
         CorrelatePipeline(
             id = "corr1",
-            correlationKey = { "my-correlation-key" },
+            correlationKey = {
+                    uow ->
+                val event = uow.event as? JsonEvent
+                event?.jsonPrimitive("entity.id")?.contentOrNull ?: "no-correlation-key"
+            },
             dynamoDbClient = dynamoDbClient,
             onEventClass = listOf(Event::class)
-            )
+        )
     }
 
     override fun handleRequest(ddbEvent: DynamodbEvent, context: Context) : String = runBlocking{

@@ -1,38 +1,35 @@
 package io.github.huherto.awsLambdaStream.flavors
-import io.github.huherto.awsLambdaStream.Event
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import kotlinx.coroutines.flow.Flow
-import kotlinx.serialization.InternalSerializationApi
-import kotlinx.serialization.serializerOrNull
 import mu.KotlinLogging
 
 abstract class Pipeline(val id : String) {
 
     protected val logger = KotlinLogging.logger {  }
 
-    fun printStartPipeline(uom: UnitOfWork) {
-        val eventType = eventType(uom.event)
-        logger.debug { "start type:${eventType}, eid:${uom.event?.id ?: "null"}" }
+    fun printStartPipeline(uow: UnitOfWork) {
+        val eventId = uow.event?.id ?: "null"
+        val eventType = uow.event?.eventType() ?: "unknown"
+        val pipelineId = this.id
+        logger.debug { "start type:${eventType}, eid:${eventId}, pipelineId:${pipelineId}" }
     }
 
-    @OptIn(InternalSerializationApi::class)
-    private fun eventType(event: Event?): String {
-        val type = event?.let { it::class.serializerOrNull()?.descriptor?.serialName } ?: "unknown"
-        return type
+    fun printEndPipeline(uow: UnitOfWork) {
+        val redacted = trimAndRedacted(uow)
+        val eventType = uow.event?.eventType() ?: "unknown"
+        logger.debug { "end type:${eventType}, eid:${uow.event?.id}, uow: $redacted" }
     }
 
-    fun printEndPipeline(uom: UnitOfWork) {
-        val redacted = trimAndRedacted(uom)
-        val eventType = eventType(uom.event)
-        logger.debug { "end type:${eventType}, eid:${uom.event?.id}, uow: $redacted" }
-    }
-
-    // Not implemented yet. For now, redefine manually to redact specific fields.
-    fun trimAndRedacted(uom: UnitOfWork) : UnitOfWork {
-        return uom.copy()
+    // Not implemented yet. For now, you could redefine manually to redact specific fields.
+    fun trimAndRedacted(uow: UnitOfWork) : UnitOfWork {
+        return uow.copy()
     }
 
     abstract fun connect(fm: FaultManager, fromFlow: Flow<UnitOfWork>): Flow<UnitOfWork>
+
+    override fun toString(): String {
+        return "Pipeline(id=$id)"
+    }
 }
 
