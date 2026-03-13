@@ -4,6 +4,12 @@ import aws.sdk.kotlin.services.dynamodb.model.PutItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.PutItemResponse
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import kotlinx.serialization.Contextual
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.long
+import org.myorg.sut.sutJson
 
 interface Event {
     var id: String?
@@ -29,6 +35,7 @@ data class UnitOfWork(
     val timestamp: String? = null,
     val putRequest: PutItemRequest? = null,
     val putResponse: PutItemResponse? = null,
+    val meta: Map<String, String>? = null
 )
 
 class FailureException(
@@ -58,5 +65,41 @@ class FailureEvent() : Event {
     override fun encoded(): String {
         TODO("Not yet implemented")
     }
+
+}
+
+class JsonEvent(val jsonString: String) : Event {
+
+    private val logger = mu.KotlinLogging.logger {  }
+
+    private val jsonObject = Json.parseToJsonElement(jsonString).jsonObject
+    override var id: String?
+        get() = jsonObject["id"]?.jsonPrimitive?.content
+        set(value) {}
+    override var timestamp: Long?
+        get() = jsonObject["timestamp"]?.jsonPrimitive?.long
+        set(value) {}
+    override var partitionKey: String?
+        get() = jsonObject["partitionKey"]?.jsonPrimitive?.content
+        set(value) {}
+    override var tags: Map<String, String>?
+        get() = jsonObject["tags"]?.jsonObject?.mapValues { it.value.jsonPrimitive.content }
+        set(value) {}
+    override var raw: Any?
+        get() = jsonObject
+        set(value) {}
+    override var eem: Any?
+        get() = TODO("Not yet implemented")
+        set(value) {}
+
+    override fun eventType(): String {
+        jsonObject["type"]?.jsonPrimitive?.content?.let { return it }
+         return "unknown"
+    }
+
+    override fun encoded(): String {
+        return jsonObject.asJson()
+    }
+
 
 }

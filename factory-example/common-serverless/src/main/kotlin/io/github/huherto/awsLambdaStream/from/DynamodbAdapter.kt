@@ -45,9 +45,9 @@ class DynamodbAdapter {
             tags = mapOf(
                 "region" to dynamodbRecord.awsRegion
             )
-            raw = mapOf(
-                "new" to dynamodbRecord.dynamodb.newImage,
-                "old" to dynamodbRecord.dynamodb.oldImage
+            raw = RecordPair(
+                new = dynamodbRecord.dynamodb.newImage?.let { RecordImage(it) },
+                old = dynamodbRecord.dynamodb.oldImage?.let { RecordImage(it) },
             )
         }
         return event
@@ -75,7 +75,6 @@ class DynamodbAdapter {
         val image = dynamodbRecord.dynamodb.newImage ?: dynamodbRecord.dynamodb.oldImage
         val discriminator : AttributeValue? = image?.get(discriminatorFn) ?: image?.get(skFn)
         return discriminator?.s ?: ""
-
     }
 
     internal fun calculateEventTypeSuffix(dynamodbRecord: DynamodbEvent.DynamodbStreamRecord): String {
@@ -103,5 +102,21 @@ class DynamodbAdapter {
         return suffix
     }
 
+
+}
+
+data class RecordPair(val new: RecordImage?, val old: RecordImage?)
+
+class RecordImage(val map: Map<String, AttributeValue>) : Map<String, AttributeValue> by map  {
+
+    fun getSequenceNumber(): String? = map["sequenceNumber"]?.s
+
+    fun getTtl(): String? = map["ttl"]?.n
+
+    fun getData(): String? = map["data"]?.s
+
+    fun getEvent(): String? = map["event"]?.s
+
+    fun isDeleted(): Boolean = map.containsKey("deleted") && map["deleted"]?.bool == true
 
 }

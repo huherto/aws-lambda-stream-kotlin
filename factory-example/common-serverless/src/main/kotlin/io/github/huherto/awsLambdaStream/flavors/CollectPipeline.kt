@@ -34,7 +34,7 @@ class CollectPipeline private constructor(builder: Builder) : Pipeline(builder.i
     class Builder(internal var id: String) {
         internal var onContentType: (UnitOfWork) -> Boolean = { true }
         internal var onEventClass: List<KClass<Event>> = listOf(Event::class)
-        internal var correlationKey: (UnitOfWork) -> String? = { uom -> uom.event?.partitionKey }
+        internal var correlationKey: (UnitOfWork) -> String? = { uow -> uow.event?.partitionKey }
         internal var ttlDays: Int? = null
         internal var includeRaw: Boolean = true
         internal var expire: String? = null

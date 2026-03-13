@@ -1,6 +1,7 @@
 package io.github.huherto.awsLambdaStream.from
 
 import io.github.huherto.awsLambdaStream.Event
+import io.github.huherto.awsLambdaStream.asJson
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 import org.myorg.sut.TrackedUnit
@@ -23,8 +24,12 @@ class TableEvent : Event {
         return type ?: "unknown"
     }
 
+    override fun toString(): String {
+        return this.asJson()
+    }
+
     override fun encoded(): String {
-        TODO("Not yet implemented")
+        return this.asJson()
     }
 
 }

@@ -120,14 +120,14 @@ class DynamodbAdapterTest {
 
     @Test
     fun `buildEvent should include raw data with new and old images`() {
-        val newImage = mapOf(
+        val newImage = RecordImage(mapOf(
             "pk" to AttributeValue().withS("key1"),
             "data" to AttributeValue().withS("new-value")
-        )
-        val oldImage = mapOf(
+        ))
+        val oldImage = RecordImage( mapOf(
             "pk" to AttributeValue().withS("key1"),
             "data" to AttributeValue().withS("old-value")
-        )
+        ))
 
         val record = createDynamodbRecord(
             newImage = newImage,
@@ -137,10 +137,9 @@ class DynamodbAdapterTest {
 
         val event = adapter.buildEvent(record)
 
-        @Suppress("UNCHECKED_CAST")
-        val raw = event.raw as? Map<String, Any?>
-        assertEquals(newImage, raw?.get("new"))
-        assertEquals(oldImage, raw?.get("old"))
+        val raw = event.raw as? RecordPair
+        assertEquals(newImage.map, raw?.new?.map)
+        assertEquals(oldImage.map, raw?.old?.map)
     }
 
     @Test

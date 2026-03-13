@@ -16,12 +16,12 @@ cdklocal_deploy() {
 
 (
   cd $SCRIPT_DIR/../common-serverless
-  $GW clean build
+  $GW test
   cd $SCRIPT_DIR/../common-stack
-  $GW clean build
+  $GW test
 	cd $SCRIPT_DIR
-	$GW clean shadowJar
+	$GW test shadowJar
 )
 
-cdklocal_deploy "sut-event-hub"
+#cdklocal_deploy "sut-event-hub"
 cdklocal_deploy "sut-control-service"
