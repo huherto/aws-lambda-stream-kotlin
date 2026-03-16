@@ -1,9 +1,12 @@
-package io.github.huherto.awsLambdaStream
+package io.github.huherto.awsLambdaStream.flavors
 
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
 import aws.sdk.kotlin.services.dynamodb.model.PutItemResponse
-import io.github.huherto.awsLambdaStream.flavors.CollectPipeline
+import io.github.huherto.awsLambdaStream.EnvironmentConfig
+import io.github.huherto.awsLambdaStream.FaultManager
+import io.github.huherto.awsLambdaStream.MyEventA
+import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -37,7 +40,7 @@ class CollectionPipelineTest {
 
     @Test
     fun `test defaultPutRequest generates correct put request with raw event`() {
-        
+
         // Given
         val envConfig = spyk<EnvironmentConfig>()
         every { envConfig.awsRegion() } returns "us-east-1"
@@ -88,7 +91,7 @@ class CollectionPipelineTest {
         val exception = assertThrows(RuntimeException::class.java) {
             pipeline.defaultPutRequest(uow)
         }
-        
+
         assertEquals("Not implemented yet", exception.message)
     }
 

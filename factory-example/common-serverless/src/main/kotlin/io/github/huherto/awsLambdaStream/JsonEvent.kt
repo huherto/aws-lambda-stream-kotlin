@@ -37,7 +37,7 @@ class JsonEvent(jsonString: String) : Event {
         get() = jsonObject
         set(value) {}
     override var eem: Any?
-        get() = TODO("Not yet implemented")
+        get() = jsonObject["eem"]?.jsonObject?.mapValues { it.value.jsonPrimitive.content }
         set(value) {}
 
     fun jsonObject(path: String) : JsonObject? {

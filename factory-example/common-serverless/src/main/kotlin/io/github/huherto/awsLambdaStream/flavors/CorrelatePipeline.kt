@@ -14,35 +14,46 @@ import kotlin.reflect.KClass
 class CorrelatePipeline constructor(
     id: String,
     val onContentType: (UnitOfWork) -> Boolean = { true },
-    val onEventClass: List<KClass<Event>> = listOf(Event::class),
+    val onEventClass: List<KClass<out Event>> = listOf(Event::class),
     val correlationKey: ((UnitOfWork) -> String)? = null,
     val correlationKeySuffix: String = "",
     val envConfig: EnvironmentConfig = EnvironmentConfig(),
     val bufferCapacity: Int = Channel.Factory.BUFFERED,
     var dynamoDbClient: DynamoDbClient? = null,
-    var putRequest: ((UnitOfWork) -> UnitOfWork)? = null,
+    val putRequest: ((UnitOfWork) -> UnitOfWork)? = null,
 ) : Pipeline(id) {
 
     private fun nullableS(s: String?): AttributeValue {
         return s?.let { AttributeValue.S(it) } ?: AttributeValue.Null(true)
     }
 
-    fun defaultPutRequest(uow: UnitOfWork) : UnitOfWork {
+    private fun nullableN(s: String?): AttributeValue {
+        return s?.let { AttributeValue.N(it) } ?: AttributeValue.Null(true)
+    }
+
+    internal fun defaultPutRequest(uow: UnitOfWork) : UnitOfWork {
+
+        if (putRequest != null) return putRequest(uow)
+
         val event: Event? = uow.event
         val timeStamp = event?.timestamp
         val awsRegion = envConfig.awsRegion()
 
         val itemValues = mapOf(
-            "pk" to nullableS(event?.id),
-            "sk" to AttributeValue.S("EVENT"),
-            "discriminator" to AttributeValue.S("EVENT"),
+            "pk" to nullableS(uow.key),
+            "sk" to nullableS(event?.id),
+            "discriminator" to AttributeValue.S("CORREL"), // ATION
             "timestamp" to AttributeValue.N(timeStamp.toString()),
             "awsregion" to AttributeValue.S(awsRegion),
-            "data" to nullableS(uow.key),
+            "sequenceNumber" to nullableN(uow.meta?.get("sequenceNumber")),
+            "ttl" to nullableN(uow.meta?.get("ttl")),
+            "expire" to nullableS(uow.meta?.get("expire")),
+            "pipelineId" to nullableS(id),
+            "event" to nullableS(event?.encoded()),
         )
 
         val putRequest = PutItemRequest.Companion {
-            tableName = envConfig.tableName()
+            tableName = envConfig.tableName() ?: "events"
             item = itemValues
         }
         return uow.copy(putRequest = putRequest)
@@ -58,7 +69,7 @@ class CorrelatePipeline constructor(
         uow.copy(putResponse = putResponse)
     }
 
-    private fun forCollectedEvents(uow: UnitOfWork) : Boolean {
+    internal fun forCollectedEvents(uow: UnitOfWork) : Boolean {
         return when(uow.record) {
             is DynamodbEvent.DynamodbStreamRecord -> {
                 uow.record.eventName == "INSERT"
@@ -69,17 +80,25 @@ class CorrelatePipeline constructor(
         }
     }
 
-    private fun normalize(uow: UnitOfWork): UnitOfWork {
+    internal fun normalize(uow: UnitOfWork): UnitOfWork {
         val raw = uow.event?.raw as? RecordPair
         val rawNew = raw?.new ?: RecordImage(mapOf())
         val event = rawNew.getEvent()?: "{}"
+        val jsonEvent: JsonEvent? = try {
+            JsonEvent(event)
+        } catch (e: Exception) {
+            println("Failed to parse event: $event")
+            println("Exception: $e")
+            throw e
+        }
+
         return uow.copy(
             meta = mapOf(
                 "sequenceNumber" to "" + rawNew.getSequenceNumber(),
                 "ttl" to "" + rawNew.getTtl(),
                 "data" to "" + rawNew.getData(),
             ),
-            event = JsonEvent(event)
+            event = jsonEvent
         )
     }
 
@@ -99,16 +118,18 @@ class CorrelatePipeline constructor(
                 .filterNotNull()
                 .filter{ uow -> faulty(uow){ forCollectedEvents(uow) } == true }
                 .mapNotFaulty{  uow -> normalize(uow) }
-                .filterEventTypes(this, *onEventClass.toTypedArray())
+                .onEach { uow -> println("step 3 ${uow.asJson()}") }
+                // Temporarily commented out
+                //.filterEventTypes(this, *onEventClass.toTypedArray())
+                .onEach { uow -> println("step 4 ${uow.asJson()}") }
                 .onEach { uow -> printStartPipeline(uow) }
                 .filter { uow -> faulty(uow) { onContentType(uow) } == true }
                 .mapNotFaulty { uow -> addCorrelationKey(uow)}
-                // .mapNotFaulty{ uow -> putRequest(uow) }
+                .mapNotFaulty{ uow -> putRequest(uow) }
                 .buffer(bufferCapacity)
-                //.mapNotNull { uow -> faulty(uow) { putDynamoDb(uow) } }
+                .mapNotNull { uow -> faulty(uow) { putDynamoDb(uow) } }
                 .onEach { uow -> printEndPipeline(uow) }
             return flow
         }
-
     }
 }

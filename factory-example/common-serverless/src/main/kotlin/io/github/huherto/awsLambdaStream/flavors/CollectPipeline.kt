@@ -3,25 +3,15 @@ package io.github.huherto.awsLambdaStream.flavors
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
 import aws.sdk.kotlin.services.dynamodb.model.PutItemRequest
-import io.github.huherto.awsLambdaStream.EnvironmentConfig
-import io.github.huherto.awsLambdaStream.Event
-import io.github.huherto.awsLambdaStream.FaultManager
-import io.github.huherto.awsLambdaStream.UnitOfWork
-import io.github.huherto.awsLambdaStream.filterEventTypes
-import io.github.huherto.awsLambdaStream.getDynamoDbClient
+import io.github.huherto.awsLambdaStream.*
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.buffer
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.mapNotNull
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.*
 import kotlin.reflect.KClass
 
 class CollectPipeline private constructor(builder: Builder) : Pipeline(builder.id) {
 
     private val onContentType: (UnitOfWork) -> Boolean = builder.onContentType
-    private val onEventClass: List<KClass<Event>> = builder.onEventClass
+    private val onEventClass: List<KClass<out Event>> = builder.onEventClass
     private val correlationKey: (UnitOfWork) -> String? = builder.correlationKey
     private val ttlDays: Int? = builder.ttlDays
     private val includeRaw: Boolean = builder.includeRaw
@@ -94,7 +84,7 @@ class CollectPipeline private constructor(builder: Builder) : Pipeline(builder.i
         )
 
         val putRequest = PutItemRequest.Companion {
-            tableName = envConfig.tableName()
+            tableName = envConfig.tableName() ?: "events"
             item = itemValues
         }
         return uow.copy(putRequest = putRequest)
