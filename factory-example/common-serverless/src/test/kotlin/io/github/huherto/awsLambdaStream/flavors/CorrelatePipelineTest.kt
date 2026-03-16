@@ -184,7 +184,8 @@ class CorrelatePipelineTest {
             correlationKey = { "test-correlation-key" },
             dynamoDbClient = dynamoDbClientMock,
             envConfig = envConfigMock,
-            onEventClass = listOf(FakeEvent::class)// specifically matching our FakeEvent
+            onEventClass = listOf(FakeEvent::class), // specifically matching our FakeEvent
+            unmarshall = { eventAsString -> FakeEvent(encodedStr = eventAsString)}
         )
 
         val skEventAttr = com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue().apply { s = "EVENT" }
@@ -214,7 +215,7 @@ class CorrelatePipelineTest {
         assertEquals("test-correlation-key", processedUow.key, "Correlation key should be added by the pipeline")
         assertNotNull(processedUow.putRequest, "A put request should be assigned")
         assertNotNull(processedUow.putResponse, "A put response should be assigned after dynamo mock execution")
-        assertEquals("JsonEvent", processedUow.event!!::class.simpleName, "Event should have been normalized to a JsonEvent")
+        assertEquals("FakeEvent", processedUow.event!!::class.simpleName, "Event should have been normalized to a FakeEvent")
     }
 
     @Test

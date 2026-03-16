@@ -21,6 +21,7 @@ class CorrelatePipeline constructor(
     val bufferCapacity: Int = Channel.Factory.BUFFERED,
     var dynamoDbClient: DynamoDbClient? = null,
     val putRequest: ((UnitOfWork) -> UnitOfWork)? = null,
+    val unmarshall: ((String) -> Event)? = null,
 ) : Pipeline(id) {
 
     private fun nullableS(s: String?): AttributeValue {
@@ -80,17 +81,24 @@ class CorrelatePipeline constructor(
         }
     }
 
-    internal fun normalize(uow: UnitOfWork): UnitOfWork {
-        val raw = uow.event?.raw as? RecordPair
-        val rawNew = raw?.new ?: RecordImage(mapOf())
-        val event = rawNew.getEvent()?: "{}"
-        val jsonEvent: JsonEvent? = try {
-            JsonEvent(event)
+    internal fun defaultUnmarshall(eventAsString: String) : Event {
+        if (unmarshall != null) return unmarshall(eventAsString)
+
+        val jsonEvent: JsonEvent = try {
+            JsonEvent(eventAsString)
         } catch (e: Exception) {
-            println("Failed to parse event: $event")
+            println("Failed to parse event: $eventAsString")
             println("Exception: $e")
             throw e
         }
+        return jsonEvent
+    }
+
+    internal fun normalize(uow: UnitOfWork): UnitOfWork {
+        val raw = uow.event?.raw as? RecordPair
+        val rawNew = raw?.new ?: RecordImage(mapOf())
+        val eventAsString = rawNew.getEvent()?: "{}"
+        val parsedEvent = defaultUnmarshall(eventAsString)
 
         return uow.copy(
             meta = mapOf(
@@ -98,7 +106,7 @@ class CorrelatePipeline constructor(
                 "ttl" to "" + rawNew.getTtl(),
                 "data" to "" + rawNew.getData(),
             ),
-            event = jsonEvent
+            event = parsedEvent
         )
     }
 
@@ -120,7 +128,7 @@ class CorrelatePipeline constructor(
                 .mapNotFaulty{  uow -> normalize(uow) }
                 .onEach { uow -> println("step 3 ${uow.asJson()}") }
                 // Temporarily commented out
-                //.filterEventTypes(this, *onEventClass.toTypedArray())
+                .filterEventTypes(this, *onEventClass.toTypedArray())
                 .onEach { uow -> println("step 4 ${uow.asJson()}") }
                 .onEach { uow -> printStartPipeline(uow) }
                 .filter { uow -> faulty(uow) { onContentType(uow) } == true }
