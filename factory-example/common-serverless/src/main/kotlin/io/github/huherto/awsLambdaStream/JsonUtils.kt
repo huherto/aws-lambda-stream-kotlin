@@ -1,14 +1,18 @@
 package io.github.huherto.awsLambdaStream
 
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue
+import com.fasterxml.jackson.annotation.JsonAutoDetect
+import com.fasterxml.jackson.annotation.PropertyAccessor
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.JsonSerializer
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import java.nio.ByteBuffer
-import java.util.Base64
+import java.util.*
 
 class ByteBufferSerializer : JsonSerializer<ByteBuffer>() {
     override fun serialize(value: ByteBuffer?, gen: JsonGenerator, serializers: SerializerProvider) {
@@ -20,6 +24,31 @@ class ByteBufferSerializer : JsonSerializer<ByteBuffer>() {
             duplicate.get(bytes)
             gen.writeString(Base64.getEncoder().encodeToString(bytes))
         }
+    }
+}
+
+
+class PipelineSerializer<T : Any> : JsonSerializer<T>() {
+    override fun serialize(value: T?, gen: JsonGenerator, serializers: SerializerProvider) {
+        if (value == null) {
+            gen.writeNull()
+            return
+        }
+
+        gen.writeStartObject()
+        value::class.members
+            .filterIsInstance<kotlin.reflect.KProperty<*>>()
+            .filter { it.getter.annotations.none { annotation -> annotation.annotationClass.simpleName == "Transient" } }
+            .forEach { property ->
+                try {
+                    val propName = property.name
+                    val propValue = property.getter.call(value)
+                    gen.writeObjectField(propName, propValue)
+                } catch (e: Exception) {
+                    // Skip non-serializable fields or inaccessible properties
+                }
+            }
+        gen.writeEndObject()
     }
 }
 
@@ -86,6 +115,7 @@ private val jacksonMapper = jacksonObjectMapper().apply {
     val module = SimpleModule()
     module.addSerializer(ByteBuffer::class.java, ByteBufferSerializer())
     module.addSerializer(AttributeValue::class.java, AttributeValueSerializer())
+    module.addSerializer(Pipeline::class.java, PipelineSerializer())
     registerModule(module)
 }
 
@@ -96,4 +126,37 @@ fun Any?.asJson() : String {
     } catch (e: Exception) {
         "\"Error serializing to JSON: ${e.message}\""
     }
+}
+
+object SafeLogger {
+    // Jackson module for Kotlin adds support for data classes and nullability
+    private val mapper: ObjectMapper = jacksonObjectMapper().apply {
+        // 1. Don't crash on empty/proxy objects
+        disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
+
+        // 2. Allow access to private fields (important for non-data classes)
+        setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY)
+    }
+
+    /**
+     * Converts any object to JSON string safely.
+     * Never throws an exception.
+     */
+    fun toJson(obj: Any?): String {
+        if (obj == null) return "null"
+
+        // Use Kotlin's runCatching for a clean "zero-fail" flow
+        return runCatching {
+            mapper.writeValueAsString(obj)
+        }.getOrElse { throwable ->
+            // FALLBACK: Return a JSON-safe error descriptor
+            val className = obj::class.java.name
+            val toStringVal = runCatching { obj.toString() }.getOrDefault("[toString() failed]")
+
+            """{"log_error": "Serialization failed", "class": "$className", "toString": "${toStringVal.escapeJson()}", "message": "${throwable.message?.escapeJson()}"}"""
+        }
+    }
+
+    // Helper to prevent broken JSON in the fallback message
+    private fun String.escapeJson() = this.replace("\"", "\\\"").replace("\n", "\\n")
 }

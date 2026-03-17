@@ -23,5 +23,5 @@ cdklocal_deploy() {
 	$GW test shadowJar
 )
 
-#cdklocal_deploy "sut-event-hub"
+cdklocal_deploy "sut-event-hub"
 cdklocal_deploy "sut-control-service"

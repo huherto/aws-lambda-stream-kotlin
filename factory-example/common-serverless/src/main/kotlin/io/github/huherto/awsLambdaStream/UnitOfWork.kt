@@ -29,7 +29,7 @@ data class UnitOfWork(
     val timestamp: String? = null,
     val putRequest: PutItemRequest? = null,
     val putResponse: PutItemResponse? = null,
-    val meta: Map<String, String>? = null
+    val meta: Map<String, String?>? = null
 )
 
 class FailureException(

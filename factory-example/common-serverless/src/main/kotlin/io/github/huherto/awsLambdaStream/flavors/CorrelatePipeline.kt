@@ -98,15 +98,15 @@ class CorrelatePipeline constructor(
         val raw = uow.event?.raw as? RecordPair
         val rawNew = raw?.new ?: RecordImage(mapOf())
         val eventAsString = rawNew.getEvent()?: "{}"
-        val parsedEvent = defaultUnmarshall(eventAsString)
+        val eventAsObject = defaultUnmarshall(eventAsString)
 
         return uow.copy(
             meta = mapOf(
-                "sequenceNumber" to "" + rawNew.getSequenceNumber(),
+                "sequenceNumber" to rawNew.getSequenceNumber(),
                 "ttl" to "" + rawNew.getTtl(),
                 "data" to "" + rawNew.getData(),
             ),
-            event = parsedEvent
+            event = eventAsObject
         )
     }
 
@@ -126,15 +126,13 @@ class CorrelatePipeline constructor(
                 .filterNotNull()
                 .filter{ uow -> faulty(uow){ forCollectedEvents(uow) } == true }
                 .mapNotFaulty{  uow -> normalize(uow) }
-                .onEach { uow -> println("step 3 ${uow.asJson()}") }
-                // Temporarily commented out
                 .filterEventTypes(this, *onEventClass.toTypedArray())
-                .onEach { uow -> println("step 4 ${uow.asJson()}") }
                 .onEach { uow -> printStartPipeline(uow) }
                 .filter { uow -> faulty(uow) { onContentType(uow) } == true }
                 .mapNotFaulty { uow -> addCorrelationKey(uow)}
                 .mapNotFaulty{ uow -> putRequest(uow) }
                 .buffer(bufferCapacity)
+                .onEach {  uow-> logger.info { "Before putDynamoDB uow=${uow}"} }
                 .mapNotNull { uow -> faulty(uow) { putDynamoDb(uow) } }
                 .onEach { uow -> printEndPipeline(uow) }
             return flow
