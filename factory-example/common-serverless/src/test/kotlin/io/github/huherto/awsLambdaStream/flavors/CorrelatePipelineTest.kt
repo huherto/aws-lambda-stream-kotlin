@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import kotlin.test.*
+import aws.sdk.kotlin.services.dynamodb.model.AttributeValue as SdkAV
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue as EventAV
 
 class CorrelatePipelineTest {
@@ -155,9 +156,9 @@ class CorrelatePipelineTest {
         // Assert - Default behavior
         val request = result.putRequest
         assertNotNull(request, "PutRequest should not be null")
-//        assertEquals("CORREL", (request.item?.get("discriminator") as? AttributeValue).value)
-//        assertEquals("test-key", (request.item?.get("pk") as? AttributeValue.S)?.value)
-//        assertEquals("test-pipeline", (request.item?.get("pipelineId") as? AttributeValue.S)?.value)
+        assertEquals("CORREL", (request.item?.get("discriminator") as? SdkAV.S)?.value)
+        assertEquals("test-key", (request.item?.get("pk") as? SdkAV.S)?.value)
+        assertEquals("test-pipeline", (request.item?.get("pipelineId") as? SdkAV.S)?.value)
 
         // Arrange & Act & Assert - Custom putRequest delegate function
         val expectedUow = UnitOfWork()

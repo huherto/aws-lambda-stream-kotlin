@@ -1,7 +1,6 @@
 package io.github.huherto.awsLambdaStream.flavors
 
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
-import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
 import aws.sdk.kotlin.services.dynamodb.model.PutItemRequest
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import io.github.huherto.awsLambdaStream.*
@@ -10,6 +9,7 @@ import io.github.huherto.awsLambdaStream.from.RecordPair
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import kotlin.reflect.KClass
+import aws.sdk.kotlin.services.dynamodb.model.AttributeValue as SdkAV
 
 class CorrelatePipeline constructor(
     id: String,
@@ -24,12 +24,12 @@ class CorrelatePipeline constructor(
     val unmarshall: ((String) -> Event)? = null,
 ) : Pipeline(id) {
 
-    private fun nullableS(s: String?): AttributeValue {
-        return s?.let { AttributeValue.S(it) } ?: AttributeValue.Null(true)
+    private fun nullableS(s: String?): SdkAV {
+        return s?.let { SdkAV.S(it) } ?: SdkAV.Null(true)
     }
 
-    private fun nullableN(s: String?): AttributeValue {
-        return s?.let { AttributeValue.N(it) } ?: AttributeValue.Null(true)
+    private fun nullableN(s: String?): SdkAV {
+        return s?.let { SdkAV.N(it) } ?: SdkAV.Null(true)
     }
 
     internal fun defaultPutRequest(uow: UnitOfWork) : UnitOfWork {
@@ -43,9 +43,9 @@ class CorrelatePipeline constructor(
         val itemValues = mapOf(
             "pk" to nullableS(uow.key),
             "sk" to nullableS(event?.id),
-            "discriminator" to AttributeValue.S("CORREL"), // ATION
-            "timestamp" to AttributeValue.N(timeStamp.toString()),
-            "awsregion" to AttributeValue.S(awsRegion),
+            "discriminator" to SdkAV.S("CORREL"), // ATION
+            "timestamp" to SdkAV.N(timeStamp.toString()),
+            "awsregion" to SdkAV.S(awsRegion),
             "sequenceNumber" to nullableN(uow.meta?.get("sequenceNumber")),
             "ttl" to nullableN(uow.meta?.get("ttl")),
             "expire" to nullableS(uow.meta?.get("expire")),
