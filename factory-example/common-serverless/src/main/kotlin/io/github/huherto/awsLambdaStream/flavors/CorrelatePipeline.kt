@@ -103,7 +103,7 @@ class CorrelatePipeline constructor(
         return uow.copy(
             meta = mapOf(
                 "sequenceNumber" to rawNew.getSequenceNumber(),
-                "ttl" to "" + rawNew.getTtl(),
+                "ttl" to "" + rawNew.getTtl().toString(),
                 "data" to "" + rawNew.getData(),
             ),
             event = eventAsObject
@@ -120,7 +120,6 @@ class CorrelatePipeline constructor(
 
     override fun connect(fm: FaultManager, fromFlow: Flow<UnitOfWork>) : Flow<UnitOfWork> {
         logger.info { "CorrelatePipeline.connect: id=$id" }
-        val putRequest = this.putRequest?: ::defaultPutRequest
         with(fm) {
             val flow = fromFlow
                 .filterNotNull()
@@ -130,7 +129,7 @@ class CorrelatePipeline constructor(
                 .onEach { uow -> printStartPipeline(uow) }
                 .filter { uow -> faulty(uow) { onContentType(uow) } == true }
                 .mapNotFaulty { uow -> addCorrelationKey(uow)}
-                .mapNotFaulty{ uow -> putRequest(uow) }
+                .mapNotFaulty{ uow -> defaultPutRequest(uow) }
                 .buffer(bufferCapacity)
                 .onEach {  uow-> logger.info { "Before putDynamoDB uow=${uow}"} }
                 .mapNotNull { uow -> faulty(uow) { putDynamoDb(uow) } }

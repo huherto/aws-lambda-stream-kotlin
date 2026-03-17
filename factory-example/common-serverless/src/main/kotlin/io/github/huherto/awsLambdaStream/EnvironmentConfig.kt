@@ -27,7 +27,7 @@ class EnvironmentConfig {
     }
 
     fun streamRetryEnabled() : Boolean {
-        var enabled = System.getenv("STREAM_RETRY_ENABLED")
+        val enabled = System.getenv("STREAM_RETRY_ENABLED")
         return enabled != null && enabled.isNotEmpty() && enabled == "true"
     }
 }

@@ -1,12 +1,12 @@
 package io.github.huherto.awsLambdaStream.from
 
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
-import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.mapNotNull
+import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue as EventAV
 
 class DynamodbAdapter {
 
@@ -33,7 +33,6 @@ class DynamodbAdapter {
                     )
                 }
         }
-
     }
 
     internal fun buildEvent(dynamodbRecord: DynamodbEvent.DynamodbStreamRecord): TableEvent {
@@ -73,7 +72,7 @@ class DynamodbAdapter {
 
     private fun calculateEventTypePrefix(dynamodbRecord: DynamodbEvent.DynamodbStreamRecord): String {
         val image = dynamodbRecord.dynamodb.newImage ?: dynamodbRecord.dynamodb.oldImage
-        val discriminator : AttributeValue? = image?.get(discriminatorFn) ?: image?.get(skFn)
+        val discriminator : EventAV? = image?.get(discriminatorFn) ?: image?.get(skFn)
         return discriminator?.s ?: ""
     }
 
@@ -107,7 +106,7 @@ class DynamodbAdapter {
 
 data class RecordPair(val new: RecordImage?, val old: RecordImage?)
 
-class RecordImage(val map: Map<String, AttributeValue>) : Map<String, AttributeValue> by map  {
+class RecordImage(val map: Map<String, EventAV?>) : Map<String, EventAV?> by map  {
 
     fun getSequenceNumber(): String? = map["sequenceNumber"]?.s
 
@@ -117,6 +116,6 @@ class RecordImage(val map: Map<String, AttributeValue>) : Map<String, AttributeV
 
     fun getEvent(): String? = map["event"]?.s
 
-    fun isDeleted(): Boolean = map.containsKey("deleted") && map["deleted"]?.bool == true
+    fun isDeleted(): Boolean = map.containsKey("deleted") && map["deleted"]?.isBOOL == true
 
 }

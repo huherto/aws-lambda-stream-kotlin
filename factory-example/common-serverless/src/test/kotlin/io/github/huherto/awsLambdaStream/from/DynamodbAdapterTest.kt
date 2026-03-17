@@ -1,7 +1,6 @@
 package io.github.huherto.awsLambdaStream.from
 
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
-import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.StreamRecord
 import io.github.huherto.awsLambdaStream.FaultManager
 import kotlinx.coroutines.flow.toList
@@ -9,6 +8,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.util.*
+import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue as EventAV
 
 class DynamodbAdapterTest {
 
@@ -40,8 +40,8 @@ class DynamodbAdapterTest {
     @Test
     fun `calculateEventTypeSuffix should return deleted when new image has deleted flag true`() {
         val newImage = mapOf(
-            "id" to AttributeValue().withS("123"),
-            "deleted" to AttributeValue().withBOOL(true)
+            "id" to EventAV().withS("123"),
+            "deleted" to EventAV().withBOOL(true)
         )
         val record = createDynamodbRecord(eventName = "MODIFY", newImage = newImage)
 
@@ -51,12 +51,12 @@ class DynamodbAdapterTest {
     @Test
     fun `calculateEventTypeSuffix should return undeleted when old image has deleted flag true but new is false`() {
         val newImage = mapOf(
-            "id" to AttributeValue().withS("123"),
-            "deleted" to AttributeValue().withBOOL(false)
+            "id" to EventAV().withS("123"),
+            "deleted" to EventAV().withBOOL(false)
         )
         val oldImage = mapOf(
-            "id" to AttributeValue().withS("123"),
-            "deleted" to AttributeValue().withBOOL(true)
+            "id" to EventAV().withS("123"),
+            "deleted" to EventAV().withBOOL(true)
         )
         val record = createDynamodbRecord(eventName = "MODIFY", newImage = newImage, oldImage = oldImage)
 
@@ -66,8 +66,8 @@ class DynamodbAdapterTest {
     @Test
     fun `calculateEventTypeSuffix should handle missing deleted flag gracefully`() {
         val newImage = mapOf(
-            "id" to AttributeValue().withS("123"),
-            "name" to AttributeValue().withS("test")
+            "id" to EventAV().withS("123"),
+            "name" to EventAV().withS("test")
         )
         val record = createDynamodbRecord(eventName = "MODIFY", newImage = newImage)
 
@@ -77,8 +77,8 @@ class DynamodbAdapterTest {
     @Test
     fun `calculateEventTypeSuffix should prefer deleted suffix over updated for MODIFY events`() {
         val newImage = mapOf(
-            "id" to AttributeValue().withS("123"),
-            "deleted" to AttributeValue().withBOOL(true)
+            "id" to EventAV().withS("123"),
+            "deleted" to EventAV().withBOOL(true)
         )
         val record = createDynamodbRecord(eventName = "MODIFY", newImage = newImage)
 
@@ -96,9 +96,9 @@ class DynamodbAdapterTest {
         val pkValue = "partition-key-value"
         val timestamp = Date()
         val newImage = mapOf(
-            "pk" to AttributeValue().withS(pkValue),
-            "discriminator" to AttributeValue().withS("OrderEvent"),
-            "timestamp" to AttributeValue().withN("1609459200")
+            "pk" to EventAV().withS(pkValue),
+            "discriminator" to EventAV().withS("OrderEvent"),
+            "timestamp" to EventAV().withN("1609459200")
         )
 
         val record = createDynamodbRecord(
@@ -120,13 +120,13 @@ class DynamodbAdapterTest {
 
     @Test
     fun `buildEvent should include raw data with new and old images`() {
-        val newImage = RecordImage(mapOf(
-            "pk" to AttributeValue().withS("key1"),
-            "data" to AttributeValue().withS("new-value")
+        val newImage = RecordImage(mapOf<String, EventAV>(
+            "pk" to EventAV().withS("key1"),
+            "data" to EventAV().withS("new-value")
         ))
         val oldImage = RecordImage( mapOf(
-            "pk" to AttributeValue().withS("key1"),
-            "data" to AttributeValue().withS("old-value")
+            "pk" to EventAV().withS("key1"),
+            "data" to EventAV().withS("old-value")
         ))
 
         val record = createDynamodbRecord(
@@ -145,8 +145,8 @@ class DynamodbAdapterTest {
     @Test
     fun `buildEvent should calculate correct event type`() {
         val newImage = mapOf(
-            "pk" to AttributeValue().withS("key1"),
-            "discriminator" to AttributeValue().withS("UserEvent")
+            "pk" to EventAV().withS("key1"),
+            "discriminator" to EventAV().withS("UserEvent")
         )
 
         val record = createDynamodbRecord(newImage = newImage, eventName = "INSERT")
@@ -163,8 +163,8 @@ class DynamodbAdapterTest {
     @Test
     fun `fromDynamoDB should process valid dynamodb records`() = runBlocking {
         val newImage = mapOf(
-            "pk" to AttributeValue().withS("key1"),
-            "discriminator" to AttributeValue().withS("TestEvent")
+            "pk" to EventAV().withS("key1"),
+            "discriminator" to EventAV().withS("TestEvent")
         )
 
         val records = listOf(
@@ -205,8 +205,8 @@ class DynamodbAdapterTest {
     @Test
     fun `fromDynamoDB should preserve record reference in unit of work`() = runBlocking {
         val newImage = mapOf(
-            "pk" to AttributeValue().withS("key1"),
-            "discriminator" to AttributeValue().withS("Event")
+            "pk" to EventAV().withS("key1"),
+            "discriminator" to EventAV().withS("Event")
         )
 
         val dynamodbRecord = createDynamodbRecord(eventId = "test-id", newImage = newImage, eventName = "INSERT")
@@ -236,8 +236,8 @@ class DynamodbAdapterTest {
         eventId: String = UUID.randomUUID().toString(),
         eventName: String = "INSERT",
         region: String = "us-east-1",
-        newImage: Map<String, AttributeValue>? = null,
-        oldImage: Map<String, AttributeValue>? = null,
+        newImage: Map<String, EventAV?>? = null,
+        oldImage: Map<String, EventAV?>? = null,
         timestamp: Date? = Date(),
         partitionKeyValue: String = "default-pk"
     ): DynamodbEvent.DynamodbStreamRecord {
@@ -245,7 +245,7 @@ class DynamodbAdapterTest {
             .withNewImage(newImage)
             .withOldImage(oldImage)
             .withKeys(
-                mapOf("pk" to AttributeValue().withS(partitionKeyValue)
+                mapOf("pk" to EventAV().withS(partitionKeyValue)
             ))
             .withApproximateCreationDateTime(timestamp)
 
