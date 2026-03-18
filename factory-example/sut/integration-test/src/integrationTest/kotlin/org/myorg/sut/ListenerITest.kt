@@ -10,9 +10,11 @@ import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequestEntry
 import aws.smithy.kotlin.runtime.net.url.Url
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import kotlin.random.Random
+import kotlin.time.ExperimentalTime
 
 // Components tested.
 //   - Send event to event bridge. sut-event-hub-local-bus.
@@ -24,6 +26,7 @@ class ListenerITest {
 
     fun endPointUrl() = Url.parse("http://localhost:4566")
 
+    @OptIn(ExperimentalTime::class)
     @Test
     fun sendEvents() = runBlocking{
 
@@ -39,12 +42,33 @@ class ListenerITest {
                 }
             )
         })
-        println("failedEntryCount=${res.failedEntryCount}")
-        for (entry in res.entries!!) {
-            println("eventID=${entry.eventId}")
-        }
-        val savedEvent = findEvent( event.id!!)
-        assert(savedEvent != null)
+        assertEquals(0, res.failedEntryCount)
+        val collectedEvent = findEventByPK( event.id!!)
+        assertNotNull(collectedEvent)
+        assertEquals(event.id, collectedEvent?.get("pk")?.asS())
+        assertEquals("EVENT", collectedEvent?.get("sk")?.asS())
+        assertEquals("EVENT", collectedEvent?.get("discriminator")?.asS())
+        assertEquals(event.id, collectedEvent?.get("data")?.asS())
+        assertNotNull(collectedEvent?.get("event")?.asS())
+
+        val timeStamp = collectedEvent?.get("timestamp")?.asN()?.toLong()?:0
+        assertTrue((event.timestamp?:0) - timeStamp < 1000)
+
+
+        val correlEvent = findEventByPK(event.entity?.id!!)
+        assertNotNull(correlEvent)
+        assertEquals(event.entity?.id, correlEvent?.get("pk")?.asS())
+        assertEquals(event.id, correlEvent?.get("sk")?.asS())
+        assertEquals("CORREL", correlEvent?.get("discriminator")?.asS())
+        //assertEquals(event.id, correlEvent?.get("data")?.asS())
+        assertNotNull(correlEvent?.get("sequenceNumber")?.asS())
+        assertNotNull(correlEvent?.get("event")?.asS())
+
+        val ttl = collectedEvent?.get("ttl")?.asN()?.toLong()
+        assertNotNull(ttl)
+        assertTrue((ttl?:0) > 0)
+        assertTrue((ttl?:0) > 1742326911) // A date in 2025
+        assertTrue((ttl?:0) < 1900093311) // A date in 2030
 
     }
 
@@ -63,17 +87,11 @@ class ListenerITest {
                 }
             )
         })
-        println("failedEntryCount=${res.failedEntryCount}")
-        for (entry in res.entries!!) {
-            println("eventID=${entry.eventId}")
-        }
-//        val savedEvent = findEvent( event.id!!)
-//        assert(savedEvent != null)
-
+        assertEquals(0, res.failedEntryCount)
     }
 
-    private suspend fun findEvent(eventId : String): Map<String, AttributeValue>? {
-        println("Looking for event with id: $eventId")
+    private suspend fun findEventByPK(pk : String): Map<String, AttributeValue>? {
+
         val startTime = System.currentTimeMillis()
         while (true) {
             if (System.currentTimeMillis() - startTime > 10000) {
@@ -82,11 +100,11 @@ class ListenerITest {
             val response = dynamoDbClient.query(QueryRequest {
                 tableName = "sut-control-service-local-events"
                 keyConditionExpression = "pk = :pk"
-                expressionAttributeValues = mapOf(":pk" to AttributeValue.S(eventId))
+                expressionAttributeValues = mapOf(":pk" to AttributeValue.S(pk))
             })
-            println("Items found: ${response.items?.size}")
+            // println("Items found: ${response.items?.size}")
             response.items?.forEach { item ->
-                println("Found item: $item")
+                // println("Found item: $item")
             }
             if (response.items?.isNotEmpty() == true) {
                 return response.items?.first()

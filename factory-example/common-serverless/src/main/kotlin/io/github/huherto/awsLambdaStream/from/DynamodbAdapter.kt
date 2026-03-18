@@ -108,8 +108,6 @@ data class RecordPair(val new: RecordImage?, val old: RecordImage?)
 
 class RecordImage(val map: Map<String, EventAV?>) : Map<String, EventAV?> by map  {
 
-    fun getSequenceNumber(): String? = map["sequenceNumber"]?.s
-
     fun getTtl(): String? = map["ttl"]?.n
 
     fun getData(): String? = map["data"]?.s
