@@ -61,10 +61,10 @@ class CorrelatePipelineTest {
         val skEventAttr = com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue().apply { s = "EVENT" }
         val skOtherAttr = com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue().apply { s = "OTHER" }
         
-        val streamRecordWithEvent = com.amazonaws.services.lambda.runtime.events.models.dynamodb.StreamRecord().apply {
+        val streamRecordWithEvent = StreamRecord().apply {
             keys = mapOf("sk" to skEventAttr)
         }
-        val streamRecordWithOther = com.amazonaws.services.lambda.runtime.events.models.dynamodb.StreamRecord().apply {
+        val streamRecordWithOther = StreamRecord().apply {
             keys = mapOf("sk" to skOtherAttr)
         }
         
@@ -195,8 +195,8 @@ class CorrelatePipelineTest {
             unmarshall = { eventAsString -> FakeEvent(encodedStr = eventAsString)}
         )
 
-        val skEventAttr = com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue().apply { s = "EVENT" }
-        val streamRecord = com.amazonaws.services.lambda.runtime.events.models.dynamodb.StreamRecord().apply {
+        val skEventAttr = EventAV().apply { s = "EVENT" }
+        val streamRecord = StreamRecord().apply {
             keys = mapOf("sk" to skEventAttr)
         }
         val validRecord = DynamodbEvent.DynamodbStreamRecord().apply {
@@ -262,8 +262,8 @@ class CorrelatePipelineTest {
             onContentType = { false } // This will cause the event to be filtered mid-pipeline
         )
 
-        val skEventAttr = com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue().apply { s = "EVENT" }
-        val streamRecord = com.amazonaws.services.lambda.runtime.events.models.dynamodb.StreamRecord().apply {
+        val skEventAttr = EventAV().apply { s = "EVENT" }
+        val streamRecord = StreamRecord().apply {
             keys = mapOf("sk" to skEventAttr)
         }
         val validRecord = DynamodbEvent.DynamodbStreamRecord().apply {
