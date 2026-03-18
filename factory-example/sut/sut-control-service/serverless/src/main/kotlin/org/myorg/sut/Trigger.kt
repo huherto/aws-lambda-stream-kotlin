@@ -9,7 +9,6 @@ import io.github.huherto.awsLambdaStream.flavors.CorrelatePipeline
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import io.github.huherto.awsLambdaStream.from.DynamodbAdapter
 import kotlinx.coroutines.runBlocking
-import kotlinx.serialization.json.contentOrNull
 import mu.KotlinLogging
 
 class Trigger : RequestHandler<DynamodbEvent, String> {
@@ -22,15 +21,15 @@ class Trigger : RequestHandler<DynamodbEvent, String> {
 
     private val pipeline: Pipeline by lazy {
         if (dynamoDbClient == null) {
-            dynamoDbClient = DynamoDBClientWrapper(getDynamoDbClient(envConfig))
+            dynamoDbClient = getDynamoDbClient(envConfig)
         }
 
         CorrelatePipeline(
             id = "corr1",
-            correlationKey = {
-                    uow ->
-                val event = uow.event as? JsonEvent
-                event?.jsonPrimitive("entity.id")?.contentOrNull ?: "no-correlation-key"
+            unmarshall = { eventAsString : String -> jsonDecode(eventAsString)},
+            correlationKey = { uow ->
+                val event = uow.event as? TrackedUnitEvent
+                event?.entity?.id ?: "no-correlation-key"
             },
             dynamoDbClient = dynamoDbClient,
             onEventClass = listOf(Event::class)
@@ -45,12 +44,12 @@ class Trigger : RequestHandler<DynamodbEvent, String> {
             .build()
 
         val headFlow = DynamodbAdapter().fromDynamoDB(FaultManager(), ddbEvent)
-
+        logger.info { "Processing ${ddbEvent.records?.size} records" }
         assembler
             .assemble(headFlow, true)
             .collect {
                 val eventClass = it.event?.javaClass?.simpleName ?: "null"
-                logger.info { "collected ${it.event?.id}, $eventClass" }
+                logger.info { "collected event ${it.event?.id}, $eventClass" }
             }
 
         "Done"

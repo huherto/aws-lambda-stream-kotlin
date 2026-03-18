@@ -3,6 +3,7 @@ package io.github.huherto.awsLambdaStream
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.PutItemResponse
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
+import com.amazonaws.services.lambda.runtime.events.models.dynamodb.StreamRecord
 import io.github.huherto.awsLambdaStream.flavors.CorrelatePipeline
 import io.github.huherto.awsLambdaStream.from.RecordImage
 import io.github.huherto.awsLambdaStream.from.RecordPair
@@ -111,14 +112,19 @@ class CorrelatePipelineTest {
     fun `normalize should extract metadata and populate JsonEvent from RecordPair`() {
         // Arrange
         val pipeline = CorrelatePipeline("test-pipeline")
-        
+
+        val record = DynamodbEvent.DynamodbStreamRecord().apply {
+            dynamodb = StreamRecord().apply {
+                sequenceNumber = "seq-123"
+            }
+        }
         val populatedMap = mapOf<String, EventAV?>(
-            "sequenceNumber" to EventAV().withS( "seq-123"),
             "ttl" to EventAV().withN("999" ),
             "data" to EventAV().withS("test-data"),
             "event" to EventAV().withS( """{"key":"value"}"""),
         )
         val uowPopulated = UnitOfWork(
+            record = record,
             event = createFakeEvent(rawObj = RecordPair(new = RecordImage(populatedMap), old = null)),
         )
 

@@ -46,7 +46,7 @@ class CorrelatePipeline constructor(
             "discriminator" to SdkAV.S("CORREL"), // ATION
             "timestamp" to SdkAV.N(timeStamp.toString()),
             "awsregion" to SdkAV.S(awsRegion),
-            "sequenceNumber" to nullableN(uow.meta?.get("sequenceNumber")),
+            "sequenceNumber" to nullableS(uow.meta?.get("sequenceNumber")),
             "ttl" to nullableN(uow.meta?.get("ttl")),
             "expire" to nullableS(uow.meta?.get("expire")),
             "pipelineId" to nullableS(id),
@@ -87,8 +87,7 @@ class CorrelatePipeline constructor(
         val jsonEvent: JsonEvent = try {
             JsonEvent(eventAsString)
         } catch (e: Exception) {
-            println("Failed to parse event: $eventAsString")
-            println("Exception: $e")
+            logger.error {"Failed to parse event: $eventAsString, $e" }
             throw e
         }
         return jsonEvent
@@ -99,10 +98,11 @@ class CorrelatePipeline constructor(
         val rawNew = raw?.new ?: RecordImage(mapOf())
         val eventAsString = rawNew.getEvent()?: "{}"
         val eventAsObject = defaultUnmarshall(eventAsString)
+        val record = uow.record as? DynamodbEvent.DynamodbStreamRecord
 
         return uow.copy(
             meta = mapOf(
-                "sequenceNumber" to rawNew.getSequenceNumber(),
+                "sequenceNumber" to record?.dynamodb?.sequenceNumber,
                 "ttl" to "" + rawNew.getTtl().toString(),
                 "data" to "" + rawNew.getData(),
             ),
@@ -131,7 +131,6 @@ class CorrelatePipeline constructor(
                 .mapNotFaulty { uow -> addCorrelationKey(uow)}
                 .mapNotFaulty{ uow -> defaultPutRequest(uow) }
                 .buffer(bufferCapacity)
-                .onEach {  uow-> logger.info { "Before putDynamoDB uow=${uow}"} }
                 .mapNotNull { uow -> faulty(uow) { putDynamoDb(uow) } }
                 .onEach { uow -> printEndPipeline(uow) }
             return flow

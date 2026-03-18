@@ -5,8 +5,8 @@ import aws.sdk.kotlin.services.dynamodb.model.PutItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.PutItemResponse
 import mu.KotlinLogging
 
-
 // Integration tests helper.
+// It creates artificial faults when writing to the database.
 class DynamoDBClientWrapper(val dynamoDBClient: DynamoDbClient) : DynamoDbClient by dynamoDBClient {
 
     private val logger = KotlinLogging.logger {  }
