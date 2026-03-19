@@ -37,6 +37,53 @@ class CorrelatePipeline constructor(
         return s?.let { SdkAV.Bool(it) } ?: SdkAV.Null(true)
     }
 
+    internal fun forCollectedEvents(uow: UnitOfWork) : Boolean {
+        return when(uow.record) {
+            is DynamodbEvent.DynamodbStreamRecord -> {
+                uow.record.eventName == "INSERT"
+                        && uow.record.dynamodb.keys["sk"]?.s == "EVENT"
+                        && uow.event?.raw is RecordPair
+            }
+            else -> false
+        }
+    }
+    internal fun defaultUnmarshall(eventAsString: String) : Event {
+        if (unmarshall != null) return unmarshall(eventAsString)
+
+        val jsonEvent: JsonEvent = try {
+            JsonEvent(eventAsString)
+        } catch (e: Exception) {
+            logger.error {"Failed to parse event: $eventAsString, $e" }
+            throw e
+        }
+        return jsonEvent
+    }
+
+    internal fun normalize(uow: UnitOfWork): UnitOfWork {
+        val raw = uow.event?.raw as? RecordPair
+        val rawNew = raw?.new ?: RecordImage(mapOf())
+        val eventAsString = rawNew.getEvent()?: "{}"
+        val eventAsObject = defaultUnmarshall(eventAsString)
+        val record = uow.record as? DynamodbEvent.DynamodbStreamRecord
+
+        return uow.copy(
+            meta = mapOf(
+                "sequenceNumber" to record?.dynamodb?.sequenceNumber,
+                "ttl" to "" + rawNew.getTtl().toString(),
+                "data" to "" + rawNew.getData(),
+            ),
+            event = eventAsObject
+        )
+    }
+
+    private fun addCorrelationKey(uow: UnitOfWork) : UnitOfWork {
+        require(correlationKey != null) { "correlationKey must be set" }
+
+        // use a suffix when you need the same key for different sets of rules
+        val key = correlationKey(uow) + correlationKeySuffix
+        return uow.copy(key = key)
+    }
+
     internal fun defaultPutRequest(uow: UnitOfWork) : UnitOfWork {
 
         if (putRequest != null) return putRequest(uow)
@@ -74,54 +121,6 @@ class CorrelatePipeline constructor(
             dynamoDbClient?.putItem(uow.putRequest)
         }
         uow.copy(putResponse = putResponse)
-    }
-
-    internal fun forCollectedEvents(uow: UnitOfWork) : Boolean {
-        return when(uow.record) {
-            is DynamodbEvent.DynamodbStreamRecord -> {
-                uow.record.eventName == "INSERT"
-                        && uow.record.dynamodb.keys["sk"]?.s == "EVENT"
-                        && uow.event?.raw is RecordPair
-            }
-            else -> false
-        }
-    }
-
-    internal fun defaultUnmarshall(eventAsString: String) : Event {
-        if (unmarshall != null) return unmarshall(eventAsString)
-
-        val jsonEvent: JsonEvent = try {
-            JsonEvent(eventAsString)
-        } catch (e: Exception) {
-            logger.error {"Failed to parse event: $eventAsString, $e" }
-            throw e
-        }
-        return jsonEvent
-    }
-
-    internal fun normalize(uow: UnitOfWork): UnitOfWork {
-        val raw = uow.event?.raw as? RecordPair
-        val rawNew = raw?.new ?: RecordImage(mapOf())
-        val eventAsString = rawNew.getEvent()?: "{}"
-        val eventAsObject = defaultUnmarshall(eventAsString)
-        val record = uow.record as? DynamodbEvent.DynamodbStreamRecord
-
-        return uow.copy(
-            meta = mapOf(
-                "sequenceNumber" to record?.dynamodb?.sequenceNumber,
-                "ttl" to "" + rawNew.getTtl().toString(),
-                "data" to "" + rawNew.getData(),
-            ),
-            event = eventAsObject
-        )
-    }
-
-    private fun addCorrelationKey(uow: UnitOfWork) : UnitOfWork {
-        require(correlationKey != null) { "correlationKey must be set" }
-
-        // use a suffix when you need the same key for different sets of rules
-        val key = correlationKey(uow) + correlationKeySuffix
-        return uow.copy(key = key)
     }
 
     override fun connect(fm: FaultManager, fromFlow: Flow<UnitOfWork>) : Flow<UnitOfWork> {
