@@ -54,6 +54,7 @@ class CorrelatePipeline constructor(
             "sequenceNumber" to nullableS(uow.meta?.get("sequenceNumber")),
             "ttl" to nullableN(uow.meta?.get("ttl")),
             "expire" to nullableB(expire),
+            "suffix" to SdkAV.S(correlationKeySuffix),
             "pipelineId" to nullableS(id),
             "event" to nullableS(event?.encoded()),
         )

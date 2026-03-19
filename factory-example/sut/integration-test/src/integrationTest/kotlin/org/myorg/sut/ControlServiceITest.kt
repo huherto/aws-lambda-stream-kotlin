@@ -70,6 +70,7 @@ class ControlServiceITest {
         correlEvent["discriminator"]?.asS() shouldBe "CORREL"
         correlEvent["expire"]?.asBool() shouldBe false
         correlEvent["awsregion"]?.asS() shouldBe "us-east-1"
+        correlEvent["suffix"]?.asS() shouldBe ""
         correlEvent["pipelineId"]?.asS() shouldBe "corr1"
         
         val sequenceNumber = correlEvent["sequenceNumber"]?.asS()
