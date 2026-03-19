@@ -1,7 +1,5 @@
 @file:Suppress("UnstableApiUsage")
 
-import org.gradle.kotlin.dsl.invoke
-
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.serialization)
@@ -62,6 +60,7 @@ testing {
                 implementation(libs.testcon.localstack)
                 implementation(libs.testcon.junit.jupiter)
                 implementation(libs.slf4j.simple)
+                implementation(libs.kotest.assertions)
                 implementation(platform(libs.aws.sdk.bom))
                 implementation(project(":factory-example:common-serverless"))
                 implementation(project())

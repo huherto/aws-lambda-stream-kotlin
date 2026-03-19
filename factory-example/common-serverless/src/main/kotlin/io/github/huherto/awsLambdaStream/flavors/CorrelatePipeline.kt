@@ -22,6 +22,7 @@ class CorrelatePipeline constructor(
     var dynamoDbClient: DynamoDbClient? = null,
     val putRequest: ((UnitOfWork) -> UnitOfWork)? = null,
     val unmarshall: ((String) -> Event)? = null,
+    val expire: Boolean? = null,
 ) : Pipeline(id) {
 
     private fun nullableS(s: String?): SdkAV {
@@ -30,6 +31,10 @@ class CorrelatePipeline constructor(
 
     private fun nullableN(s: String?): SdkAV {
         return s?.let { SdkAV.N(it) } ?: SdkAV.Null(true)
+    }
+
+    private fun nullableB(s: Boolean?): SdkAV {
+        return s?.let { SdkAV.Bool(it) } ?: SdkAV.Null(true)
     }
 
     internal fun defaultPutRequest(uow: UnitOfWork) : UnitOfWork {
@@ -48,7 +53,7 @@ class CorrelatePipeline constructor(
             "awsregion" to SdkAV.S(awsRegion),
             "sequenceNumber" to nullableS(uow.meta?.get("sequenceNumber")),
             "ttl" to nullableN(uow.meta?.get("ttl")),
-            "expire" to nullableS(uow.meta?.get("expire")),
+            "expire" to nullableB(expire),
             "pipelineId" to nullableS(id),
             "event" to nullableS(event?.encoded()),
         )
