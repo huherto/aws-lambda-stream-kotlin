@@ -15,22 +15,7 @@ repositories {
 }
 
 dependencies {
-
-    implementation(platform(libs.aws.sdk.bom))
-
-    implementation(project(":factory-example:common-serverless"))
-
-    implementation(libs.aws.java.core)
-    implementation(libs.aws.java.events)
-    implementation(libs.aws.sdk.dynamodb)
-    implementation(libs.aws.sdk.lambda)
-    implementation(libs.kotlin.stdlib)
-    implementation(libs.kotlinx.serialization.json)
-    implementation(libs.lambda.json.logger)
-
-    testImplementation(kotlin("test"))
-    testImplementation(libs.aws.lambda.java.tests)
-    testImplementation(libs.mockk)
+    // No dependencies needed here since this a integration testing module.
 }
 
 tasks.shadowJar {
