@@ -89,9 +89,6 @@ suspend fun Flow<UnitOfWork>.compact(rule: PipelineRule): Flow<UnitOfWork> = flo
         val sortedBatch = groupBatch.sortedWith(Comparator { a, b -> sorter(a, b) })
         val last = sortedBatch.last()
 
-        // Metrics omitted for brevity as there is no 'metrics' field in UnitOfWork yet
-        // but you can append them here by mutating meta or tags.
-
         last.copy(batch = sortedBatch)
     }
 

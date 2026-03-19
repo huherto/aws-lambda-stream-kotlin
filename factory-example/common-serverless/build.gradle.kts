@@ -25,6 +25,7 @@ dependencies {
     implementation(libs.aws.sdk.lambda)
     implementation(libs.jackson.kotlin)
     implementation(libs.kotest.assertions)
+    implementation(libs.kotest.property)
     implementation(libs.kotlin.logging)
     implementation(libs.kotlin.stdlib)
     implementation(libs.kotlinx.serialization.json)
