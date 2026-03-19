@@ -1,8 +1,5 @@
 @file:Suppress("UnstableApiUsage")
 
-import org.gradle.kotlin.dsl.invoke
-import org.gradle.api.tasks.testing.Test
-
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.serialization)
@@ -26,11 +23,12 @@ dependencies {
     implementation(libs.aws.sdk.dynamodb)
     implementation(libs.aws.sdk.kinesis)
     implementation(libs.aws.sdk.lambda)
+    implementation(libs.jackson.kotlin)
+    implementation(libs.kotest.assertions)
+    implementation(libs.kotlin.logging)
     implementation(libs.kotlin.stdlib)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.testcon.localstack)
-    implementation(libs.kotlin.logging)
-    implementation(libs.jackson.kotlin)
 
 
     testImplementation(kotlin("test"))

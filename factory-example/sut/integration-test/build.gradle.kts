@@ -38,15 +38,17 @@ testing {
         register<JvmTestSuite>("integrationTest") {
             useJUnitJupiter()
             dependencies {
+                implementation(platform(libs.aws.sdk.bom))
+
+                implementation(libs.aws.sdk.dynamodb)
+                implementation(libs.aws.sdk.eventbridge)
                 implementation(libs.aws.sdk.kinesis)
                 implementation(libs.aws.sdk.lambda)
-                implementation(libs.aws.sdk.eventbridge)
-                implementation(libs.aws.sdk.dynamodb)
-                implementation(libs.testcon.localstack)
-                implementation(libs.testcon.junit.jupiter)
-                implementation(libs.slf4j.simple)
                 implementation(libs.kotest.assertions)
-                implementation(platform(libs.aws.sdk.bom))
+                implementation(libs.slf4j.simple)
+                implementation(libs.testcon.junit.jupiter)
+                implementation(libs.testcon.localstack)
+
                 implementation(project(":factory-example:common-serverless"))
                 implementation(project())
 

@@ -7,6 +7,12 @@ import com.amazonaws.services.lambda.runtime.events.models.dynamodb.StreamRecord
 import io.github.huherto.awsLambdaStream.flavors.CorrelatePipeline
 import io.github.huherto.awsLambdaStream.from.RecordImage
 import io.github.huherto.awsLambdaStream.from.RecordPair
+import io.kotest.matchers.booleans.shouldBeFalse
+import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.collections.shouldBeEmpty
+import io.kotest.matchers.nulls.shouldNotBeNull
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -14,7 +20,7 @@ import io.mockk.spyk
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
-import kotlin.test.*
+import kotlin.test.Test
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue as SdkAV
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue as EventAV
 
@@ -79,33 +85,21 @@ class CorrelatePipelineTest {
         )
         
         // Act & Assert
-        assertTrue(
-            pipeline.forCollectedEvents(validUow), 
-            "Should return true for INSERT event with sk=EVENT and raw=RecordPair"
-        )
+        pipeline.forCollectedEvents(validUow).shouldBeTrue()
         
         val wrongEventNameRecord = DynamodbEvent.DynamodbStreamRecord().apply {
             eventName = "MODIFY"
             dynamodb = streamRecordWithEvent
         }
-        assertFalse(
-            pipeline.forCollectedEvents(validUow.copy(record = wrongEventNameRecord)), 
-            "Should return false when eventName is not INSERT"
-        )
+        pipeline.forCollectedEvents(validUow.copy(record = wrongEventNameRecord)).shouldBeFalse()
         
         val wrongSkRecord = DynamodbEvent.DynamodbStreamRecord().apply {
             eventName = "INSERT"
             dynamodb = streamRecordWithOther
         }
-        assertFalse(
-            pipeline.forCollectedEvents(validUow.copy(record = wrongSkRecord)), 
-            "Should return false when sk is not EVENT"
-        )
+        pipeline.forCollectedEvents(validUow.copy(record = wrongSkRecord)).shouldBeFalse()
         
-        assertFalse(
-            pipeline.forCollectedEvents(validUow.copy(event = createFakeEvent(rawObj = "Not a RecordPair"))), 
-            "Should return false when event.raw is not of type RecordPair"
-        )
+        pipeline.forCollectedEvents(validUow.copy(event = createFakeEvent(rawObj = "Not a RecordPair"))).shouldBeFalse()
     }
 
     @Test
@@ -130,10 +124,10 @@ class CorrelatePipelineTest {
 
         // Act & Assert
         val resultPopulated = pipeline.normalize(uowPopulated)
-        assertEquals("seq-123", resultPopulated.meta?.get("sequenceNumber"))
-        assertEquals("999", resultPopulated.meta?.get("ttl"))
-        assertEquals("test-data", resultPopulated.meta?.get("data"))
-        assertEquals("JsonEvent", resultPopulated.event!!::class.simpleName)
+        resultPopulated.meta?.get("sequenceNumber") shouldBe "seq-123"
+        resultPopulated.meta?.get("ttl") shouldBe "999"
+        resultPopulated.meta?.get("data") shouldBe "test-data"
+        resultPopulated.event!!::class.simpleName shouldBe "JsonEvent"
     }
 
     @Test
@@ -161,23 +155,23 @@ class CorrelatePipelineTest {
 
         // Assert - Default behavior
         val request = result.putRequest
-        assertNotNull(request, "PutRequest should not be null")
-        assertEquals("CORREL", (request.item?.get("discriminator") as? SdkAV.S)?.value)
-        assertEquals("test-key", (request.item?.get("pk") as? SdkAV.S)?.value)
-        assertEquals("test-pipeline", (request.item?.get("pipelineId") as? SdkAV.S)?.value)
+        request.shouldNotBeNull()
+        (request.item?.get("discriminator") as? SdkAV.S)?.value shouldBe "CORREL"
+        (request.item?.get("pk") as? SdkAV.S)?.value shouldBe "test-key"
+        (request.item?.get("pipelineId") as? SdkAV.S)?.value shouldBe "test-pipeline"
 
         // Arrange & Act & Assert - Custom putRequest delegate function
         val expectedUow = UnitOfWork()
         val customPipeline = CorrelatePipeline("test-pipeline", putRequest = { expectedUow })
         
         val customResult = customPipeline.defaultPutRequest(uow)
-        assertSame(expectedUow, customResult, "Should return the result of the custom putRequest delegate when it is provided")
+        customResult shouldBeSameInstanceAs expectedUow
     }
 
     // --- Unit Tests for the Connect Function ---
 
     @Test
-    fun `connect should successfully process a valid UnitOfWork`() = runBlocking {
+    fun `connect should successfully process a valid UnitOfWork`() : Unit = runBlocking {
         // Arrange
         val dynamoDbClientMock = mockk<DynamoDbClient>()
         coEvery { dynamoDbClientMock.putItem(any()) } returns PutItemResponse.invoke {}
@@ -216,17 +210,17 @@ class CorrelatePipelineTest {
         val resultList = resultFlow.toList()
 
         // Assert
-        assertEquals(1, resultList.size, "Should process exactly one UnitOfWork")
+        resultList.size shouldBe 1
         
         val processedUow = resultList.first()
-        assertEquals("test-correlation-key", processedUow.key, "Correlation key should be added by the pipeline")
-        assertNotNull(processedUow.putRequest, "A put request should be assigned")
-        assertNotNull(processedUow.putResponse, "A put response should be assigned after dynamo mock execution")
-        assertEquals("FakeEvent", processedUow.event!!::class.simpleName, "Event should have been normalized to a FakeEvent")
+        processedUow.key shouldBe "test-correlation-key"
+        processedUow.putRequest.shouldNotBeNull()
+        processedUow.putResponse.shouldNotBeNull()
+        processedUow.event!!::class.simpleName shouldBe "FakeEvent"
     }
 
     @Test
-    fun `connect should filter out UnitOfWork when forCollectedEvents returns false`() = runBlocking {
+    fun `connect should filter out UnitOfWork when forCollectedEvents returns false`() : Unit = runBlocking {
         // Arrange
         val pipeline = CorrelatePipeline(
             id = "test-pipeline",
@@ -250,11 +244,11 @@ class CorrelatePipelineTest {
         val resultList = resultFlow.toList()
 
         // Assert
-        assertTrue(resultList.isEmpty(), "Flow should be empty because UnitOfWork was filtered out by forCollectedEvents")
+        resultList.shouldBeEmpty()
     }
 
     @Test
-    fun `connect should filter out UnitOfWork when onContentType returns false`() = runBlocking {
+    fun `connect should filter out UnitOfWork when onContentType returns false`() : Unit = runBlocking {
         // Arrange
         val pipeline = CorrelatePipeline(
             id = "test-pipeline",
@@ -283,6 +277,6 @@ class CorrelatePipelineTest {
         val resultList = resultFlow.toList()
 
         // Assert
-        assertTrue(resultList.isEmpty(), "Flow should be empty because UnitOfWork was filtered out by onContentType")
+        resultList.shouldBeEmpty()
     }
 }
