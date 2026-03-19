@@ -2,6 +2,7 @@ package io.github.huherto.awsLambdaStream.flavors
 
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.PutItemRequest
+import aws.sdk.kotlin.services.dynamodb.model.QueryRequest
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import io.github.huherto.awsLambdaStream.*
 import io.github.huherto.awsLambdaStream.from.RecordImage
@@ -11,30 +12,33 @@ import kotlinx.coroutines.flow.*
 import kotlin.reflect.KClass
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue as SdkAV
 
-class CorrelatePipeline constructor(
+class EvaluatePipeline constructor(
     id: String,
     val onContentType: (UnitOfWork) -> Boolean = { true },
     val onEventClass: List<KClass<out Event>> = listOf(Event::class),
     val correlationKey: ((UnitOfWork) -> String)? = null,
     val correlationKeySuffix: String = "",
+    val index: String? = null,
     val envConfig: EnvironmentConfig = EnvironmentConfig(),
     val bufferCapacity: Int = Channel.Factory.BUFFERED,
     var dynamoDbClient: DynamoDbClient? = null,
     val putRequest: ((UnitOfWork) -> UnitOfWork)? = null,
     val unmarshall: ((String) -> Event)? = null,
     val expire: Boolean = false,
+    val expression: ((UnitOfWork) -> Boolean)? = null,
 ) : Pipeline(id) {
 
-    internal fun forCollectedEvents(uow: UnitOfWork) : Boolean {
+    internal fun forEvents(uow: UnitOfWork) : Boolean {
         return when(uow.record) {
             is DynamodbEvent.DynamodbStreamRecord -> {
-                uow.record.eventName == "INSERT"
-                        && uow.record.dynamodb.keys["sk"]?.s == "EVENT"
-                        && uow.event?.raw is RecordPair
+                (uow.record.eventName == "INSERT"
+                        && uow.record.dynamodb.keys["sk"]?.s == "EVENT")
+                        || uow.record.dynamodb.newImage?.get("discriminator")?.s == "CORREL"
             }
             else -> false
         }
     }
+
     internal fun defaultUnmarshall(eventAsString: String) : Event {
         if (unmarshall != null) return unmarshall(eventAsString)
 
@@ -53,12 +57,20 @@ class CorrelatePipeline constructor(
         val eventAsString = rawNew.getEvent()?: "{}"
         val eventAsObject = defaultUnmarshall(eventAsString)
         val record = uow.record as? DynamodbEvent.DynamodbStreamRecord
+        val isCorrel = rawNew.get("discriminator")?.s == "CORREL"
+        val correlationKey = if (isCorrel) rawNew.get("pk")?.s else rawNew.get("data")?.s
 
         return uow.copy(
             meta = mapOf(
+                "id" to uow.event?.id,
                 "sequenceNumber" to record?.dynamodb?.sequenceNumber,
                 "ttl" to "" + rawNew.getTtl().toString(),
-                "data" to "" + rawNew.getData(),
+                "expire" to "" + rawNew.get("expire")?.b,
+                "pk" to rawNew.get("pk")?.s,
+                "data" to rawNew.getData(),
+                "correlationKey" to correlationKey,
+                "suffix" to rawNew.get("suffix")?.s,
+                "correlation" to isCorrel.toString()
             ),
             event = eventAsObject
         )
@@ -70,6 +82,49 @@ class CorrelatePipeline constructor(
         // use a suffix when you need the same key for different sets of rules
         val key = correlationKey(uow) + correlationKeySuffix
         return uow.copy(key = key)
+    }
+
+    internal fun onCorrelationKeySuffix(uow: UnitOfWork): Boolean {
+        val uowSuffix = uow.meta?.get("suffix")
+
+        // evaluate rules with no suffix against correlations with no suffix
+        if (correlationKeySuffix.isEmpty() && uowSuffix.isNullOrEmpty()) {
+            return true
+        }
+
+        // do not evaluate rules with a suffix against correlations with no suffix
+        if (correlationKeySuffix.isNotEmpty() && uowSuffix.isNullOrEmpty()) {
+            return false
+        }
+
+        // evaluate rules with a suffix against correlations with the same suffix
+        if (correlationKeySuffix.isNotEmpty() && uowSuffix == correlationKeySuffix) {
+            return true
+        }
+
+        // do not evaluate rules with a suffix against correlations with a different suffix
+        return false
+    }
+
+    internal fun toQueryRequest(uow: UnitOfWork) : UnitOfWork {
+        val isCorrelation = uow.meta?.get("correlation").toBoolean()
+
+        val request = QueryRequest {
+            if (isCorrelation) {
+                keyConditionExpression = "#pk = :pk"
+                expressionAttributeNames = mapOf("#pk" to "pk")
+                // Safely pulling the value from the meta map and wrapping in AttributeValue.S
+                expressionAttributeValues = mapOf(":pk" to SdkAV.S(uow.meta?.get("pk") ?: ""))
+                consistentRead = true
+            } else {
+                indexName = index ?: "DataIndex"
+                keyConditionExpression = "#data = :data"
+                expressionAttributeNames = mapOf("#data" to "data")
+                expressionAttributeValues = mapOf(":data" to SdkAV.S(uow.meta?.get("data") ?: ""))
+            }
+        }
+
+        return uow.copy(toQueryRequest = request)
     }
 
     internal fun defaultPutRequest(uow: UnitOfWork) : UnitOfWork {
@@ -116,7 +171,7 @@ class CorrelatePipeline constructor(
         with(fm) {
             val flow = fromFlow
                 .filterNotNull()
-                .filter{ uow -> faulty(uow){ forCollectedEvents(uow) } == true }
+                .filter{ uow -> faulty(uow){ forEvents(uow) } == true }
                 .mapNotFaulty{  uow -> normalize(uow) }
                 .filterEventTypes(this, *onEventClass.toTypedArray())
                 .onEach { uow -> printStartPipeline(uow) }

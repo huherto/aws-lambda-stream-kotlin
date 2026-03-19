@@ -56,10 +56,6 @@ class CollectPipeline private constructor(builder: Builder) : Pipeline(builder.i
         return uow.event?.timestamp?.let { it / 1000 + daysInSecs(ttl) } ?: 0
     }
 
-    private fun nullableS(s: String?): AttributeValue {
-        return s?.let { AttributeValue.S(it) } ?: AttributeValue.Null(true)
-    }
-
     private fun omitRaw(event: Event?): String {
         throw RuntimeException("Not implemented yet")
     }

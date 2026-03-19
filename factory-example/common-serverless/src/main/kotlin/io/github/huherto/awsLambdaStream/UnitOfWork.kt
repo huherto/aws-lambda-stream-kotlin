@@ -2,6 +2,7 @@ package io.github.huherto.awsLambdaStream
 
 import aws.sdk.kotlin.services.dynamodb.model.PutItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.PutItemResponse
+import aws.sdk.kotlin.services.dynamodb.model.QueryRequest
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
 
 interface Event {
@@ -29,7 +30,11 @@ data class UnitOfWork(
     val timestamp: String? = null,
     val putRequest: PutItemRequest? = null,
     val putResponse: PutItemResponse? = null,
-    val meta: Map<String, String?>? = null
+    val meta: Map<String, String?>? = null,
+    val toQueryRequest: QueryRequest? = null,
+    val triggers: List<Any>? = null,
+    val correlated: List<Any>? = null,
+    val batch: List<UnitOfWork>? = null,
 )
 
 class FailureException(
