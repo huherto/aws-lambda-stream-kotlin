@@ -22,7 +22,7 @@ class CorrelatePipeline constructor(
     var dynamoDbClient: DynamoDbClient? = null,
     val putRequest: ((UnitOfWork) -> UnitOfWork)? = null,
     val unmarshall: ((String) -> Event)? = null,
-    val expire: Boolean? = null,
+    val expire: Boolean = false,
 ) : Pipeline(id) {
 
     private fun nullableS(s: String?): SdkAV {

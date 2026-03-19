@@ -58,15 +58,19 @@ class ControlServiceITest {
         collectedEvent["data"]?.asS() shouldBe event.id
         collectedEvent["event"]?.asS().shouldNotBeNull()
 
-        val timeStamp = collectedEvent["timestamp"]?.asN()?.toLong() ?: 0L
-        ((event.timestamp ?: 0L) - timeStamp) shouldBeLessThan 1000L
+        var timeStamp = collectedEvent["timestamp"]?.asN()?.toLong()
+        timeStamp.shouldNotBeNull()
+        timeStamp shouldBeGreaterThan (event.timestamp!! - 1L)
+        timeStamp shouldBeLessThan (event.timestamp!! + 100*1000L) // 1000 secs from now
 
         val correlEvent = findEventByPK(event.entity?.id!!)
         correlEvent.shouldNotBeNull()
         correlEvent["pk"]?.asS() shouldBe event.entity?.id
         correlEvent["sk"]?.asS() shouldBe event.id
         correlEvent["discriminator"]?.asS() shouldBe "CORREL"
-        // correlEvent["data"]?.asS() shouldBe event.id
+        correlEvent["expire"]?.asBool() shouldBe false
+        correlEvent["awsregion"]?.asS() shouldBe "us-east-1"
+        correlEvent["pipelineId"]?.asS() shouldBe "corr1"
         
         val sequenceNumber = correlEvent["sequenceNumber"]?.asS()
         sequenceNumber.shouldNotBeNull()
@@ -74,11 +78,15 @@ class ControlServiceITest {
         
         correlEvent["event"]?.asS().shouldNotBeNull()
         
-        val ttl = collectedEvent["ttl"]?.asN()?.toLong()
+        val ttl = correlEvent["ttl"]?.asN()?.toLong()
         ttl.shouldNotBeNull()
-        ttl shouldBeGreaterThan 0L
         ttl shouldBeGreaterThan 1742326911L // A date in 2025
         ttl shouldBeLessThan 1900093311L // A date in 2030
+
+        timeStamp = correlEvent["timestamp"]?.asN()?.toLong()
+        timeStamp.shouldNotBeNull()
+        timeStamp shouldBeGreaterThan (event.timestamp!! - 1L)
+        timeStamp shouldBeLessThan (event.timestamp!! + 1000*1000L) // 1000 secs from now
     }
 
     @Test
