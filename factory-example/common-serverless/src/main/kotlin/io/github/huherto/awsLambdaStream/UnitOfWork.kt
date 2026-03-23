@@ -1,5 +1,6 @@
 package io.github.huherto.awsLambdaStream
 
+import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
 import aws.sdk.kotlin.services.dynamodb.model.PutItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.PutItemResponse
 import aws.sdk.kotlin.services.dynamodb.model.QueryRequest
@@ -32,9 +33,10 @@ data class UnitOfWork(
     val putResponse: PutItemResponse? = null,
     val meta: Map<String, String?>? = null,
     val toQueryRequest: QueryRequest? = null,
-    val triggers: List<Any>? = null,
+    val triggers: List<Event>? = null,
     val correlated: List<Any>? = null,
     val batch: List<UnitOfWork>? = null,
+    val queryResponse: List<Map<String, AttributeValue>>? = null,
 )
 
 class FailureException(

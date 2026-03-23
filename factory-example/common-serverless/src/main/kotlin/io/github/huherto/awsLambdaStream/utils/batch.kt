@@ -70,7 +70,7 @@ fun toGroupUows(groups: Map<String?, List<UnitOfWork>>): List<UnitOfWork> {
     return groups.values.map { UnitOfWork(batch = it) }
 }
 
-suspend fun Flow<UnitOfWork>.compact(rule: PipelineRule): Flow<UnitOfWork> = flow {
+fun Flow<UnitOfWork>.compact(rule: PipelineRule): Flow<UnitOfWork> = flow {
     if (rule.compact == null) {
         emitAll(this@compact)
         return@flow

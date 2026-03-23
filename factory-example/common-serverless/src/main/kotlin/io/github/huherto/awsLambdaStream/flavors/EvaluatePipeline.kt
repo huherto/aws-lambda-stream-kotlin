@@ -7,12 +7,15 @@ import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import io.github.huherto.awsLambdaStream.*
 import io.github.huherto.awsLambdaStream.from.RecordImage
 import io.github.huherto.awsLambdaStream.from.RecordPair
+import io.github.huherto.awsLambdaStream.queries.queryAllDynamoDB
+import io.github.huherto.awsLambdaStream.utils.PipelineRule
+import io.github.huherto.awsLambdaStream.utils.compact
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import kotlin.reflect.KClass
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue as SdkAV
 
-class EvaluatePipeline constructor(
+class EvaluatePipeline (
     id: String,
     val onContentType: (UnitOfWork) -> Boolean = { true },
     val onEventClass: List<KClass<out Event>> = listOf(Event::class),
@@ -113,7 +116,7 @@ class EvaluatePipeline constructor(
             if (isCorrelation) {
                 keyConditionExpression = "#pk = :pk"
                 expressionAttributeNames = mapOf("#pk" to "pk")
-                // Safely pulling the value from the meta map and wrapping in AttributeValue.S
+                // Safely pulling the value from the meta-map and wrapping in AttributeValue.S
                 expressionAttributeValues = mapOf(":pk" to SdkAV.S(uow.meta?.get("pk") ?: ""))
                 consistentRead = true
             } else {
@@ -125,6 +128,41 @@ class EvaluatePipeline constructor(
         }
 
         return uow.copy(toQueryRequest = request)
+    }
+
+    internal fun Flow<UnitOfWork>.complex(): Flow<UnitOfWork> {
+        return if (expression == null) {
+            this.map { uow ->
+                uow.copy(
+                    triggers = listOfNotNull(uow.event)
+                )
+            }
+        } else {
+            this
+                .filter { uow -> onCorrelationKeySuffix(uow) }
+                .map { uow -> toQueryRequest(uow) }
+                .queryAllDynamoDB(
+                    dynamoDbClient ?: error("DynamoDB client must be configured to process expressions")
+                )
+                .map { uow ->
+                    // In TS, queryAllDynamoDB assigns to 'correlated' via queryResponseField.
+                    // In Kotlin, queryAllDynamoDB stores the result in `queryResponse` (List<Map<String, AttributeValue>>).
+                    // We extract the JSON event string, unmarshall it, and assign the objects to `correlated`.
+                    val correlatedEvents = uow.queryResponse?.mapNotNull { item ->
+                        val eventString = (item["event"] as? SdkAV.S)?.value
+                        eventString?.let { defaultUnmarshall(it) }
+                    } ?: emptyList()
+
+                    uow.copy(
+                        correlated = correlatedEvents
+                    )
+                }
+                .filter { uow ->
+                    // In TS, the stream mapped the expression logic to a boolean field on uow, then filtered.
+                    // In Kotlin, we can directly execute the expression block within standard filter operator.
+                    expression.invoke(uow)
+                }
+        }
     }
 
     internal fun defaultPutRequest(uow: UnitOfWork) : UnitOfWork {
@@ -176,6 +214,7 @@ class EvaluatePipeline constructor(
                 .filterEventTypes(this, *onEventClass.toTypedArray())
                 .onEach { uow -> printStartPipeline(uow) }
                 .filter { uow -> faulty(uow) { onContentType(uow) } == true }
+                .compact(PipelineRule())
                 .mapNotFaulty { uow -> addCorrelationKey(uow)}
                 .mapNotFaulty{ uow -> defaultPutRequest(uow) }
                 .buffer(bufferCapacity)
