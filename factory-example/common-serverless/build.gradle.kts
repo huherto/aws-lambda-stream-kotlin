@@ -18,12 +18,11 @@ dependencies {
     implementation(platform(libs.aws.sdk.bom))
 
     implementation(libs.aws.java.core)
-    implementation(libs.aws.java.eventbridge)
     implementation(libs.aws.java.events)
     implementation(libs.aws.sdk.dynamodb)
+    implementation(libs.aws.sdk.eventbridge)
     implementation(libs.aws.sdk.kinesis)
     implementation(libs.aws.sdk.lambda)
-    implementation(libs.aws.sdk.eventbridge)
     implementation(libs.jackson.kotlin)
     implementation(libs.kotlin.logging)
     implementation(libs.kotlin.stdlib)
