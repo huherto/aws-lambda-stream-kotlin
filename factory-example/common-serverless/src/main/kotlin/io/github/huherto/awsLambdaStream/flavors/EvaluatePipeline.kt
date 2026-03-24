@@ -19,7 +19,6 @@ class EvaluatePipeline (
     id: String,
     val onContentType: (UnitOfWork) -> Boolean = { true },
     val onEventClass: List<KClass<out Event>> = listOf(Event::class),
-    val correlationKey: ((UnitOfWork) -> String)? = null,
     val correlationKeySuffix: String = "",
     val index: String? = null,
     val envConfig: EnvironmentConfig = EnvironmentConfig(),
@@ -35,8 +34,8 @@ class EvaluatePipeline (
         return when(uow.record) {
             is DynamodbEvent.DynamodbStreamRecord -> {
                 (uow.record.eventName == "INSERT"
-                        && uow.record.dynamodb.keys["sk"]?.s == "EVENT")
-                        || uow.record.dynamodb.newImage?.get("discriminator")?.s == "CORREL"
+                        && uow.record.dynamodb?.keys["sk"]?.s == "EVENT")
+                        || uow.record.dynamodb?.newImage?.get("discriminator")?.s == "CORREL"
             }
             else -> false
         }
