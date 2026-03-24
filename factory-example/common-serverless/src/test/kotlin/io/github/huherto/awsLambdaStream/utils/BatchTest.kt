@@ -91,17 +91,14 @@ class BatchTest : FunSpec({
                 UnitOfWork(key = "B"),
                 UnitOfWork(key = "C")
             )
-            val inactiveRule = PipelineRule(compact = null)
-            val activeRule = PipelineRule(
-                compact = CompactRule(
+            val compactRule = CompactRule(
                     group = { "StaticGroup" },
                     sort = { a, b -> a.key.orEmpty().compareTo(b.key.orEmpty()) }
-                )
             )
 
             // Act
-            val compactedResult = uows.asFlow().compact(activeRule).toList()
-            val uncompactedResult = uows.asFlow().compact(inactiveRule).toList()
+            val compactedResult = uows.asFlow().compact(compactRule).toList()
+            val uncompactedResult = uows.asFlow().compact(null).toList()
 
             // Assert
             uncompactedResult shouldHaveSize 3

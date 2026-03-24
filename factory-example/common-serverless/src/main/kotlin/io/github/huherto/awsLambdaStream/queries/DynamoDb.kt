@@ -27,22 +27,6 @@ data class DynamoDbOptions(
     val decrypt: suspend (Map<String, AttributeValue>) -> Map<String, AttributeValue> = { it }
 )
 
-// Extension properties to access requests/responses dynamically if they are added to `UnitOfWork` or `meta`.
-// Note: Depending on your exact UnitOfWork implementation, you might want to adapt these
-// to be standard properties of your UoW or store them in the `meta` map.
-var UnitOfWork.batchGetRequest: BatchGetItemRequest?
-    get() = meta?.get("batchGetRequest") as? BatchGetItemRequest
-    set(value) { /* Handle setting based on your UoW structure */ }
-
-var UnitOfWork.queryRequest: QueryRequest?
-    get() = toQueryRequest
-    set(value) { /* UoW might have to be copied */ }
-
-var UnitOfWork.scanRequest: ScanRequest?
-    get() = meta?.get("scanRequest") as? ScanRequest
-    set(value) { /* Handle setting */ }
-
-
 fun Flow<UnitOfWork>.batchGetDynamoDB(
     dynamoDbClient: DynamoDbClient,
     options: DynamoDbOptions = DynamoDbOptions(step = "get")
@@ -227,7 +211,7 @@ fun toGetRequest(uow: UnitOfWork, rule: Rule): BatchGetItemRequest {
     val data = rawNew ?: rawOld ?: return BatchGetItemRequest { }
 
     val keysList = rule.fks.mapNotNull { fk ->
-        val value = data[fk] as? String
+        val value = data[fk]?.s
         if (value != null) {
             val parts = value.split("|")
             if (parts.size == 2) {

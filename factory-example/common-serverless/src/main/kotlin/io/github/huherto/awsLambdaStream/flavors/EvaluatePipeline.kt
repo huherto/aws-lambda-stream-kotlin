@@ -1,15 +1,15 @@
 package io.github.huherto.awsLambdaStream.flavors
 
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
-import aws.sdk.kotlin.services.dynamodb.model.PutItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.QueryRequest
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import io.github.huherto.awsLambdaStream.*
 import io.github.huherto.awsLambdaStream.from.RecordImage
 import io.github.huherto.awsLambdaStream.from.RecordPair
 import io.github.huherto.awsLambdaStream.queries.queryAllDynamoDB
-import io.github.huherto.awsLambdaStream.utils.PipelineRule
+import io.github.huherto.awsLambdaStream.utils.CompactRule
 import io.github.huherto.awsLambdaStream.utils.compact
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import kotlin.reflect.KClass
@@ -25,10 +25,10 @@ class EvaluatePipeline (
     val envConfig: EnvironmentConfig = EnvironmentConfig(),
     val bufferCapacity: Int = Channel.Factory.BUFFERED,
     var dynamoDbClient: DynamoDbClient? = null,
-    val putRequest: ((UnitOfWork) -> UnitOfWork)? = null,
     val unmarshall: ((String) -> Event)? = null,
-    val expire: Boolean = false,
+    val compactRule: CompactRule? = null,
     val expression: ((UnitOfWork) -> Boolean)? = null,
+    val higherOrderEmit: Any? = null,
 ) : Pipeline(id) {
 
     internal fun forEvents(uow: UnitOfWork) : Boolean {
@@ -79,14 +79,6 @@ class EvaluatePipeline (
         )
     }
 
-    private fun addCorrelationKey(uow: UnitOfWork) : UnitOfWork {
-        require(correlationKey != null) { "correlationKey must be set" }
-
-        // use a suffix when you need the same key for different sets of rules
-        val key = correlationKey(uow) + correlationKeySuffix
-        return uow.copy(key = key)
-    }
-
     internal fun onCorrelationKeySuffix(uow: UnitOfWork): Boolean {
         val uowSuffix = uow.meta?.get("suffix")
 
@@ -127,7 +119,7 @@ class EvaluatePipeline (
             }
         }
 
-        return uow.copy(toQueryRequest = request)
+        return uow.copy(queryRequest = request)
     }
 
     internal fun Flow<UnitOfWork>.complex(): Flow<UnitOfWork> {
@@ -165,45 +157,95 @@ class EvaluatePipeline (
         }
     }
 
-    internal fun defaultPutRequest(uow: UnitOfWork) : UnitOfWork {
+    // A concrete implementation of Event for the newly created higher-order template
+    data class HigherOrderEvent(
+        override var id: String? = null,
+        override var timestamp: Long? = null,
+        override var partitionKey: String? = null,
+        override var tags: Map<String, String>? = null,
+        override var raw: Any? = null,
+        override var eem: Any? = null,
+        var type: String? = null,
+        var mappedTriggers: List<Map<String, Any?>>? = null,
+        var baseEvent: Event? = null // Holds the properties of uow.event if basic is true
+    ) : Event {
+        override fun eventType(): String = type ?: baseEvent?.eventType() ?: "unknown"
+        override fun encoded(): String = baseEvent?.encoded() ?: "{}"
+    }
 
-        if (putRequest != null) return putRequest(uow)
+    /**
+     * Transforms a UnitOfWork into a list of UnitOfWorks with newly emitted higher order events.
+     * Note: To use with 'faultyAsyncStream' in Kotlin Flow, you would typically use `flatMapConcat` or `mapNotNull`
+     * wrapped in your `FaultManager.faulty()` handler.
+     */
+    internal fun toHigherOrderEvents(uow: UnitOfWork): List<UnitOfWork> {
+        val basic = higherOrderEmit as? String != null
+        val trigger = uow.triggers?.lastOrNull()
 
-        val event: Event? = uow.event
-        val timeStamp = event?.timestamp
-        val awsRegion = envConfig.awsRegion()
+        // reduce + merge + omit(['region', 'source'])
+        val aggregatedTags = uow.triggers
+            ?.mapNotNull { it.tags }
+            ?.fold(mutableMapOf<String, String>()) { acc, currentTags ->
+                acc.apply { putAll(currentTags) }
+            }?.apply {
+                remove("region")
+                remove("source")
+            }
 
-        val itemValues = mapOf(
-            "pk" to nullableS(uow.key),
-            "sk" to nullableS(event?.id),
-            "discriminator" to SdkAV.S("CORREL"), // ATION
-            "timestamp" to SdkAV.N(timeStamp.toString()),
-            "awsregion" to SdkAV.S(awsRegion),
-            "sequenceNumber" to nullableS(uow.meta?.get("sequenceNumber")),
-            "ttl" to nullableN(uow.meta?.get("ttl")),
-            "expire" to nullableB(expire),
-            "suffix" to SdkAV.S(correlationKeySuffix),
-            "pipelineId" to nullableS(id),
-            "event" to nullableS(event?.encoded()),
+        val mappedTriggers = uow.triggers?.map {
+            mapOf(
+                "id" to it.id,
+                "type" to it.eventType(),
+                "timestamp" to it.timestamp
+            )
+        }
+
+        val uowMetaId = uow.meta?.get("id") ?: ""
+        val uowMetaCorrelationKey = uow.meta?.get("correlationKey") ?: ""
+        val partitionKeyStr = uowMetaCorrelationKey.replace(".${correlationKeySuffix}", "")
+
+        val template = HigherOrderEvent(
+            id = "$uowMetaId.${id}", // plus a suffix if many
+            type = if (basic) higherOrderEmit else null,
+            timestamp = trigger?.timestamp,
+            partitionKey = partitionKeyStr,
+            tags = aggregatedTags,
+            mappedTriggers = mappedTriggers,
+            baseEvent = if (basic) uow.event else null,
+            raw = if (basic) uow.event?.raw else null,
+            eem = if (basic) uow.event?.eem else null
         )
 
-        val putRequest = PutItemRequest.Companion {
-            tableName = envConfig.tableName() ?: "events"
-            item = itemValues
+        val resultEvents: List<Event> = if (basic) {
+            listOf(template)
+        } else {
+            @Suppress("UNCHECKED_CAST")
+            val emitFunction = higherOrderEmit as? (UnitOfWork, Event) -> List<Event>
+                ?: throw IllegalArgumentException("higherOrderEmit must be a String or a function")
+
+            val emitResult = emitFunction(uow, template)
+
+            // Emulates castArray(result)
+            when (emitResult) {
+                is Iterable<*> -> emitResult.filterIsInstance<Event>()
+                is Event -> listOf(emitResult)
+                else -> emptyList()
+            }
         }
-        return uow.copy(putRequest = putRequest)
+
+        // Maps results back to a UnitOfWork (replacing the current event with the emitted one)
+        return resultEvents.map { emit ->
+            uow.copy(event = emit)
+        }
     }
 
-    private val putDynamoDb: suspend (UnitOfWork) -> UnitOfWork = { uow ->
-        if (dynamoDbClient == null) {
-            dynamoDbClient = getDynamoDbClient(envConfig)
-        }
-        val putResponse = uow.putRequest?.let {
-            dynamoDbClient?.putItem(uow.putRequest)
-        }
-        uow.copy(putResponse = putResponse)
+    fun publish(uow: UnitOfWork) : UnitOfWork {
+        // Not implemented yet
+        logger.info { "Publishing event: $uow.event" }
+        return uow
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     override fun connect(fm: FaultManager, fromFlow: Flow<UnitOfWork>) : Flow<UnitOfWork> {
         logger.info { "CorrelatePipeline.connect: id=$id" }
         with(fm) {
@@ -214,11 +256,14 @@ class EvaluatePipeline (
                 .filterEventTypes(this, *onEventClass.toTypedArray())
                 .onEach { uow -> printStartPipeline(uow) }
                 .filter { uow -> faulty(uow) { onContentType(uow) } == true }
-                .compact(PipelineRule())
-                .mapNotFaulty { uow -> addCorrelationKey(uow)}
-                .mapNotFaulty{ uow -> defaultPutRequest(uow) }
                 .buffer(bufferCapacity)
-                .mapNotNull { uow -> faulty(uow) { putDynamoDb(uow) } }
+                .compact(compactRule)
+                .complex()
+                .flatMapMerge { uow ->
+                    faulty(uow) { toHigherOrderEvents(uow) }?.asFlow() ?: emptyFlow()
+                }
+                .buffer(bufferCapacity)
+                .mapNotNull { uow -> faulty(uow) { publish(uow) } }
                 .onEach { uow -> printEndPipeline(uow) }
             return flow
         }

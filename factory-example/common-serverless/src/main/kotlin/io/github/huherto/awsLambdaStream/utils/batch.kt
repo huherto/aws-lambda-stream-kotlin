@@ -34,7 +34,7 @@ fun unBatchUow(uow: UnitOfWork): List<UnitOfWork> {
             putRequest = outerMinusBatch.putRequest ?: inner.putRequest,
             putResponse = outerMinusBatch.putResponse ?: inner.putResponse,
             meta = outerMinusBatch.meta ?: inner.meta,
-            toQueryRequest = outerMinusBatch.toQueryRequest ?: inner.toQueryRequest,
+            queryRequest = outerMinusBatch.queryRequest ?: inner.queryRequest,
             triggers = outerMinusBatch.triggers ?: inner.triggers,
             correlated = outerMinusBatch.correlated ?: inner.correlated,
             batch = null
@@ -70,14 +70,14 @@ fun toGroupUows(groups: Map<String?, List<UnitOfWork>>): List<UnitOfWork> {
     return groups.values.map { UnitOfWork(batch = it) }
 }
 
-fun Flow<UnitOfWork>.compact(rule: PipelineRule): Flow<UnitOfWork> = flow {
-    if (rule.compact == null) {
+fun Flow<UnitOfWork>.compact(rule: CompactRule?): Flow<UnitOfWork> = flow {
+    if (rule == null) {
         emitAll(this@compact)
         return@flow
     }
 
-    val grouper = rule.compact.group ?: { it.event?.partitionKey }
-    val sorter = rule.compact.sort ?: { lh, rh ->
+    val grouper = rule.group ?: { it.event?.partitionKey }
+    val sorter = rule.sort ?: { lh, rh ->
         val lhTs = lh.event?.timestamp ?: 0L
         val rhTs = rh.event?.timestamp ?: 0L
         lhTs.compareTo(rhTs)
