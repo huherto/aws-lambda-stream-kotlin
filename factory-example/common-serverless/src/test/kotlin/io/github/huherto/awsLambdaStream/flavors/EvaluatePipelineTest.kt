@@ -10,6 +10,8 @@ import io.github.huherto.awsLambdaStream.from.RecordPair
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue as SdkAV
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue as EventAV
@@ -378,5 +380,78 @@ class EvaluatePipelineTest {
 
         // Assert
         result shouldBe uow
+    }
+
+    @Test
+    fun `connect should successfully process valid UnitOfWork and filter out invalid ones`() : Unit = runBlocking {
+        // Arrange
+        val pipeline = EvaluatePipeline(
+            id = "test-pipeline",
+            // Required to avoid IllegalArgumentException during toHigherOrderEvents
+            higherOrderEmit = EmitOption.Basic("MyHigherOrderType") 
+        )
+        val faultManager = io.github.huherto.awsLambdaStream.FaultManager()
+
+        val eventAsString = """{"id": "ev1", "type": "TestEvent"}"""
+        val rawNewMap = mapOf(
+            "event" to EventAV().withS(eventAsString),
+            "discriminator" to EventAV().withS("EVENT"),
+            "pk" to EventAV().withS("pk-123"),
+            "data" to EventAV().withS("data-456")
+        )
+
+        // A valid UnitOfWork that meets the `forEvents` and `onContentType` criteria
+        val validUow = UnitOfWork(
+            event = object : Event {
+                override var id: String? = "ev1"
+                override var timestamp: Long? = 123456789L
+                override var partitionKey: String? = null
+                override var tags: Map<String, String>? = null
+                override var raw: Any? = RecordPair(new = RecordImage(rawNewMap), old = null)
+                override var eem: Any? = null
+                override fun eventType() = "TestEvent"
+                override fun encoded() = ""
+            },
+            record = DynamodbEvent.DynamodbStreamRecord().apply {
+                eventName = "INSERT"
+                dynamodb = StreamRecord().apply {
+                    keys = mapOf("sk" to EventAV().withS("EVENT"))
+                    sequenceNumber = "seq-999"
+                }
+            }
+        )
+
+        // An invalid UnitOfWork that should be filtered out early by `forEvents`
+        val invalidUow = UnitOfWork(
+            record = DynamodbEvent.DynamodbStreamRecord().apply {
+                eventName = "MODIFY" 
+            }
+        )
+
+        val uowFlow = kotlinx.coroutines.flow.flowOf(validUow, invalidUow)
+
+        // Act
+        val results = pipeline.connect(faultManager, uowFlow).toList()
+
+        // Assert
+        results.size shouldBe 1
+        
+        val processedUow = results.first()
+        processedUow.shouldNotBeNull()
+        
+        // Assert higher order event mapping behavior
+        val emittedEvent = processedUow.event
+        emittedEvent.shouldBeInstanceOf<EvaluatePipeline.HigherOrderEvent>()
+        emittedEvent.type shouldBe "MyHigherOrderType"
+        emittedEvent.id shouldBe "ev1.test-pipeline"
+        
+        emittedEvent.mappedTriggers.shouldNotBeNull()
+        emittedEvent.mappedTriggers!!.size shouldBe 1
+        emittedEvent.mappedTriggers!![0]["id"] shouldBe "ev1"
+        
+        // Assert normalization mapped variables onto meta
+        processedUow.meta?.get("sequenceNumber") shouldBe "seq-999"
+        processedUow.meta?.get("pk") shouldBe "pk-123"
+        processedUow.meta?.get("data") shouldBe "data-456"
     }
 }
