@@ -270,7 +270,7 @@ class EvaluatePipelineTest {
         val pipeline = EvaluatePipeline(
             id = "test-id",
             correlationKeySuffix = "suffix",
-            higherOrderEmit = "MyHigherOrderType"
+            higherOrderEmit = EmitOption.Basic("MyHigherOrderType")
         )
         
         val trigger1 = object : Event {
@@ -354,7 +354,7 @@ class EvaluatePipelineTest {
 
         val pipeline = EvaluatePipeline(
             id = "test-id",
-            higherOrderEmit = emitFunction
+            higherOrderEmit = EmitOption.Custom(emitFunction)
         )
 
         val uow = UnitOfWork(meta = mapOf("id" to "m1", "correlationKey" to "k1"))

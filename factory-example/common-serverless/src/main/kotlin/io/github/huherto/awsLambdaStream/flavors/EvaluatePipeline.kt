@@ -15,6 +15,11 @@ import kotlinx.coroutines.flow.*
 import kotlin.reflect.KClass
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue as SdkAV
 
+sealed interface EmitOption {
+    data class Basic(val type: String) : EmitOption
+    data class Custom(val emit: (UnitOfWork, Event) -> List<Event>) : EmitOption
+}
+
 class EvaluatePipeline (
     id: String,
     val onContentType: (UnitOfWork) -> Boolean = { true },
@@ -27,7 +32,7 @@ class EvaluatePipeline (
     val unmarshall: ((String) -> Event)? = null,
     val compactRule: CompactRule? = null,
     val expression: ((UnitOfWork) -> Boolean)? = null,
-    val higherOrderEmit: Any? = null,
+    val higherOrderEmit: EmitOption? = null,
 ) : Pipeline(id) {
 
     internal fun forEvents(uow: UnitOfWork) : Boolean {
@@ -178,7 +183,7 @@ class EvaluatePipeline (
      * wrapped in your `FaultManager.faulty()` handler.
      */
     internal fun toHigherOrderEvents(uow: UnitOfWork): List<UnitOfWork> {
-        val basic = higherOrderEmit as? String != null
+        val basic = higherOrderEmit is EmitOption.Basic
         val trigger = uow.triggers?.lastOrNull()
 
         // reduce + merge + omit(['region', 'source'])
@@ -205,7 +210,7 @@ class EvaluatePipeline (
 
         val template = HigherOrderEvent(
             id = "$uowMetaId.${id}", // plus a suffix if many
-            type = if (basic) higherOrderEmit else null,
+            type = (higherOrderEmit as? EmitOption.Basic)?.type,
             timestamp = trigger?.timestamp,
             partitionKey = partitionKeyStr,
             tags = aggregatedTags,
@@ -215,21 +220,10 @@ class EvaluatePipeline (
             eem = if (basic) uow.event?.eem else null
         )
 
-        val resultEvents: List<Event> = if (basic) {
-            listOf(template)
-        } else {
-            @Suppress("UNCHECKED_CAST")
-            val emitFunction = higherOrderEmit as? (UnitOfWork, Event) -> List<Event>
-                ?: throw IllegalArgumentException("higherOrderEmit must be a String or a function")
-
-            val emitResult = emitFunction(uow, template)
-
-            // Emulates castArray(result)
-            when (emitResult) {
-                is Iterable<*> -> emitResult.filterIsInstance<Event>()
-                is Event -> listOf(emitResult)
-                else -> emptyList()
-            }
+        val resultEvents: List<Event> = when (higherOrderEmit) {
+            is EmitOption.Basic -> listOf(template)
+            is EmitOption.Custom -> higherOrderEmit.emit(uow, template)
+            null -> throw IllegalArgumentException("higherOrderEmit must be a String or a function")
         }
 
         // Maps results back to a UnitOfWork (replacing the current event with the emitted one)
