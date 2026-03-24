@@ -24,8 +24,6 @@ dependencies {
     implementation(libs.aws.sdk.kinesis)
     implementation(libs.aws.sdk.lambda)
     implementation(libs.jackson.kotlin)
-    implementation(libs.kotest.assertions)
-    implementation(libs.kotest.property)
     implementation(libs.kotlin.logging)
     implementation(libs.kotlin.stdlib)
     implementation(libs.kotlinx.serialization.json)
@@ -34,8 +32,11 @@ dependencies {
 
     testImplementation(kotlin("test"))
     testImplementation(libs.aws.lambda.java.tests)
-    testImplementation(libs.mockk)
+    testImplementation(libs.kotest.assertions)
+    testImplementation(libs.kotest.property)
+    testImplementation(libs.kotest.runner)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.mockk)
     testImplementation(libs.slf4j.simple)
 }
 
