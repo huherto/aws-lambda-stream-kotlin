@@ -1,3 +1,5 @@
+package io.github.huherto.awsLambdaStream.connectors
+
 import aws.sdk.kotlin.services.eventbridge.EventBridgeClient
 import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequest
 import aws.sdk.kotlin.services.eventbridge.model.PutEventsResponse
@@ -47,7 +49,7 @@ class EventBridgeConnector(
     companion object {
         private val clients = ConcurrentHashMap<String, EventBridgeClient>()
 
-        private fun getTimeoutFromEnv(): Duration {
+        internal fun getTimeoutFromEnv(): Duration {
             val timeoutMs = System.getenv("BUS_TIMEOUT")?.toLongOrNull()
                 ?: System.getenv("TIMEOUT")?.toLongOrNull()
                 ?: 1000L
@@ -67,7 +69,7 @@ class EventBridgeConnector(
         return putEventsInternal(params, emptyList(), ctx)
     }
 
-    private suspend fun putEventsInternal(
+    internal suspend fun putEventsInternal(
         params: PutEventsRequest,
         attempts: List<PutEventsResponse>,
         ctx: Any?
@@ -88,7 +90,7 @@ class EventBridgeConnector(
         }
     }
 
-    private suspend fun sendCommand(request: PutEventsRequest, ctx: Any?): PutEventsResponse {
+    internal suspend fun sendCommand(request: PutEventsRequest, ctx: Any?): PutEventsResponse {
         opt.metrics?.capture(client, request, "eventbridge", opt, ctx)
         
         return try {
@@ -101,7 +103,7 @@ class EventBridgeConnector(
         }
     }
 
-    private fun unprocessed(params: PutEventsRequest, resp: PutEventsResponse): PutEventsRequest {
+    internal fun unprocessed(params: PutEventsRequest, resp: PutEventsResponse): PutEventsRequest {
         val failedEntries = params.entries?.filterIndexed { index, _ ->
             resp.entries?.get(index)?.errorCode != null
         }
@@ -112,7 +114,7 @@ class EventBridgeConnector(
         }
     }
 
-    private fun accumulate(attempts: List<PutEventsResponse>, finalResp: PutEventsResponse): ConnectorResponse {
+    internal fun accumulate(attempts: List<PutEventsResponse>, finalResp: PutEventsResponse): ConnectorResponse {
         val allAttempts = attempts + finalResp
         
         val allSuccessfulEntries = allAttempts.flatMap { attempt ->
@@ -126,13 +128,13 @@ class EventBridgeConnector(
         )
     }
 
-    private fun assertMaxRetries(attemptsCount: Int, maxRetries: Int) {
+    internal fun assertMaxRetries(attemptsCount: Int, maxRetries: Int) {
         if (attemptsCount > maxRetries) {
             throw IllegalStateException("Maximum retry attempts exceeded.")
         }
     }
 
-    private fun getDelay(baseDelay: Long, attempt: Int): Long {
+    internal fun getDelay(baseDelay: Long, attempt: Int): Long {
         // Equivalent to custom backoff delay behavior
         return baseDelay * (1L shl (attempt - 1)).coerceAtLeast(1L)
     }
