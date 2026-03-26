@@ -30,4 +30,41 @@ class EnvironmentConfig {
         val enabled = System.getenv("STREAM_RETRY_ENABLED")
         return enabled != null && enabled.isNotEmpty() && enabled == "true"
     }
+
+    fun busName() : String? {
+        return System.getenv("BUS_NAME")
+    }
+
+    fun busSource() : String? {
+        return System.getenv("BUS_SRC")
+    }
+
+    fun maxPublishRequestSize() : Int? {
+        return System.getenv("PUBLISH_MAX_REQ_SIZE")?.toInt()
+    }
+
+    fun maxRequestSize() : Int? {
+        return System.getenv("MAX_REQ_SIZE")?.toInt()
+    }
+
+    fun publishBatchSize() : Int? {
+        return System.getenv("PUBLISH_BATCH_SIZE")?.toInt()
+    }
+
+    fun batchSize() : Int? {
+        return System.getenv("BATCH_SIZE")?.toInt()
+    }
+
+    fun publishParallel() : Int? {
+        return System.getenv("PUBLISH_PARALLEL")?.toInt()
+    }
+
+    fun parallel() : Int? {
+        return System.getenv("PARALLEL")?.toInt()
+    }
+
+    fun busEndPointId() : String? {
+        return System.getenv("BUS_ENDPOINT_ID")
+    }
+
 }

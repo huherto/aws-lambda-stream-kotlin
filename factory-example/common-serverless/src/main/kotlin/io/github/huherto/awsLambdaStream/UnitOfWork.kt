@@ -1,6 +1,9 @@
 package io.github.huherto.awsLambdaStream
 
 import aws.sdk.kotlin.services.dynamodb.model.*
+import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequest
+import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequestEntry
+import io.github.huherto.awsLambdaStream.connectors.ConnectorResponse
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
 
 interface Event {
@@ -36,6 +39,9 @@ data class UnitOfWork(
     val batchGetRequest: BatchGetItemRequest? = null,
     val queryRequest: QueryRequest? = null,
     val scanRequest: ScanRequest? = null,
+    val publishRequestEntry: PutEventsRequestEntry? = null,
+    val publishRequest: PutEventsRequest? = null,
+    val publishResponse: ConnectorResponse? = null,
 )
 
 class FailureException(
