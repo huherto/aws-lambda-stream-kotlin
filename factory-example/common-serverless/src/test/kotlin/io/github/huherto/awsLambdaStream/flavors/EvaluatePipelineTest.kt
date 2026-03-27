@@ -6,21 +6,36 @@ import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.Event
 import io.github.huherto.awsLambdaStream.JsonEvent
 import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.connectors.EventBridgeConnector
 import io.github.huherto.awsLambdaStream.from.RecordImage
 import io.github.huherto.awsLambdaStream.from.RecordPair
 import io.github.huherto.awsLambdaStream.sinks.EventBridgePublishOptions
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
-import io.mockk.spyk
+import io.mockk.*
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue as SdkAV
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue as EventAV
 
 
 class EvaluatePipelineTest {
+
+    @BeforeEach
+    fun setupMocking() {
+        // Prevent AWS client actual network instantiation
+        mockkObject(EventBridgeConnector.Companion)
+        every { EventBridgeConnector.getClient(any(), any()) } returns mockk(relaxed = true)
+    }
+
+    @AfterEach
+    fun tearDown() {
+        unmockkAll()
+    }
 
     fun protoEvaluatePipeline(id: String) : EvaluatePipeline {
         val envConfig = spyk<EnvironmentConfig>()
