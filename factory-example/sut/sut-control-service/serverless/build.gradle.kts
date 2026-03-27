@@ -1,7 +1,5 @@
 @file:Suppress("UnstableApiUsage")
 
-import org.gradle.kotlin.dsl.invoke
-
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.serialization)
@@ -43,6 +41,10 @@ dependencies {
 
     testImplementation(kotlin("test"))
     testImplementation(libs.aws.lambda.java.tests)
+    testImplementation(libs.kotest.assertions)
+    testImplementation(libs.kotest.property)
+    testImplementation(libs.kotest.runner)
+    testImplementation(libs.kotlin.reflect)
     testImplementation(libs.mockk)
     testImplementation(libs.slf4j.simple)
 }

@@ -14,10 +14,8 @@ data class EventBridgePublishOptions(
     val source: String = envConfig.busSource() ?: "custom",
     val maxPublishRequestSize: Int = envConfig.maxPublishRequestSize()
         ?: envConfig.maxRequestSize() ?: (256 * 1024),
-    val batchSize: Int = envConfig.publishBatchSize()
-        ?: envConfig.batchSize() ?: 10,
-    val parallel: Int = envConfig.publishParallel()
-        ?: envConfig.parallel()?: 8,
+    val batchSize: Int = envConfig.publishBatchSize() ?: envConfig.batchSize() ?: 10,
+    val parallel: Int = (envConfig.publishParallel() ?: envConfig.parallel()?: 8),
     val endpointId: String? = envConfig.busEndPointId(),
     val handleErrors: Boolean = true,
     val step: String = "publish"
