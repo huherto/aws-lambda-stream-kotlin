@@ -12,6 +12,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.mockk
+import io.mockk.spyk
 import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.jvm.isAccessible
 
@@ -20,7 +21,7 @@ class TriggerTest : FunSpec({
     context("Trigger internal pipeline initialization") {
         test("should lazily initialize correlatePipeline and evaluatePipeline correctly") {
             // Arrange
-            val envConfig = mockk<EnvironmentConfig>(relaxed = true)
+            val envConfig = spyk<EnvironmentConfig>()
             val dynamoDbClient = mockk<DynamoDbClient>(relaxed = true)
             val trigger = Trigger(envConfig, dynamoDbClient)
 
@@ -46,7 +47,7 @@ class TriggerTest : FunSpec({
     context("Trigger handleRequest") {
         test("should process DynamodbEvent successfully and return 'Done' for various record scenarios") {
             // Arrange
-            val envConfig = mockk<EnvironmentConfig>(relaxed = true)
+            val envConfig = spyk<EnvironmentConfig>()
             val dynamoDbClient = mockk<DynamoDbClient>(relaxed = true)
             val trigger = Trigger(envConfig, dynamoDbClient)
             val testContext = TestContext()

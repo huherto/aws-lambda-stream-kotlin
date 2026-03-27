@@ -52,7 +52,7 @@ class EventBridgeSinkTest : FunSpec({
         every { envConfig.busEndPointId() } returns null
 
         // Act
-        val options = EventBridgePublishOptions(envConfig)
+        val options = EventBridgePublishOptions(envConfig = envConfig)
 
         // Assert
         options.busName shouldBe "undefined"

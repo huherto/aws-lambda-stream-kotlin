@@ -46,17 +46,14 @@ class Trigger constructor(
             dynamoDbClient = getDynamoDbClient(envConfig)
         }
 
-        val eventBridgePublishOptions = EventBridgePublishOptions(
-            envConfig = envConfig,
-            batchSize = 10,
-            parallel = 8,
-        )
         EvaluatePipeline(
             id = "eval1",
             envConfig = envConfig,
             dynamoDbClient = dynamoDbClient,
             onEventClass = listOf(TrackedUnitEvent::class),
-            eventBridgePublishOptions = eventBridgePublishOptions,
+            eventBridgePublishOptions = EventBridgePublishOptions(
+                envConfig = envConfig,
+            ),
         )
     }
 

@@ -48,19 +48,19 @@ class EnvironmentConfig {
     }
 
     fun publishBatchSize() : Int? {
-        return System.getenv("PUBLISH_BATCH_SIZE")?.toInt()
+        return System.getenv("PUBLISH_BATCH_SIZE").toIntOrNull()
     }
 
     fun batchSize() : Int? {
-        return System.getenv("BATCH_SIZE")?.toInt()
+        return System.getenv("BATCH_SIZE")?.toIntOrNull()
     }
 
     fun publishParallel() : Int? {
-        return System.getenv("PUBLISH_PARALLEL")?.toInt()
+        return System.getenv("PUBLISH_PARALLEL")?.toIntOrNull()
     }
 
     fun parallel() : Int? {
-        return System.getenv("PARALLEL")?.toInt()
+        return System.getenv("PARALLEL")?.toIntOrNull()
     }
 
     fun busEndPointId() : String? {
