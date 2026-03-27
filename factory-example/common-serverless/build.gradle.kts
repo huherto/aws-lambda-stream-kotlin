@@ -26,6 +26,7 @@ dependencies {
     implementation(libs.jackson.kotlin)
     implementation(libs.kotlin.logging)
     implementation(libs.kotlin.stdlib)
+    implementation(libs.kotlinx.coroutines)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.testcon.localstack)
 

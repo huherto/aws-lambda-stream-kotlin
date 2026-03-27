@@ -8,8 +8,9 @@ import io.github.huherto.awsLambdaStream.connectors.EventBridgeConnector
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 
+
 data class EventBridgePublishOptions(
-    val envConfig: EnvironmentConfig = EnvironmentConfig(),
+    val envConfig: EnvironmentConfig,
     val busName: String = envConfig.busName()?: "undefined",
     val source: String = envConfig.busSource() ?: "custom",
     val maxPublishRequestSize: Int = envConfig.maxPublishRequestSize()
@@ -27,18 +28,22 @@ class EventBridgeSink {
 
     companion object {
 
+
+        private val logger = mu.KotlinLogging.logger {}
+
         /**
          * Represents the publishToEventBridge pipeline step.
          * Modeled as an extension function on Flow<UnitOfWork>.
          */
         @OptIn(ExperimentalCoroutinesApi::class)
         fun Flow<UnitOfWork>.publishToEventBridge(
-            opt: EventBridgePublishOptions = EventBridgePublishOptions()
+            opt: EventBridgePublishOptions
         ): Flow<UnitOfWork> {
             return this
                 .map { toPublishRequestEntry(it, opt) }
                 .chunked(opt.batchSize)
                 .map { batchedList -> UnitOfWork(pipeline = batchedList.first().pipeline, batch = batchedList) }
+                .onEach { logger.info { "Batching ${it.batch?.size} events for pipeline ${it.pipeline?.id} to EventBridge"} }
                 .map { toPublishRequest(it, opt) }
                 .flatMapMerge(opt.parallel) { batchUow ->
                     flow {
@@ -51,10 +56,10 @@ class EventBridgeSink {
                 }
         }
 
-        private fun toPublishRequestEntry(uow: UnitOfWork, opt: EventBridgePublishOptions): UnitOfWork {
+        internal fun toPublishRequestEntry(uow: UnitOfWork, opt: EventBridgePublishOptions): UnitOfWork {
             val event = uow.event
             if (event != null) {
-                 val entry = PutEventsRequestEntry{
+                 val entry = PutEventsRequestEntry.Companion {
                      eventBusName = opt.busName
                      source = opt.source
                      detailType = event.eventType()
@@ -65,10 +70,10 @@ class EventBridgeSink {
             return uow
         }
 
-        private fun toPublishRequest(batchUow: UnitOfWork, opt: EventBridgePublishOptions): UnitOfWork {
+        internal fun toPublishRequest(batchUow: UnitOfWork, opt: EventBridgePublishOptions): UnitOfWork {
 
             val entries = batchUow.batch?.mapNotNull{ it.publishRequestEntry }
-            val putEventsRequest = PutEventsRequest {
+            val putEventsRequest = PutEventsRequest.Companion {
                 this.entries = entries
                 this.endpointId = opt.endpointId
             }
@@ -76,9 +81,10 @@ class EventBridgeSink {
         }
 
 
-        private suspend fun putEvents(batchUow: UnitOfWork, opt: EventBridgePublishOptions): UnitOfWork {
+        internal suspend fun putEvents(batchUow: UnitOfWork, opt: EventBridgePublishOptions): UnitOfWork {
 
             if (batchUow.publishRequest != null) {
+
                 val connector = EventBridgeConnector(batchUow.pipeline!!.id)
                 val publishResponse = connector.putEvents(batchUow.publishRequest)
                 return batchUow.copy(publishResponse = publishResponse)
