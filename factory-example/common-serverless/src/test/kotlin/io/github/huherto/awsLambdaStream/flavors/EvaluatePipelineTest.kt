@@ -2,14 +2,17 @@ package io.github.huherto.awsLambdaStream.flavors
 
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.StreamRecord
+import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.Event
 import io.github.huherto.awsLambdaStream.JsonEvent
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.from.RecordImage
 import io.github.huherto.awsLambdaStream.from.RecordPair
+import io.github.huherto.awsLambdaStream.sinks.EventBridgePublishOptions
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import io.mockk.spyk
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
@@ -19,10 +22,20 @@ import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeVal
 
 class EvaluatePipelineTest {
 
+    fun protoEvaluatePipeline(id: String) : EvaluatePipeline {
+        val envConfig = spyk<EnvironmentConfig>()
+        val pipeline = EvaluatePipeline(
+            id = id,
+            envConfig = envConfig,
+            eventBridgePublishOptions=EventBridgePublishOptions(envConfig=envConfig),
+            )
+        return pipeline
+    }
+
     @Test
     fun `normalize should extract metadata correctly for non-CORREL events`() {
         // Arrange
-        val pipeline = EvaluatePipeline("test-id")
+        val pipeline = protoEvaluatePipeline("test-di")
         val eventAsString = """{"id": "ev1", "type": "TestEvent"}"""
         val rawNewMap = mapOf(
             "event" to EventAV().withS(eventAsString),
@@ -69,7 +82,12 @@ class EvaluatePipelineTest {
     @Test
     fun `normalize should extract metadata correctly for CORREL events`() {
         // Arrange
-        val pipeline = EvaluatePipeline("test-id")
+        val envConfig = spyk<EnvironmentConfig>()
+        val pipeline = EvaluatePipeline(
+            id="test-id",
+            envConfig = envConfig,
+            eventBridgePublishOptions=EventBridgePublishOptions(envConfig=envConfig)
+        )
         val eventAsString = """{"id": "ev2", "type": "CorrelEvent"}"""
         val rawNewMap = mapOf(
             "event" to EventAV().withS(eventAsString),
@@ -109,7 +127,12 @@ class EvaluatePipelineTest {
     @Test
     fun `normalize should handle missing fields and empty raw data gracefully`() {
         // Arrange
-        val pipeline = EvaluatePipeline("test-id")
+        val envConfig = spyk<EnvironmentConfig>()
+        val pipeline = EvaluatePipeline(
+            id="test-id",
+            envConfig = envConfig,
+            eventBridgePublishOptions=EventBridgePublishOptions(envConfig=envConfig),
+        )
         val uowEmpty = UnitOfWork(
             event = object : Event {
                 override var id: String? = null
@@ -143,7 +166,12 @@ class EvaluatePipelineTest {
     @Test
     fun `forEvents should return true for valid INSERT and CORREL events, and false otherwise`() {
         // Arrange
-        val pipeline = EvaluatePipeline("test-id")
+        val envConfig = spyk<EnvironmentConfig>()
+        val pipeline = EvaluatePipeline(
+            id="test-id",
+            envConfig = envConfig,
+            eventBridgePublishOptions = EventBridgePublishOptions(envConfig = envConfig)
+        )
         
         val insertEventUow = UnitOfWork(
             record = DynamodbEvent.DynamodbStreamRecord().apply {
@@ -189,11 +217,18 @@ class EvaluatePipelineTest {
             override fun eventType() = "custom"
             override fun encoded() = ""
         }
+        val envConfig = spyk<EnvironmentConfig>()
         val pipelineWithUnmarshall = EvaluatePipeline(
             id = "test-id",
+            envConfig = envConfig,
+            eventBridgePublishOptions = EventBridgePublishOptions(envConfig = envConfig),
             unmarshall = { customEvent }
         )
-        val pipelineWithoutUnmarshall = EvaluatePipeline("test-id")
+        val pipelineWithoutUnmarshall = EvaluatePipeline(
+            id="test-id",
+            envConfig = envConfig,
+            eventBridgePublishOptions = EventBridgePublishOptions(envConfig = envConfig),
+        )
 
         val jsonString = """{"id": "2", "type": "test"}"""
 
@@ -212,8 +247,19 @@ class EvaluatePipelineTest {
     @Test
     fun `onCorrelationKeySuffix should evaluate rules against matching and non-matching suffixes`() {
         // Arrange
-        val pipelineNoSuffix = EvaluatePipeline("test", correlationKeySuffix = "")
-        val pipelineWithSuffix = EvaluatePipeline("test", correlationKeySuffix = "expectedSuffix")
+        val envConfig = spyk<EnvironmentConfig>()
+        val pipelineNoSuffix = EvaluatePipeline(
+            id="test",
+            envConfig = envConfig,
+            eventBridgePublishOptions = EventBridgePublishOptions(envConfig = envConfig),
+            correlationKeySuffix = ""
+        )
+        val pipelineWithSuffix = EvaluatePipeline(
+            id="test",
+            envConfig = envConfig,
+            eventBridgePublishOptions = EventBridgePublishOptions(envConfig = envConfig),
+            correlationKeySuffix = "expectedSuffix"
+        )
 
         val uowNoSuffix = UnitOfWork(meta = mapOf())
         val uowEmptySuffix = UnitOfWork(meta = mapOf("suffix" to ""))
@@ -234,7 +280,12 @@ class EvaluatePipelineTest {
     @Test
     fun `toQueryRequest should create appropriate QueryRequest based on correlation flag`() {
         // Arrange
-        val pipeline = EvaluatePipeline("test", index = "CustomIndex")
+        val envConfig = spyk<EnvironmentConfig>()
+        val pipeline = EvaluatePipeline(
+            id="test",
+            envConfig = envConfig,
+            eventBridgePublishOptions = EventBridgePublishOptions(envConfig = envConfig),
+            index = "CustomIndex")
 
         val correlUow = UnitOfWork(meta = mapOf("correlation" to "true", "pk" to "test-pk"))
         val dataUow = UnitOfWork(meta = mapOf("correlation" to "false", "data" to "test-data"))
@@ -269,8 +320,11 @@ class EvaluatePipelineTest {
     @Test
     fun `toHigherOrderEvents should emit expected events for basic configuration`() {
         // Arrange
+        val envConfig = spyk<EnvironmentConfig>()
         val pipeline = EvaluatePipeline(
             id = "test-id",
+            envConfig = envConfig,
+            eventBridgePublishOptions = EventBridgePublishOptions(envConfig = envConfig),
             correlationKeySuffix = "suffix",
             higherOrderEmit = EmitOption.Basic("MyHigherOrderType")
         )
@@ -353,9 +407,11 @@ class EvaluatePipelineTest {
         }
 
         val emitFunction: (UnitOfWork, Event) -> List<Event> = { _, _ -> listOf(customEvent) }
-
+        val envConfig = spyk<EnvironmentConfig>()
         val pipeline = EvaluatePipeline(
             id = "test-id",
+            envConfig = envConfig,
+            eventBridgePublishOptions = EventBridgePublishOptions(envConfig = envConfig),
             higherOrderEmit = EmitOption.Custom(emitFunction)
         )
 
@@ -370,23 +426,13 @@ class EvaluatePipelineTest {
     }
 
     @Test
-    fun `publish should return the unit of work unchanged`() {
-        // Arrange
-        val pipeline = EvaluatePipeline("test-id")
-        val uow = UnitOfWork()
-
-        // Act
-        val result = pipeline.publish(uow)
-
-        // Assert
-        result shouldBe uow
-    }
-
-    @Test
     fun `connect should successfully process valid UnitOfWork and filter out invalid ones`() : Unit = runBlocking {
         // Arrange
+        val envConfig = spyk<EnvironmentConfig>()
         val pipeline = EvaluatePipeline(
             id = "test-pipeline",
+            envConfig = envConfig,
+            eventBridgePublishOptions = EventBridgePublishOptions(envConfig = envConfig),
             // Required to avoid IllegalArgumentException during toHigherOrderEvents
             higherOrderEmit = EmitOption.Basic("MyHigherOrderType") 
         )
@@ -402,6 +448,7 @@ class EvaluatePipelineTest {
 
         // A valid UnitOfWork that meets the `forEvents` and `onContentType` criteria
         val validUow = UnitOfWork(
+            pipeline = pipeline,
             event = object : Event {
                 override var id: String? = "ev1"
                 override var timestamp: Long? = 123456789L

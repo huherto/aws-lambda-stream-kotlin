@@ -3,15 +3,13 @@ package io.github.huherto.awsLambdaStream
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.PutItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.PutItemResponse
-import io.mockk.coEvery
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.slot
+import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import java.time.Clock
 import java.time.Instant
 import kotlin.test.Test
@@ -25,7 +23,7 @@ class EventsMicrostoreImplTest {
         // Set up
         val ddbClient = mockk<DynamoDbClient>()
         val clock = mockk<Clock>()
-        val envConfig = mockk<EnvironmentConfig>()
+        val envConfig = spyk<EnvironmentConfig>()
         val microstore = EventsMicrostoreImpl(ddbClient, clock, envConfig)
         val putRequestSlot = slot<PutItemRequest>()
 

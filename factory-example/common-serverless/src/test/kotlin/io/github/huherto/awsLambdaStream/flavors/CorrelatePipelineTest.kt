@@ -176,7 +176,7 @@ class CorrelatePipelineTest {
         val dynamoDbClientMock = mockk<DynamoDbClient>()
         coEvery { dynamoDbClientMock.putItem(any()) } returns PutItemResponse.invoke {}
 
-        val envConfigMock = mockk<EnvironmentConfig>()
+        val envConfigMock = spyk<EnvironmentConfig>()
         every { envConfigMock.awsRegion() } returns "us-east-1"
         every { envConfigMock.tableName() } returns "test-table"
 

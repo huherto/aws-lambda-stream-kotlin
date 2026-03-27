@@ -25,7 +25,7 @@ class CollectionPipelineTest {
     }
 
     fun mockEnvConfig()  : EnvironmentConfig {
-        val envConfig = mockk<EnvironmentConfig>()
+        val envConfig = spyk<EnvironmentConfig>()
         every { envConfig.awsRegion() } returns "us-east-1"
         every { envConfig.tableName() } returns "events"
         return envConfig
