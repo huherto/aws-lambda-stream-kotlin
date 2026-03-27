@@ -38,8 +38,8 @@ data class ConnectorResponse(
 )
 
 class EventBridgeConnector(
-    private val pipelineId: String,
-    private val timeout: Duration = getTimeoutFromEnv(),
+    pipelineId: String,
+    timeout: Duration = getTimeoutFromEnv(),
     private val retryConfig: RetryConfig = RetryConfig(),
     private val opt: ConnectorOptions = ConnectorOptions(),
     private val debug: (String, Any?) -> Unit = { msg, arg -> println(msg.replace("%j", arg.toString())) }

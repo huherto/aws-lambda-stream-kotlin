@@ -1,10 +1,14 @@
-package io.github.huherto.awsLambdaStream
+package io.github.huherto.awsLambdaStream.flavors
 
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.PutItemResponse
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
+import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.StreamRecord
-import io.github.huherto.awsLambdaStream.flavors.CorrelatePipeline
+import io.github.huherto.awsLambdaStream.EnvironmentConfig
+import io.github.huherto.awsLambdaStream.Event
+import io.github.huherto.awsLambdaStream.FaultManager
+import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.from.RecordImage
 import io.github.huherto.awsLambdaStream.from.RecordPair
 import io.kotest.matchers.booleans.shouldBeFalse
@@ -57,15 +61,22 @@ class CorrelatePipelineTest {
         )
     }
 
+    private val envConfig : EnvironmentConfig by lazy {
+        val spy = spyk<EnvironmentConfig>()
+        every { spy.awsRegion() } returns "us-east-1"
+        every { spy.tableName() } returns "test-table"
+        spy
+    }
+
     // --- Unit Tests for Internal Functions ---
 
     @Test
     fun `forCollectedEvents should evaluate correctly based on record and event properties`() {
         // Arrange
-        val pipeline = CorrelatePipeline("test-pipeline")
+        val pipeline = CorrelatePipeline("test-pipeline", envConfig = envConfig)
         
-        val skEventAttr = com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue().apply { s = "EVENT" }
-        val skOtherAttr = com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue().apply { s = "OTHER" }
+        val skEventAttr = AttributeValue().apply { s = "EVENT" }
+        val skOtherAttr = AttributeValue().apply { s = "OTHER" }
         
         val streamRecordWithEvent = StreamRecord().apply {
             keys = mapOf("sk" to skEventAttr)
@@ -80,7 +91,7 @@ class CorrelatePipelineTest {
         }
         
         val validUow = UnitOfWork(
-            record = validRecord, 
+            record = validRecord,
             event = createFakeEvent(rawObj = RecordPair(null, null))
         )
         
@@ -105,7 +116,7 @@ class CorrelatePipelineTest {
     @Test
     fun `normalize should extract metadata and populate JsonEvent from RecordPair`() {
         // Arrange
-        val pipeline = CorrelatePipeline("test-pipeline")
+        val pipeline = CorrelatePipeline("test-pipeline", envConfig = envConfig)
 
         val record = DynamodbEvent.DynamodbStreamRecord().apply {
             dynamodb = StreamRecord().apply {
@@ -139,8 +150,8 @@ class CorrelatePipelineTest {
         val uow = UnitOfWork(
             key = "test-key",
             event = createFakeEvent(
-                eventId = "event-1", 
-                eventTimestamp = 1600000000L, 
+                eventId = "event-1",
+                eventTimestamp = 1600000000L,
                 encodedStr = """{"id":"event-1"}"""
             ),
             meta = mapOf(
@@ -162,7 +173,11 @@ class CorrelatePipelineTest {
 
         // Arrange & Act & Assert - Custom putRequest delegate function
         val expectedUow = UnitOfWork()
-        val customPipeline = CorrelatePipeline("test-pipeline", putRequest = { expectedUow })
+        val customPipeline = CorrelatePipeline(
+            id = "test-pipeline",
+            envConfig = envConfig,
+            putRequest = { expectedUow },
+        )
         
         val customResult = customPipeline.defaultPutRequest(uow)
         customResult shouldBeSameInstanceAs expectedUow
@@ -176,15 +191,12 @@ class CorrelatePipelineTest {
         val dynamoDbClientMock = mockk<DynamoDbClient>()
         coEvery { dynamoDbClientMock.putItem(any()) } returns PutItemResponse.invoke {}
 
-        val envConfigMock = spyk<EnvironmentConfig>()
-        every { envConfigMock.awsRegion() } returns "us-east-1"
-        every { envConfigMock.tableName() } returns "test-table"
 
         val pipeline = CorrelatePipeline(
             id = "test-pipeline",
             correlationKey = { "test-correlation-key" },
             dynamoDbClient = dynamoDbClientMock,
-            envConfig = envConfigMock,
+            envConfig = envConfig,
             onEventClass = listOf(FakeEvent::class), // specifically matching our FakeEvent
             unmarshall = { eventAsString -> FakeEvent(encodedStr = eventAsString)}
         )
@@ -224,6 +236,7 @@ class CorrelatePipelineTest {
         // Arrange
         val pipeline = CorrelatePipeline(
             id = "test-pipeline",
+            envConfig = envConfig,
             correlationKey = { "test-correlation-key" }
         )
 
@@ -252,6 +265,7 @@ class CorrelatePipelineTest {
         // Arrange
         val pipeline = CorrelatePipeline(
             id = "test-pipeline",
+            envConfig = envConfig,
             correlationKey = { "test-correlation-key" },
             onContentType = { false } // This will cause the event to be filtered mid-pipeline
         )

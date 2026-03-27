@@ -8,7 +8,6 @@ import io.github.huherto.awsLambdaStream.connectors.EventBridgeConnector
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 
-
 data class EventBridgePublishOptions(
     val envConfig: EnvironmentConfig,
     val busName: String = envConfig.busName()?: "undefined",
@@ -31,10 +30,6 @@ class EventBridgeSink {
 
         private val logger = mu.KotlinLogging.logger {}
 
-        /**
-         * Represents the publishToEventBridge pipeline step.
-         * Modeled as an extension function on Flow<UnitOfWork>.
-         */
         @OptIn(ExperimentalCoroutinesApi::class)
         fun Flow<UnitOfWork>.publishToEventBridge(
             opt: EventBridgePublishOptions
@@ -43,7 +38,6 @@ class EventBridgeSink {
                 .map { toPublishRequestEntry(it, opt) }
                 .chunked(opt.batchSize)
                 .map { batchedList -> UnitOfWork(pipeline = batchedList.first().pipeline, batch = batchedList) }
-                .onEach { logger.info { "Batching ${it.batch?.size} events for pipeline ${it.pipeline?.id} to EventBridge"} }
                 .map { toPublishRequest(it, opt) }
                 .flatMapMerge(opt.parallel) { batchUow ->
                     flow {
@@ -79,7 +73,6 @@ class EventBridgeSink {
             }
             return batchUow.copy(publishRequest = putEventsRequest)
         }
-
 
         internal suspend fun putEvents(batchUow: UnitOfWork, opt: EventBridgePublishOptions): UnitOfWork {
 

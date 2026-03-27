@@ -17,7 +17,7 @@ class CorrelatePipeline constructor(
     val onEventClass: List<KClass<out Event>> = listOf(Event::class),
     val correlationKey: ((UnitOfWork) -> String)? = null,
     val correlationKeySuffix: String = "",
-    val envConfig: EnvironmentConfig = EnvironmentConfig(),
+    val envConfig: EnvironmentConfig,
     val bufferCapacity: Int = Channel.Factory.BUFFERED,
     var dynamoDbClient: DynamoDbClient? = null,
     val putRequest: ((UnitOfWork) -> UnitOfWork)? = null,

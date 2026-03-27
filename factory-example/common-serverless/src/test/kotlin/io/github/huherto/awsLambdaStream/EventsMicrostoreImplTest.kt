@@ -20,21 +20,19 @@ class EventsMicrostoreImplTest {
     @Test
     fun testSave() = runTest {
 
-        // Set up
+        // Arrange
         val ddbClient = mockk<DynamoDbClient>()
         val clock = mockk<Clock>()
         val envConfig = spyk<EnvironmentConfig>()
         val microstore = EventsMicrostoreImpl(ddbClient, clock, envConfig)
         val putRequestSlot = slot<PutItemRequest>()
 
-        // Given
         coEvery { ddbClient.putItem(capture(putRequestSlot)) } coAnswers { mockk<PutItemResponse>() }
         every { clock.instant() } returns Instant.parse("2025-01-01T00:00:00.000Z")
         every { envConfig.awsRegion() } returns "us-east-1"
         every { envConfig.tableName() } returns "events"
 
-        // When
-        // Fix: Use flowOf to ensure the UnitOfWork is actually emitted to the flow
+        // Act
         val flow = flowOf(
             UnitOfWork().copy(
                 event = MyEventA().apply {
@@ -51,7 +49,7 @@ class EventsMicrostoreImplTest {
 
         advanceUntilIdle()
 
-        // Then
+        // Assert
         assertTrue(putRequestSlot.isCaptured, "PutItemRequest should have been captured")
         
         putRequestSlot.captured.item?.apply {
