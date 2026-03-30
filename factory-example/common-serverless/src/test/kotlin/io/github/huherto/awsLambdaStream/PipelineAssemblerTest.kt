@@ -1,11 +1,9 @@
 package io.github.huherto.awsLambdaStream
 
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.mapNotNull
-import kotlinx.coroutines.flow.toList
+import io.mockk.coEvery
+import io.mockk.spyk
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
@@ -30,6 +28,13 @@ class PipelineAssemblerTest {
                 }
             }
         }
+    }
+
+    private val envConfig : EnvironmentConfig by lazy {
+        val spy = spyk<EnvironmentConfig>()
+        coEvery { spy.awsRegion() } returns "us-east-1"
+        //coEvery { spy.tableName() } returns "test-table"
+        spy
     }
 
     @Test
@@ -98,7 +103,15 @@ class PipelineAssemblerTest {
     @Test
     fun `test assemble handles FailureException and publishes FailureEvent`() = runBlocking {
         val failingPipeline = FailingPipeline("fail1")
-        val fm = FaultManager()
+        
+        val publishedEvents = mutableListOf<UnitOfWork>()
+        
+        val fm = FaultManager(
+            envConfig = envConfig,
+            publishFlow = { flow -> 
+                flow.onEach { publishedEvents.add(it) } 
+            }
+        )
 
         val assembler = PipelineAssembler.builder()
             .addPipeline(failingPipeline)
@@ -108,26 +121,21 @@ class PipelineAssemblerTest {
         val uow = UnitOfWork(record = "test_record")
         val headFlow = flowOf(uow)
 
-        // When the flow is assembled, it will be mapped into the FailingPipeline and throw an exception
         val resultFlow = assembler.assemble(headFlow, includeFaultHandler = true)
-
         val results = resultFlow.toList()
-        // The resulting flow itself should be empty because the exception was thrown before it could emit
+
         assertEquals(0, results.size, "Flow should be empty due to failure")
 
-        // Verify that flushFaults() successfully moved the caught exception from `theFaults` queue into the `published` queue
-        assertEquals(1, fm.getPublished().size, "Should publish one failure event")
+        assertEquals(1, publishedEvents.size, "Should publish one failure event")
         assertEquals(0, fm.getFaults().size, "Faults should be empty after publishing")
 
-        val failureEvent = fm.getPublished().get(0)
+        // Retrieve the event from the captured UnitOfWork
+        val failureEvent = publishedEvents[0].event as? FailureEvent
         assertNotNull(failureEvent)
-        assertEquals(FAULT_EVENT_TYPE, failureEvent.eventType())
+        assertEquals(FAULT_EVENT_TYPE, failureEvent?.eventType())
         
-        // Assert that the proper exception type is saved within the FailureEvent
-        val exception = failureEvent.failureException
+        val exception = failureEvent?.failureException
         assertNotNull(exception)
-        
-        // Check that the UnitOfWork matches the failing UoW
         assertEquals(uow.record, exception?.uom?.record)
     }
 

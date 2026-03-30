@@ -2,10 +2,7 @@ package io.github.huherto.awsLambdaStream.flavors
 
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.StreamRecord
-import io.github.huherto.awsLambdaStream.EnvironmentConfig
-import io.github.huherto.awsLambdaStream.Event
-import io.github.huherto.awsLambdaStream.JsonEvent
-import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.*
 import io.github.huherto.awsLambdaStream.connectors.EventBridgeConnector
 import io.github.huherto.awsLambdaStream.from.RecordImage
 import io.github.huherto.awsLambdaStream.from.RecordPair
@@ -37,8 +34,9 @@ class EvaluatePipelineTest {
         unmockkAll()
     }
 
+    private  val envConfig = spyk<EnvironmentConfig>()
+
     fun protoEvaluatePipeline(id: String) : EvaluatePipeline {
-        val envConfig = spyk<EnvironmentConfig>()
         val pipeline = EvaluatePipeline(
             id = id,
             envConfig = envConfig,
@@ -97,7 +95,6 @@ class EvaluatePipelineTest {
     @Test
     fun `normalize should extract metadata correctly for CORREL events`() {
         // Arrange
-        val envConfig = spyk<EnvironmentConfig>()
         val pipeline = EvaluatePipeline(
             id="test-id",
             envConfig = envConfig,
@@ -142,7 +139,6 @@ class EvaluatePipelineTest {
     @Test
     fun `normalize should handle missing fields and empty raw data gracefully`() {
         // Arrange
-        val envConfig = spyk<EnvironmentConfig>()
         val pipeline = EvaluatePipeline(
             id="test-id",
             envConfig = envConfig,
@@ -181,7 +177,6 @@ class EvaluatePipelineTest {
     @Test
     fun `forEvents should return true for valid INSERT and CORREL events, and false otherwise`() {
         // Arrange
-        val envConfig = spyk<EnvironmentConfig>()
         val pipeline = EvaluatePipeline(
             id="test-id",
             envConfig = envConfig,
@@ -232,7 +227,6 @@ class EvaluatePipelineTest {
             override fun eventType() = "custom"
             override fun encoded() = ""
         }
-        val envConfig = spyk<EnvironmentConfig>()
         val pipelineWithUnmarshall = EvaluatePipeline(
             id = "test-id",
             envConfig = envConfig,
@@ -262,7 +256,6 @@ class EvaluatePipelineTest {
     @Test
     fun `onCorrelationKeySuffix should evaluate rules against matching and non-matching suffixes`() {
         // Arrange
-        val envConfig = spyk<EnvironmentConfig>()
         val pipelineNoSuffix = EvaluatePipeline(
             id="test",
             envConfig = envConfig,
@@ -295,7 +288,6 @@ class EvaluatePipelineTest {
     @Test
     fun `toQueryRequest should create appropriate QueryRequest based on correlation flag`() {
         // Arrange
-        val envConfig = spyk<EnvironmentConfig>()
         val pipeline = EvaluatePipeline(
             id="test",
             envConfig = envConfig,
@@ -335,7 +327,6 @@ class EvaluatePipelineTest {
     @Test
     fun `toHigherOrderEvents should emit expected events for basic configuration`() {
         // Arrange
-        val envConfig = spyk<EnvironmentConfig>()
         val pipeline = EvaluatePipeline(
             id = "test-id",
             envConfig = envConfig,
@@ -422,7 +413,6 @@ class EvaluatePipelineTest {
         }
 
         val emitFunction: (UnitOfWork, Event) -> List<Event> = { _, _ -> listOf(customEvent) }
-        val envConfig = spyk<EnvironmentConfig>()
         val pipeline = EvaluatePipeline(
             id = "test-id",
             envConfig = envConfig,
@@ -443,7 +433,6 @@ class EvaluatePipelineTest {
     @Test
     fun `connect should successfully process valid UnitOfWork and filter out invalid ones`() : Unit = runBlocking {
         // Arrange
-        val envConfig = spyk<EnvironmentConfig>()
         val pipeline = EvaluatePipeline(
             id = "test-pipeline",
             envConfig = envConfig,
@@ -451,7 +440,7 @@ class EvaluatePipelineTest {
             // Required to avoid IllegalArgumentException during toHigherOrderEvents
             higherOrderEmit = EmitOption.Basic("MyHigherOrderType") 
         )
-        val faultManager = io.github.huherto.awsLambdaStream.FaultManager()
+        val faultManager = FaultManager(envConfig = envConfig)
 
         val eventAsString = """{"id": "ev1", "type": "TestEvent"}"""
         val rawNewMap = mapOf(

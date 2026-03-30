@@ -69,6 +69,6 @@ class FailureEvent() : Event {
     }
 
     override fun encoded(): String {
-        TODO("Not yet implemented")
+        return this.asJson()
     }
 }

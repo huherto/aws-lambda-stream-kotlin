@@ -63,8 +63,8 @@ class CorrelatePipelineTest {
 
     private val envConfig : EnvironmentConfig by lazy {
         val spy = spyk<EnvironmentConfig>()
-        every { spy.awsRegion() } returns "us-east-1"
-        every { spy.tableName() } returns "test-table"
+        coEvery { spy.awsRegion() } returns "us-east-1"
+        coEvery { spy.tableName() } returns "test-table"
         spy
     }
 
@@ -215,7 +215,7 @@ class CorrelatePipelineTest {
             event = createFakeEvent(rawObj = RecordPair(null, null))
         )
 
-        val fm = FaultManager()
+        val fm = FaultManager(envConfig)
 
         // Act
         val resultFlow = pipeline.connect(fm, flowOf(validUow))
@@ -250,7 +250,7 @@ class CorrelatePipelineTest {
             event = createFakeEvent(rawObj = RecordPair(null, null))
         )
 
-        val fm = FaultManager()
+        val fm = FaultManager(envConfig = envConfig)
 
         // Act
         val resultFlow = pipeline.connect(fm, flowOf(invalidUow))
@@ -284,7 +284,7 @@ class CorrelatePipelineTest {
             event = createFakeEvent(rawObj = RecordPair(null, null))
         )
 
-        val fm = FaultManager()
+        val fm = FaultManager(envConfig = envConfig)
 
         // Act
         val resultFlow = pipeline.connect(fm, flowOf(validUow))

@@ -2,7 +2,9 @@ package io.github.huherto.awsLambdaStream.from
 
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.StreamRecord
+import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.FaultManager
+import io.mockk.spyk
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.*
@@ -12,8 +14,9 @@ import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeVal
 
 class DynamodbAdapterTest {
 
+    private val envConfig = spyk(EnvironmentConfig())
     private val adapter = DynamodbAdapter()
-    private val faultManager = FaultManager()
+    private val faultManager = FaultManager(envConfig = envConfig)
 
     // ============================================================================
     // Tests for calculateEventTypeSuffix

@@ -41,7 +41,7 @@ class CollectionPipelineTest {
     @Test
     fun `test defaultPutRequest generates correct put request with raw event`() {
 
-        // Given
+        // Arrange
         val envConfig = spyk<EnvironmentConfig>()
         every { envConfig.awsRegion() } returns "us-east-1"
         every { envConfig.tableName() } returns "events"
@@ -56,10 +56,10 @@ class CollectionPipelineTest {
         val event = myEventA()
         val uow = UnitOfWork(event = event, key = "test-correlation-key")
 
-        // When
+        // Act
         val resultUow = pipeline.defaultPutRequest(uow)
 
-        // Then
+        // Assert
         assertNotNull(resultUow.putRequest)
         val itemValues = resultUow.putRequest!!.item
 
@@ -79,7 +79,7 @@ class CollectionPipelineTest {
 
     @Test
     fun `test defaultPutRequest without raw event throws exception`() {
-        // Given
+        // Arrange
         val pipeline = CollectPipeline.Builder("collection-pipeline-test")
             .includeRaw(false) // This will trigger omitRaw()
             .build()
@@ -87,7 +87,7 @@ class CollectionPipelineTest {
         val event = myEventA()
         val uow = UnitOfWork(event = event)
 
-        // When and Then
+        // Act and Assert
         val exception = assertThrows(RuntimeException::class.java) {
             pipeline.defaultPutRequest(uow)
         }
@@ -110,7 +110,7 @@ class CollectionPipelineTest {
         // Assert
         assertNotNull(pipeline)
 
-        val faultManager = FaultManager()
+        val faultManager = FaultManager(envConfig = mockEnvConfig())
         val uowFlow = flowOf(UnitOfWork(event = myEventA()))
         pipeline.connect(faultManager, uowFlow).collect { uow ->
             assertNotNull(uow)
@@ -122,7 +122,7 @@ class CollectionPipelineTest {
         // Arrange
         val pipeline = CollectPipeline.Builder("collection-pipeline-test").build()
         val uowFlow = flowOf(UnitOfWork(event = myEventA()))
-        val faultManager = FaultManager()
+        val faultManager = FaultManager(envConfig = mockEnvConfig())
 
         // Act & Assert
         assertDoesNotThrow {

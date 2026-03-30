@@ -65,7 +65,7 @@ class Trigger constructor(
             .addPipeline(evaluatePipeline)
             .build()
 
-        val headFlow = DynamodbAdapter().fromDynamoDB(FaultManager(), ddbEvent)
+        val headFlow = DynamodbAdapter().fromDynamoDB(FaultManager(envConfig), ddbEvent)
         logger.info { "Processing ${ddbEvent.records?.size} records" }
         assembler
             .assemble(headFlow, true)

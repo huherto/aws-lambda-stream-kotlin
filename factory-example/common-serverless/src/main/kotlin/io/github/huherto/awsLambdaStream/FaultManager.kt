@@ -1,28 +1,34 @@
 package io.github.huherto.awsLambdaStream
 
 import aws.smithy.kotlin.runtime.SdkBaseException
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.buffer
-import kotlinx.coroutines.flow.count
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.mapNotNull
-import kotlinx.coroutines.flow.onEach
+import io.github.huherto.awsLambdaStream.flavors.Pipeline
+import io.github.huherto.awsLambdaStream.sinks.EventBridgePublishOptions
+import io.github.huherto.awsLambdaStream.sinks.EventBridgeSink.Companion.publishToEventBridge
+import kotlinx.coroutines.flow.*
 import java.util.*
 import java.util.concurrent.ConcurrentLinkedQueue
 
 class FaultManager constructor(
-    private val envConfig: EnvironmentConfig = EnvironmentConfig()
+    private val envConfig: EnvironmentConfig,
+    private val eventBridgePublishOptions: EventBridgePublishOptions = EventBridgePublishOptions(envConfig),
+    private val publishFlow: (Flow<UnitOfWork>) -> Flow<UnitOfWork> = { it.publishToEventBridge(eventBridgePublishOptions) }
 ) {
 
     private val logger = mu.KotlinLogging.logger { }
     
     private val theFaults = ConcurrentLinkedQueue<FailureEvent>()
-    private val published = ConcurrentLinkedQueue<FailureEvent>()
 
-    fun getPublished(): List<FailureEvent> {
-        return published.toList()
+    class FaultManagementPipeline(id: String) : Pipeline(id) {
+        override fun connect(
+            fm: FaultManager,
+            fromFlow: Flow<UnitOfWork>
+        ): Flow<UnitOfWork> {
+            // dummy implementation.
+            return emptyList<UnitOfWork>().asFlow()
+        }
     }
-    
+    private val faultManagementPipeline = FaultManagementPipeline("fault1")
+
     fun getFaults(): List<FailureEvent> {
         return theFaults.toList()
     }
@@ -54,11 +60,6 @@ class FaultManager constructor(
         return false
     }
 
-    fun publish(fault: FailureEvent) {
-        logger.info { "FaultManager.publish: fault=$fault" }
-        published.add(fault)
-    }
-
     fun redirectFailure(ex: FailureException) {
         logError(ex)
         if (!isRetriableException(ex)) {
@@ -82,17 +83,19 @@ class FaultManager constructor(
         }
     }
 
+    internal fun Flow<UnitOfWork>.publish() : Flow<UnitOfWork> {
+        return this.publishToEventBridge(eventBridgePublishOptions)
+    }
+
     suspend fun flushFaults() {
-        val count = flow {
+        val flow = flow {
             while (true) {
                 val fault = theFaults.poll() ?: break
-                emit(fault)
+                val uow = UnitOfWork(pipeline = faultManagementPipeline, event = fault)
+                emit(uow)
             }
-        }
-            .buffer()
-            .onEach { fault -> publish(fault) }
-            .count()
-
+        };
+        val count = publishFlow(flow).collect()
         logger.info { "flushFaults: count=$count" }
     }
 }

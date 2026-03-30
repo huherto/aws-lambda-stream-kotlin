@@ -48,7 +48,7 @@ class EnvironmentConfig {
     }
 
     fun publishBatchSize() : Int? {
-        return System.getenv("PUBLISH_BATCH_SIZE").toIntOrNull()
+        return System.getenv("PUBLISH_BATCH_SIZE")?.toIntOrNull()
     }
 
     fun batchSize() : Int? {

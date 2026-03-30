@@ -1,5 +1,6 @@
 package io.github.huherto.awsLambdaStream
 
+import io.mockk.spyk
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.test.runTest
@@ -9,10 +10,12 @@ import kotlin.test.assertTrue
 
 class FiltersTest {
 
+    private val envConfig = spyk(EnvironmentConfig())
+
     @Test
     fun `test event types filter`() = runTest {
 
-        val faultManager = FaultManager()
+        val faultManager = FaultManager(envConfig = envConfig)
 
         val  myEventA = MyEventA()
         val  myEventB = MyEventB()
