@@ -18,7 +18,7 @@ class FaultManager constructor(
     
     private val theFaults = ConcurrentLinkedQueue<FailureEvent>()
 
-    class FaultManagementPipeline(id: String) : Pipeline(id) {
+    class FaultManagerPipeline(id: String) : Pipeline(id) {
         override fun connect(
             fm: FaultManager,
             fromFlow: Flow<UnitOfWork>
@@ -27,7 +27,7 @@ class FaultManager constructor(
             return emptyList<UnitOfWork>().asFlow()
         }
     }
-    private val faultManagementPipeline = FaultManagementPipeline("fault1")
+    private val faultManagerPipeline = FaultManagerPipeline("fault1")
 
     fun getFaults(): List<FailureEvent> {
         return theFaults.toList()
@@ -91,10 +91,10 @@ class FaultManager constructor(
         val flow = flow {
             while (true) {
                 val fault = theFaults.poll() ?: break
-                val uow = UnitOfWork(pipeline = faultManagementPipeline, event = fault)
+                val uow = UnitOfWork(pipeline = faultManagerPipeline, event = fault)
                 emit(uow)
             }
-        };
+        }
         val count = publishFlow(flow).collect()
         logger.info { "flushFaults: count=$count" }
     }
