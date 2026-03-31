@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.mapNotNull
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue as EventAV
 
-class DynamodbAdapter {
+class DynamodbAdapter (private val faultManager: FaultManager) {
 
     private val logger = mu.KotlinLogging.logger {  }
 
@@ -20,7 +20,7 @@ class DynamodbAdapter {
 
     private val skFn = "sk"
 
-    fun fromDynamoDB(faultManager: FaultManager, dynamodbEvent: DynamodbEvent) : Flow<UnitOfWork> {
+    fun fromDynamoDB(dynamodbEvent: DynamodbEvent) : Flow<UnitOfWork> {
         with(faultManager) {
             return dynamodbEvent.records.asFlow()
                 .mapNotNull { dynamodbRecord -> UnitOfWork().copy(record = dynamodbRecord) }

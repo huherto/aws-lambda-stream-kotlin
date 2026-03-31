@@ -15,8 +15,8 @@ import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeVal
 class DynamodbAdapterTest {
 
     private val envConfig = spyk(EnvironmentConfig())
-    private val adapter = DynamodbAdapter()
     private val faultManager = FaultManager(envConfig = envConfig)
+    private val adapter = DynamodbAdapter(faultManager)
 
     // ============================================================================
     // Tests for calculateEventTypeSuffix
@@ -186,7 +186,7 @@ class DynamodbAdapterTest {
             }
         }
 
-        val results = adapter.fromDynamoDB(faultManager, dynamodbEvent).toList()
+        val results = adapter.fromDynamoDB(dynamodbEvent).toList()
 
         assertEquals(2, results.size)
         assertEquals("event-1", results[0].event?.id)
@@ -200,7 +200,7 @@ class DynamodbAdapterTest {
             records = emptyList()
         }
 
-        val results = adapter.fromDynamoDB(faultManager, dynamodbEvent).toList()
+        val results = adapter.fromDynamoDB( dynamodbEvent).toList()
 
         assertEquals(0, results.size)
     }
@@ -224,7 +224,7 @@ class DynamodbAdapterTest {
             )
         }
 
-        val results = adapter.fromDynamoDB(faultManager, dynamodbEvent).toList()
+        val results = adapter.fromDynamoDB(dynamodbEvent).toList()
 
         assertEquals(1, results.size)
         assertNotNull(results[0].record)

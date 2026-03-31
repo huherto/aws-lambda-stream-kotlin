@@ -23,7 +23,9 @@ class TriggerTest : FunSpec({
             // Arrange
             val envConfig = spyk<EnvironmentConfig>()
             val dynamoDbClient = mockk<DynamoDbClient>(relaxed = true)
-            val trigger = Trigger(envConfig, dynamoDbClient)
+            val container = TriggerContainer(envConfig, dynamoDbClient)
+
+            val trigger = Trigger(container)
 
             val correlatePipelineProp = Trigger::class.declaredMemberProperties.find { it.name == "correlatePipeline" }
             correlatePipelineProp?.isAccessible = true
@@ -49,7 +51,8 @@ class TriggerTest : FunSpec({
             // Arrange
             val envConfig = spyk<EnvironmentConfig>()
             val dynamoDbClient = mockk<DynamoDbClient>(relaxed = true)
-            val trigger = Trigger(envConfig, dynamoDbClient)
+            val container = TriggerContainer(envConfig, dynamoDbClient)
+            val trigger = Trigger(container)
             val testContext = TestContext()
 
             val emptyEvent = DynamodbEvent().apply { 
