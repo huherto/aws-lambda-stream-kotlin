@@ -7,7 +7,6 @@ import aws.sdk.kotlin.services.eventbridge.model.PutEventsResultEntry
 import kotlinx.coroutines.delay
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.milliseconds
 
 // Configuration Models
 data class RetryConfig(
@@ -39,8 +38,8 @@ data class ConnectorResponse(
 
 class EventBridgeConnector(
     pipelineId: String,
-    timeout: Duration = getTimeoutFromEnv(),
-    private val retryConfig: RetryConfig = RetryConfig(),
+    timeout: Duration,
+    private val retryConfig: RetryConfig,
     private val opt: ConnectorOptions = ConnectorOptions(),
     private val debug: (String, Any?) -> Unit = { msg, arg -> println(msg.replace("%j", arg.toString())) }
 ) {
@@ -49,12 +48,6 @@ class EventBridgeConnector(
     companion object {
         private val clients = ConcurrentHashMap<String, EventBridgeClient>()
 
-        internal fun getTimeoutFromEnv(): Duration {
-            val timeoutMs = System.getenv("BUS_TIMEOUT")?.toLongOrNull()
-                ?: System.getenv("TIMEOUT")?.toLongOrNull()
-                ?: 1000L
-            return timeoutMs.milliseconds
-        }
 
         fun getClient(pipelineId: String, timeout: Duration): EventBridgeClient {
             return clients.computeIfAbsent(pipelineId) {

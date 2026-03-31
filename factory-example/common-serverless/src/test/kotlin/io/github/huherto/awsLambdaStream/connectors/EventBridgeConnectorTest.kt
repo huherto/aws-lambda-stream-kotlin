@@ -26,7 +26,10 @@ class EventBridgeConnectorTest : FunSpec({
     test("should handle retry assertions and delay calculations") {
         // Arrange
         every { EventBridgeConnector.getClient(any(), any()) } returns mockk<EventBridgeClient>(relaxed = true)
-        val connector = EventBridgeConnector("test-pipeline", 1000.milliseconds)
+        val connector = EventBridgeConnector(
+            pipelineId = "test-pipeline",
+            retryConfig = RetryConfig(),
+            timeout = 1000.milliseconds)
         val baseDelay = 1000L
 
         // Act & Assert - Delay Calculations
@@ -50,7 +53,10 @@ class EventBridgeConnectorTest : FunSpec({
     test("should extract unprocessed entries and accumulate responses") {
         // Arrange
         every { EventBridgeConnector.getClient(any(), any()) } returns mockk<EventBridgeClient>(relaxed = true)
-        val connector = EventBridgeConnector("test-pipeline", 1000.milliseconds)
+        val connector = EventBridgeConnector(
+            pipelineId = "test-pipeline",
+            retryConfig = RetryConfig(),
+            timeout = 1000.milliseconds)
         
         val request = PutEventsRequest {
             entries = listOf(
@@ -99,10 +105,11 @@ class EventBridgeConnectorTest : FunSpec({
         val mockClient = mockk<EventBridgeClient>()
         val mockMetrics = mockk<Metrics>(relaxed = true)
         every { EventBridgeConnector.getClient(any(), any()) } returns mockClient
-        
+
         val connector = EventBridgeConnector(
-            pipelineId = "test-pipeline", 
-            timeout = 1000.milliseconds, 
+            pipelineId = "test-pipeline",
+            retryConfig = RetryConfig(),
+            timeout = 1000.milliseconds,
             opt = ConnectorOptions(metrics = mockMetrics)
         )
 

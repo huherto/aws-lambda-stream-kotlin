@@ -5,8 +5,27 @@ import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequestEntry
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.EventBridgeConnector
+import io.github.huherto.awsLambdaStream.connectors.RetryConfig
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
+import kotlin.time.Duration.Companion.milliseconds
+
+class EventBridgeConnectorFactory(private val envConfig: EnvironmentConfig, private val retryConfig: RetryConfig? = null) {
+
+    fun timeoutInMills(): Long {
+        return envConfig.busTimeout() ?: envConfig.timeout() ?: 1000L
+    }
+
+    fun create(pipelineId: String?) : EventBridgeConnector {
+        val timeout = timeoutInMills().milliseconds
+        return EventBridgeConnector(
+            pipelineId = pipelineId?: "undefined",
+            retryConfig = retryConfig ?: RetryConfig(),
+            timeout = timeout,
+            )
+    }
+
+}
 
 data class EventBridgePublishOptions(
     val envConfig: EnvironmentConfig,
@@ -18,8 +37,11 @@ data class EventBridgePublishOptions(
     val parallel: Int = (envConfig.publishParallel() ?: envConfig.parallel()?: 8),
     val endpointId: String? = envConfig.busEndPointId(),
     val handleErrors: Boolean = true,
-    val step: String = "publish"
+    val step: String = "publish",
+    val connectorFactory: EventBridgeConnectorFactory = EventBridgeConnectorFactory(envConfig)
 )
+
+
 
 class EventBridgeSink {
 
@@ -76,7 +98,7 @@ class EventBridgeSink {
 
             if (batchUow.publishRequest != null) {
 
-                val connector = EventBridgeConnector(batchUow.pipeline!!.id)
+                val connector = opt.connectorFactory.create(batchUow.pipeline?.id)
                 val publishResponse = connector.putEvents(batchUow.publishRequest)
                 return batchUow.copy(publishResponse = publishResponse)
             }

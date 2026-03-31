@@ -3,11 +3,15 @@ package io.github.huherto.awsLambdaStream
 class EnvironmentConfig {
 
     fun tableName() : String? {
-        var tableName = System.getenv("EVENT_TABLE_NAME")
-        if (tableName == null || tableName.isEmpty()) {
-            tableName = System.getenv("ENTITY_TABLE_NAME")
-        }
-        return tableName
+        return eventTableName() ?: entityTableName()
+    }
+
+    fun eventTableName() : String? {
+        return System.getenv("EVENT_TABLE_NAME")
+    }
+
+    fun entityTableName() : String? {
+        return System.getenv("ENTITY_TABLE_NAME")
     }
 
     fun awsRegion() : String {
@@ -66,5 +70,14 @@ class EnvironmentConfig {
     fun busEndPointId() : String? {
         return System.getenv("BUS_ENDPOINT_ID")
     }
+
+    fun busTimeout() : Long? {
+        return System.getenv("BUS_TIMEOUT")?.toLongOrNull()
+    }
+
+    fun timeout() : Long? {
+        return System.getenv("TIMEOUT")?.toLongOrNull()
+    }
+
 
 }
