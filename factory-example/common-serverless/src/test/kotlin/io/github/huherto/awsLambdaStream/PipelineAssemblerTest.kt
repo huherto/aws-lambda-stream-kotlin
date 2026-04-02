@@ -1,15 +1,8 @@
 package io.github.huherto.awsLambdaStream
 
-import aws.sdk.kotlin.services.eventbridge.EventBridgeClient
-import aws.sdk.kotlin.services.eventbridge.model.PutEventsResponse
-import io.github.huherto.awsLambdaStream.connectors.ConnectorResponse
-import io.github.huherto.awsLambdaStream.connectors.EventBridgeClientFactory
-import io.github.huherto.awsLambdaStream.connectors.EventBridgeConnector
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
 import io.mockk.coEvery
-import io.mockk.every
-import io.mockk.mockk
 import io.mockk.spyk
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.runBlocking
@@ -112,23 +105,10 @@ class PipelineAssemblerTest {
     }
 
 
-    // Skipping this for now. I will probably rewrite how the EventBridge Connector works
-    // @Test
+    @Test
     fun `test assemble handles FailureException and publishes FailureEvent`() = runBlocking {
         val failingPipeline = FailingPipeline("fail1")
-        
-        val publishedEvents = mutableListOf<UnitOfWork>()
-        val mockConnector = mockk<EventBridgeConnector>()
-        coEvery { mockConnector.putEvents(any()) } answers {
-            publishedEvents.add(arg(0))
-            ConnectorResponse(emptyList(), publishedEvents.size, emptyList())
-        }
-        val mockClient = mockk<EventBridgeClient>()
-        val clientFactory = mockk<EventBridgeClientFactory>()
-        every { clientFactory.createClient(any()) } answers { mockClient }
-        coEvery { mockClient.putEvents(any()) } answers {
-            PutEventsResponse{}
-        }
+
         val eventPublisher = EventPublisherInMemory()
         val fm = FaultManager(
             envConfig = envConfig,
@@ -148,11 +128,12 @@ class PipelineAssemblerTest {
 
         assertEquals(0, results.size, "Flow should be empty due to failure")
 
+        val publishedEvents = eventPublisher.events()
         assertEquals(1, publishedEvents.size, "Should publish one failure event")
         assertEquals(0, fm.getFaults().size, "Faults should be empty after publishing")
 
         // Retrieve the event from the captured UnitOfWork
-        val failureEvent = publishedEvents[0].event as? FailureEvent
+        val failureEvent = publishedEvents[0] as? FailureEvent
         assertNotNull(failureEvent)
         assertEquals(FAULT_EVENT_TYPE, failureEvent?.eventType())
         
