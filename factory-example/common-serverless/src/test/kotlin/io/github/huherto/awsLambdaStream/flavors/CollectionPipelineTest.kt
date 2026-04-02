@@ -1,134 +1,134 @@
 package io.github.huherto.awsLambdaStream.flavors
 
-import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
-import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
-import aws.sdk.kotlin.services.dynamodb.model.PutItemResponse
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
-import io.github.huherto.awsLambdaStream.FaultManager
-import io.github.huherto.awsLambdaStream.MyEventA
+import io.github.huherto.awsLambdaStream.Event
 import io.github.huherto.awsLambdaStream.UnitOfWork
-import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
-import io.mockk.coEvery
+import io.github.huherto.awsLambdaStream.sinks.EventsMicrostoreInMemory
+import io.kotest.matchers.nulls.shouldNotBeNull
+import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.spyk
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
-import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
 class CollectionPipelineTest {
 
-    fun myEventA() = MyEventA(foo = "foo-value", bar = "bar-value").apply {
-        id = "test-event-id"
-        timestamp = 1672531200000 // 2023-01-01T00:00:00.000Z
-        partitionKey = "pk-test"
-    }
+    // Helper method to create a CollectPipeline instance
+    private fun createPipeline(
+        ttlDays: Int? = null,
+        includeRaw: Boolean = true,
+        expire: String? = null,
+        envConfigTtl: Int? = 33,
+        eventsMicrostore: EventsMicrostoreInMemory = EventsMicrostoreInMemory()
+    ): CollectPipeline {
+        
+        val mockEnvConfig = mockk<EnvironmentConfig>(relaxed = true) {
+            every { ttl() } returns envConfigTtl
+        }
 
-    fun mockEnvConfig()  : EnvironmentConfig {
-        val envConfig = spyk<EnvironmentConfig>()
-        every { envConfig.awsRegion() } returns "us-east-1"
-        every { envConfig.tableName() } returns "events"
-        return envConfig
+        return CollectPipeline(
+            pipelineId = "test-pipeline",
+            envConfig = mockEnvConfig,
+            ttlDays = ttlDays,
+            includeRaw = includeRaw,
+            expire = expire,
+            eventsMicrostore = eventsMicrostore
+        )
     }
-
-    fun mockDynamoDbClient() : DynamoDbClient {
-        val dynamoDbClient = mockk<DynamoDbClient>()
-        coEvery { dynamoDbClient.putItem(any()) } coAnswers { mockk<PutItemResponse>() }
-        return dynamoDbClient
-    }
-
 
     @Test
-    fun `test defaultPutRequest generates correct put request with raw event`() {
-
+    fun `daysInSecs should calculate correct number of seconds for given days`() {
         // Arrange
-        val envConfig = spyk<EnvironmentConfig>()
-        every { envConfig.awsRegion() } returns "us-east-1"
-        every { envConfig.tableName() } returns "events"
-        val ttlDaysTest = 5
-        val pipeline = CollectPipeline.Builder("collection-pipeline-test")
-            .includeRaw(true)
-            .expire("test-expire")
-            .ttlDays(ttlDaysTest)
-            .envConfig(envConfig)
-            .build()
-
-        val event = myEventA()
-        val uow = UnitOfWork(event = event, key = "test-correlation-key")
+        val pipeline = createPipeline()
 
         // Act
-        val resultUow = pipeline.defaultPutRequest(uow)
+        val oneDay = pipeline.daysInSecs(1)
+        val fiveDays = pipeline.daysInSecs(5)
+        val zeroDays = pipeline.daysInSecs(0)
 
         // Assert
-        assertNotNull(resultUow.putRequest)
-        val itemValues = resultUow.putRequest!!.item
-
-        assertNotNull(itemValues)
-        assertEquals(AttributeValue.S("test-event-id"), itemValues?.get("pk"))
-        assertEquals(AttributeValue.S("EVENT"), itemValues?.get("sk"))
-        assertEquals(AttributeValue.S("EVENT"), itemValues?.get("discriminator"))
-        assertEquals(AttributeValue.N("1672531200000"), itemValues?.get("timestamp"))
-
-        // TTL logic check: timestamp(1672531200000) / 1000 + 5 days(432000 secs) = 1672963200
-        val expectedTtl = (1672531200000 / 1000) + (ttlDaysTest * 24 * 60 * 60L)
-        assertEquals(AttributeValue.N(expectedTtl.toString()), itemValues?.get("ttl"))
-
-        assertEquals(AttributeValue.S("test-expire"), itemValues?.get("expire"))
-        assertEquals(AttributeValue.S("test-correlation-key"), itemValues?.get("data"))
+        oneDay shouldBe 86400L
+        fiveDays shouldBe 432000L
+        zeroDays shouldBe 0L
     }
 
     @Test
-    fun `test defaultPutRequest without raw event throws exception`() {
+    fun `save internal flow extension should map UnitOfWork with saveOptions and delegate to eventsMicrostore`() :Unit = runBlocking {
         // Arrange
-        val pipeline = CollectPipeline.Builder("collection-pipeline-test")
-            .includeRaw(false) // This will trigger omitRaw()
-            .build()
+        val inMemoryStore = EventsMicrostoreInMemory()
+        val pipeline = createPipeline(
+            ttlDays = 10,
+            includeRaw = false,
+            expire = "2025-01-01",
+            eventsMicrostore = inMemoryStore
+        )
 
-        val event = myEventA()
-        val uow = UnitOfWork(event = event)
-
-        // Act and Assert
-        val exception = assertThrows(RuntimeException::class.java) {
-            pipeline.defaultPutRequest(uow)
+        val mockEvent = mockk<Event>(relaxed = true) {
+            every { id } returns "event-123"
+            every { timestamp } returns 1000000L // 1000 seconds
         }
+        
+        val uow = UnitOfWork(event = mockEvent)
+        val inputFlow = flowOf(uow)
 
-        assertEquals("Not implemented yet", exception.message)
-    }
-
-    @Test
-    fun `test builder configures pipeline with custom values correctly`() = runBlocking {
-        // Arrange & Act
-        val pipeline = CollectPipeline.Builder("collection-pipeline-test")
-            .bufferCapacity(42)
-            .ttlDays(10)
-            .includeRaw(true)
-            .correlationKey { "custom-key" }
-            .envConfig(mockEnvConfig())
-            .dynamoDbClient(mockDynamoDbClient())
-            .build()
+        // Act
+        val resultFlow = with(pipeline) {
+            inputFlow.save()
+        }
+        val resultList = resultFlow.toList()
 
         // Assert
-        assertNotNull(pipeline)
+        resultList.size shouldBe 1
+        
+        val savedUow = resultList.first()
+        savedUow.saveOptions.shouldNotBeNull()
+        savedUow.saveOptions?.includeRaw shouldBe false
+        savedUow.saveOptions?.expire shouldBe "2025-01-01"
+        
+        // TTL calculation check: timestamp in secs (1000) + daysInSecs(10 days = 864000) = 865000
+        savedUow.saveOptions?.ttlTimestampInSecs shouldBe 865000L
 
-        val faultManager = FaultManager(envConfig = mockEnvConfig(), eventPublisher = EventPublisherInMemory())
-        val uowFlow = flowOf(UnitOfWork(event = myEventA()))
-        pipeline.connect(faultManager, uowFlow).collect { uow ->
-            assertNotNull(uow)
-        }
+        // Verify that it was accurately recorded in the microstore via EventsMicrostoreInMemory
+        val savedMap = inMemoryStore.saveUowMap()
+        savedMap.size shouldBe 1
+        savedMap["event-123"] shouldBe savedUow
     }
 
     @Test
-    fun `test collect executes without crashing`() = runBlocking {
+    fun `save internal flow extension should fallback to environment config ttl if ttlDays is not explicitly provided`() : Unit = runBlocking {
         // Arrange
-        val pipeline = CollectPipeline.Builder("collection-pipeline-test").build()
-        val uowFlow = flowOf(UnitOfWork(event = myEventA()))
-        val faultManager = FaultManager(envConfig = mockEnvConfig(), eventPublisher = EventPublisherInMemory())
+        val inMemoryStore = EventsMicrostoreInMemory()
+        val pipeline = createPipeline(
+            ttlDays = null,
+            envConfigTtl = 5,
+            eventsMicrostore = inMemoryStore
+        )
 
-        // Act & Assert
-        assertDoesNotThrow {
-            val flow = pipeline.connect(faultManager, uowFlow)
-            assertNotNull(flow)
+        val mockEvent = mockk<Event>(relaxed = true) {
+            every { id } returns "event-456"
+            every { timestamp } returns 2000000L // 2000 seconds
         }
+        
+        val uow = UnitOfWork(event = mockEvent)
+        val inputFlow = flowOf(uow)
+
+        // Act
+        val resultFlow = with(pipeline) {
+            inputFlow.save()
+        }
+        val resultList = resultFlow.toList()
+
+        // Assert
+        val savedUow = resultList.first()
+        
+        // TTL calculation check: timestamp in secs (2000) + daysInSecs(5 days = 432000) = 434000
+        savedUow.saveOptions?.ttlTimestampInSecs shouldBe 434000L
+        
+        // Verify it was correctly stored
+        val savedMap = inMemoryStore.saveUowMap()
+        savedMap.size shouldBe 1
+        savedMap["event-456"] shouldBe savedUow
     }
 }

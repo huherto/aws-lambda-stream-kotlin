@@ -4,6 +4,7 @@ import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
+import io.github.huherto.awsLambdaStream.sinks.EventsMicrostoreInMemory
 import io.github.huherto.awsLambdaStream.testsupport.DynamDbClientFake
 import io.github.huherto.awsLambdaStream.testsupport.TestContext
 import io.mockk.every
@@ -29,7 +30,9 @@ class ListenerTest {
         val envConfig = spyk<EnvironmentConfig>()
         every { envConfig.awsRegion() } returns "us-east-1"
         every { envConfig.tableName() } returns "events"
-        Listener(kinesisAdapter, envConfig, dynamoDbClient, eventPublisher = EventPublisherInMemory())
+        Listener(kinesisAdapter, envConfig, dynamoDbClient, eventPublisher = EventPublisherInMemory(),
+            eventsMicrostore = EventsMicrostoreInMemory()
+        )
     }
 
     @BeforeEach

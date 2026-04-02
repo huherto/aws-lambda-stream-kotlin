@@ -5,6 +5,7 @@ import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequest
 import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequestEntry
 import io.github.huherto.awsLambdaStream.connectors.ConnectorResponse
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
+import io.github.huherto.awsLambdaStream.sinks.EventsMicrostore
 
 interface Event {
     var id: String?
@@ -29,6 +30,7 @@ data class UnitOfWork(
     val sequenceNumber: String? = null,
     val shardId: String? = null,
     val timestamp: String? = null,
+    val saveOptions: EventsMicrostore.SaveOptions? = null,
     val putRequest: PutItemRequest? = null,
     val putResponse: PutItemResponse? = null,
     val meta: Map<String, String?>? = null,

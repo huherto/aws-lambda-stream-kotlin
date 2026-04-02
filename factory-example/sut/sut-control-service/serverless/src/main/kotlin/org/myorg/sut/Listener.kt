@@ -4,11 +4,15 @@ import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
-import io.github.huherto.awsLambdaStream.*
+import io.github.huherto.awsLambdaStream.EnvironmentConfig
+import io.github.huherto.awsLambdaStream.FaultManager
+import io.github.huherto.awsLambdaStream.PipelineAssembler
 import io.github.huherto.awsLambdaStream.flavors.CollectPipeline
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import io.github.huherto.awsLambdaStream.from.KinesisAdapter
+import io.github.huherto.awsLambdaStream.getDynamoDbClient
 import io.github.huherto.awsLambdaStream.sinks.EventPublisher
+import io.github.huherto.awsLambdaStream.sinks.EventsMicrostore
 import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging
 import java.nio.ByteBuffer
@@ -23,6 +27,7 @@ class Listener(
     private val initialAdapter: KinesisAdapter? = null,
     val envConfig: EnvironmentConfig = EnvironmentConfig(),
     private var dynamoDbClient: DynamoDbClient? = null,
+    private val eventsMicrostore: EventsMicrostore,
     private val eventPublisher: EventPublisher
 ) : RequestHandler<KinesisEvent, Void?> {
 
@@ -40,11 +45,12 @@ class Listener(
             dynamoDbClient = DynamoDBClientWrapper(getDynamoDbClient(envConfig))
         }
 
-        CollectPipeline.Builder("collect1")
-            .dynamoDbClient(dynamoDbClient)
-            .onEventClass(listOf(Event::class))
-            .envConfig(envConfig)
-            .build()
+        CollectPipeline(
+            pipelineId = "collect1",
+            envConfig = envConfig,
+            eventsMicrostore = eventsMicrostore,
+            onEventClass = listOf(TrackedUnitEvent::class)
+        )
     }
 
     override fun handleRequest(kinesisEvent: KinesisEvent, context: Context): Void? = runBlocking{

@@ -1,88 +1,71 @@
 package io.github.huherto.awsLambdaStream
 
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
-import aws.sdk.kotlin.services.dynamodb.model.PutItemRequest
-import aws.sdk.kotlin.services.dynamodb.model.PutItemResponse
-import io.mockk.*
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.test.advanceUntilIdle
-import kotlinx.coroutines.test.runTest
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
-import java.time.Clock
-import java.time.Instant
-import kotlin.test.Test
+import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
+import io.github.huherto.awsLambdaStream.sinks.EventsMicrostore
+import io.github.huherto.awsLambdaStream.sinks.EventsMicrostoreImpl
+import io.kotest.matchers.nulls.shouldNotBeNull
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeTypeOf
+import io.mockk.every
+import io.mockk.mockk
+import org.junit.jupiter.api.Test
 
 class EventsMicrostoreImplTest {
 
-    @OptIn(ExperimentalCoroutinesApi::class)
+    private val envConfig = mockk<EnvironmentConfig>()
+    private val dynamoDbClient = mockk<DynamoDbClient>()
+    private val faultManager = mockk<FaultManager>()
+
+    private val sut = EventsMicrostoreImpl(envConfig, dynamoDbClient, faultManager)
+
     @Test
-    fun testSave() = runTest {
-
+    fun `putRequest should correctly populate PutItemRequest based on UnitOfWork, Event, and EnvironmentConfig`() {
         // Arrange
-        val ddbClient = mockk<DynamoDbClient>()
-        val clock = mockk<Clock>()
-        val envConfig = spyk<EnvironmentConfig>()
-        val microstore = EventsMicrostoreImpl(ddbClient, clock, envConfig)
-        val putRequestSlot = slot<PutItemRequest>()
+        val eventId = "test-event-id"
+        val eventTimestamp = 1672531200000L
+        val eventEncoded = "{\"data\":\"encoded-event\"}"
+        val awsRegion = "eu-west-1"
+        val expectedTableName = "custom-events-table"
 
-        coEvery { ddbClient.putItem(capture(putRequestSlot)) } coAnswers { mockk<PutItemResponse>() }
-        every { clock.instant() } returns Instant.parse("2025-01-01T00:00:00.000Z")
-        every { envConfig.awsRegion() } returns "us-east-1"
-        every { envConfig.tableName() } returns "events"
+        val mockEvent = mockk<Event> {
+            every { id } returns eventId
+            every { timestamp } returns eventTimestamp
+            every { encoded() } returns eventEncoded
+        }
 
-        // Act
-        val flow = flowOf(
-            UnitOfWork().copy(
-                event = MyEventA().apply {
-                    id = "my-event-id-001"
-                    timestamp = Instant.parse("2022-01-01T00:00:00.000Z").toEpochMilli() / 1000
-                    entity = MyThing().apply {
-                        id = "my-thing-id-01"
-                    }
-                }
-            )
+        val mockSaveOptions = mockk<EventsMicrostore.SaveOptions> {
+            every { includeRaw } returns true
+            every { ttlTimestampInSecs } returns 987654321
+            every { expire } returns "expire-timestamp"
+        }
+
+        val uow = UnitOfWork(
+            event = mockEvent,
+            key = "uow-key",
+            saveOptions = mockSaveOptions
         )
 
-        microstore.save(flow, EventsMicrostore.SaveOptions(expireDays = 90))
+        every { envConfig.awsRegion() } returns awsRegion
+        every { envConfig.tableName() } returns expectedTableName
 
-        advanceUntilIdle()
+        // Act
+        val result = sut.putRequest(uow)
 
         // Assert
-        assertTrue(putRequestSlot.isCaptured, "PutItemRequest should have been captured")
+        val putRequest = result.putRequest.shouldNotBeNull()
+        putRequest.tableName shouldBe expectedTableName
+
+        val item = putRequest.item.shouldNotBeNull()
         
-        putRequestSlot.captured.item?.apply {
-            assertEquals("my-event-id-001", this["pk"]?.asS())
-            assertEquals("EVENT", this["sk"]?.asS().toString())
-            assertEquals("EVENT", this["discriminator"]?.asS().toString())
-            assertEquals("1640995200", this["timestamp"]?.asN())
-            assertEquals("us-east-1", this["awsregion"]?.asS().toString())
-            assertEquals("1743465600", this["ttl"]?.asN())
-            assertEquals("1743465600", this["expire"]?.asN())
-            assertEquals("null", this["data"]?.asSOrNull().toString())
-
-            val actualEventAsJson = this["event"]?.asS()
-            val expectedEventAsJson = """
-                {
-                    "type":"MY_EVENT_A",
-                    "id":"my-event-id-001",
-                    "timestamp":1640995200,
-                    "entity": {
-                        "id":"my-thing-id-01"
-                    }
-                }
-            """
-
-            assertEquals(
-                cleanUpString(expectedEventAsJson),
-                cleanUpString(actualEventAsJson.toString())
-            )
-        }
-        assertEquals("events", putRequestSlot.captured.tableName)
-    }
-
-    private fun cleanUpString(s: String): String {
-        return s.replace("\\s".toRegex(), "")
+        item["pk"].shouldBeTypeOf<AttributeValue.S>().value shouldBe eventId
+        item["sk"].shouldBeTypeOf<AttributeValue.S>().value shouldBe "EVENT"
+        item["discriminator"].shouldBeTypeOf<AttributeValue.S>().value shouldBe "EVENT"
+        item["timestamp"].shouldBeTypeOf<AttributeValue.N>().value shouldBe eventTimestamp.toString()
+        item["awsregion"].shouldBeTypeOf<AttributeValue.S>().value shouldBe awsRegion
+        item["ttl"].shouldBeTypeOf<AttributeValue.N>().value shouldBe "987654321"
+        item["expire"].shouldBeTypeOf<AttributeValue.S>().value shouldBe "expire-timestamp"
+        item["data"].shouldBeTypeOf<AttributeValue.S>().value shouldBe "uow-key"
+        item["event"].shouldBeTypeOf<AttributeValue.S>().value shouldBe eventEncoded
     }
 }
