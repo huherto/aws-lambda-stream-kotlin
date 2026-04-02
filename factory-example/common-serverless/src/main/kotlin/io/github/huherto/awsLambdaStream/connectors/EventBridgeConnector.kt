@@ -1,9 +1,12 @@
 package io.github.huherto.awsLambdaStream.connectors
 
+import aws.sdk.kotlin.runtime.auth.credentials.EnvironmentCredentialsProvider
 import aws.sdk.kotlin.services.eventbridge.EventBridgeClient
 import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequest
 import aws.sdk.kotlin.services.eventbridge.model.PutEventsResponse
 import aws.sdk.kotlin.services.eventbridge.model.PutEventsResultEntry
+import aws.smithy.kotlin.runtime.net.url.Url
+import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import kotlinx.coroutines.delay
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Duration
@@ -36,25 +39,47 @@ data class ConnectorResponse(
     val attempts: List<PutEventsResponse>
 )
 
+interface EventBridgeClientFactory {
+    fun createClient(pipelineId: String): EventBridgeClient
+}
+
+class EventBridgeClientFactoryImpl(private val envConfig: EnvironmentConfig) : EventBridgeClientFactory {
+    override fun createClient(pipelineId: String): EventBridgeClient {
+        val endpointUrl = envConfig.endPointUrl()?.ifEmpty { null }
+        val region = envConfig.awsRegion()
+        return EventBridgeClient {
+            this.region = region
+            this.credentialsProvider = EnvironmentCredentialsProvider()
+            endpointUrl?.let { this.endpointUrl = Url.parse(it) }
+        }
+    }
+}
+
 class EventBridgeConnector(
     pipelineId: String,
+    private val envConfig: EnvironmentConfig,
     timeout: Duration,
     private val retryConfig: RetryConfig,
     private val opt: ConnectorOptions = ConnectorOptions(),
+    private val clientFactory: EventBridgeClientFactory,
     private val debug: (String, Any?) -> Unit = { msg, arg -> println(msg.replace("%j", arg.toString())) }
 ) {
-    private val client: EventBridgeClient = getClient(pipelineId, timeout)
+    private val client: EventBridgeClient = getClient(pipelineId, clientFactory)
+
+    private val logger = mu.KotlinLogging.logger {}
 
     companion object {
         private val clients = ConcurrentHashMap<String, EventBridgeClient>()
 
-
-        fun getClient(pipelineId: String, timeout: Duration): EventBridgeClient {
-            return clients.computeIfAbsent(pipelineId) {
-                EventBridgeClient {
-                    // SDK-level retry strategies and Http Engine timeouts can be configured here
-                }
+        fun getClient(pipelineId: String, clientFactory: EventBridgeClientFactory): EventBridgeClient {
+            return clients.computeIfAbsent(pipelineId ) {
+                clientFactory.createClient(pipelineId)
             }
+        }
+
+        // Useful for testing.
+        internal fun clearClients() {
+            clients.clear()
         }
     }
 
@@ -88,10 +113,10 @@ class EventBridgeConnector(
         
         return try {
             val response = client.putEvents(request)
-            debug("Success response:", response)
+            logger.debug{"Success response:$response"}
             response
         } catch (e: Exception) {
-            debug("Error sending command:", e.message)
+            logger.warn{"Error sending command: ${e.message}"}
             throw e
         }
     }

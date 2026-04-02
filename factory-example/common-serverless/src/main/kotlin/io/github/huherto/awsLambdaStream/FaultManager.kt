@@ -83,9 +83,9 @@ class FaultManager constructor(
         }
     }
 
-    internal fun Flow<UnitOfWork>.publish() : Flow<UnitOfWork> {
-        return this.publishToEventBridge(eventBridgePublishOptions)
-    }
+//    internal fun Flow<UnitOfWork>.publish() : Flow<UnitOfWork> {
+//        return this.publishToEventBridge(eventBridgePublishOptions)
+//    }
 
     suspend fun flushFaults() {
         val flow = flow {

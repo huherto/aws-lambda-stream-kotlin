@@ -2,6 +2,7 @@ package io.github.huherto.awsLambdaStream
 
 import aws.smithy.kotlin.runtime.SdkBaseException
 import io.github.huherto.awsLambdaStream.sinks.EventBridgePublishOptions
+import io.github.huherto.awsLambdaStream.sinks.EventBridgeSink.Companion.publishToEventBridge
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldBeEmpty
@@ -187,7 +188,7 @@ class FaultManagerTest : FunSpec({
         
         // Act
         with(faultManager) {
-            val resultFlow = emptyFlow<UnitOfWork>().publish()
+            val resultFlow = emptyFlow<UnitOfWork>().publishToEventBridge(publishOptions)
             
             // Assert
             // Since publish calls the actual implementation conditionally processing the flow, 

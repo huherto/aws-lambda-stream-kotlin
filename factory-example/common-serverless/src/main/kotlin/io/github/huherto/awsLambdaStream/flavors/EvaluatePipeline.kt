@@ -257,7 +257,7 @@ class EvaluatePipeline (
                     faulty(uow) { toHigherOrderEvents(uow) }?.asFlow() ?: emptyFlow()
                 }
                 .buffer(bufferCapacity)
-                .publish()
+                .publishToEventBridge(eventBridgePublishOptions)
                 .onEach { uow -> printEndPipeline(uow) }
             return flow
         }
