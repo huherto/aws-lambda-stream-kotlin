@@ -7,8 +7,7 @@ import io.github.huherto.awsLambdaStream.*
 import io.github.huherto.awsLambdaStream.from.RecordImage
 import io.github.huherto.awsLambdaStream.from.RecordPair
 import io.github.huherto.awsLambdaStream.queries.queryAllDynamoDB
-import io.github.huherto.awsLambdaStream.sinks.EventBridgePublishOptions
-import io.github.huherto.awsLambdaStream.sinks.EventBridgeSink.Companion.publishToEventBridge
+import io.github.huherto.awsLambdaStream.sinks.EventPublisher
 import io.github.huherto.awsLambdaStream.utils.CompactRule
 import io.github.huherto.awsLambdaStream.utils.compact
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -25,7 +24,7 @@ sealed interface EmitOption {
 class EvaluatePipeline (
     id: String,
     val envConfig: EnvironmentConfig,
-    val eventBridgePublishOptions: EventBridgePublishOptions,
+    val eventPublisher: EventPublisher,
     val onContentType: (UnitOfWork) -> Boolean = { true },
     val onEventClass: List<KClass<out Event>> = listOf(Event::class),
     val correlationKeySuffix: String = "",
@@ -236,7 +235,7 @@ class EvaluatePipeline (
     }
 
     internal fun Flow<UnitOfWork>.publish() : Flow<UnitOfWork> {
-        return this.publishToEventBridge(eventBridgePublishOptions)
+        return eventPublisher.publish(this)
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -257,7 +256,7 @@ class EvaluatePipeline (
                     faulty(uow) { toHigherOrderEvents(uow) }?.asFlow() ?: emptyFlow()
                 }
                 .buffer(bufferCapacity)
-                .publishToEventBridge(eventBridgePublishOptions)
+                .publish()
                 .onEach { uow -> printEndPipeline(uow) }
             return flow
         }

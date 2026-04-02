@@ -6,7 +6,6 @@ import io.github.huherto.awsLambdaStream.*
 import io.github.huherto.awsLambdaStream.connectors.EventBridgeConnector
 import io.github.huherto.awsLambdaStream.from.RecordImage
 import io.github.huherto.awsLambdaStream.from.RecordPair
-import io.github.huherto.awsLambdaStream.sinks.EventBridgePublishOptions
 import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
@@ -38,10 +37,11 @@ class EvaluatePipelineTest {
     private  val envConfig = spyk<EnvironmentConfig>()
 
     fun protoEvaluatePipeline(id: String) : EvaluatePipeline {
+        val eventPublisher = EventPublisherInMemory()
         val pipeline = EvaluatePipeline(
             id = id,
             envConfig = envConfig,
-            eventBridgePublishOptions=EventBridgePublishOptions(envConfig=envConfig),
+            eventPublisher = eventPublisher,
             )
         return pipeline
     }
@@ -96,10 +96,11 @@ class EvaluatePipelineTest {
     @Test
     fun `normalize should extract metadata correctly for CORREL events`() {
         // Arrange
+        val eventPublisher = EventPublisherInMemory()
         val pipeline = EvaluatePipeline(
             id="test-id",
             envConfig = envConfig,
-            eventBridgePublishOptions=EventBridgePublishOptions(envConfig=envConfig)
+            eventPublisher = eventPublisher,
         )
         val eventAsString = """{"id": "ev2", "type": "CorrelEvent"}"""
         val rawNewMap = mapOf(
@@ -140,10 +141,11 @@ class EvaluatePipelineTest {
     @Test
     fun `normalize should handle missing fields and empty raw data gracefully`() {
         // Arrange
+        val eventPublisher = EventPublisherInMemory()
         val pipeline = EvaluatePipeline(
             id="test-id",
             envConfig = envConfig,
-            eventBridgePublishOptions=EventBridgePublishOptions(envConfig=envConfig),
+            eventPublisher = eventPublisher,
         )
         val uowEmpty = UnitOfWork(
             event = object : Event {
@@ -178,10 +180,11 @@ class EvaluatePipelineTest {
     @Test
     fun `forEvents should return true for valid INSERT and CORREL events, and false otherwise`() {
         // Arrange
+        val eventPublisher = EventPublisherInMemory()
         val pipeline = EvaluatePipeline(
             id="test-id",
             envConfig = envConfig,
-            eventBridgePublishOptions = EventBridgePublishOptions(envConfig = envConfig)
+            eventPublisher = eventPublisher,
         )
         
         val insertEventUow = UnitOfWork(
@@ -228,16 +231,17 @@ class EvaluatePipelineTest {
             override fun eventType() = "custom"
             override fun encoded() = ""
         }
+        val eventPublisher = EventPublisherInMemory()
         val pipelineWithUnmarshall = EvaluatePipeline(
             id = "test-id",
             envConfig = envConfig,
-            eventBridgePublishOptions = EventBridgePublishOptions(envConfig = envConfig),
+            eventPublisher = eventPublisher,
             unmarshall = { customEvent }
         )
         val pipelineWithoutUnmarshall = EvaluatePipeline(
             id="test-id",
             envConfig = envConfig,
-            eventBridgePublishOptions = EventBridgePublishOptions(envConfig = envConfig),
+            eventPublisher = eventPublisher,
         )
 
         val jsonString = """{"id": "2", "type": "test"}"""
@@ -257,16 +261,17 @@ class EvaluatePipelineTest {
     @Test
     fun `onCorrelationKeySuffix should evaluate rules against matching and non-matching suffixes`() {
         // Arrange
+        val eventPublisher = EventPublisherInMemory()
         val pipelineNoSuffix = EvaluatePipeline(
             id="test",
             envConfig = envConfig,
-            eventBridgePublishOptions = EventBridgePublishOptions(envConfig = envConfig),
+            eventPublisher = eventPublisher,
             correlationKeySuffix = ""
         )
         val pipelineWithSuffix = EvaluatePipeline(
             id="test",
             envConfig = envConfig,
-            eventBridgePublishOptions = EventBridgePublishOptions(envConfig = envConfig),
+            eventPublisher = eventPublisher,
             correlationKeySuffix = "expectedSuffix"
         )
 
@@ -289,10 +294,11 @@ class EvaluatePipelineTest {
     @Test
     fun `toQueryRequest should create appropriate QueryRequest based on correlation flag`() {
         // Arrange
+        val eventPublisher = EventPublisherInMemory()
         val pipeline = EvaluatePipeline(
             id="test",
             envConfig = envConfig,
-            eventBridgePublishOptions = EventBridgePublishOptions(envConfig = envConfig),
+            eventPublisher = eventPublisher,
             index = "CustomIndex")
 
         val correlUow = UnitOfWork(meta = mapOf("correlation" to "true", "pk" to "test-pk"))
@@ -328,10 +334,11 @@ class EvaluatePipelineTest {
     @Test
     fun `toHigherOrderEvents should emit expected events for basic configuration`() {
         // Arrange
+        val eventPublisher = EventPublisherInMemory()
         val pipeline = EvaluatePipeline(
             id = "test-id",
             envConfig = envConfig,
-            eventBridgePublishOptions = EventBridgePublishOptions(envConfig = envConfig),
+            eventPublisher = eventPublisher,
             correlationKeySuffix = "suffix",
             higherOrderEmit = EmitOption.Basic("MyHigherOrderType")
         )
@@ -414,10 +421,11 @@ class EvaluatePipelineTest {
         }
 
         val emitFunction: (UnitOfWork, Event) -> List<Event> = { _, _ -> listOf(customEvent) }
+        val eventPublisher = EventPublisherInMemory()
         val pipeline = EvaluatePipeline(
             id = "test-id",
             envConfig = envConfig,
-            eventBridgePublishOptions = EventBridgePublishOptions(envConfig = envConfig),
+            eventPublisher = eventPublisher,
             higherOrderEmit = EmitOption.Custom(emitFunction)
         )
 
@@ -434,10 +442,11 @@ class EvaluatePipelineTest {
     @Test
     fun `connect should successfully process valid UnitOfWork and filter out invalid ones`() : Unit = runBlocking {
         // Arrange
+        val eventPublisher = EventPublisherInMemory()
         val pipeline = EvaluatePipeline(
             id = "test-pipeline",
             envConfig = envConfig,
-            eventBridgePublishOptions = EventBridgePublishOptions(envConfig = envConfig),
+            eventPublisher = eventPublisher,
             // Required to avoid IllegalArgumentException during toHigherOrderEvents
             higherOrderEmit = EmitOption.Basic("MyHigherOrderType")
         )

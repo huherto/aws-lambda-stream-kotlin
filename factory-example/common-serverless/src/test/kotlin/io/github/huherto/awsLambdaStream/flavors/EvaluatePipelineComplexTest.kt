@@ -5,7 +5,7 @@ import aws.sdk.kotlin.services.dynamodb.model.QueryResponse
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.Event
 import io.github.huherto.awsLambdaStream.UnitOfWork
-import io.github.huherto.awsLambdaStream.sinks.EventBridgePublishOptions
+import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldBeEmpty
@@ -27,10 +27,11 @@ class EvaluatePipelineComplexTest : FunSpec({
         test("should assign triggers based on the presence of the event") {
             // Arrange
             val envConfig = spyk<EnvironmentConfig>()
+            val eventPublisher = EventPublisherInMemory()
             val pipeline = EvaluatePipeline(
                 id="pipeline-1",
                 envConfig=envConfig,
-                eventBridgePublishOptions=EventBridgePublishOptions(envConfig=envConfig),
+                eventPublisher = eventPublisher,
                 expression=null)
             val mockEvent = mockk<Event>()
             val uowWithEvent = UnitOfWork(event = mockEvent)
@@ -56,6 +57,7 @@ class EvaluatePipelineComplexTest : FunSpec({
             // Arrange
             val mockDynamoDbClient = spyk<DynamoDbClient>()
             val envConfig = spyk<EnvironmentConfig>()
+            val eventPublisher = EventPublisherInMemory()
 
             // Mocking DynamoDB client to return two simulated events
             coEvery { mockDynamoDbClient.query(any()) } returns QueryResponse {
@@ -65,11 +67,10 @@ class EvaluatePipelineComplexTest : FunSpec({
                 )
             }
 
-
             val pipeline = EvaluatePipeline(
                 id = "pipeline-2",
                 envConfig=envConfig,
-                eventBridgePublishOptions=EventBridgePublishOptions(envConfig=envConfig),
+                eventPublisher = eventPublisher,
                 dynamoDbClient = mockDynamoDbClient,
                 correlationKeySuffix = "expected-suffix",
                 unmarshall = { str -> mockk<Event> { every { encoded() } returns str } },
@@ -113,6 +114,7 @@ class EvaluatePipelineComplexTest : FunSpec({
             // Arrange
             val mockDynamoDbClient = spyk<DynamoDbClient>()
             val envConfig = spyk<EnvironmentConfig>()
+            val eventPublisher = EventPublisherInMemory()
 
             // Mocking an empty DynamoDB response (no correlations found)
             coEvery { mockDynamoDbClient.query(any()) } returns QueryResponse { items = emptyList() }
@@ -120,7 +122,7 @@ class EvaluatePipelineComplexTest : FunSpec({
             val pipeline = EvaluatePipeline(
                 id = "pipeline-3",
                 envConfig=envConfig,
-                eventBridgePublishOptions=EventBridgePublishOptions(envConfig=envConfig),
+                eventPublisher = eventPublisher,
                 dynamoDbClient = mockDynamoDbClient,
                 correlationKeySuffix = "expected-suffix",
                 unmarshall = { mockk<Event>() },
@@ -139,10 +141,11 @@ class EvaluatePipelineComplexTest : FunSpec({
         test("should throw an IllegalStateException if dynamoDbClient is not configured") {
             // Arrange
             val envConfig = spyk<EnvironmentConfig>()
+            val eventPublisher = EventPublisherInMemory()
             val pipeline = EvaluatePipeline(
                 id = "pipeline-4",
                 envConfig=envConfig,
-                eventBridgePublishOptions=EventBridgePublishOptions(envConfig=envConfig),
+                eventPublisher = eventPublisher,
                 dynamoDbClient = null, // Missing client
                 expression = { true }
             )

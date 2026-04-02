@@ -2,7 +2,10 @@ package io.github.huherto.awsLambdaStream.sinks
 
 import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequest
 import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequestEntry
+import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.connectors.EventBridgeClientFactory
+import io.github.huherto.awsLambdaStream.connectors.EventBridgeClientFactoryImpl
 import io.github.huherto.awsLambdaStream.connectors.EventBridgeConnector
 import io.github.huherto.awsLambdaStream.connectors.RetryConfig
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -20,6 +23,20 @@ class EventPublisherInMemory : EventPublisher {
     }
     fun events() = uows.map{ it.event }.toList()
 }
+
+data class EventBridgePublishOptions(
+    val envConfig: EnvironmentConfig,
+    val busName: String = envConfig.busName()?: "undefined",
+    val source: String = envConfig.busSource() ?: "custom",
+    val maxPublishRequestSize: Int = envConfig.maxPublishRequestSize()
+        ?: envConfig.maxRequestSize() ?: (256 * 1024),
+    val batchSize: Int = envConfig.publishBatchSize() ?: envConfig.batchSize() ?: 10,
+    val parallel: Int = (envConfig.publishParallel() ?: envConfig.parallel()?: 8),
+    val endpointId: String? = envConfig.busEndPointId(),
+    val handleErrors: Boolean = true,
+    val step: String = "publish",
+    val clientFactory: EventBridgeClientFactory = EventBridgeClientFactoryImpl(envConfig = envConfig)
+)
 
 class EventBridgePublisher(
     private val opt: EventBridgePublishOptions

@@ -8,7 +8,6 @@ import io.github.huherto.awsLambdaStream.flavors.CorrelatePipeline
 import io.github.huherto.awsLambdaStream.flavors.EvaluatePipeline
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import io.github.huherto.awsLambdaStream.from.DynamodbAdapter
-import io.github.huherto.awsLambdaStream.sinks.EventBridgePublishOptions
 import io.github.huherto.awsLambdaStream.sinks.EventPublisher
 
 class TriggerContainer(
@@ -38,7 +37,7 @@ class TriggerContainer(
             envConfig = envConfig,
             dynamoDbClient = dynamoDbClient,
             onEventClass = listOf(TrackedUnitEvent::class),
-            eventBridgePublishOptions = EventBridgePublishOptions(envConfig),
+            eventPublisher = eventPublisher,
         )
     }
 
