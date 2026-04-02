@@ -11,6 +11,7 @@ import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.from.RecordImage
 import io.github.huherto.awsLambdaStream.from.RecordPair
+import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
 import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.collections.shouldBeEmpty
@@ -215,7 +216,7 @@ class CorrelatePipelineTest {
             event = createFakeEvent(rawObj = RecordPair(null, null))
         )
 
-        val fm = FaultManager(envConfig)
+        val fm = FaultManager(envConfig, eventPublisher = EventPublisherInMemory())
 
         // Act
         val resultFlow = pipeline.connect(fm, flowOf(validUow))
@@ -250,7 +251,7 @@ class CorrelatePipelineTest {
             event = createFakeEvent(rawObj = RecordPair(null, null))
         )
 
-        val fm = FaultManager(envConfig = envConfig)
+        val fm = FaultManager(envConfig, eventPublisher = EventPublisherInMemory())
 
         // Act
         val resultFlow = pipeline.connect(fm, flowOf(invalidUow))
@@ -284,7 +285,7 @@ class CorrelatePipelineTest {
             event = createFakeEvent(rawObj = RecordPair(null, null))
         )
 
-        val fm = FaultManager(envConfig = envConfig)
+        val fm = FaultManager(envConfig, eventPublisher = EventPublisherInMemory())
 
         // Act
         val resultFlow = pipeline.connect(fm, flowOf(validUow))

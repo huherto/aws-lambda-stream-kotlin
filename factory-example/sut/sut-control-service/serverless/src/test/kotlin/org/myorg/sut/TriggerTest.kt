@@ -6,9 +6,8 @@ import com.amazonaws.services.lambda.runtime.events.models.dynamodb.StreamRecord
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.PipelineAssembler
-import io.github.huherto.awsLambdaStream.connectors.EventBridgeClientFactoryImpl
 import io.github.huherto.awsLambdaStream.from.DynamodbAdapter
-import io.github.huherto.awsLambdaStream.sinks.EventBridgePublishOptions
+import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
 import io.github.huherto.awsLambdaStream.testsupport.TestContext
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
@@ -24,7 +23,8 @@ class TriggerTest : FunSpec({
             // Arrange
             val envConfig = spyk<EnvironmentConfig>()
             val dynamoDbClient = mockk<DynamoDbClient>(relaxed = true)
-            val container = TriggerContainer(envConfig, dynamoDbClient)
+            val eventPublisher = EventPublisherInMemory()
+            val container = TriggerContainer(envConfig, dynamoDbClient, eventPublisher)
 
             val trigger = Trigger(container)
 
@@ -51,17 +51,16 @@ class TriggerTest : FunSpec({
             // Arrange
             val envConfig = spyk<EnvironmentConfig>()
             val dynamoDbClient = mockk<DynamoDbClient>(relaxed = true)
-            val eventBridgeClientFactory = EventBridgeClientFactoryImpl(envConfig)
-            val eventBridgePublishOptions = EventBridgePublishOptions(envConfig, clientFactory = eventBridgeClientFactory)
+            val eventPublisher = EventPublisherInMemory()
             val faultManager = spyk(FaultManager(
                 envConfig,
-                eventBridgePublishOptions = eventBridgePublishOptions)
+                eventPublisher)
             )
             val container = TriggerContainer(
                 envConfig,
                 dynamoDbClient,
                 faultManager = faultManager,
-                eventBridgePublishOptions = eventBridgePublishOptions
+                eventPublisher = eventPublisher,
             )
             val trigger = Trigger(container)
             val testContext = TestContext()

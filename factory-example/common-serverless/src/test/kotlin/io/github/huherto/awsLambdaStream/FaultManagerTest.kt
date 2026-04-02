@@ -1,18 +1,17 @@
 package io.github.huherto.awsLambdaStream
 
 import aws.smithy.kotlin.runtime.SdkBaseException
-import io.github.huherto.awsLambdaStream.sinks.EventBridgePublishOptions
-import io.github.huherto.awsLambdaStream.sinks.EventBridgeSink.Companion.publishToEventBridge
+import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.toList
 
 class FaultManagerTest : FunSpec({
 
@@ -20,7 +19,8 @@ class FaultManagerTest : FunSpec({
 
     test("faulty should return block result when no exception occurs") {
         // Arrange
-        val faultManager = FaultManager(envConfig)
+        val eventPublisher = EventPublisherInMemory()
+        val faultManager = FaultManager(envConfig, eventPublisher)
         val uow = mockk<UnitOfWork>(relaxed = true)
         
         // Act
@@ -36,11 +36,12 @@ class FaultManagerTest : FunSpec({
         val envConfig = spyk<EnvironmentConfig>()
         every { envConfig.awsLambdaFunctionName() } returns "test-function"
         every { envConfig.streamRetryEnabled() } returns false
-        
-        val faultManager = spyk(FaultManager(envConfig))
+
+        val eventPublisher = EventPublisherInMemory()
+        val faultManager = spyk(FaultManager(envConfig, eventPublisher))
         every { faultManager.logError(any()) } returns Unit
         
-        val uow = mockk<UnitOfWork>(relaxed = true)
+        val uow = UnitOfWork()
         val exception = RuntimeException("test error")
         
         // Act
@@ -55,7 +56,8 @@ class FaultManagerTest : FunSpec({
 
     test("redirectFailure should handle retriable and non-retriable exceptions correctly") {
         // Arrange
-        val faultManager = spyk(FaultManager(envConfig))
+        val eventPublisher = EventPublisherInMemory()
+        val faultManager = spyk(FaultManager(envConfig, eventPublisher))
         every { faultManager.logError(any()) } returns Unit
         
         val uow = mockk<UnitOfWork>(relaxed = true)
@@ -93,7 +95,8 @@ class FaultManagerTest : FunSpec({
 
     test("redirectFailure should handle null AWS Lambda function name gracefully") {
         // Arrange
-        val faultManager = spyk(FaultManager(envConfig))
+        val eventPublisher = EventPublisherInMemory()
+        val faultManager = spyk(FaultManager(envConfig, eventPublisher))
         every { faultManager.logError(any()) } returns Unit
         
         val uow = mockk<UnitOfWork>(relaxed = true)
@@ -116,7 +119,8 @@ class FaultManagerTest : FunSpec({
         // Arrange
         every { envConfig.awsLambdaFunctionName() } returns "test-function"
         every { envConfig.streamRetryEnabled() } returns false
-        val faultManager = spyk(FaultManager(envConfig))
+        val eventPublisher = EventPublisherInMemory()
+        val faultManager = spyk(FaultManager(envConfig, eventPublisher))
         every { faultManager.logError(any()) } returns Unit
         
         val uow1 = mockk<UnitOfWork>(relaxed = true)
@@ -145,13 +149,9 @@ class FaultManagerTest : FunSpec({
         // Arrange
         every { envConfig.awsLambdaFunctionName() } returns "test-function"
         every { envConfig.streamRetryEnabled() } returns false
-        
-        val emittedList = mutableListOf<UnitOfWork>()
-        val publishFlow: (Flow<UnitOfWork>) -> Flow<UnitOfWork> = { inputFlow ->
-            inputFlow.onEach { emittedList.add(it) }
-        }
-        
-        val faultManager = spyk(FaultManager(envConfig, publishFlow = publishFlow))
+
+        val eventPublisher = EventPublisherInMemory()
+        val faultManager = spyk(FaultManager(envConfig, eventPublisher))
         every { faultManager.logError(any()) } returns Unit
         
         val uow = mockk<UnitOfWork>(relaxed = true)
@@ -166,34 +166,22 @@ class FaultManagerTest : FunSpec({
         
         // Assert
         faultManager.getFaults().shouldBeEmpty()
+
+        val emittedList = eventPublisher.events()
         emittedList shouldHaveSize 2
-        (emittedList[0].event is FailureEvent) shouldBe true
-        (emittedList[0].event as FailureEvent).failureException?.cause?.message shouldBe "error 1"
-        (emittedList[1].event as FailureEvent).failureException?.cause?.message shouldBe "error 2"
+        (emittedList[0] is FailureEvent) shouldBe true
+        (emittedList[0] as FailureEvent).failureException?.cause?.message shouldBe "error 1"
+        (emittedList[1] as FailureEvent).failureException?.cause?.message shouldBe "error 2"
     }
 
     test("logError should not throw exceptions") {
         // Arrange
-        val faultManager = FaultManager(envConfig)
+        val eventPublisher = EventPublisherInMemory()
+        val faultManager = FaultManager(envConfig, eventPublisher)
         
         // Act & Assert
         // Ensuring it doesn't crash the execution
         faultManager.logError(RuntimeException("Test exception"))
     }
 
-    test("internal publish extension function should process the flow") {
-        // Arrange
-        val publishOptions = EventBridgePublishOptions(envConfig = envConfig)
-        val faultManager = FaultManager(envConfig, publishOptions)
-        
-        // Act
-        with(faultManager) {
-            val resultFlow = emptyFlow<UnitOfWork>().publishToEventBridge(publishOptions)
-            
-            // Assert
-            // Since publish calls the actual implementation conditionally processing the flow, 
-            // verifying it evaluates properly into a Flow is sufficient for isolation.
-            resultFlow shouldNotBe null
-        }
-    }
 })

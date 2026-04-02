@@ -7,6 +7,7 @@ import io.github.huherto.awsLambdaStream.connectors.EventBridgeConnector
 import io.github.huherto.awsLambdaStream.from.RecordImage
 import io.github.huherto.awsLambdaStream.from.RecordPair
 import io.github.huherto.awsLambdaStream.sinks.EventBridgePublishOptions
+import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
@@ -438,9 +439,9 @@ class EvaluatePipelineTest {
             envConfig = envConfig,
             eventBridgePublishOptions = EventBridgePublishOptions(envConfig = envConfig),
             // Required to avoid IllegalArgumentException during toHigherOrderEvents
-            higherOrderEmit = EmitOption.Basic("MyHigherOrderType") 
+            higherOrderEmit = EmitOption.Basic("MyHigherOrderType")
         )
-        val faultManager = FaultManager(envConfig = envConfig)
+        val faultManager = FaultManager(envConfig = envConfig, eventPublisher = EventPublisherInMemory())
 
         val eventAsString = """{"id": "ev1", "type": "TestEvent"}"""
         val rawNewMap = mapOf(

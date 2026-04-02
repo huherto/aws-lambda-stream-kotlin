@@ -8,8 +8,8 @@ class EventBridgeClientFake(delegate: EventBridgeClient) : EventBridgeClient by 
 
     val putEventsRequests = mutableListOf<PutEventsRequest>()
 
-    override suspend fun putEvents(request: PutEventsRequest): PutEventsResponse {
-            putEventsRequests.add(request)
+    override suspend fun putEvents(input: PutEventsRequest): PutEventsResponse {
+            putEventsRequests.add(input)
         return PutEventsResponse.Companion {}
     }
 

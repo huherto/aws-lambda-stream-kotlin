@@ -13,6 +13,14 @@ interface EventPublisher {
     fun publish(flow: Flow<UnitOfWork>): Flow<UnitOfWork>
 }
 
+class EventPublisherInMemory : EventPublisher {
+    private val uows = mutableListOf<UnitOfWork>()
+    override fun publish(flow: Flow<UnitOfWork>): Flow<UnitOfWork> {
+        return flow.onEach { uows.add(it) }
+    }
+    fun events() = uows.map{ it.event }.toList()
+}
+
 class EventBridgePublisher(
     private val opt: EventBridgePublishOptions
 ) : EventPublisher {

@@ -9,7 +9,7 @@ class PipelineAssembler private constructor(builder : Builder) {
 
     private val pipelines = builder.pipelines
 
-    private val faultManager = builder.faultManager
+    private val faultManager = builder.faultManager?: throw RuntimeException("faultManager is required")
 
     fun getFaultManager(): FaultManager {
         return faultManager
@@ -20,7 +20,7 @@ class PipelineAssembler private constructor(builder : Builder) {
 
         internal var envConfig = EnvironmentConfig()
 
-        internal var faultManager = FaultManager(envConfig)
+        internal var faultManager: FaultManager? = null
 
         fun addPipeline(pipeline: Pipeline): Builder {
             pipelines.add(pipeline)

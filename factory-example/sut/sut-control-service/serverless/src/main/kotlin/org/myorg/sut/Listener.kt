@@ -8,6 +8,7 @@ import io.github.huherto.awsLambdaStream.*
 import io.github.huherto.awsLambdaStream.flavors.CollectPipeline
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import io.github.huherto.awsLambdaStream.from.KinesisAdapter
+import io.github.huherto.awsLambdaStream.sinks.EventPublisher
 import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging
 import java.nio.ByteBuffer
@@ -21,7 +22,8 @@ class MyKinesisAdapter : KinesisAdapter() {
 class Listener(
     private val initialAdapter: KinesisAdapter? = null,
     val envConfig: EnvironmentConfig = EnvironmentConfig(),
-    private var dynamoDbClient: DynamoDbClient? = null
+    private var dynamoDbClient: DynamoDbClient? = null,
+    private val eventPublisher: EventPublisher
 ) : RequestHandler<KinesisEvent, Void?> {
 
     private val logger = KotlinLogging.logger {  }
@@ -48,6 +50,7 @@ class Listener(
     override fun handleRequest(kinesisEvent: KinesisEvent, context: Context): Void? = runBlocking{
         val assembler = PipelineAssembler
             .builder()
+            .faultManager(FaultManager(envConfig, eventPublisher = eventPublisher))
             .addPipeline(pipeline)
             .build()
 

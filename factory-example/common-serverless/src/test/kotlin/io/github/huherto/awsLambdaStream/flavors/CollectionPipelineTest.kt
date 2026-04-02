@@ -7,6 +7,7 @@ import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.MyEventA
 import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -110,7 +111,7 @@ class CollectionPipelineTest {
         // Assert
         assertNotNull(pipeline)
 
-        val faultManager = FaultManager(envConfig = mockEnvConfig())
+        val faultManager = FaultManager(envConfig = mockEnvConfig(), eventPublisher = EventPublisherInMemory())
         val uowFlow = flowOf(UnitOfWork(event = myEventA()))
         pipeline.connect(faultManager, uowFlow).collect { uow ->
             assertNotNull(uow)
@@ -122,7 +123,7 @@ class CollectionPipelineTest {
         // Arrange
         val pipeline = CollectPipeline.Builder("collection-pipeline-test").build()
         val uowFlow = flowOf(UnitOfWork(event = myEventA()))
-        val faultManager = FaultManager(envConfig = mockEnvConfig())
+        val faultManager = FaultManager(envConfig = mockEnvConfig(), eventPublisher = EventPublisherInMemory())
 
         // Act & Assert
         assertDoesNotThrow {

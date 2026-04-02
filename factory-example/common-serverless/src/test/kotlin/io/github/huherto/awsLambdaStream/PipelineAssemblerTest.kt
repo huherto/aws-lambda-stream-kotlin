@@ -6,7 +6,7 @@ import io.github.huherto.awsLambdaStream.connectors.ConnectorResponse
 import io.github.huherto.awsLambdaStream.connectors.EventBridgeClientFactory
 import io.github.huherto.awsLambdaStream.connectors.EventBridgeConnector
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
-import io.github.huherto.awsLambdaStream.sinks.EventBridgePublishOptions
+import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -51,6 +51,7 @@ class PipelineAssemblerTest {
         val pipeline2 = MockPipeline("p2")
 
         val assembler = PipelineAssembler.builder()
+            .faultManager(FaultManager(envConfig = envConfig, eventPublisher = EventPublisherInMemory()))
             .addPipeline(pipeline1)
             .addPipeline(pipeline2)
             .build()
@@ -64,6 +65,7 @@ class PipelineAssemblerTest {
         val pipeline2 = MockPipeline("p2")
 
         val assembler = PipelineAssembler.builder()
+            .faultManager(FaultManager(envConfig = envConfig, eventPublisher = EventPublisherInMemory()))
             .addPipeline(pipeline1)
             .addPipeline(pipeline2)
             .build()
@@ -95,6 +97,7 @@ class PipelineAssemblerTest {
         val pipeline1 = MockPipeline("p1")
 
         val assembler = PipelineAssembler.builder()
+            .faultManager(FaultManager(envConfig = envConfig, eventPublisher = EventPublisherInMemory()))
             .addPipeline(pipeline1)
             .build()
 
@@ -126,9 +129,10 @@ class PipelineAssemblerTest {
         coEvery { mockClient.putEvents(any()) } answers {
             PutEventsResponse{}
         }
+        val eventPublisher = EventPublisherInMemory()
         val fm = FaultManager(
             envConfig = envConfig,
-            eventBridgePublishOptions = EventBridgePublishOptions(envConfig, clientFactory = clientFactory),
+            eventPublisher = eventPublisher,
         )
 
         val assembler = PipelineAssembler.builder()
@@ -159,7 +163,9 @@ class PipelineAssemblerTest {
 
     @Test
     fun `test startPipeline and endPipeline simply return uow`() {
-        val assembler = PipelineAssembler.builder().build()
+        val assembler = PipelineAssembler.builder()
+            .faultManager(FaultManager(envConfig = envConfig, eventPublisher = EventPublisherInMemory()))
+            .build()
         val uow = UnitOfWork(key = "test")
 
         val startedUow = assembler.startPipeline(uow)

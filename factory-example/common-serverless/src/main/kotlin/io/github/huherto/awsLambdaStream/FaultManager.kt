@@ -2,16 +2,14 @@ package io.github.huherto.awsLambdaStream
 
 import aws.smithy.kotlin.runtime.SdkBaseException
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
-import io.github.huherto.awsLambdaStream.sinks.EventBridgePublishOptions
-import io.github.huherto.awsLambdaStream.sinks.EventBridgeSink.Companion.publishToEventBridge
+import io.github.huherto.awsLambdaStream.sinks.EventPublisher
 import kotlinx.coroutines.flow.*
 import java.util.*
 import java.util.concurrent.ConcurrentLinkedQueue
 
 class FaultManager constructor(
     private val envConfig: EnvironmentConfig,
-    private val eventBridgePublishOptions: EventBridgePublishOptions = EventBridgePublishOptions(envConfig),
-    private val publishFlow: (Flow<UnitOfWork>) -> Flow<UnitOfWork> = { it.publishToEventBridge(eventBridgePublishOptions) }
+    private val eventPublisher: EventPublisher,
 ) {
 
     private val logger = mu.KotlinLogging.logger { }
@@ -83,10 +81,6 @@ class FaultManager constructor(
         }
     }
 
-//    internal fun Flow<UnitOfWork>.publish() : Flow<UnitOfWork> {
-//        return this.publishToEventBridge(eventBridgePublishOptions)
-//    }
-
     suspend fun flushFaults() {
         val flow = flow {
             while (true) {
@@ -95,7 +89,7 @@ class FaultManager constructor(
                 emit(uow)
             }
         }
-        val count = publishFlow(flow).collect()
+        val count = eventPublisher.publish(flow).collect()
         logger.info { "flushFaults: count=$count" }
     }
 }

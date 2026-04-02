@@ -9,12 +9,13 @@ import io.github.huherto.awsLambdaStream.flavors.EvaluatePipeline
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import io.github.huherto.awsLambdaStream.from.DynamodbAdapter
 import io.github.huherto.awsLambdaStream.sinks.EventBridgePublishOptions
+import io.github.huherto.awsLambdaStream.sinks.EventPublisher
 
 class TriggerContainer(
     val envConfig: EnvironmentConfig,
     val dynamoDbClient: DynamoDbClient,
-    val eventBridgePublishOptions: EventBridgePublishOptions = EventBridgePublishOptions(envConfig),
-    val faultManager: FaultManager = FaultManager(envConfig, eventBridgePublishOptions = eventBridgePublishOptions),
+    val eventPublisher: EventPublisher,
+    val faultManager: FaultManager = FaultManager(envConfig, eventPublisher),
 ) {
 
     private val correlatePipeline: Pipeline by lazy {
@@ -37,7 +38,7 @@ class TriggerContainer(
             envConfig = envConfig,
             dynamoDbClient = dynamoDbClient,
             onEventClass = listOf(TrackedUnitEvent::class),
-            eventBridgePublishOptions = eventBridgePublishOptions,
+            eventBridgePublishOptions = EventBridgePublishOptions(envConfig),
         )
     }
 

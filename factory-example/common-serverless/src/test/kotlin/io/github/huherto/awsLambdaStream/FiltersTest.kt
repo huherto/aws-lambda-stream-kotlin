@@ -1,5 +1,6 @@
 package io.github.huherto.awsLambdaStream
 
+import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
 import io.mockk.spyk
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onEach
@@ -15,7 +16,7 @@ class FiltersTest {
     @Test
     fun `test event types filter`() = runTest {
 
-        val faultManager = FaultManager(envConfig = envConfig)
+        val faultManager = FaultManager(envConfig = envConfig, eventPublisher = EventPublisherInMemory())
 
         val  myEventA = MyEventA()
         val  myEventB = MyEventB()

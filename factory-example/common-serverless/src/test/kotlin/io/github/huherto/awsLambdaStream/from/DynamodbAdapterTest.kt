@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.StreamRecord
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.FaultManager
+import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
 import io.mockk.spyk
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
@@ -15,7 +16,7 @@ import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeVal
 class DynamodbAdapterTest {
 
     private val envConfig = spyk(EnvironmentConfig())
-    private val faultManager = FaultManager(envConfig = envConfig)
+    private val faultManager = FaultManager(envConfig = envConfig, eventPublisher = EventPublisherInMemory())
     private val adapter = DynamodbAdapter(faultManager)
 
     // ============================================================================
