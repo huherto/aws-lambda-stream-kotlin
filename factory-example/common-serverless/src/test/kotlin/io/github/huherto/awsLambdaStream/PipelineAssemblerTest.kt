@@ -139,7 +139,7 @@ class PipelineAssemblerTest {
         
         val exception = failureEvent?.failureException
         assertNotNull(exception)
-        assertEquals(uow.record, exception?.uom?.record)
+        assertEquals(uow.record, exception?.uow?.record)
     }
 
     @Test

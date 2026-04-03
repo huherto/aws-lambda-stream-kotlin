@@ -4,16 +4,15 @@ import com.amazonaws.services.lambda.runtime.events.KinesisEvent
 import io.github.huherto.awsLambdaStream.Event
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.asFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.flow.*
 import java.nio.ByteBuffer
 
 abstract class KinesisAdapter {
 
     fun  fromKinesis(faultManager: FaultManager, kinesisEvent: KinesisEvent): Flow<UnitOfWork> {
-
+        if (kinesisEvent.records.isNullOrEmpty()) {
+            return emptyFlow()
+        }
         with(faultManager) {
             return kinesisEvent.records.asFlow()
                 .mapNotNull { record ->

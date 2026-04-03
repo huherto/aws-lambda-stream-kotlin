@@ -1,116 +1,150 @@
 package org.myorg.sut
 
-import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
+import io.github.huherto.awsLambdaStream.FailureEvent
+import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
 import io.github.huherto.awsLambdaStream.sinks.EventsMicrostoreInMemory
-import io.github.huherto.awsLambdaStream.testsupport.DynamDbClientFake
 import io.github.huherto.awsLambdaStream.testsupport.TestContext
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.spyk
+import io.kotest.matchers.maps.shouldBeEmpty
+import io.kotest.matchers.maps.shouldNotBeEmpty
+import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.types.shouldBeInstanceOf
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
-import java.nio.ByteBuffer
-import java.nio.charset.StandardCharsets.UTF_8
-import java.time.Instant
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
+import kotlin.io.encoding.Base64
 
 typealias TestEvent = com.amazonaws.services.lambda.runtime.tests.annotations.Event
 
 class ListenerTest {
 
-    private var kinesisAdapter = MyKinesisAdapter()
-
-    private val dynamoDbClient = DynamDbClientFake(mockk<DynamoDbClient>())
-
-    private val listener : Listener by lazy {
-        val envConfig = spyk<EnvironmentConfig>()
-        every { envConfig.awsRegion() } returns "us-east-1"
-        every { envConfig.tableName() } returns "events"
-        Listener(kinesisAdapter, envConfig, dynamoDbClient, eventPublisher = EventPublisherInMemory(),
-            eventsMicrostore = EventsMicrostoreInMemory()
-        )
-    }
+    private lateinit var microstore: EventsMicrostoreInMemory
+    private lateinit var container: ListenerContainer
+    private lateinit var listener: Listener
 
     @BeforeEach
     fun beforeEach() {
-        dynamoDbClient.reset()
+        val envConfig = EnvironmentConfig()
+        val eventPublisher = EventPublisherInMemory()
+        val faultManager = FaultManager(envConfig, eventPublisher, skipLogging = true)
+        microstore = EventsMicrostoreInMemory()
+        
+        container = ListenerContainer(
+            envConfig = envConfig,
+            eventsMicrostore = microstore,
+            faultManager = faultManager,
+        )
+        
+        listener = Listener(container)
+    }
+
+    @Test
+    fun `should handle empty or null Kinesis records successfully without storing anything`() {
+        // Arrange
+        val emptyEvent = KinesisEvent().apply { records = emptyList() }
+        val nullRecordsEvent = KinesisEvent()
+        val context = TestContext()
+
+        // Act
+        val resultEmpty = listener.handleRequest(emptyEvent, context)
+        val resultNull = listener.handleRequest(nullRecordsEvent, context)
+
+        // Assert
+        resultEmpty.shouldBeNull()
+        resultNull.shouldBeNull()
+        microstore.saveUowMap().shouldBeEmpty()
     }
 
     @ParameterizedTest
     @TestEvent(value = "events/kinesis_basic.json", type = KinesisEvent::class)
-    fun testBasicKinesisEvent(event: KinesisEvent) {
+    fun `should handle valid Kinesis events and save to microstore`(event: KinesisEvent) {
+        // Arrange
         val context = TestContext()
 
-        event.records[0].kinesis.data = encodePayload(ship1Event1)
-        event.records[1].kinesis.data = encodePayload(ship1Event2)
+        // Act
+        val result = listener.handleRequest(event, context)
 
-        listener.handleRequest(event, context)
+        // Assert
+        result.shouldBeNull()
 
-        assertEquals(2,dynamoDbClient.putRequests.size)
-        val putRequest1 = dynamoDbClient.putRequests["SHIP-001-2025"]
-        val putRequest2 = dynamoDbClient.putRequests["SHIP-002-2025"]
+        // Assert that the event was processed and collected into the memory microstore
+        val savedUows = microstore.saveUowMap()
+        savedUows.shouldNotBeEmpty()
 
-        assertNotNull(putRequest1)
-        assertNotNull(putRequest2)
-        assertJsonString(ship1Event1.toString(), putRequest1.item?.get("event")!!.asS())
-        assertJsonString(ship1Event2.toString(), putRequest2.item?.get("event")!!.asS())
+        val uow = savedUows.values.first()
+        uow.event shouldNotBe null
+        uow.event?.id shouldBe "test-event-123"
+
+        val publisher = container.faultManager.publisher() as EventPublisherInMemory
+        publisher shouldNotBe null
+        publisher.events().size shouldBe 1
+        val event = publisher.events().first()
+        event shouldNotBe null
+        val fault = event.shouldBeInstanceOf<FailureEvent>()
+        val faultUow = fault.failureException?.uow shouldNotBe null
+        val record = faultUow?.record.shouldBeInstanceOf<KinesisEvent.KinesisEventRecord>()
+        record shouldNotBe null
+        record.eventID shouldBe "shardId-000000000000:1"
     }
 
-    private fun cleanUpString(s: String): String {
-        return s.replace("\\s".toRegex(), "")
-    }
+    @ParameterizedTest
+    @TestEvent(value = "events/kinesis_basic.json", type = KinesisEvent::class)
+    fun `should transform kinesis events into a flow`(event: KinesisEvent) {
+        // Arrange
 
-    private fun assertJsonString(expected: String, actual: String) {
-        assertEquals(cleanUpString(expected), cleanUpString(actual))
-    }
+        // Act
+        val flow = container.kinesisAdapter
+            .fromKinesis(container.faultManager, event)
 
-    private fun encodePayload(payload: TrackedUnitEvent): ByteBuffer? {
-        return UTF_8.encode(sutJson.encodeToString(payload))
-    }
+        runBlocking {
+            val eventList = flow.toList()
+            eventList.size shouldBe 1
+            val uow = eventList[0]
+            uow.event shouldNotBe null
+            uow.event?.id shouldBe "test-event-123"
+        }
 
-    val shipment1 = TrackedUnit().apply {
-        id = "SHIP-001"
-        senderFullName = "Alice Sender"
-        returnAddress = TrackedUnit.Address(
-            street = "123 Main St",
-            city = "Springfield",
-            state = "IL",
-            zip = "62701"
-        )
-        destinationAddress = TrackedUnit.Address(
-            street = "987 Market Ave",
-            city = "Chicago",
-            state = "IL",
-            zip = "60601"
-        )
-        trackingNumber = "TRACK-001-2025"
-        weight = 1.5
-        dimensions = TrackedUnit.PackageDimensions(
-            length = 30.0,
-            width = 20.0,
-            height = 10.0
-        )
-    }
+        val faults = container.faultManager.getFaults()
+        faults.size shouldBe 1
+        val fault = faults[0]
+        fault shouldNotBe null
+        fault.failureException shouldNotBe null
 
-    val ship1Event1 = ShipmentCreatedEvent().apply {
-        id = "SHIP-001-2025"
-        entity = shipment1
-        timestamp = Instant.now().toEpochMilli() / 1000
-        location = "Springfield, IL"
-        result = "SUCCESS"
+        val faultUow = fault.failureException?.uow
+        faultUow shouldNotBe null
+        faultUow?.record shouldNotBe null
+        val fm = container.faultManager
+
+        runBlocking {
+            val flushedCount = fm.flushFaults()
+            flushedCount shouldBe 1
+        }
 
     }
 
-    val ship1Event2 = ShipmentDeliveredEvent().apply {
-        id = "SHIP-002-2025"
-        entity = shipment1
-        timestamp = Instant.now().toEpochMilli() / 1000
-        location = "Chicago, IL"
-        result = "SUCCESS"
-    }
+    @Test
+    fun `create an event converted to base64 and back`() {
+        val event = ShipmentCreatedEvent().apply {
+            id = "test-event-123"
+            partitionKey = "pk-1"
+            entity = TrackedUnit().apply {
+                id = "tu=123"
+                senderFullName = "Fulanito de tal"
+            }
+        }
 
+        val eventString: String = event.encoded()
+        val base64: String = Base64.encode(eventString.toByteArray())
+
+        val payload: ByteArray = Base64.decode(base64)
+        val jsonString = String(payload)
+
+        assert(jsonString == eventString)
+    }
 }

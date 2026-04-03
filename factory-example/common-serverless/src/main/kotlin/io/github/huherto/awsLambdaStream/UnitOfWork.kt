@@ -47,7 +47,7 @@ data class UnitOfWork(
 )
 
 class FailureException(
-    val uom: UnitOfWork,
+    val uow: UnitOfWork,
     cause: Throwable?
 ) : RuntimeException( cause)
 

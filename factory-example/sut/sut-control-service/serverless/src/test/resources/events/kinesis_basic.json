@@ -21,7 +21,7 @@
         "kinesisSchemaVersion": "1.0",
         "partitionKey": "user-42",
         "sequenceNumber": "2",
-        "data": "eyJldmVudCI6InVwZGF0ZSIsImlkIjoiYWJjMTIzIn0=",
+        "data": "ewogICAgInR5cGUiOiAiU0hJUE1FTlRfQ1JFQVRFRCIsCiAgICAiaWQiOiAidGVzdC1ldmVudC0xMjMiLAogICAgInBhcnRpdGlvbktleSI6ICJway0xIiwKICAgICJlbnRpdHkiOiB7CiAgICAgICAgImlkIjogInR1PTEyMyIsCiAgICAgICAgInNlbmRlckZ1bGxOYW1lIjogIkZ1bGFuaXRvIGRlIHRhbCIKICAgIH0KfQ==",
         "approximateArrivalTimestamp": 1731012060.0
       },
       "eventSource": "aws:kinesis",

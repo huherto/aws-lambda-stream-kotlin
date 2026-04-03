@@ -10,12 +10,14 @@ import java.util.concurrent.ConcurrentLinkedQueue
 class FaultManager constructor(
     private val envConfig: EnvironmentConfig,
     private val eventPublisher: EventPublisher,
+    private val skipLogging: Boolean = false
 ) {
 
     private val logger = mu.KotlinLogging.logger { }
     
     private val theFaults = ConcurrentLinkedQueue<FailureEvent>()
 
+    // We may no longer need this.
     class FaultManagerPipeline(id: String) : Pipeline(id) {
         override fun connect(
             fm: FaultManager,
@@ -25,10 +27,15 @@ class FaultManager constructor(
             return emptyList<UnitOfWork>().asFlow()
         }
     }
+
     private val faultManagerPipeline = FaultManagerPipeline("fault1")
 
     fun getFaults(): List<FailureEvent> {
         return theFaults.toList()
+    }
+
+    fun publisher() : EventPublisher {
+        return eventPublisher
     }
 
     inline fun <R> Flow<UnitOfWork>.mapNotFaulty(
@@ -76,12 +83,14 @@ class FaultManager constructor(
     }
 
     fun logError(exception: Throwable) {
-        logger.error {
-            "Exception in pipeline flow: ${exception.message}"
+        if (!skipLogging) { // Use it to keep logs clean on unit tests.
+            logger.error {
+                "Exception in pipeline flow: ${exception.message}"
+            }
         }
     }
 
-    suspend fun flushFaults() {
+    suspend fun flushFaults() : Int {
         val flow = flow {
             while (true) {
                 val fault = theFaults.poll() ?: break
@@ -89,7 +98,10 @@ class FaultManager constructor(
                 emit(uow)
             }
         }
-        val count = eventPublisher.publish(flow).collect()
-        logger.info { "flushFaults: count=$count" }
+        val count = eventPublisher.publish(flow).count()
+        if (!skipLogging) {
+            logger.info { "flushFaults: count=$count" }
+        }
+        return count
     }
 }
