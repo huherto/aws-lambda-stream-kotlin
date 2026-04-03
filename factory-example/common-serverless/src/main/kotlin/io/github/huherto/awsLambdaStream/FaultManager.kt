@@ -15,7 +15,7 @@ class FaultManager constructor(
 
     private val logger = mu.KotlinLogging.logger { }
     
-    private val theFaults = ConcurrentLinkedQueue<FailureEvent>()
+    private val theFaults = ConcurrentLinkedQueue<FaultEvent>()
 
     // We may no longer need this.
     class FaultManagerPipeline(id: String) : Pipeline(id) {
@@ -30,7 +30,7 @@ class FaultManager constructor(
 
     private val faultManagerPipeline = FaultManagerPipeline("fault1")
 
-    fun getFaults(): List<FailureEvent> {
+    fun getFaults(): List<FaultEvent> {
         return theFaults.toList()
     }
 
@@ -51,13 +51,13 @@ class FaultManager constructor(
         return try {
             block(uow)
         } catch (e: Throwable) {
-            val failureException = FailureException(uow, e)
-            redirectFailure(failureException)
+            val faultException = FaultException(uow, e)
+            redirectFailure(faultException)
             null
         }
     }
 
-    private fun isRetriableException(exception: FailureException): Boolean {
+    private fun isRetriableException(exception: FaultException): Boolean {
         if (!envConfig.streamRetryEnabled()) return false
         if (exception.cause is SdkBaseException) {
             return (exception.cause as SdkBaseException).sdkErrorMetadata.isRetryable
@@ -65,11 +65,11 @@ class FaultManager constructor(
         return false
     }
 
-    fun redirectFailure(ex: FailureException) {
+    fun redirectFailure(ex: FaultException) {
         logError(ex)
         if (!isRetriableException(ex)) {
             val functionName = envConfig.awsLambdaFunctionName() ?: "undefined"
-            val failureEvent = FailureEvent().apply {
+            val failureEvent = FaultEvent().apply {
                 id = UUID.randomUUID().toString()
                 partitionKey = UUID.randomUUID().toString()
                 timestamp = System.currentTimeMillis()

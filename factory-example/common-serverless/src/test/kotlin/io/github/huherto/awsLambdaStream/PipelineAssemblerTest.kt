@@ -24,7 +24,7 @@ class PipelineAssemblerTest {
             with(fm) {
                 return fromFlow.mapNotNull {
                     faulty(it) {
-                        throw FailureException(it, RuntimeException("Intentional failure for $id"))
+                        throw FaultException(it, RuntimeException("Intentional failure for $id"))
                     }
                 }
             }
@@ -133,7 +133,7 @@ class PipelineAssemblerTest {
         assertEquals(0, fm.getFaults().size, "Faults should be empty after publishing")
 
         // Retrieve the event from the captured UnitOfWork
-        val failureEvent = publishedEvents[0] as? FailureEvent
+        val failureEvent = publishedEvents[0] as? FaultEvent
         assertNotNull(failureEvent)
         assertEquals(FAULT_EVENT_TYPE, failureEvent?.eventType())
         

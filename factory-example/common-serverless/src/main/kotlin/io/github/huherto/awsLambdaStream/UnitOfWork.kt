@@ -46,20 +46,20 @@ data class UnitOfWork(
     val publishResponse: ConnectorResponse? = null,
 )
 
-class FailureException(
+class FaultException(
     val uow: UnitOfWork,
     cause: Throwable?
 ) : RuntimeException( cause)
 
 const val FAULT_EVENT_TYPE : String = "fault"
 
-class FailureEvent() : Event {
+class FaultEvent() : Event {
 
     override var id: String? = null
     override var timestamp: Long? = null
     override var partitionKey: String? = null
     override var tags: Map<String, String>? = mutableMapOf()
-    var failureException : FailureException? = null
+    var failureException : FaultException? = null
     override var raw: Any? = null
     override var eem: Any? = null
     override fun eventType(): String {

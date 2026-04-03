@@ -65,7 +65,7 @@ class FaultManagerTest : FunSpec({
         
         // Act & Assert - Scenario 1: non-retriable (streamRetryEnabled = false)
         every { envConfig.streamRetryEnabled() } returns false
-        val nonRetriableEx = FailureException(uow, RuntimeException("non-retriable"))
+        val nonRetriableEx = FaultException(uow, RuntimeException("non-retriable"))
         
         faultManager.redirectFailure(nonRetriableEx)
         
@@ -76,16 +76,16 @@ class FaultManagerTest : FunSpec({
         every { envConfig.streamRetryEnabled() } returns true
         val sdkException = mockk<SdkBaseException>(relaxed = true)
         every { sdkException.sdkErrorMetadata.isRetryable } returns true
-        val retriableEx = FailureException(uow, sdkException)
+        val retriableEx = FaultException(uow, sdkException)
         
-        shouldThrow<FailureException> {
+        shouldThrow<FaultException> {
             faultManager.redirectFailure(retriableEx)
         }
         faultManager.getFaults() shouldHaveSize 1 // No new faults added
         
         // Act & Assert - Scenario 3: non-retriable SDK exception (retryable=false)
         every { sdkException.sdkErrorMetadata.isRetryable } returns false
-        val nonRetriableSdkEx = FailureException(uow, sdkException)
+        val nonRetriableSdkEx = FaultException(uow, sdkException)
         
         faultManager.redirectFailure(nonRetriableSdkEx)
         
@@ -104,7 +104,7 @@ class FaultManagerTest : FunSpec({
         every { envConfig.awsLambdaFunctionName() } returns null
         every { envConfig.streamRetryEnabled() } returns false
         
-        val ex = FailureException(uow, RuntimeException("error"))
+        val ex = FaultException(uow, RuntimeException("error"))
         
         // Act
         faultManager.redirectFailure(ex)
@@ -169,9 +169,9 @@ class FaultManagerTest : FunSpec({
 
         val emittedList = eventPublisher.events()
         emittedList shouldHaveSize 2
-        (emittedList[0] is FailureEvent) shouldBe true
-        (emittedList[0] as FailureEvent).failureException?.cause?.message shouldBe "error 1"
-        (emittedList[1] as FailureEvent).failureException?.cause?.message shouldBe "error 2"
+        (emittedList[0] is FaultEvent) shouldBe true
+        (emittedList[0] as FaultEvent).failureException?.cause?.message shouldBe "error 1"
+        (emittedList[1] as FaultEvent).failureException?.cause?.message shouldBe "error 2"
     }
 
     test("logError should not throw exceptions") {

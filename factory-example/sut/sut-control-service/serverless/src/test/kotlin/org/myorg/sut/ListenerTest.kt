@@ -2,7 +2,7 @@ package org.myorg.sut
 
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
-import io.github.huherto.awsLambdaStream.FailureEvent
+import io.github.huherto.awsLambdaStream.FaultEvent
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
 import io.github.huherto.awsLambdaStream.sinks.EventsMicrostoreInMemory
@@ -86,7 +86,7 @@ class ListenerTest {
         publisher.events().size shouldBe 1
         val event = publisher.events().first()
         event shouldNotBe null
-        val fault = event.shouldBeInstanceOf<FailureEvent>()
+        val fault = event.shouldBeInstanceOf<FaultEvent>()
         val faultUow = fault.failureException?.uow shouldNotBe null
         val record = faultUow?.record.shouldBeInstanceOf<KinesisEvent.KinesisEventRecord>()
         record shouldNotBe null
