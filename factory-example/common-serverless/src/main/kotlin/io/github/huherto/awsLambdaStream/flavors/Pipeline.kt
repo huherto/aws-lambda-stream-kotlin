@@ -23,8 +23,7 @@ abstract class Pipeline(val id : String) {
 
     fun printStepPipeline(step: String, uow: UnitOfWork) {
         val redacted = trimAndRedacted(uow)
-        val eventType = uow.event?.eventType() ?: "unknown"
-        logger.debug { "step type:${eventType}, eid:${uow.event?.id}, uow: $redacted" }
+        logger.info { "step: ${step}, eid:${uow.event?.id}, uow: $redacted" }
     }
 
     // Not implemented yet. For now, you could redefine manually to redact specific fields.

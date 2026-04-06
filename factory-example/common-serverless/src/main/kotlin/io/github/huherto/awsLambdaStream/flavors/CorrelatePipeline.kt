@@ -1,17 +1,12 @@
 package io.github.huherto.awsLambdaStream.flavors
 
-import aws.sdk.kotlin.services.dynamodb.model.PutItemRequest
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import io.github.huherto.awsLambdaStream.*
 import io.github.huherto.awsLambdaStream.from.RecordImage
 import io.github.huherto.awsLambdaStream.from.RecordPair
 import io.github.huherto.awsLambdaStream.sinks.EventsMicrostore
-import io.github.huherto.awsLambdaStream.utils.nullableBool
-import io.github.huherto.awsLambdaStream.utils.nullableN
-import io.github.huherto.awsLambdaStream.utils.nullableS
 import kotlinx.coroutines.flow.*
 import kotlin.reflect.KClass
-import aws.sdk.kotlin.services.dynamodb.model.AttributeValue as SdkAV
 
 const val CORREL = "CORREL"
 
@@ -72,33 +67,6 @@ class CorrelatePipeline constructor(
         // use a suffix when you need the same key for different sets of rules
         val key = correlationKey(uow) + correlationKeySuffix
         return uow.copy(key = key)
-    }
-
-    internal fun defaultPutRequest(uow: UnitOfWork) : UnitOfWork {
-
-        val event: Event? = uow.event
-        val timeStamp = event?.timestamp
-        val awsRegion = envConfig.awsRegion()
-
-        val itemValues = mapOf(
-            "pk" to nullableS(uow.key),
-            "sk" to nullableS(event?.id),
-            "discriminator" to SdkAV.S(CORREL), // ATION
-            "timestamp" to SdkAV.N(timeStamp.toString()),
-            "awsregion" to SdkAV.S(awsRegion),
-            "sequenceNumber" to nullableS(uow.meta?.get("sequenceNumber")),
-            "ttl" to nullableN(uow.meta?.get("ttl")),
-            "expire" to nullableBool(expire),
-            "suffix" to SdkAV.S(correlationKeySuffix),
-            "pipelineId" to nullableS(id),
-            "event" to nullableS(event?.encoded()),
-        )
-
-        val putRequest = PutItemRequest.Companion {
-            tableName = envConfig.tableName() ?: "events"
-            item = itemValues
-        }
-        return uow.copy(putRequest = putRequest)
     }
 
     internal fun Flow<UnitOfWork>.save(): Flow<UnitOfWork> {

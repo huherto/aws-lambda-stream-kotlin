@@ -20,14 +20,12 @@ import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
-import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
-import aws.sdk.kotlin.services.dynamodb.model.AttributeValue as SdkAV
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue as EventAV
 
 class CorrelatePipelineTest {
@@ -152,41 +150,46 @@ class CorrelatePipelineTest {
     }
 
     @Test
-    fun `save should generate PutItemRequest correctly`() {
+    fun `save should map UnitOfWork to include SaveOptions and call EventsMicrostore`() : Unit = runBlocking {
         // Arrange
-        val envConfig = spyk<EnvironmentConfig>()
-        every { envConfig.awsRegion() } returns "us-east-1"
         val pipeline = CorrelatePipeline(
             id = "test-pipeline",
             envConfig = envConfig,
-            eventsMicrostore = EventsMicrostoreImpl(
-                envConfig = envConfig,
-                dynamoDbClient = mockk<DynamoDbClient>(),
-                faultManager = FaultManager(envConfig, eventPublisher = EventPublisherInMemory())
-            ))
-        val uow = UnitOfWork(
-            key = "test-key",
-            event = createFakeEvent(
-                eventId = "event-1",
-                eventTimestamp = 1600000000L,
-                encodedStr = """{"id":"event-1"}"""
-            ),
-            meta = mapOf(
-                "sequenceNumber" to "123",
-                "ttl" to "456",
-                "expire" to "789"
-            )
+            eventsMicrostore = EventsMicrostoreInMemory(),
+            expire = true,
+            correlationKeySuffix = "-suffix"
         )
 
-        // Act - Default behavior
-        val result = pipeline.defaultPutRequest(uow)
+        val event = createFakeEvent(eventId = "test-event-id", eventTimestamp = 12345L)
+        val uow = UnitOfWork(
+            record = DynamodbEvent.DynamodbStreamRecord(),
+            event = event
+        ).copy(
+            key = "test-key",
+            meta = mapOf("sequenceNumber" to "seq-1", "ttl" to "999")
+        )
 
-        // Assert - Default behavior
-        val request = result.putRequest
-        request.shouldNotBeNull()
-        (request.item?.get("discriminator") as? SdkAV.S)?.value shouldBe "CORREL"
-        (request.item?.get("pk") as? SdkAV.S)?.value shouldBe "test-key"
-        (request.item?.get("pipelineId") as? SdkAV.S)?.value shouldBe "test-pipeline"
+        // Act
+        val resultFlow = with(pipeline) { flowOf(uow).save() }
+        val resultList = resultFlow.toList()
+
+        // Assert
+        resultList.size shouldBe 1
+        val processedUow = resultList.first()
+
+        val saveOptions = processedUow.saveOptions
+        saveOptions.shouldNotBeNull()
+
+        saveOptions.pk shouldBe "test-key"
+        saveOptions.sk shouldBe "test-event-id"
+        saveOptions.discriminator shouldBe "CORREL"
+        saveOptions.timeStamp shouldBe "12345"
+        saveOptions.awsRegion shouldBe "us-east-1" // comes from the envConfig spy
+        saveOptions.sequenceNumber shouldBe "seq-1"
+        saveOptions.ttl shouldBe 999L
+        saveOptions.expire shouldBe true
+        saveOptions.suffix shouldBe "-suffix"
+        saveOptions.pipelineId shouldBe "test-pipeline"
     }
 
     // --- Unit Tests for the Connect Function ---
