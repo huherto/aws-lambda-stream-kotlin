@@ -1,13 +1,13 @@
 package io.github.huherto.awsLambdaStream.testsupport
 
 import aws.sdk.kotlin.runtime.auth.credentials.StaticCredentialsProvider
-import aws.smithy.kotlin.runtime.net.url.Url
-import kotlinx.coroutines.delay
 import aws.sdk.kotlin.services.kinesis.KinesisClient
 import aws.sdk.kotlin.services.kinesis.model.CreateStreamRequest
 import aws.sdk.kotlin.services.kinesis.model.DescribeStreamRequest
 import aws.sdk.kotlin.services.kinesis.model.ResourceNotFoundException
 import aws.sdk.kotlin.services.kinesis.model.StreamStatus
+import aws.smithy.kotlin.runtime.net.url.Url
+import kotlinx.coroutines.delay
 import org.testcontainers.containers.localstack.LocalStackContainer
 
 class KinesisHelper {

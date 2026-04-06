@@ -16,7 +16,7 @@ repositories {
 dependencies {
     implementation(libs.aws.cdk)
     testImplementation(kotlin("test"))
-    implementation(project(":factory-example:common-stack"))
+    implementation(project(":examples:common-stack"))
 }
 
 tasks.test {

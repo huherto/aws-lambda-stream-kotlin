@@ -9,12 +9,12 @@
 
 rootProject.name = "aws-lambda-stream-kotlin"
 
-include("factory-example:common-stack")
-include("factory-example:common-serverless")
-include("factory-example:sut:sut-event-hub")
-include("factory-example:sut:sut-event-hub:serverless")
-include("factory-example:sut:sut-event-hub:stack")
-include("factory-example:sut:sut-control-service")
-include("factory-example:sut:sut-control-service:serverless")
-include("factory-example:sut:sut-control-service:stack")
-include("factory-example:sut:integration-test")
+include("examples:common-stack")
+include("examples:common-serverless")
+include("examples:sut:sut-event-hub")
+include("examples:sut:sut-event-hub:serverless")
+include("examples:sut:sut-event-hub:stack")
+include("examples:sut:sut-control-service")
+include("examples:sut:sut-control-service:serverless")
+include("examples:sut:sut-control-service:stack")
+include("examples:sut:integration-test")

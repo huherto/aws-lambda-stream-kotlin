@@ -17,7 +17,7 @@ dependencies {
     implementation(libs.aws.cdk)
     testImplementation(kotlin("test"))
     implementation("org.apache.logging.log4j:log4j-slf4j2-impl:2.25.3")
-    implementation(project(":factory-example:common-stack"))
+    implementation(project(":examples:common-stack"))
 }
 
 tasks.test {

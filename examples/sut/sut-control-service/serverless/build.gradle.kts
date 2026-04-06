@@ -24,7 +24,7 @@ dependencies {
 
     implementation(platform(libs.aws.sdk.bom))
 
-    implementation(project(":factory-example:common-serverless"))
+    implementation(project(":examples:common-serverless"))
 
     implementation(libs.aws.java.core)
     implementation(libs.aws.java.events)

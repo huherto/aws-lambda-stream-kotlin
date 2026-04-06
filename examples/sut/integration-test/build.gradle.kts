@@ -49,7 +49,7 @@ testing {
                 implementation(libs.testcon.junit.jupiter)
                 implementation(libs.testcon.localstack)
 
-                implementation(project(":factory-example:common-serverless"))
+                implementation(project(":examples:common-serverless"))
                 implementation(project())
 
             }
