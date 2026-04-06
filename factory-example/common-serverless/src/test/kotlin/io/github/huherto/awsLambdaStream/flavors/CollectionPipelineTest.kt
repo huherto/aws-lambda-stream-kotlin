@@ -19,7 +19,7 @@ class CollectionPipelineTest {
     private fun createPipeline(
         ttlDays: Int? = null,
         includeRaw: Boolean = true,
-        expire: String? = null,
+        expire: Boolean? = null,
         envConfigTtl: Int? = 33,
         eventsMicrostore: EventsMicrostoreInMemory = EventsMicrostoreInMemory()
     ): CollectPipeline {
@@ -57,12 +57,12 @@ class CollectionPipelineTest {
     @Test
     fun `save internal flow extension should map UnitOfWork with saveOptions and delegate to eventsMicrostore`() :Unit = runBlocking {
         // Arrange
-        val inMemoryStore = EventsMicrostoreInMemory()
+        val eventsMicrostore = EventsMicrostoreInMemory()
         val pipeline = createPipeline(
             ttlDays = 10,
             includeRaw = false,
-            expire = "2025-01-01",
-            eventsMicrostore = inMemoryStore
+            expire = true,
+            eventsMicrostore = eventsMicrostore
         )
 
         val mockEvent = mockk<Event>(relaxed = true) {
@@ -84,14 +84,14 @@ class CollectionPipelineTest {
         
         val savedUow = resultList.first()
         savedUow.saveOptions.shouldNotBeNull()
-        savedUow.saveOptions?.includeRaw shouldBe false
-        savedUow.saveOptions?.expire shouldBe "2025-01-01"
+        savedUow.saveOptions.includeRaw shouldBe false
+        savedUow.saveOptions.expire shouldBe true
         
         // TTL calculation check: timestamp in secs (1000) + daysInSecs(10 days = 864000) = 865000
-        savedUow.saveOptions?.ttlTimestampInSecs shouldBe 865000L
+        savedUow.saveOptions.ttl shouldBe 865000L
 
         // Verify that it was accurately recorded in the microstore via EventsMicrostoreInMemory
-        val savedMap = inMemoryStore.saveUowMap()
+        val savedMap = eventsMicrostore.saveUowMap()
         savedMap.size shouldBe 1
         savedMap["event-123"] shouldBe savedUow
     }
@@ -99,11 +99,11 @@ class CollectionPipelineTest {
     @Test
     fun `save internal flow extension should fallback to environment config ttl if ttlDays is not explicitly provided`() : Unit = runBlocking {
         // Arrange
-        val inMemoryStore = EventsMicrostoreInMemory()
+        val eventsMicrostore = EventsMicrostoreInMemory()
         val pipeline = createPipeline(
             ttlDays = null,
             envConfigTtl = 5,
-            eventsMicrostore = inMemoryStore
+            eventsMicrostore = eventsMicrostore
         )
 
         val mockEvent = mockk<Event>(relaxed = true) {
@@ -124,10 +124,10 @@ class CollectionPipelineTest {
         val savedUow = resultList.first()
         
         // TTL calculation check: timestamp in secs (2000) + daysInSecs(5 days = 432000) = 434000
-        savedUow.saveOptions?.ttlTimestampInSecs shouldBe 434000L
+        savedUow.saveOptions?.ttl shouldBe 434000L
         
         // Verify it was correctly stored
-        val savedMap = inMemoryStore.saveUowMap()
+        val savedMap = eventsMicrostore.saveUowMap()
         savedMap.size shouldBe 1
         savedMap["event-456"] shouldBe savedUow
     }

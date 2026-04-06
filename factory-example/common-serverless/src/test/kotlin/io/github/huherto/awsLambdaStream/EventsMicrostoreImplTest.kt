@@ -17,7 +17,7 @@ class EventsMicrostoreImplTest {
     private val dynamoDbClient = mockk<DynamoDbClient>()
     private val faultManager = mockk<FaultManager>()
 
-    private val sut = EventsMicrostoreImpl(envConfig, dynamoDbClient, faultManager)
+    private val eventMicrostore = EventsMicrostoreImpl(envConfig, dynamoDbClient, faultManager)
 
     @Test
     fun `putRequest should correctly populate PutItemRequest based on UnitOfWork, Event, and EnvironmentConfig`() {
@@ -34,23 +34,29 @@ class EventsMicrostoreImplTest {
             every { encoded() } returns eventEncoded
         }
 
-        val mockSaveOptions = mockk<EventsMicrostore.SaveOptions> {
-            every { includeRaw } returns true
-            every { ttlTimestampInSecs } returns 987654321
-            every { expire } returns "expire-timestamp"
-        }
+        val savedOptions = EventsMicrostore.SaveOptions(
+            pk = eventId,
+            sk = "EVENT",
+            discriminator = "EVENT",
+            timeStamp = eventTimestamp.toString(),
+            includeRaw = true,
+            awsRegion = awsRegion,
+            ttl = 987654321,
+            expire = true,
+            data = "uow-key",
+        )
 
         val uow = UnitOfWork(
             event = mockEvent,
             key = "uow-key",
-            saveOptions = mockSaveOptions
+            saveOptions = savedOptions
         )
 
         every { envConfig.awsRegion() } returns awsRegion
         every { envConfig.tableName() } returns expectedTableName
 
         // Act
-        val result = sut.putRequest(uow)
+        val result = eventMicrostore.putRequest(uow)
 
         // Assert
         val putRequest = result.putRequest.shouldNotBeNull()
@@ -64,7 +70,7 @@ class EventsMicrostoreImplTest {
         item["timestamp"].shouldBeTypeOf<AttributeValue.N>().value shouldBe eventTimestamp.toString()
         item["awsregion"].shouldBeTypeOf<AttributeValue.S>().value shouldBe awsRegion
         item["ttl"].shouldBeTypeOf<AttributeValue.N>().value shouldBe "987654321"
-        item["expire"].shouldBeTypeOf<AttributeValue.S>().value shouldBe "expire-timestamp"
+        item["expire"].shouldBeTypeOf<AttributeValue.Bool>().value shouldBe true
         item["data"].shouldBeTypeOf<AttributeValue.S>().value shouldBe "uow-key"
         item["event"].shouldBeTypeOf<AttributeValue.S>().value shouldBe eventEncoded
     }

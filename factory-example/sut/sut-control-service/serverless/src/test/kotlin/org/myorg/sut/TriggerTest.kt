@@ -8,6 +8,7 @@ import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.PipelineAssembler
 import io.github.huherto.awsLambdaStream.from.DynamodbAdapter
 import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
+import io.github.huherto.awsLambdaStream.sinks.EventsMicrostoreInMemory
 import io.github.huherto.awsLambdaStream.testsupport.TestContext
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
@@ -18,27 +19,33 @@ import io.mockk.spyk
 
 class TriggerTest : FunSpec({
 
+    fun createContainer(): TriggerContainer {
+        val envConfig = spyk<EnvironmentConfig>()
+        val dynamoDbClient = mockk<DynamoDbClient>(relaxed = true)
+        val eventPublisher = EventPublisherInMemory()
+        val eventsMicrostore = EventsMicrostoreInMemory()
+        val faultManager = FaultManager(envConfig, eventPublisher, skipLogging = true)
+        val container = TriggerContainer(envConfig, dynamoDbClient, eventPublisher, eventsMicrostore, faultManager)
+        return container
+    }
+
     context("Trigger internal pipeline initialization") {
         test("should lazily initialize container") {
             // Arrange
-            val envConfig = spyk<EnvironmentConfig>()
-            val dynamoDbClient = mockk<DynamoDbClient>(relaxed = true)
-            val eventPublisher = EventPublisherInMemory()
-            val container = TriggerContainer(envConfig, dynamoDbClient, eventPublisher)
+            val container = createContainer()
 
             val trigger = Trigger(container)
 
             // Act
             val assembler = container.assembler
             val dynamoDBAdapter = container.dynamoDbAdapter
-            val faultManager = container.faultManager
 
             // Assert
             assembler shouldNotBe null
             assembler.shouldBeInstanceOf<PipelineAssembler>()
 
             assembler.getFaultManager() shouldNotBe null
-            assembler.getFaultManager() shouldBe faultManager
+            assembler.getFaultManager() shouldBe container.faultManager
 
             dynamoDBAdapter shouldNotBe null
             dynamoDBAdapter.shouldBeInstanceOf<DynamodbAdapter>()
@@ -46,22 +53,11 @@ class TriggerTest : FunSpec({
         }
     }
 
+
     context("Trigger handleRequest") {
         test("should process DynamodbEvent successfully and return 'Done' for various record scenarios") {
             // Arrange
-            val envConfig = spyk<EnvironmentConfig>()
-            val dynamoDbClient = mockk<DynamoDbClient>(relaxed = true)
-            val eventPublisher = EventPublisherInMemory()
-            val faultManager = spyk(FaultManager(
-                envConfig,
-                eventPublisher)
-            )
-            val container = TriggerContainer(
-                envConfig,
-                dynamoDbClient,
-                faultManager = faultManager,
-                eventPublisher = eventPublisher,
-            )
+            val container = createContainer()
             val trigger = Trigger(container)
             val testContext = TestContext()
 

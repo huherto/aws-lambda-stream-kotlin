@@ -3,7 +3,6 @@ import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import kotlinx.coroutines.flow.Flow
 import mu.KotlinLogging
-import aws.sdk.kotlin.services.dynamodb.model.AttributeValue as SdkAV
 
 abstract class Pipeline(val id : String) {
 
@@ -37,18 +36,6 @@ abstract class Pipeline(val id : String) {
 
     override fun toString(): String {
         return "Pipeline(id=$id)"
-    }
-
-    protected fun nullableS(s: String?): SdkAV {
-        return s?.let { SdkAV.S(it) } ?: SdkAV.Null(true)
-    }
-
-    protected fun nullableN(s: String?): SdkAV {
-        return s?.let { SdkAV.N(it) } ?: SdkAV.Null(true)
-    }
-
-    protected fun nullableB(s: Boolean?): SdkAV {
-        return s?.let { SdkAV.Bool(it) } ?: SdkAV.Null(true)
     }
 
 }

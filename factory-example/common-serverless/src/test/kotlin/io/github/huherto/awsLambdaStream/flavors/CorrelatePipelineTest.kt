@@ -12,12 +12,13 @@ import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.from.RecordImage
 import io.github.huherto.awsLambdaStream.from.RecordPair
 import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
+import io.github.huherto.awsLambdaStream.sinks.EventsMicrostoreImpl
+import io.github.huherto.awsLambdaStream.sinks.EventsMicrostoreInMemory
 import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -74,7 +75,11 @@ class CorrelatePipelineTest {
     @Test
     fun `forCollectedEvents should evaluate correctly based on record and event properties`() {
         // Arrange
-        val pipeline = CorrelatePipeline("test-pipeline", envConfig = envConfig)
+        val pipeline = CorrelatePipeline(
+            "test-pipeline",
+            envConfig = envConfig,
+            eventsMicrostore = EventsMicrostoreInMemory()
+        )
         
         val skEventAttr = AttributeValue().apply { s = "EVENT" }
         val skOtherAttr = AttributeValue().apply { s = "OTHER" }
@@ -117,7 +122,11 @@ class CorrelatePipelineTest {
     @Test
     fun `normalize should extract metadata and populate JsonEvent from RecordPair`() {
         // Arrange
-        val pipeline = CorrelatePipeline("test-pipeline", envConfig = envConfig)
+        val pipeline = CorrelatePipeline(
+            "test-pipeline",
+            envConfig = envConfig,
+            eventsMicrostore = EventsMicrostoreInMemory()
+        )
 
         val record = DynamodbEvent.DynamodbStreamRecord().apply {
             dynamodb = StreamRecord().apply {
@@ -143,11 +152,18 @@ class CorrelatePipelineTest {
     }
 
     @Test
-    fun `defaultPutRequest should generate PutItemRequest correctly or use custom putRequest if provided`() {
+    fun `save should generate PutItemRequest correctly`() {
         // Arrange
         val envConfig = spyk<EnvironmentConfig>()
         every { envConfig.awsRegion() } returns "us-east-1"
-        val pipeline = CorrelatePipeline(id = "test-pipeline", envConfig = envConfig)
+        val pipeline = CorrelatePipeline(
+            id = "test-pipeline",
+            envConfig = envConfig,
+            eventsMicrostore = EventsMicrostoreImpl(
+                envConfig = envConfig,
+                dynamoDbClient = mockk<DynamoDbClient>(),
+                faultManager = FaultManager(envConfig, eventPublisher = EventPublisherInMemory())
+            ))
         val uow = UnitOfWork(
             key = "test-key",
             event = createFakeEvent(
@@ -171,17 +187,6 @@ class CorrelatePipelineTest {
         (request.item?.get("discriminator") as? SdkAV.S)?.value shouldBe "CORREL"
         (request.item?.get("pk") as? SdkAV.S)?.value shouldBe "test-key"
         (request.item?.get("pipelineId") as? SdkAV.S)?.value shouldBe "test-pipeline"
-
-        // Arrange & Act & Assert - Custom putRequest delegate function
-        val expectedUow = UnitOfWork()
-        val customPipeline = CorrelatePipeline(
-            id = "test-pipeline",
-            envConfig = envConfig,
-            putRequest = { expectedUow },
-        )
-        
-        val customResult = customPipeline.defaultPutRequest(uow)
-        customResult shouldBeSameInstanceAs expectedUow
     }
 
     // --- Unit Tests for the Connect Function ---
@@ -192,14 +197,17 @@ class CorrelatePipelineTest {
         val dynamoDbClientMock = mockk<DynamoDbClient>()
         coEvery { dynamoDbClientMock.putItem(any()) } returns PutItemResponse.invoke {}
 
-
+        val faultManager = FaultManager(envConfig, eventPublisher = EventPublisherInMemory())
         val pipeline = CorrelatePipeline(
             id = "test-pipeline",
             correlationKey = { "test-correlation-key" },
-            dynamoDbClient = dynamoDbClientMock,
             envConfig = envConfig,
             onEventClass = listOf(FakeEvent::class), // specifically matching our FakeEvent
-            unmarshall = { eventAsString -> FakeEvent(encodedStr = eventAsString)}
+            unmarshall = { eventAsString -> FakeEvent(encodedStr = eventAsString)},
+            eventsMicrostore = EventsMicrostoreImpl(
+                envConfig = envConfig,
+                dynamoDbClient = dynamoDbClientMock,
+                faultManager = faultManager),
         )
 
         val skEventAttr = EventAV().apply { s = "EVENT" }
@@ -216,10 +224,8 @@ class CorrelatePipelineTest {
             event = createFakeEvent(rawObj = RecordPair(null, null))
         )
 
-        val fm = FaultManager(envConfig, eventPublisher = EventPublisherInMemory())
-
         // Act
-        val resultFlow = pipeline.connect(fm, flowOf(validUow))
+        val resultFlow = pipeline.connect(faultManager, flowOf(validUow))
         val resultList = resultFlow.toList()
 
         // Assert
@@ -238,7 +244,8 @@ class CorrelatePipelineTest {
         val pipeline = CorrelatePipeline(
             id = "test-pipeline",
             envConfig = envConfig,
-            correlationKey = { "test-correlation-key" }
+            correlationKey = { "test-correlation-key" },
+            eventsMicrostore = EventsMicrostoreInMemory(),
         )
 
         // Invalid record (wrong eventName)
@@ -268,7 +275,8 @@ class CorrelatePipelineTest {
             id = "test-pipeline",
             envConfig = envConfig,
             correlationKey = { "test-correlation-key" },
-            onContentType = { false } // This will cause the event to be filtered mid-pipeline
+            onContentType = { false }, // This will cause the event to be filtered mid-pipeline
+            eventsMicrostore = EventsMicrostoreInMemory(),
         )
 
         val skEventAttr = EventAV().apply { s = "EVENT" }

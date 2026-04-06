@@ -9,15 +9,14 @@ import io.github.huherto.awsLambdaStream.flavors.EvaluatePipeline
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import io.github.huherto.awsLambdaStream.from.DynamodbAdapter
 import io.github.huherto.awsLambdaStream.getDynamoDbClient
-import io.github.huherto.awsLambdaStream.sinks.EventBridgePublishOptions
-import io.github.huherto.awsLambdaStream.sinks.EventBridgePublisher
-import io.github.huherto.awsLambdaStream.sinks.EventPublisher
+import io.github.huherto.awsLambdaStream.sinks.*
 
 class TriggerContainer(
     val envConfig: EnvironmentConfig,
     val dynamoDbClient: DynamoDbClient,
     val eventPublisher: EventPublisher,
-    val faultManager: FaultManager = FaultManager(envConfig, eventPublisher),
+    val eventsMicrostore: EventsMicrostore,
+    val faultManager: FaultManager,
 ) {
 
     companion object {
@@ -26,10 +25,18 @@ class TriggerContainer(
             val dynamoDbClient = getDynamoDbClient(envConfig)
             val eventPublisherOptions = EventBridgePublishOptions(envConfig)
             val eventPublisher = EventBridgePublisher(eventPublisherOptions)
+            val faultManager = FaultManager(envConfig, eventPublisher)
+            val eventsMicrostore = EventsMicrostoreImpl(
+                envConfig = envConfig,
+                dynamoDbClient = dynamoDbClient,
+                faultManager = faultManager,
+            )
             return TriggerContainer(
                 envConfig = envConfig,
                 dynamoDbClient = dynamoDbClient,
                 eventPublisher = eventPublisher,
+                eventsMicrostore = eventsMicrostore,
+                faultManager = faultManager,
             )
         }
     }
@@ -43,8 +50,8 @@ class TriggerContainer(
                 val event = uow.event as? TrackedUnitEvent
                 event?.entity?.id ?: "no-correlation-key"
             },
-            dynamoDbClient = dynamoDbClient,
             onEventClass = listOf(TrackedUnitEvent::class),
+            eventsMicrostore = eventsMicrostore,
         )
     }
 

@@ -13,6 +13,8 @@ import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import io.mockk.every
+import io.mockk.spyk
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.BeforeEach
@@ -30,7 +32,9 @@ class ListenerTest {
 
     @BeforeEach
     fun beforeEach() {
-        val envConfig = EnvironmentConfig()
+        val envConfig = spyk( EnvironmentConfig())
+        every { envConfig.awsRegion() } returns "eu-west-1"
+        every { envConfig.tableName() } returns "events-table-name"
         val eventPublisher = EventPublisherInMemory()
         val faultManager = FaultManager(envConfig, eventPublisher, skipLogging = true)
         microstore = EventsMicrostoreInMemory()

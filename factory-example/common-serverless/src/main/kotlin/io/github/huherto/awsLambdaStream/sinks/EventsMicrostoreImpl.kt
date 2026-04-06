@@ -7,6 +7,9 @@ import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.Event
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.utils.nullableBool
+import io.github.huherto.awsLambdaStream.utils.nullableN
+import io.github.huherto.awsLambdaStream.utils.nullableS
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.buffer
@@ -30,19 +33,45 @@ class EventsMicrostoreImpl constructor(
         }
     }
 
-    fun nullableS(s: String?) : AttributeValue {
-        return s?.let { AttributeValue.S(it) } ?: AttributeValue.Null(true)
-    }
-
     private fun omitRaw(event: Event?): String {
         throw RuntimeException("Not implemented yet")
     }
 
-    fun putRequest(uow: UnitOfWork) : UnitOfWork {
+    internal fun putRequest(uow: UnitOfWork) : UnitOfWork {
+
+        val event: Event? = uow.event
+
+        if (uow.saveOptions == null) return uow.copy(putRequest = null)
+        val itemValues = with(uow.saveOptions) {
+            val encodedEvent = if (includeRaw) event?.encoded() else omitRaw(event)
+            mapOf(
+                "pk" to nullableS(pk),
+                "sk" to nullableS(sk),
+                "discriminator" to nullableS(discriminator),
+                "timestamp" to nullableN(timeStamp),
+                "awsregion" to nullableS(awsRegion),
+                "sequenceNumber" to nullableS(sequenceNumber),
+                "ttl" to nullableN(ttl?.toString()),
+                "expire" to nullableBool(expire),
+                "suffix" to nullableS(suffix),
+                "data" to nullableS(data),
+                "pipelineId" to nullableS(pipelineId),
+                "event" to nullableS(encodedEvent),
+            )
+        }
+
+        val putRequest = PutItemRequest.Companion {
+            tableName = envConfig.tableName() ?: "events"
+            item = itemValues
+        }
+        return uow.copy(putRequest = putRequest)
+    }
+
+    fun putRequestOld(uow: UnitOfWork) : UnitOfWork {
         val event: Event? = uow.event
         val savedOptions = uow.saveOptions ?: EventsMicrostore.SaveOptions()
         val encodedEvent = if (savedOptions.includeRaw) event?.encoded() else omitRaw(event)
-        val ttl = savedOptions.ttlTimestampInSecs
+        val ttl = savedOptions.ttl
         val expire = savedOptions.expire
         val timeStamp = event?.timestamp
         val awsRegion = envConfig.awsRegion()
@@ -54,7 +83,7 @@ class EventsMicrostoreImpl constructor(
             "timestamp" to AttributeValue.N(timeStamp.toString()),
             "awsregion" to AttributeValue.S(awsRegion),
             "ttl" to AttributeValue.N(ttl.toString()),
-            "expire" to nullableS(expire),
+            "expire" to nullableBool(expire),
             "data" to nullableS(uow.key),
             "event" to nullableS(encodedEvent)
         )

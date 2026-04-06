@@ -1,15 +1,19 @@
 package io.github.huherto.awsLambdaStream.flavors
 
-import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.PutItemRequest
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import io.github.huherto.awsLambdaStream.*
 import io.github.huherto.awsLambdaStream.from.RecordImage
 import io.github.huherto.awsLambdaStream.from.RecordPair
-import kotlinx.coroutines.channels.Channel
+import io.github.huherto.awsLambdaStream.sinks.EventsMicrostore
+import io.github.huherto.awsLambdaStream.utils.nullableBool
+import io.github.huherto.awsLambdaStream.utils.nullableN
+import io.github.huherto.awsLambdaStream.utils.nullableS
 import kotlinx.coroutines.flow.*
 import kotlin.reflect.KClass
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue as SdkAV
+
+const val CORREL = "CORREL"
 
 class CorrelatePipeline constructor(
     id: String,
@@ -18,9 +22,7 @@ class CorrelatePipeline constructor(
     val correlationKey: ((UnitOfWork) -> String)? = null,
     val correlationKeySuffix: String = "",
     val envConfig: EnvironmentConfig,
-    val bufferCapacity: Int = Channel.Factory.BUFFERED,
-    var dynamoDbClient: DynamoDbClient? = null,
-    val putRequest: ((UnitOfWork) -> UnitOfWork)? = null,
+    var eventsMicrostore: EventsMicrostore,
     val unmarshall: ((String) -> Event)? = null,
     val expire: Boolean = false,
 ) : Pipeline(id) {
@@ -74,8 +76,6 @@ class CorrelatePipeline constructor(
 
     internal fun defaultPutRequest(uow: UnitOfWork) : UnitOfWork {
 
-        if (putRequest != null) return putRequest(uow)
-
         val event: Event? = uow.event
         val timeStamp = event?.timestamp
         val awsRegion = envConfig.awsRegion()
@@ -83,12 +83,12 @@ class CorrelatePipeline constructor(
         val itemValues = mapOf(
             "pk" to nullableS(uow.key),
             "sk" to nullableS(event?.id),
-            "discriminator" to SdkAV.S("CORREL"), // ATION
+            "discriminator" to SdkAV.S(CORREL), // ATION
             "timestamp" to SdkAV.N(timeStamp.toString()),
             "awsregion" to SdkAV.S(awsRegion),
             "sequenceNumber" to nullableS(uow.meta?.get("sequenceNumber")),
             "ttl" to nullableN(uow.meta?.get("ttl")),
-            "expire" to nullableB(expire),
+            "expire" to nullableBool(expire),
             "suffix" to SdkAV.S(correlationKeySuffix),
             "pipelineId" to nullableS(id),
             "event" to nullableS(event?.encoded()),
@@ -101,14 +101,23 @@ class CorrelatePipeline constructor(
         return uow.copy(putRequest = putRequest)
     }
 
-    private val putDynamoDb: suspend (UnitOfWork) -> UnitOfWork = { uow ->
-        if (dynamoDbClient == null) {
-            dynamoDbClient = getDynamoDbClient(envConfig)
+    internal fun Flow<UnitOfWork>.save(): Flow<UnitOfWork> {
+        val flow = this.map { uow ->
+            val saveOptions = EventsMicrostore.SaveOptions(
+                pk = uow.key,
+                sk = uow.event?.id,
+                discriminator = CORREL,
+                timeStamp = uow.event?.timestamp.toString(),
+                awsRegion = envConfig.awsRegion(),
+                sequenceNumber = uow.meta?.get("sequenceNumber"),
+                ttl = uow.meta?.get("ttl")?.toLongOrNull(),
+                expire = expire,
+                suffix = correlationKeySuffix,
+                pipelineId = id,
+            )
+            uow.copy(saveOptions = saveOptions)
         }
-        val putResponse = uow.putRequest?.let {
-            dynamoDbClient?.putItem(uow.putRequest)
-        }
-        uow.copy(putResponse = putResponse)
+        return eventsMicrostore.save(flow)
     }
 
     override fun connect(fm: FaultManager, fromFlow: Flow<UnitOfWork>) : Flow<UnitOfWork> {
@@ -122,9 +131,7 @@ class CorrelatePipeline constructor(
                 .onEach { uow -> printStartPipeline(uow) }
                 .filter { uow -> faulty(uow) { onContentType(uow) } == true }
                 .mapNotFaulty { uow -> addCorrelationKey(uow)}
-                .mapNotFaulty{ uow -> defaultPutRequest(uow) }
-                .buffer(bufferCapacity)
-                .mapNotNull { uow -> faulty(uow) { putDynamoDb(uow) } }
+                .save()
                 .onEach { uow -> printEndPipeline(uow) }
             return flow
         }
