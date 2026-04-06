@@ -54,13 +54,10 @@ class CollectPipeline constructor(
         with(fm) {
             val flow = fromFlow
                 .filterNotNull()
-                .onEach { printStepPipeline("stepA", it) }
                 .filterEventTypes(this, *onEventClass.toTypedArray())
                 .onEach { uow -> printStartPipeline(uow) }
                 .filter { uow -> faulty(uow) { onContentType(uow) } == true }
-                .onEach { uow -> printStepPipeline("stepB", uow) }
                 .mapNotFaulty { uow -> uow.copy(key = correlationKey(uow)) }
-                .onEach { uow -> printStepPipeline("stepC", uow) }
                 .save()
                 .onEach { uow -> printEndPipeline(uow) }
             return flow

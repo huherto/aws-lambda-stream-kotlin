@@ -1,7 +1,6 @@
 package io.github.huherto.awsLambdaStream.sinks
 
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
-import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
 import aws.sdk.kotlin.services.dynamodb.model.PutItemRequest
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.Event
@@ -59,34 +58,6 @@ class EventsMicrostoreImpl constructor(
                 "event" to nullableS(encodedEvent),
             )
         }
-
-        val putRequest = PutItemRequest.Companion {
-            tableName = envConfig.tableName() ?: "events"
-            item = itemValues
-        }
-        return uow.copy(putRequest = putRequest)
-    }
-
-    fun putRequestOld(uow: UnitOfWork) : UnitOfWork {
-        val event: Event? = uow.event
-        val savedOptions = uow.saveOptions ?: EventsMicrostore.SaveOptions()
-        val encodedEvent = if (savedOptions.includeRaw) event?.encoded() else omitRaw(event)
-        val ttl = savedOptions.ttl
-        val expire = savedOptions.expire
-        val timeStamp = event?.timestamp
-        val awsRegion = envConfig.awsRegion()
-
-        val itemValues = mapOf(
-            "pk" to nullableS(event?.id),
-            "sk" to AttributeValue.S("EVENT"),
-            "discriminator" to AttributeValue.S("EVENT"),
-            "timestamp" to AttributeValue.N(timeStamp.toString()),
-            "awsregion" to AttributeValue.S(awsRegion),
-            "ttl" to AttributeValue.N(ttl.toString()),
-            "expire" to nullableBool(expire),
-            "data" to nullableS(uow.key),
-            "event" to nullableS(encodedEvent)
-        )
 
         val putRequest = PutItemRequest.Companion {
             tableName = envConfig.tableName() ?: "events"

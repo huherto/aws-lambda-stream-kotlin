@@ -34,8 +34,6 @@ class TriggerTest : FunSpec({
             // Arrange
             val container = createContainer()
 
-            val trigger = Trigger(container)
-
             // Act
             val assembler = container.assembler
             val dynamoDBAdapter = container.dynamoDbAdapter
