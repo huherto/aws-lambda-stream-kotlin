@@ -49,7 +49,8 @@ testing {
                 implementation(libs.testcon.junit.jupiter)
                 implementation(libs.testcon.localstack)
 
-                implementation(project(":examples:common-serverless"))
+                implementation(project(":libs:serverless-core"))
+                implementation(project(":examples:sut:common-serverless"))
                 implementation(project())
 
             }

@@ -4,7 +4,6 @@ plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.serialization)
     alias(libs.plugins.shadow)
-    `jvm-test-suite`
 }
 
 group = "org.myorg"
@@ -14,30 +13,23 @@ repositories {
     mavenCentral()
 }
 
-// Exclude the production logger from all test configurations
-configurations.matching { it.name.startsWith("test") }.configureEach {
-    val loggerModule = libs.lambda.json.logger.get().module
-    exclude(group = loggerModule.group, module = loggerModule.name)
-}
-
 dependencies {
 
     implementation(platform(libs.aws.sdk.bom))
 
-    implementation(project(":libs:serverless-core"))
-    implementation(project(":examples:sut:common-serverless"))
-
     implementation(libs.aws.java.core)
     implementation(libs.aws.java.events)
     implementation(libs.aws.sdk.dynamodb)
+    implementation(libs.aws.sdk.eventbridge)
+    implementation(libs.aws.sdk.kinesis)
     implementation(libs.aws.sdk.lambda)
-    implementation(libs.kotlin.stdlib)
-    implementation(libs.kotlinx.serialization.json)
-    implementation(libs.kotlinx.coroutines)
-    implementation(libs.lambda.json.logger)
-    implementation(libs.slf4j.api)
+    implementation(libs.jackson.kotlin)
     implementation(libs.kotlin.logging)
-    //implementation(libs.slf4j.simple)
+    implementation(libs.kotlin.stdlib)
+    implementation(libs.kotlinx.coroutines)
+    implementation(libs.kotlinx.serialization.json)
+    implementation(libs.testcon.localstack)
+    implementation(project(":libs:serverless-core"))
 
 
     testImplementation(kotlin("test"))
@@ -45,7 +37,7 @@ dependencies {
     testImplementation(libs.kotest.assertions)
     testImplementation(libs.kotest.property)
     testImplementation(libs.kotest.runner)
-    testImplementation(libs.kotlin.reflect)
+    testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.mockk)
     testImplementation(libs.slf4j.simple)
 }
@@ -60,11 +52,14 @@ kotlin {
     jvmToolchain(21)
 }
 
-// Taken from https://docs.gradle.org/current/userguide/jvm_test_suite_plugin.html#sec:declare_an_additional_test_suite
 testing {
     suites {
         val test by getting(JvmTestSuite::class) {
             useJUnitJupiter()
         }
     }
+}
+
+tasks.withType<Test> {
+    jvmArgs("-XX:+EnableDynamicAgentLoading")
 }

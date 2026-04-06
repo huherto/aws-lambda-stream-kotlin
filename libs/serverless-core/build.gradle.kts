@@ -6,7 +6,7 @@ plugins {
     alias(libs.plugins.shadow)
 }
 
-group = "org.myorg"
+group = "io.github.huherto.awsLambdaStream"
 version = "1.0"
 
 repositories {
@@ -42,7 +42,7 @@ dependencies {
 }
 
 tasks.shadowJar {
-    archiveBaseName.set("serverless")
+    archiveBaseName.set("serverless-core")
     archiveClassifier.set("")
     archiveVersion.set("")
 }
