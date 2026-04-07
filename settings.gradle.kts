@@ -10,12 +10,12 @@
 rootProject.name = "aws-lambda-stream-kotlin"
 
 include("libs:serverless-core")
-include("examples:common-stack")
+include("examples:common-infra")
 include("examples:sut:common-serverless")
 include("examples:sut:sut-event-hub")
 include("examples:sut:sut-event-hub:app")
-include("examples:sut:sut-event-hub:stack")
+include("examples:sut:sut-event-hub:infra")
 include("examples:sut:sut-control-service")
 include("examples:sut:sut-control-service:app")
-include("examples:sut:sut-control-service:stack")
+include("examples:sut:sut-control-service:infra")
 include("examples:sut:integration-test")

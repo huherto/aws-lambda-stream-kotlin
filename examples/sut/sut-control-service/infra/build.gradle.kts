@@ -16,8 +16,7 @@ repositories {
 dependencies {
     implementation(libs.aws.cdk)
     testImplementation(kotlin("test"))
-    implementation("org.apache.logging.log4j:log4j-slf4j2-impl:2.25.3")
-    implementation(project(":examples:common-stack"))
+    implementation(project(":examples:common-infra"))
 }
 
 tasks.test {
@@ -27,3 +26,5 @@ tasks.test {
 application {
     mainClass.set("org.myorg.sut.AppKt")
 }
+
+
