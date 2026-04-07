@@ -33,7 +33,7 @@ class ControlStack(scope: Construct, serviceProps: ServiceProps) : BaseStack(sco
     private fun newTriggerLambda(): Function =
         Function.Builder.create(this, "trigger")
             .functionName("${subsys()}-control-service-${stage()}-trigger")
-            .code(Code.fromAsset("../serverless/build/libs/serverless.jar"))
+            .code(Code.fromAsset("../app/build/libs/sut-control-service.jar"))
             .handler("org.myorg.sut.Trigger::handleRequest")
             .timeout(Duration.seconds(50))
             .memorySize(1024)
@@ -100,7 +100,7 @@ class ControlStack(scope: Construct, serviceProps: ServiceProps) : BaseStack(sco
     private fun newListenerLambda(): Function =
         Function.Builder.create(this, "listener")
             .functionName("${subsys()}-control-service-${stage()}-listener")
-            .code(Code.fromAsset("../serverless/build/libs/serverless.jar"))
+            .code(Code.fromAsset("../app/build/libs/sut-control-service.jar"))
             .handler("org.myorg.sut.Listener::handleRequest")
             .timeout(Duration.seconds(50))
             .memorySize(1024)

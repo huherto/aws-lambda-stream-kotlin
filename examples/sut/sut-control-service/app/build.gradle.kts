@@ -51,7 +51,7 @@ dependencies {
 }
 
 tasks.shadowJar {
-    archiveBaseName.set("serverless")
+    archiveBaseName.set("sut-control-service")
     archiveClassifier.set("")
     archiveVersion.set("")
 }

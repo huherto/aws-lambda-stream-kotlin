@@ -22,7 +22,7 @@ dependencies {
 }
 
 tasks.shadowJar {
-    archiveBaseName.set("serverless")
+    archiveBaseName.set("sut-event-hub")
     archiveClassifier.set("")
     archiveVersion.set("")
 }
