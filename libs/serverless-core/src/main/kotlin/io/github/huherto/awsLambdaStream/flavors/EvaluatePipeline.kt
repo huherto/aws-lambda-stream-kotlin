@@ -6,8 +6,8 @@ import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import io.github.huherto.awsLambdaStream.*
 import io.github.huherto.awsLambdaStream.from.RecordImage
 import io.github.huherto.awsLambdaStream.from.RecordPair
-import io.github.huherto.awsLambdaStream.queries.queryAllDynamoDB
 import io.github.huherto.awsLambdaStream.sinks.EventPublisher
+import io.github.huherto.awsLambdaStream.sinks.EventsMicrostore
 import io.github.huherto.awsLambdaStream.utils.CompactRule
 import io.github.huherto.awsLambdaStream.utils.compact
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -25,6 +25,7 @@ class EvaluatePipeline (
     id: String,
     val envConfig: EnvironmentConfig,
     val eventPublisher: EventPublisher,
+    val eventsMicrostore: EventsMicrostore,
     val onContentType: (UnitOfWork) -> Boolean = { true },
     val onEventClass: List<KClass<out Event>> = listOf(Event::class),
     val correlationKeySuffix: String = "",
@@ -67,20 +68,28 @@ class EvaluatePipeline (
         val eventAsObject = defaultUnmarshall(eventAsString)
         val record = uow.record as? DynamodbEvent.DynamodbStreamRecord
         val isCorrel = rawNew.get("discriminator")?.s == "CORREL"
-        val correlationKey = if (isCorrel) rawNew.get("pk")?.s else rawNew.get("data")?.s
-
+        val pk = rawNew.get("pk")?.s
+        val data = rawNew.get("data")?.s
+        val expire = rawNew.get("expire")?.b
+        val correlationKey = if (isCorrel) pk else data
+        val suffix = rawNew.get("suffix")?.s
+        val queryParams = EventsMicrostore.QueryParams(
+            pk = pk,
+            isCorrel,
+        )
         return uow.copy(
             meta = mapOf(
                 "id" to uow.event?.id,
                 "sequenceNumber" to record?.dynamodb?.sequenceNumber,
                 "ttl" to "" + rawNew.getTtl().toString(),
-                "expire" to "" + rawNew.get("expire")?.b,
-                "pk" to rawNew.get("pk")?.s,
+                "expire" to "" + expire,
+                "pk" to pk,
                 "data" to rawNew.getData(),
                 "correlationKey" to correlationKey,
-                "suffix" to rawNew.get("suffix")?.s,
+                "suffix" to suffix,
                 "correlation" to isCorrel.toString()
             ),
+            queryParams = queryParams,
             event = eventAsObject
         )
     }
@@ -128,6 +137,10 @@ class EvaluatePipeline (
         return uow.copy(queryRequest = request)
     }
 
+    internal fun Flow<UnitOfWork>.queryCorrelated() : Flow<UnitOfWork> {
+        return eventsMicrostore.queryByPk(this)
+    }
+
     internal fun Flow<UnitOfWork>.complex(): Flow<UnitOfWork> {
         return if (expression == null) {
             this.map { uow ->
@@ -138,23 +151,8 @@ class EvaluatePipeline (
         } else {
             this
                 .filter { uow -> onCorrelationKeySuffix(uow) }
-                .map { uow -> toQueryRequest(uow) }
-                .queryAllDynamoDB(
-                    dynamoDbClient ?: error("DynamoDB client must be configured to process expressions")
-                )
-                .map { uow ->
-                    // In TS, queryAllDynamoDB assigns to 'correlated' via queryResponseField.
-                    // In Kotlin, queryAllDynamoDB stores the result in `queryResponse` (List<Map<String, AttributeValue>>).
-                    // We extract the JSON event string, unmarshall it, and assign the objects to `correlated`.
-                    val correlatedEvents = uow.queryResponse?.mapNotNull { item ->
-                        val eventString = (item["event"] as? SdkAV.S)?.value
-                        eventString?.let { defaultUnmarshall(it) }
-                    } ?: emptyList()
-
-                    uow.copy(
-                        correlated = correlatedEvents
-                    )
-                }
+                .map { uow -> uow.copy() }
+                .queryCorrelated()
                 .filter { uow ->
                     // In TS, the stream mapped the expression logic to a boolean field on uow, then filtered.
                     // In Kotlin, we can directly execute the expression block within standard filter operator.

@@ -133,7 +133,7 @@ class DynamodbQueriesTest {
 
         // Assert - Decryption Output
         queryResults.size shouldBe 1
-        val queryItem = queryResults[0].queryResponse?.firstOrNull()
+        val queryItem = queryResults[0].queryResponse?.items?.firstOrNull()
         (queryItem?.get("id") as? AttributeValue.S)?.value shouldBe "q1"
         (queryItem?.get("decrypted") as? AttributeValue.S)?.value shouldBe "true"
 

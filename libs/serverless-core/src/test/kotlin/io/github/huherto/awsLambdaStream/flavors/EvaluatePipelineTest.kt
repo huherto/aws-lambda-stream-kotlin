@@ -7,6 +7,7 @@ import io.github.huherto.awsLambdaStream.connectors.EventBridgeConnector
 import io.github.huherto.awsLambdaStream.from.RecordImage
 import io.github.huherto.awsLambdaStream.from.RecordPair
 import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
+import io.github.huherto.awsLambdaStream.sinks.EventsMicrostoreInMemory
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
@@ -42,6 +43,7 @@ class EvaluatePipelineTest {
             id = id,
             envConfig = envConfig,
             eventPublisher = eventPublisher,
+            eventsMicrostore = EventsMicrostoreInMemory(),
             )
         return pipeline
     }
@@ -101,7 +103,8 @@ class EvaluatePipelineTest {
             id="test-id",
             envConfig = envConfig,
             eventPublisher = eventPublisher,
-        )
+            eventsMicrostore = EventsMicrostoreInMemory(),
+            )
         val eventAsString = """{"id": "ev2", "type": "CorrelEvent"}"""
         val rawNewMap = mapOf(
             "event" to EventAV().withS(eventAsString),
@@ -146,7 +149,8 @@ class EvaluatePipelineTest {
             id="test-id",
             envConfig = envConfig,
             eventPublisher = eventPublisher,
-        )
+            eventsMicrostore = EventsMicrostoreInMemory(),
+            )
         val uowEmpty = UnitOfWork(
             event = object : Event {
                 override var id: String? = null
@@ -185,7 +189,8 @@ class EvaluatePipelineTest {
             id="test-id",
             envConfig = envConfig,
             eventPublisher = eventPublisher,
-        )
+            eventsMicrostore = EventsMicrostoreInMemory(),
+            )
         
         val insertEventUow = UnitOfWork(
             record = DynamodbEvent.DynamodbStreamRecord().apply {
@@ -236,13 +241,15 @@ class EvaluatePipelineTest {
             id = "test-id",
             envConfig = envConfig,
             eventPublisher = eventPublisher,
-            unmarshall = { customEvent }
-        )
+            unmarshall = { customEvent },
+            eventsMicrostore = EventsMicrostoreInMemory(),
+            )
         val pipelineWithoutUnmarshall = EvaluatePipeline(
             id="test-id",
             envConfig = envConfig,
             eventPublisher = eventPublisher,
-        )
+            eventsMicrostore = EventsMicrostoreInMemory(),
+            )
 
         val jsonString = """{"id": "2", "type": "test"}"""
 
@@ -266,14 +273,16 @@ class EvaluatePipelineTest {
             id="test",
             envConfig = envConfig,
             eventPublisher = eventPublisher,
-            correlationKeySuffix = ""
-        )
+            correlationKeySuffix = "",
+            eventsMicrostore = EventsMicrostoreInMemory(),
+            )
         val pipelineWithSuffix = EvaluatePipeline(
             id="test",
             envConfig = envConfig,
             eventPublisher = eventPublisher,
-            correlationKeySuffix = "expectedSuffix"
-        )
+            correlationKeySuffix = "expectedSuffix",
+            eventsMicrostore = EventsMicrostoreInMemory(),
+            )
 
         val uowNoSuffix = UnitOfWork(meta = mapOf())
         val uowEmptySuffix = UnitOfWork(meta = mapOf("suffix" to ""))
@@ -299,6 +308,7 @@ class EvaluatePipelineTest {
             id="test",
             envConfig = envConfig,
             eventPublisher = eventPublisher,
+            eventsMicrostore = EventsMicrostoreInMemory(),
             index = "CustomIndex")
 
         val correlUow = UnitOfWork(meta = mapOf("correlation" to "true", "pk" to "test-pk"))
@@ -340,8 +350,9 @@ class EvaluatePipelineTest {
             envConfig = envConfig,
             eventPublisher = eventPublisher,
             correlationKeySuffix = "suffix",
-            higherOrderEmit = EmitOption.Basic("MyHigherOrderType")
-        )
+            higherOrderEmit = EmitOption.Basic("MyHigherOrderType"),
+            eventsMicrostore = EventsMicrostoreInMemory(),
+            )
         
         val trigger1 = object : Event {
             override var id: String? = "t1"
@@ -426,8 +437,9 @@ class EvaluatePipelineTest {
             id = "test-id",
             envConfig = envConfig,
             eventPublisher = eventPublisher,
-            higherOrderEmit = EmitOption.Custom(emitFunction)
-        )
+            higherOrderEmit = EmitOption.Custom(emitFunction),
+            eventsMicrostore = EventsMicrostoreInMemory(),
+            )
 
         val uow = UnitOfWork(meta = mapOf("id" to "m1", "correlationKey" to "k1"))
 
@@ -447,6 +459,7 @@ class EvaluatePipelineTest {
             id = "test-pipeline",
             envConfig = envConfig,
             eventPublisher = eventPublisher,
+            eventsMicrostore = EventsMicrostoreInMemory(),
             // Required to avoid IllegalArgumentException during toHigherOrderEvents
             higherOrderEmit = EmitOption.Basic("MyHigherOrderType")
         )

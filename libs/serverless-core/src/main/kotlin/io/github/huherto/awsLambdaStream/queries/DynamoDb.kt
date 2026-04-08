@@ -70,25 +70,12 @@ fun Flow<UnitOfWork>.queryAllDynamoDB(
     val request = uow.queryRequest ?: return@map uow
 
     val reqKey = request.toString()
-    @Suppress("UNCHECKED_CAST")
-    val cachedResponse = memoryCache[reqKey] as? List<Map<String, AttributeValue>>
-
-    val response = if (cachedResponse != null) {
-        cachedResponse
-    } else {
-        val result = dynamoDbClient.query(request)
-
-        val decryptedItems = coroutineScope {
-            result.items?.map { item ->
-                async { options.decrypt(item) }
-            }?.awaitAll() ?: emptyList()
-        }
-
-        memoryCache[reqKey] = decryptedItems
-        decryptedItems
+    var cachedResponse = memoryCache[reqKey] as? QueryResponse
+    if (cachedResponse == null) {
+        cachedResponse = dynamoDbClient.query(request)
+        memoryCache[reqKey] = cachedResponse
     }
-
-    uow.copy(queryResponse = response)
+    uow.copy(queryResponse = cachedResponse)
 }
 
 fun Flow<UnitOfWork>.scanSplitDynamoDB(

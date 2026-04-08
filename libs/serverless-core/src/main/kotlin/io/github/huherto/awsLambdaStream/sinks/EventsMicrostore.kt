@@ -20,6 +20,13 @@ interface EventsMicrostore {
         val pipelineId : String? = null,
     )
 
+    data class QueryParams(
+        val pk: String?,
+        val isCorrelated: Boolean?
+    )
+
     fun save(flow: Flow<UnitOfWork>) : Flow<UnitOfWork>
+
+    fun queryByPk(flow: Flow<UnitOfWork>): Flow<UnitOfWork>
 
 }

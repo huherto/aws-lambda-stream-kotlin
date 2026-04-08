@@ -20,4 +20,8 @@ class EventsMicrostoreInMemory : EventsMicrostore {
         }
     }
 
+    override fun queryByPk(flow: Flow<UnitOfWork>): Flow<UnitOfWork> {
+        TODO("Not yet implemented")
+    }
+
 }

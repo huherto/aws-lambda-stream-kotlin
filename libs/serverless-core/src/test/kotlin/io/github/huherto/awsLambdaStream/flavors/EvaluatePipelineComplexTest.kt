@@ -6,6 +6,7 @@ import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.Event
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
+import io.github.huherto.awsLambdaStream.sinks.EventsMicrostoreInMemory
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldBeEmpty
@@ -32,6 +33,7 @@ class EvaluatePipelineComplexTest : FunSpec({
                 id="pipeline-1",
                 envConfig=envConfig,
                 eventPublisher = eventPublisher,
+                eventsMicrostore = EventsMicrostoreInMemory(),
                 expression=null)
             val mockEvent = mockk<Event>()
             val uowWithEvent = UnitOfWork(event = mockEvent)
@@ -74,6 +76,7 @@ class EvaluatePipelineComplexTest : FunSpec({
                 dynamoDbClient = mockDynamoDbClient,
                 correlationKeySuffix = "expected-suffix",
                 unmarshall = { str -> mockk<Event> { every { encoded() } returns str } },
+                eventsMicrostore = EventsMicrostoreInMemory(),
                 expression = { uow -> uow.correlated?.size == 2 } // Keep UOW only if exactly 2 correlated events found
             )
 
@@ -126,6 +129,7 @@ class EvaluatePipelineComplexTest : FunSpec({
                 dynamoDbClient = mockDynamoDbClient,
                 correlationKeySuffix = "expected-suffix",
                 unmarshall = { mockk<Event>() },
+                eventsMicrostore = EventsMicrostoreInMemory(),
                 expression = { uow -> uow.correlated?.isNotEmpty() == true } // Fails for an empty correlated list
             )
 
@@ -147,6 +151,7 @@ class EvaluatePipelineComplexTest : FunSpec({
                 envConfig=envConfig,
                 eventPublisher = eventPublisher,
                 dynamoDbClient = null, // Missing client
+                eventsMicrostore = EventsMicrostoreInMemory(),
                 expression = { true }
             )
 
