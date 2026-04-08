@@ -29,7 +29,8 @@ class DynamodbAdapter (private val faultManager: FaultManager) {
                     val event = buildEvent(dynamodbRecord)
                     UnitOfWork().copy(
                         record = dynamodbRecord,
-                        event = event
+                        event = event,
+                        sequenceNumber = dynamodbRecord.dynamodb.sequenceNumber,
                     )
                 }
         }

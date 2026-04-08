@@ -27,7 +27,7 @@ class CollectPipeline constructor(
                 discriminator = "EVENT",
                 timeStamp = event?.timestamp.toString(),
                 awsRegion = envConfig.awsRegion(),
-                sequenceNumber = uow.meta?.get("sequenceNumber"),
+                sequenceNumber = uow.sequenceNumber,
                 ttl = ttlRule(uow),
                 expire = expire,
                 data = uow.key,

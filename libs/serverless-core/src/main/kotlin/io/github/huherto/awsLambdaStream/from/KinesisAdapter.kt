@@ -7,6 +7,8 @@ import io.github.huherto.awsLambdaStream.UnitOfWork
 import kotlinx.coroutines.flow.*
 import java.nio.ByteBuffer
 
+// TODO - This class needs unit tests.
+//
 abstract class KinesisAdapter {
 
     fun  fromKinesis(faultManager: FaultManager, kinesisEvent: KinesisEvent): Flow<UnitOfWork> {
@@ -27,7 +29,7 @@ abstract class KinesisAdapter {
                     if (event.id == null) {
                         event.id = (record.eventID)
                     }
-                    uow.copy( event = event)
+                    uow.copy( event = event, sequenceNumber = record.kinesis?.sequenceNumber)
                 }.map { uow ->
                     // TODO: call claim_check processing
                     uow
