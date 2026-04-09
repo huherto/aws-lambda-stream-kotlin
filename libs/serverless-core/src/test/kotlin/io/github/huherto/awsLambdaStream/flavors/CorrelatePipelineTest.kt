@@ -68,6 +68,13 @@ class CorrelatePipelineTest {
         spy
     }
 
+    fun createEventsMicrostore() : EventsMicrostoreInMemory {
+        val faultManager = mockk<FaultManager>(relaxed = true)
+        val envConfig = spyk(EnvironmentConfig())
+        val eventsMicrostore = EventsMicrostoreInMemory(faultManager)
+        return eventsMicrostore
+    }
+
     // --- Unit Tests for Internal Functions ---
 
     @Test
@@ -76,7 +83,7 @@ class CorrelatePipelineTest {
         val pipeline = CorrelatePipeline(
             "test-pipeline",
             envConfig = envConfig,
-            eventsMicrostore = EventsMicrostoreInMemory()
+            eventsMicrostore = createEventsMicrostore()
         )
         
         val skEventAttr = AttributeValue().apply { s = "EVENT" }
@@ -123,7 +130,7 @@ class CorrelatePipelineTest {
         val pipeline = CorrelatePipeline(
             "test-pipeline",
             envConfig = envConfig,
-            eventsMicrostore = EventsMicrostoreInMemory()
+            eventsMicrostore = createEventsMicrostore()
         )
 
         val record = DynamodbEvent.DynamodbStreamRecord().apply {
@@ -155,7 +162,7 @@ class CorrelatePipelineTest {
         val pipeline = CorrelatePipeline(
             id = "test-pipeline",
             envConfig = envConfig,
-            eventsMicrostore = EventsMicrostoreInMemory(),
+            eventsMicrostore = createEventsMicrostore(),
             expire = true,
             correlationKeySuffix = "-suffix"
         )
@@ -248,7 +255,7 @@ class CorrelatePipelineTest {
             id = "test-pipeline",
             envConfig = envConfig,
             correlationKey = { "test-correlation-key" },
-            eventsMicrostore = EventsMicrostoreInMemory(),
+            eventsMicrostore = createEventsMicrostore(),
         )
 
         // Invalid record (wrong eventName)
@@ -279,7 +286,7 @@ class CorrelatePipelineTest {
             envConfig = envConfig,
             correlationKey = { "test-correlation-key" },
             onContentType = { false }, // This will cause the event to be filtered mid-pipeline
-            eventsMicrostore = EventsMicrostoreInMemory(),
+            eventsMicrostore = createEventsMicrostore(),
         )
 
         val skEventAttr = EventAV().apply { s = "EVENT" }

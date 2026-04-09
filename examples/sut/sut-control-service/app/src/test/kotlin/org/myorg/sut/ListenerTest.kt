@@ -36,8 +36,8 @@ class ListenerTest {
         every { envConfig.awsRegion() } returns "eu-west-1"
         every { envConfig.tableName() } returns "events-table-name"
         val eventPublisher = EventPublisherInMemory()
-        val faultManager = FaultManager(envConfig, eventPublisher, skipLogging = true)
-        microstore = EventsMicrostoreInMemory()
+        val faultManager = FaultManager(envConfig, eventPublisher, skipErrorLogging = true)
+        microstore = EventsMicrostoreInMemory(faultManager)
         
         container = ListenerContainer(
             envConfig = envConfig,

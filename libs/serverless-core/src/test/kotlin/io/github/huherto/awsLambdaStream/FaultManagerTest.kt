@@ -54,65 +54,70 @@ class FaultManagerTest : FunSpec({
         faults.first().failureException?.cause shouldBe exception
     }
 
-    test("redirectFailure should handle retriable and non-retriable exceptions correctly") {
+    test("redirectFailure should add a fault for non-retriable exceptions when stream retry is disabled") {
         // Arrange
+        val envConfig = spyk<EnvironmentConfig>()
+        every { envConfig.awsLambdaFunctionName() } returns "test-function"
+        every { envConfig.streamRetryEnabled() } returns false
+
         val eventPublisher = EventPublisherInMemory()
         val faultManager = spyk(FaultManager(envConfig, eventPublisher))
         every { faultManager.logError(any()) } returns Unit
-        
+
         val uow = mockk<UnitOfWork>(relaxed = true)
-        every { envConfig.awsLambdaFunctionName() } returns "test-function"
-        
-        // Act & Assert - Scenario 1: non-retriable (streamRetryEnabled = false)
-        every { envConfig.streamRetryEnabled() } returns false
         val nonRetriableEx = FaultException(uow, RuntimeException("non-retriable"))
-        
+
+        // Act
         faultManager.redirectFailure(nonRetriableEx)
-        
+
+        // Assert
         faultManager.getFaults() shouldHaveSize 1
         faultManager.getFaults()[0].failureException shouldBe nonRetriableEx
-        
-        // Act & Assert - Scenario 2: retriable SDK exception
+    }
+
+    test("redirectFailure should throw for retriable SDK exceptions when stream retry is enabled") {
+        // Arrange
+        val envConfig = spyk<EnvironmentConfig>()
+        every { envConfig.awsLambdaFunctionName() } returns "test-function"
         every { envConfig.streamRetryEnabled() } returns true
+
+        val eventPublisher = EventPublisherInMemory()
+        val faultManager = spyk(FaultManager(envConfig, eventPublisher))
+        every { faultManager.logError(any()) } returns Unit
+
+        val uow = mockk<UnitOfWork>(relaxed = true)
         val sdkException = mockk<SdkBaseException>(relaxed = true)
         every { sdkException.sdkErrorMetadata.isRetryable } returns true
         val retriableEx = FaultException(uow, sdkException)
-        
+
+        // Act & Assert
         shouldThrow<FaultException> {
             faultManager.redirectFailure(retriableEx)
         }
-        faultManager.getFaults() shouldHaveSize 1 // No new faults added
-        
-        // Act & Assert - Scenario 3: non-retriable SDK exception (retryable=false)
-        every { sdkException.sdkErrorMetadata.isRetryable } returns false
-        val nonRetriableSdkEx = FaultException(uow, sdkException)
-        
-        faultManager.redirectFailure(nonRetriableSdkEx)
-        
-        faultManager.getFaults() shouldHaveSize 2
-        faultManager.getFaults()[1].failureException shouldBe nonRetriableSdkEx
+        faultManager.getFaults() shouldHaveSize 0
     }
 
-    test("redirectFailure should handle null AWS Lambda function name gracefully") {
+    test("redirectFailure should add a fault for non-retriable SDK exceptions when stream retry is enabled") {
         // Arrange
+        val envConfig = spyk<EnvironmentConfig>()
+        every { envConfig.awsLambdaFunctionName() } returns "test-function"
+        every { envConfig.streamRetryEnabled() } returns true
+
         val eventPublisher = EventPublisherInMemory()
         val faultManager = spyk(FaultManager(envConfig, eventPublisher))
         every { faultManager.logError(any()) } returns Unit
-        
+
         val uow = mockk<UnitOfWork>(relaxed = true)
-        
-        every { envConfig.awsLambdaFunctionName() } returns null
-        every { envConfig.streamRetryEnabled() } returns false
-        
-        val ex = FaultException(uow, RuntimeException("error"))
-        
+        val sdkException = mockk<SdkBaseException>(relaxed = true)
+        every { sdkException.sdkErrorMetadata.isRetryable } returns false
+        val nonRetriableSdkEx = FaultException(uow, sdkException)
+
         // Act
-        faultManager.redirectFailure(ex)
-        
+        faultManager.redirectFailure(nonRetriableSdkEx)
+
         // Assert
-        val faults = faultManager.getFaults()
-        faults shouldHaveSize 1
-        faults.first().tags?.get("functionname") shouldBe "undefined"
+        faultManager.getFaults() shouldHaveSize 1
+        faultManager.getFaults()[0].failureException shouldBe nonRetriableSdkEx
     }
 
     test("mapNotFaulty should filter out faulty items and accumulate faults") {

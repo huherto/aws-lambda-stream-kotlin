@@ -2,7 +2,10 @@ package io.github.huherto.awsLambdaStream.flavors
 
 import io.github.huherto.awsLambdaStream.*
 import io.github.huherto.awsLambdaStream.sinks.EventsMicrostore
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlin.reflect.KClass
 
 class CollectPipeline constructor(
@@ -14,11 +17,12 @@ class CollectPipeline constructor(
     private val ttlDays: Int? = null,
     private val includeRaw: Boolean = true,
     private val expire: Boolean? = null,
-    private var eventsMicrostore: EventsMicrostore,
+    private val eventsMicrostore: EventsMicrostore,
 ) : Pipeline(pipelineId) {
 
     internal fun Flow<UnitOfWork>.save(): Flow<UnitOfWork> {
 
+        val awsRegion = envConfig.awsRegion()
         val flow = this.map { uow ->
             val event: Event? = uow.event
             val saveOptions = EventsMicrostore.SaveOptions(
@@ -26,7 +30,7 @@ class CollectPipeline constructor(
                 sk = "EVENT",
                 discriminator = "EVENT",
                 timeStamp = event?.timestamp.toString(),
-                awsRegion = envConfig.awsRegion(),
+                awsRegion = awsRegion,
                 sequenceNumber = uow.sequenceNumber,
                 ttl = ttlRule(uow),
                 expire = expire,
@@ -48,12 +52,10 @@ class CollectPipeline constructor(
         return uow.event?.timestamp?.let { it / 1000 + daysInSecs(ttl) } ?: 0
     }
 
-
     override fun connect(fm: FaultManager, fromFlow: Flow<UnitOfWork>) : Flow<UnitOfWork> {
         logger.info { "CollectPipeline.connect: id=$id" }
         with(fm) {
             val flow = fromFlow
-                .filterNotNull()
                 .filterEventTypes(this, *onEventClass.toTypedArray())
                 .onEach { uow -> printStartPipeline(uow) }
                 .filter { uow -> faulty(uow) { onContentType(uow) } == true }

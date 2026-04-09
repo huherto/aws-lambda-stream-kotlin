@@ -62,6 +62,7 @@ class TriggerContainer(
             dynamoDbClient = dynamoDbClient,
             onEventClass = listOf(TrackedUnitEvent::class),
             eventPublisher = eventPublisher,
+            eventsMicrostore = eventsMicrostore,
         )
     }
 

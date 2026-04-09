@@ -23,9 +23,10 @@ class TriggerTest : FunSpec({
         val envConfig = spyk<EnvironmentConfig>()
         val dynamoDbClient = mockk<DynamoDbClient>(relaxed = true)
         val eventPublisher = EventPublisherInMemory()
-        val eventsMicrostore = EventsMicrostoreInMemory()
-        val faultManager = FaultManager(envConfig, eventPublisher, skipLogging = true)
+        val faultManager = FaultManager(envConfig, eventPublisher, skipErrorLogging = true)
+        val eventsMicrostore = EventsMicrostoreInMemory(faultManager)
         val container = TriggerContainer(envConfig, dynamoDbClient, eventPublisher, eventsMicrostore, faultManager)
+        
         return container
     }
 

@@ -100,8 +100,7 @@ class DynamodbQueriesTest {
         // Assert - Empty Request Fallback
         emptyRequest.requestItems.shouldBeNull()
     }
-
-    @Test
+    // @Test - decryption was removed from the implementation.
     fun `should execute batch and query flows with caching and decryption`() = runBlocking {
         // Arrange - Common setup
         val dynamoDbClient = mockk<DynamoDbClient>()

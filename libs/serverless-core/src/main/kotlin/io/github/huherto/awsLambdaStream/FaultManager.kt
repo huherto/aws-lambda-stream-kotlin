@@ -8,9 +8,11 @@ import java.util.*
 import java.util.concurrent.ConcurrentLinkedQueue
 
 class FaultManager constructor(
-    private val envConfig: EnvironmentConfig,
+    val envConfig: EnvironmentConfig,
     private val eventPublisher: EventPublisher,
-    private val skipLogging: Boolean = false
+    private val skipErrorLogging: Boolean = false,
+    private val isStreamRetryEnabled: Boolean = envConfig.streamRetryEnabled(),
+    private val awsLambdaFunctionName: String = envConfig.awsLambdaFunctionName()?:"undefined"
 ) {
 
     private val logger = mu.KotlinLogging.logger { }
@@ -58,7 +60,7 @@ class FaultManager constructor(
     }
 
     private fun isRetriableException(exception: FaultException): Boolean {
-        if (!envConfig.streamRetryEnabled()) return false
+        if (!isStreamRetryEnabled) return false
         if (exception.cause is SdkBaseException) {
             return (exception.cause as SdkBaseException).sdkErrorMetadata.isRetryable
         }
@@ -68,7 +70,7 @@ class FaultManager constructor(
     fun redirectFailure(ex: FaultException) {
         logError(ex)
         if (!isRetriableException(ex)) {
-            val functionName = envConfig.awsLambdaFunctionName() ?: "undefined"
+            val functionName = awsLambdaFunctionName ?: "undefined"
             val failureEvent = FaultEvent().apply {
                 id = UUID.randomUUID().toString()
                 partitionKey = UUID.randomUUID().toString()
@@ -83,7 +85,7 @@ class FaultManager constructor(
     }
 
     fun logError(exception: Throwable) {
-        if (!skipLogging) { // Use it to keep logs clean on unit tests.
+        if (!skipErrorLogging) { // Use it to keep logs clean on unit tests.
             logger.error {
                 "Exception in pipeline flow: ${exception.message}"
             }
@@ -99,9 +101,7 @@ class FaultManager constructor(
             }
         }
         val count = eventPublisher.publish(flow).count()
-        if (!skipLogging) {
-            logger.info { "flushFaults: count=$count" }
-        }
+        logger.debug { "flushFaults: count=$count" }
         return count
     }
 }
