@@ -1,20 +1,15 @@
 package io.github.huherto.awsLambdaStream.flavors
 
-import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
-import aws.sdk.kotlin.services.dynamodb.model.QueryRequest
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import io.github.huherto.awsLambdaStream.*
 import io.github.huherto.awsLambdaStream.from.RecordImage
 import io.github.huherto.awsLambdaStream.from.RecordPair
 import io.github.huherto.awsLambdaStream.sinks.EventPublisher
 import io.github.huherto.awsLambdaStream.sinks.EventsMicrostore
-import io.github.huherto.awsLambdaStream.utils.CompactRule
-import io.github.huherto.awsLambdaStream.utils.compact
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import kotlin.reflect.KClass
-import aws.sdk.kotlin.services.dynamodb.model.AttributeValue as SdkAV
 
 sealed interface EmitOption {
     data class Basic(val type: String) : EmitOption
@@ -31,9 +26,7 @@ class EvaluatePipeline (
     val correlationKeySuffix: String = "",
     val index: String? = null,
     val bufferCapacity: Int = Channel.Factory.BUFFERED,
-    var dynamoDbClient: DynamoDbClient? = null,
     val unmarshall: ((String) -> Event)? = null,
-    val compactRule: CompactRule? = null,
     val expression: ((UnitOfWork) -> Boolean)? = null,
     val higherOrderEmit: EmitOption? = null,
 ) : Pipeline(id) {
@@ -62,6 +55,7 @@ class EvaluatePipeline (
     }
 
     internal fun normalize(uow: UnitOfWork): UnitOfWork {
+
         val raw = uow.event?.raw as? RecordPair
         val rawNew = raw?.new ?: RecordImage(mapOf())
         val eventAsString = rawNew.getEvent()?: "{}"
@@ -75,17 +69,19 @@ class EvaluatePipeline (
         val suffix = rawNew.get("suffix")?.s
         val queryParams = EventsMicrostore.QueryParams(
             pk = pk,
-            isCorrel,
+            isCorrelated =  isCorrel,
+            data = data,
+            index = index,
         )
         return uow.copy(
             meta = mapOf(
                 "id" to uow.event?.id,
-                "sequenceNumber" to record?.dynamodb?.sequenceNumber,
-                "ttl" to "" + rawNew.getTtl().toString(),
-                "expire" to "" + expire,
-                "pk" to pk,
-                "data" to rawNew.getData(),
-                "correlationKey" to correlationKey,
+                //"sequenceNumber" to record?.dynamodb?.sequenceNumber,
+                // "ttl" to "" + rawNew.getTtl().toString(),
+                // "expire" to "" + expire,
+                // "pk" to pk,
+                // "data" to rawNew.getData(),
+                //"correlationKey" to correlationKey,
                 "suffix" to suffix,
                 "correlation" to isCorrel.toString()
             ),
@@ -95,46 +91,8 @@ class EvaluatePipeline (
     }
 
     internal fun onCorrelationKeySuffix(uow: UnitOfWork): Boolean {
-        val uowSuffix = uow.meta?.get("suffix")
-
-        // evaluate rules with no suffix against correlations with no suffix
-        if (correlationKeySuffix.isEmpty() && uowSuffix.isNullOrEmpty()) {
-            return true
-        }
-
-        // do not evaluate rules with a suffix against correlations with no suffix
-        if (correlationKeySuffix.isNotEmpty() && uowSuffix.isNullOrEmpty()) {
-            return false
-        }
-
-        // evaluate rules with a suffix against correlations with the same suffix
-        if (correlationKeySuffix.isNotEmpty() && uowSuffix == correlationKeySuffix) {
-            return true
-        }
-
-        // do not evaluate rules with a suffix against correlations with a different suffix
-        return false
-    }
-
-    internal fun toQueryRequest(uow: UnitOfWork) : UnitOfWork {
-        val isCorrelation = uow.meta?.get("correlation").toBoolean()
-
-        val request = QueryRequest {
-            if (isCorrelation) {
-                keyConditionExpression = "#pk = :pk"
-                expressionAttributeNames = mapOf("#pk" to "pk")
-                // Safely pulling the value from the meta-map and wrapping in AttributeValue.S
-                expressionAttributeValues = mapOf(":pk" to SdkAV.S(uow.meta?.get("pk") ?: ""))
-                consistentRead = true
-            } else {
-                indexName = index ?: "DataIndex"
-                keyConditionExpression = "#data = :data"
-                expressionAttributeNames = mapOf("#data" to "data")
-                expressionAttributeValues = mapOf(":data" to SdkAV.S(uow.meta?.get("data") ?: ""))
-            }
-        }
-
-        return uow.copy(queryRequest = request)
+        val uowSuffix = uow.meta?.get("suffix") ?: ""
+        return correlationKeySuffix == uowSuffix
     }
 
     internal fun Flow<UnitOfWork>.queryCorrelated() : Flow<UnitOfWork> {
@@ -151,11 +109,8 @@ class EvaluatePipeline (
         } else {
             this
                 .filter { uow -> onCorrelationKeySuffix(uow) }
-                .map { uow -> uow.copy() }
                 .queryCorrelated()
                 .filter { uow ->
-                    // In TS, the stream mapped the expression logic to a boolean field on uow, then filtered.
-                    // In Kotlin, we can directly execute the expression block within standard filter operator.
                     expression.invoke(uow)
                 }
         }
@@ -177,24 +132,11 @@ class EvaluatePipeline (
         override fun encoded(): String = baseEvent?.encoded() ?: "{}"
     }
 
-    /**
-     * Transforms a UnitOfWork into a list of UnitOfWorks with newly emitted higher order events.
-     * Note: To use with 'faultyAsyncStream' in Kotlin Flow, you would typically use `flatMapConcat` or `mapNotNull`
-     * wrapped in your `FaultManager.faulty()` handler.
-     */
     internal fun toHigherOrderEvents(uow: UnitOfWork): List<UnitOfWork> {
         val basic = higherOrderEmit is EmitOption.Basic
         val trigger = uow.triggers?.lastOrNull()
 
-        // reduce + merge + omit(['region', 'source'])
-        val aggregatedTags = uow.triggers
-            ?.mapNotNull { it.tags }
-            ?.fold(mutableMapOf<String, String>()) { acc, currentTags ->
-                acc.apply { putAll(currentTags) }
-            }?.apply {
-                remove("region")
-                remove("source")
-            }
+        val aggregatedTags = aggregateTags(uow)
 
         val mappedTriggers = uow.triggers?.map {
             mapOf(
@@ -232,6 +174,19 @@ class EvaluatePipeline (
         }
     }
 
+    private fun aggregateTags(uow: UnitOfWork): MutableMap<String, String>? {
+        // reduce + merge + omit(['region', 'source'])
+        val aggregatedTags = uow.triggers
+            ?.mapNotNull { it.tags }
+            ?.fold(mutableMapOf<String, String>()) { acc, currentTags ->
+                acc.apply { putAll(currentTags) }
+            }?.apply {
+                remove("region")
+                remove("source")
+            }
+        return aggregatedTags
+    }
+
     internal fun Flow<UnitOfWork>.publish() : Flow<UnitOfWork> {
         return eventPublisher.publish(this)
     }
@@ -241,14 +196,11 @@ class EvaluatePipeline (
         logger.info { "CorrelatePipeline.connect: id=$id" }
         with(fm) {
             val flow = fromFlow
-                .filterNotNull()
                 .filter{ uow -> faulty(uow){ forEvents(uow) } == true }
                 .mapNotFaulty{  uow -> normalize(uow) }
                 .filterEventTypes(this, *onEventClass.toTypedArray())
                 .onEach { uow -> printStartPipeline(uow) }
                 .filter { uow -> faulty(uow) { onContentType(uow) } == true }
-                .buffer(bufferCapacity)
-                .compact(compactRule)
                 .complex()
                 .flatMapMerge { uow ->
                     faulty(uow) { toHigherOrderEvents(uow) }?.asFlow() ?: emptyFlow()

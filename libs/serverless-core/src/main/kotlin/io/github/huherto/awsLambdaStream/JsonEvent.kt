@@ -2,7 +2,6 @@ package io.github.huherto.awsLambdaStream
 
 import kotlinx.serialization.json.*
 
-
 fun getJsonElementByPath(jsonObject: JsonObject, path: String): JsonElement? {
     return path.split(".").fold(jsonObject as JsonElement?) { current, key ->
         (current as? JsonObject)?.get(key)

@@ -192,7 +192,7 @@ class DynamodbAdapterTest {
         assertEquals(2, results.size)
         assertEquals("event-1", results[0].event?.id)
         assertEquals("event-2", results[1].event?.id)
-        assertTrue(results.all { it.event is TableEvent })
+        assertTrue(results.all { it.event is TableChangeEvent })
     }
 
     @Test

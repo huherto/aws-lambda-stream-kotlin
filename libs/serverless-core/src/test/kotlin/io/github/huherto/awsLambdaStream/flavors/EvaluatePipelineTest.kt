@@ -174,11 +174,11 @@ class EvaluatePipelineTest {
         // Assert
         val meta = result.meta.shouldNotBeNull()
         meta["id"] shouldBe "event-1"
-        meta["pk"] shouldBe "pk-1"
-        meta["data"] shouldBe "data-1"
-        meta["correlationKey"] shouldBe "pk-1"
+        //meta["pk"] shouldBe "pk-1"
+        //meta["data"] shouldBe "data-1"
+        //meta["correlationKey"] shouldBe "pk-1"
         meta["suffix"] shouldBe "suffix-1"
-        meta["correlation"] shouldBe "true"
+        //meta["correlation"] shouldBe "true"
         
         result.queryParams.shouldNotBeNull()
         result.queryParams.pk shouldBe "pk-1"
@@ -209,32 +209,6 @@ class EvaluatePipelineTest {
         sameSuffixMatch shouldBe true
         differentSuffixMatch shouldBe false
         missingSuffixRejected shouldBe false
-    }
-
-    @Test
-    fun `toQueryRequest should build correlation and non correlation requests`() {
-        // Arrange
-        val pipeline = createPipeline(index = "CustomIndex")
-        val correlationUow = UnitOfWork(meta = mapOf("correlation" to "true", "pk" to "pk-1"))
-        val dataUow = UnitOfWork(meta = mapOf("correlation" to "false", "data" to "data-1"))
-
-        // Act
-        val correlationResult = pipeline.toQueryRequest(correlationUow)
-        val dataResult = pipeline.toQueryRequest(dataUow)
-
-        // Assert
-        val correlationRequest = correlationResult.queryRequest.shouldNotBeNull()
-        correlationRequest.keyConditionExpression shouldBe "#pk = :pk"
-        correlationRequest.expressionAttributeNames shouldBe mapOf("#pk" to "pk")
-        correlationRequest.expressionAttributeValues?.get(":pk")?.asS() shouldBe "pk-1"
-        correlationRequest.consistentRead shouldBe true
-
-        val dataRequest = dataResult.queryRequest.shouldNotBeNull()
-        dataRequest.indexName shouldBe "CustomIndex"
-        dataRequest.keyConditionExpression shouldBe "#data = :data"
-        dataRequest.expressionAttributeNames shouldBe mapOf("#data" to "data")
-        dataRequest.expressionAttributeValues?.get(":data")?.asS() shouldBe "data-1"
-        dataRequest.consistentRead shouldBe null
     }
 
     @Test

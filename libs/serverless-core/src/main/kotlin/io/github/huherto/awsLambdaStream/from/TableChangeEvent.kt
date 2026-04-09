@@ -6,7 +6,7 @@ import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 
 @Serializable
-class TableEvent : Event {
+class TableChangeEvent : Event {
     override var id: String? = null
     override var timestamp: Long? = null
     override var partitionKey: String? = null

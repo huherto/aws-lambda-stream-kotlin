@@ -59,7 +59,6 @@ class TriggerContainer(
         EvaluatePipeline(
             id = "eval1",
             envConfig = envConfig,
-            dynamoDbClient = dynamoDbClient,
             onEventClass = listOf(TrackedUnitEvent::class),
             eventPublisher = eventPublisher,
             eventsMicrostore = eventsMicrostore,

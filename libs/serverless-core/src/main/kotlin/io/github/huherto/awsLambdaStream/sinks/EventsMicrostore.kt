@@ -22,7 +22,9 @@ interface EventsMicrostore {
 
     data class QueryParams(
         val pk: String?,
-        val isCorrelated: Boolean?
+        val isCorrelated: Boolean?,
+        val data: String? = null,  // Not used yet.
+        val index: String? = null, // Not used yet.
     )
 
     fun save(flow: Flow<UnitOfWork>) : Flow<UnitOfWork>

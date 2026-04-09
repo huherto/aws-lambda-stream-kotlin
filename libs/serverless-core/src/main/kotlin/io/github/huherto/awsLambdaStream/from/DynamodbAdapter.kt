@@ -36,8 +36,9 @@ class DynamodbAdapter (private val faultManager: FaultManager) {
         }
     }
 
-    internal fun buildEvent(dynamodbRecord: DynamodbEvent.DynamodbStreamRecord): TableEvent {
-        val event = TableEvent().apply {
+    internal fun buildEvent(dynamodbRecord: DynamodbEvent.DynamodbStreamRecord): TableChangeEvent {
+
+        val event = TableChangeEvent().apply {
             id = dynamodbRecord.eventID
             timestamp = deriveTimestamp(dynamodbRecord)
             partitionKey = dynamodbRecord.dynamodb.keys[pkFn]?.s
