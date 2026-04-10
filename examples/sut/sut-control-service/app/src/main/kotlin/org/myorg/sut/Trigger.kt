@@ -18,7 +18,7 @@ class Trigger constructor(private val container: TriggerContainer = TriggerConta
             .assemble(headFlow, true)
             .collect {
                 val eventClass = it.event?.javaClass?.simpleName ?: "null"
-                logger.info { "collected event ${it.event?.id}, $eventClass" }
+                logger.info { "processed event ${it.event?.id}, $eventClass" }
             }
 
         "Done"

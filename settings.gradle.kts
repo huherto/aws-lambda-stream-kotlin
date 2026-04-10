@@ -9,7 +9,7 @@
 
 rootProject.name = "aws-lambda-stream-kotlin"
 
-include("libs:serverless-core")
+include("core")
 include("examples:common-infra")
 include("examples:sut:common-serverless")
 include("examples:sut:sut-event-hub")

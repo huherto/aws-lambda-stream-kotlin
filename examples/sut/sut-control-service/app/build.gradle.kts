@@ -24,20 +24,19 @@ dependencies {
 
     implementation(platform(libs.aws.sdk.bom))
 
-    implementation(project(":libs:serverless-core"))
+    implementation(project(":core"))
     implementation(project(":examples:sut:common-serverless"))
 
     implementation(libs.aws.java.core)
     implementation(libs.aws.java.events)
     implementation(libs.aws.sdk.dynamodb)
     implementation(libs.aws.sdk.lambda)
+    implementation(libs.kotlin.logging)
     implementation(libs.kotlin.stdlib)
-    implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines)
+    implementation(libs.kotlinx.serialization.json)
     implementation(libs.lambda.json.logger)
     implementation(libs.slf4j.api)
-    implementation(libs.kotlin.logging)
-    //implementation(libs.slf4j.simple)
 
 
     testImplementation(kotlin("test"))

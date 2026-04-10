@@ -42,7 +42,7 @@ dependencies {
 }
 
 tasks.shadowJar {
-    archiveBaseName.set("serverless-core")
+    archiveBaseName.set("core")
     archiveClassifier.set("")
     archiveVersion.set("")
 }

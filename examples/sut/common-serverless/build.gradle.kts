@@ -29,7 +29,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.testcon.localstack)
-    implementation(project(":libs:serverless-core"))
+    implementation(project(":core"))
 
 
     testImplementation(kotlin("test"))
