@@ -45,6 +45,7 @@ testing {
                 implementation(libs.aws.sdk.kinesis)
                 implementation(libs.aws.sdk.lambda)
                 implementation(libs.kotest.assertions)
+                implementation(libs.kotlin.logging)
                 implementation(libs.slf4j.simple)
                 implementation(libs.testcon.junit.jupiter)
                 implementation(libs.testcon.localstack)

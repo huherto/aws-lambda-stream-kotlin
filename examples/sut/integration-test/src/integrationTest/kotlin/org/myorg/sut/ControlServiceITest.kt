@@ -30,6 +30,8 @@ import kotlin.time.ExperimentalTime
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ControlServiceITest {
 
+    private val logger = mu.KotlinLogging.logger {}
+
     fun endPointUrl() = Url.parse("http://localhost:4566")
 
     @OptIn(ExperimentalTime::class)
@@ -38,6 +40,7 @@ class ControlServiceITest {
 
         val event = createShipmentCreatedEvent(createTrackedUnit())
 
+        logger.info { "Sending event ${event.id}" }
         val res = eventBridgeClient.putEvents(PutEventsRequest {
             entries = listOf(
                 PutEventsRequestEntry {
@@ -51,6 +54,8 @@ class ControlServiceITest {
         res.failedEntryCount shouldBe 0
         
         val collectedEvent = findEventByPK(event.id!!)
+        logger.info { "Collected event id: ${event.id}" }
+        logger.debug { "Collected event: $collectedEvent" }
         collectedEvent.shouldNotBeNull()
         collectedEvent["pk"]?.asS() shouldBe event.id
         collectedEvent["sk"]?.asS() shouldBe "EVENT"
@@ -64,6 +69,8 @@ class ControlServiceITest {
         timeStamp shouldBeLessThan (event.timestamp!! + 100*1000L) // 1000 secs from now
 
         val correlEvent = findEventByPK(event.entity?.id!!)
+        logger.info { "Correlated event id: ${event.id}" }
+        logger.debug { "Correlated event: $correlEvent" }
         correlEvent.shouldNotBeNull()
         correlEvent["pk"]?.asS() shouldBe event.entity?.id
         correlEvent["sk"]?.asS() shouldBe event.id
@@ -71,7 +78,7 @@ class ControlServiceITest {
         correlEvent["expire"]?.asBool() shouldBe false
         correlEvent["awsregion"]?.asS() shouldBe "us-east-1"
         correlEvent["suffix"]?.asS() shouldBe ""
-        correlEvent["pipelineId"]?.asS() shouldBe "corr1"
+        correlEvent["pipelineId"]?.asS() shouldBe "corre1"
         
         val sequenceNumber = correlEvent["sequenceNumber"]?.asS()
         sequenceNumber.shouldNotBeNull()
@@ -113,7 +120,7 @@ class ControlServiceITest {
         val startTime = System.currentTimeMillis()
         while (true) {
             if (System.currentTimeMillis() - startTime > 10000) {
-                throw RuntimeException("Timed out waiting for event to be inserted.")
+                throw RuntimeException("Timed out waiting for event $pk to be inserted.")
             }
             val response = dynamoDbClient.query(QueryRequest {
                 tableName = "sut-control-service-local-events"

@@ -6,7 +6,7 @@ import com.amazonaws.services.lambda.runtime.events.KinesisEvent
 import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging
 
-class Listener(private val container : ListenerContainer) : RequestHandler<KinesisEvent, Void?> {
+class Listener(private var container : ListenerContainer = ListenerContainer.build()) : RequestHandler<KinesisEvent, Void?> {
 
     private val logger = KotlinLogging.logger {  }
 
