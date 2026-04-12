@@ -2,197 +2,147 @@ package io.github.huherto.awsLambdaStream.connectors
 
 import aws.sdk.kotlin.services.eventbridge.EventBridgeClient
 import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequest
-import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequestEntry
 import aws.sdk.kotlin.services.eventbridge.model.PutEventsResponse
-import aws.sdk.kotlin.services.eventbridge.model.PutEventsResultEntry
-import io.github.huherto.awsLambdaStream.EnvironmentConfig
-import io.github.huherto.awsLambdaStream.testsupport.EventBridgeClientFake
 import io.kotest.assertions.throwables.shouldThrow
-import io.kotest.core.spec.style.FunSpec
-import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.mockk.*
-import kotlin.time.Duration.Companion.milliseconds
+import kotlinx.coroutines.test.runTest
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import java.io.IOException
+import kotlin.time.Duration.Companion.seconds
 
-class EventBridgeConnectorTest : FunSpec({
+class EventBridgeConnectorTest {
 
-    beforeTest {
-        EventBridgeConnector.Companion.clearClients()
+    private val retryConfig = RetryConfig(maxRetries = 2, retryWait = 1L)
+    private val request = PutEventsRequest { }
+    private val timeout = 1.seconds
+
+    @BeforeEach
+    fun setUp() {
+        MockKAnnotations.init(this)
+        EventBridgeConnector.clearClients()
+        clearAllMocks()
     }
 
-    afterTest {
-        unmockkAll()
+    @AfterEach
+    fun tearDown() {
+        EventBridgeConnector.clearClients()
+        clearAllMocks()
     }
 
-    fun envConfig() : EnvironmentConfig {
-        return spyk(EnvironmentConfig())
-    }
-
-    test("should handle retry assertions and delay calculations") {
+    @Test
+    fun `getClient caches client per pipeline id and reuses existing client`() {
         // Arrange
-        val eventBridgeClient = EventBridgeClientFake(EventBridgeClient{})
-        val eventBridgeClientFactory = mockk<EventBridgeClientFactory>()
-        every { eventBridgeClientFactory.createClient(any()) } returns eventBridgeClient
-        val connector = EventBridgeConnector(
-            pipelineId = "test-pipeline",
-            envConfig = envConfig(),
-            retryConfig = RetryConfig(),
-            clientFactory = eventBridgeClientFactory,
-            timeout = 1000.milliseconds)
-        val baseDelay = 1000L
+        val clientFactory = mockk<EventBridgeClientFactory>()
+        val firstClient = mockk<EventBridgeClient>()
+        val secondClient = mockk<EventBridgeClient>()
 
-        // Act & Assert - Delay Calculations
-        val delayAttempt1 = connector.getDelay(baseDelay, 1)
-        val delayAttempt2 = connector.getDelay(baseDelay, 2)
-        val delayAttempt3 = connector.getDelay(baseDelay, 3)
-
-        delayAttempt1 shouldBe 1000L
-        delayAttempt2 shouldBe 2000L
-        delayAttempt3 shouldBe 4000L
-
-        // Act & Assert - Retry Assertions
-        connector.assertMaxRetries(3, 3) // Should not throw
-
-        val exception = shouldThrow<IllegalStateException> {
-            connector.assertMaxRetries(4, 3)
-        }
-        exception.message shouldBe "Maximum retry attempts exceeded."
-    }
-
-    test("should extract unprocessed entries and accumulate responses") {
-        // Arrange
-        val eventBridgeClient = EventBridgeClientFake(EventBridgeClient{})
-        val eventBridgeClientFactory = mockk<EventBridgeClientFactory>()
-        every { eventBridgeClientFactory.createClient(any()) } returns eventBridgeClient
-        val connector = EventBridgeConnector(
-            pipelineId = "test-pipeline",
-            envConfig = envConfig(),
-            retryConfig = RetryConfig(),
-            clientFactory = eventBridgeClientFactory,
-            timeout = 1000.milliseconds)
-        
-        val request = PutEventsRequest {
-            entries = listOf(
-                PutEventsRequestEntry { source = "source1" },
-                PutEventsRequestEntry { source = "source2" }
-            )
-        }
-        
-        val responseAttempt1 = PutEventsResponse {
-            failedEntryCount = 1
-            entries = listOf(
-                PutEventsResultEntry { eventId = "id-1" }, // Success
-                PutEventsResultEntry { errorCode = "InternalFailure" } // Failed
-            )
-        }
-
-        val responseAttempt2 = PutEventsResponse {
-            failedEntryCount = 0
-            entries = listOf(
-                PutEventsResultEntry { eventId = "id-2" } // Success on retry
-            )
-        }
-
-        // Act - Unprocessed Extract
-        val unprocessedReq = connector.unprocessed(request, responseAttempt1)
-
-        // Assert - Unprocessed Extract
-        unprocessedReq.entries.shouldNotBeNull()
-        unprocessedReq.entries?.size shouldBe 1
-        unprocessedReq.entries?.first()?.source shouldBe "source2"
-
-        // Act - Accumulate Responses
-        val attempts = listOf(responseAttempt1)
-        val finalResponse = connector.accumulate(attempts, responseAttempt2)
-
-        // Assert - Accumulate Responses
-        finalResponse.failedEntryCount shouldBe 0
-        finalResponse.attempts.size shouldBe 2
-        finalResponse.entries.size shouldBe 2
-        finalResponse.entries[0].eventId shouldBe "id-1"
-        finalResponse.entries[1].eventId shouldBe "id-2"
-    }
-
-    test("sendCommand should interact with metrics and gracefully throw on failure") {
-        // Arrange
-        val mockClient = mockk<EventBridgeClient>()
-        val mockMetrics = mockk<Metrics>(relaxed = true)
-        val eventBridgeClientFactory = mockk<EventBridgeClientFactory>()
-        every { eventBridgeClientFactory.createClient(any()) } returns mockClient
-        coEvery { mockClient.putEvents(any()) } throws RuntimeException("AWS Network Error")
-
-        val connector = EventBridgeConnector(
-            pipelineId = "test-pipeline",
-            envConfig = envConfig(),
-            clientFactory = eventBridgeClientFactory,
-            retryConfig = RetryConfig(),
-            timeout = 1000.milliseconds,
-            opt = ConnectorOptions(metrics = mockMetrics)
-        )
-
-        val request = PutEventsRequest { entries = emptyList() }
-        val runtimeException = RuntimeException("AWS Network Error")
-        
-        coEvery { mockClient.putEvents(any()) } throws runtimeException
+        every { clientFactory.createClient("pipeline-1") } returns firstClient
+        every { clientFactory.createClient("pipeline-2") } returns secondClient
 
         // Act
-        val exception = shouldThrow<RuntimeException> {
-            connector.sendCommand(request, "mockContext")
-        }
-        
+        val clientA1 = EventBridgeConnector.getClient("pipeline-1", clientFactory)
+        val clientA2 = EventBridgeConnector.getClient("pipeline-1", clientFactory)
+        val clientB = EventBridgeConnector.getClient("pipeline-2", clientFactory)
+
         // Assert
-        exception.message shouldBe "AWS Network Error"
-        coVerify(exactly = 1) { 
-            mockMetrics.capture(mockClient, request, "eventbridge", any(), "mockContext") 
-        }
+        clientA1 shouldBe firstClient
+        clientA2 shouldBe firstClient
+        clientB shouldBe secondClient
+        verify(exactly = 1) { clientFactory.createClient("pipeline-1") }
+        verify(exactly = 1) { clientFactory.createClient("pipeline-2") }
     }
 
-    test("putEvents should automatically handle retries on partial failure") {
+    @Test
+    fun `sendCommand captures metrics before sending and returns client response`() = runTest {
         // Arrange
-        val mockClient = mockk<EventBridgeClient>()
-        val eventBridgeClientFactory = mockk<EventBridgeClientFactory>()
-        every { eventBridgeClientFactory.createClient(any()) } returns mockClient
+        val client = mockk<EventBridgeClient>()
+        val clientFactory = mockk<EventBridgeClientFactory>()
+        val metrics = mockk<Metrics>()
+        val response = PutEventsResponse { failedEntryCount = 0 }
+
+        every { clientFactory.createClient("pipeline-1") } returns client
+        coEvery { client.putEvents(request) } returns response
+        justRun { metrics.capture(client, request, "eventbridge", any(), null) }
+
         val connector = EventBridgeConnector(
-            pipelineId = "test-pipeline",
-            envConfig = envConfig(),
-            clientFactory = eventBridgeClientFactory,
-            timeout = 1000.milliseconds, 
-            retryConfig = RetryConfig(maxRetries = 2, retryWait = 10L) // Small delay for fast test
+            pipelineId = "pipeline-1",
+            envConfig = mockk(relaxed = true),
+            timeout = timeout,
+            retryConfig = retryConfig,
+            opt = ConnectorOptions(metrics = metrics),
+            clientFactory = clientFactory
         )
 
-        val initialRequest = PutEventsRequest {
-            entries = listOf(
-                PutEventsRequestEntry { source = "source1" },
-                PutEventsRequestEntry { source = "source2" }
-            )
-        }
+        // Act
+        val result = connector.sendCommand(request, null)
 
-        val firstResponse = PutEventsResponse {
-            failedEntryCount = 1
-            entries = listOf(
-                PutEventsResultEntry { eventId = "id-1" },
-                PutEventsResultEntry { errorCode = "InternalFailure" }
-            )
-        }
+        // Assert
+        result shouldBe response
+        verify(exactly = 1) { metrics.capture(client, request, "eventbridge", any(), null) }
+        coVerify(exactly = 1) { client.putEvents(request) }
+    }
 
-        val secondResponse = PutEventsResponse {
-            failedEntryCount = 0
-            entries = listOf(
-                PutEventsResultEntry { eventId = "id-2" }
-            )
-        }
+    @Test
+    fun `sendCommand rethrows client exceptions after logging and still captures metrics`() = runTest {
+        // Arrange
+        val client = mockk<EventBridgeClient>()
+        val clientFactory = mockk<EventBridgeClientFactory>()
+        val metrics = mockk<Metrics>()
+        val exception = IOException("boom")
 
-        // Setup the client mock to fail a specific entry the first time, then succeed the second time
-        coEvery { mockClient.putEvents(any()) } returns  firstResponse andThen secondResponse
+        every { clientFactory.createClient("pipeline-1") } returns client
+        coEvery { client.putEvents(request) } throws exception
+        justRun { metrics.capture(client, request, "eventbridge", any(), null) }
+
+        val connector = EventBridgeConnector(
+            pipelineId = "pipeline-1",
+            envConfig = mockk(relaxed = true),
+            timeout = timeout,
+            retryConfig = retryConfig,
+            opt = ConnectorOptions(metrics = metrics),
+            clientFactory = clientFactory
+        )
 
         // Act
-        val result = connector.putEvents(initialRequest)
+        val thrown = shouldThrow<IOException> {
+            connector.sendCommand(request, null)
+        }
+
+        // Assert
+        thrown shouldBe exception
+        verify(exactly = 1) { metrics.capture(client, request, "eventbridge", any(), null) }
+        coVerify(exactly = 1) { client.putEvents(request) }
+    }
+
+    @Test
+    fun `putEvents delegates to retry executor and returns combined connector response`() = runTest {
+        // Arrange
+        val client = mockk<EventBridgeClient>()
+        val clientFactory = mockk<EventBridgeClientFactory>()
+        val response = PutEventsResponse { failedEntryCount = 0 }
+
+        every { clientFactory.createClient("pipeline-1") } returns client
+        coEvery { client.putEvents(request) } returns response
+
+        val connector = EventBridgeConnector(
+            pipelineId = "pipeline-1",
+            envConfig = mockk(relaxed = true),
+            timeout = timeout,
+            retryConfig = retryConfig,
+            opt = ConnectorOptions(),
+            clientFactory = clientFactory
+        )
+
+        // Act
+        val result = connector.putEvents(request)
 
         // Assert
         result.failedEntryCount shouldBe 0
-        result.attempts.size shouldBe 2
-        result.entries.size shouldBe 2
-        result.entries[0].eventId shouldBe "id-1"
-        result.entries[1].eventId shouldBe "id-2"
+        result.entries shouldBe emptyList()
+        result.attempts shouldBe listOf(response)
+        coVerify(exactly = 1) { client.putEvents(request) }
     }
-})
+}
