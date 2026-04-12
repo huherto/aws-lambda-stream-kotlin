@@ -9,6 +9,7 @@ import io.kotest.matchers.shouldBe
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
+import kotlin.time.Duration.Companion.milliseconds
 
 class RetryExecutorTest {
 
@@ -98,7 +99,7 @@ class RetryExecutorTest {
     fun `should execute once when first response does not require retry`() = runTest {
         // Arrange
         val strategy = mockk<RetryStrategy<String, String, String>>()
-        val retryConfig = RetryConfig(maxRetries = 3, retryWait = 100L)
+        val retryConfig = RetryConfig(maxRetries = 3, retryWait = 100.milliseconds)
         val sendCalls = mutableListOf<String>()
 
         val executor = RetryExecutor(
@@ -128,7 +129,7 @@ class RetryExecutorTest {
     fun `should retry with exponential delay and stop after max retries`() = runTest {
         // Arrange
         val strategy = mockk<RetryStrategy<String, String, String>>()
-        val retryConfig = RetryConfig(maxRetries = 2, retryWait = 100L)
+        val retryConfig = RetryConfig(maxRetries = 2, retryWait = 100.milliseconds)
         val sendCalls = mutableListOf<String>()
 
         val executor = RetryExecutor(

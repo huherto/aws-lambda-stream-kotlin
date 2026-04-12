@@ -15,7 +15,7 @@ import kotlin.time.Duration.Companion.seconds
 
 class EventBridgeConnectorTest {
 
-    private val retryConfig = RetryConfig(maxRetries = 2, retryWait = 1L)
+    private val retryConfig = RetryConfig(maxRetries = 2, retryWait = 1.seconds)
     private val request = PutEventsRequest { }
     private val timeout = 1.seconds
 
