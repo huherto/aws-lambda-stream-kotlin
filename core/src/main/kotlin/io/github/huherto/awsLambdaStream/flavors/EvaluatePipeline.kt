@@ -9,7 +9,6 @@ import io.github.huherto.awsLambdaStream.sinks.EventsMicrostore
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
-import kotlin.reflect.KClass
 
 sealed interface EmitOption {
     data class Basic(val type: String) : EmitOption
@@ -22,7 +21,7 @@ class EvaluatePipeline (
     val eventPublisher: EventPublisher,
     val eventsMicrostore: EventsMicrostore,
     val onContentType: (UnitOfWork) -> Boolean = { true },
-    val onEventClass: List<KClass<out Event>> = listOf(Event::class),
+    val eventFilter: EventFilter = EventFilter.Any,
     val correlationKeySuffix: String = "",
     val index: String? = null,
     val bufferCapacity: Int = Channel.BUFFERED,
@@ -195,13 +194,9 @@ class EvaluatePipeline (
         logger.info { "Evaluate.connect: id=$id" }
         with(fm) {
             val flow = fromFlow
-                .onEach { uow-> printStepPipeline("start evaluate", uow) }
                 .filter{ uow -> faulty(uow){ forEvents(uow) } == true }
-                .onEach { uow-> printStepPipeline("after forEvents", uow) }
                 .mapNotFaulty{  uow -> normalize(uow) }
-                //.onEach { uow-> printStepPipeline("after normalize", uow) }
-                .onEach { uow-> printStepPipeline("class name " + uow.event?.javaClass?.simpleName, uow) }
-                .filterEventTypes(this, *onEventClass.toTypedArray())
+                .filterEvents(fm, eventFilter)
                 .onEach { uow -> printStartPipeline(uow) }
                 .filter { uow -> faulty(uow) { onContentType(uow) } == true }
                 .complex()

@@ -25,7 +25,7 @@ class TriggerTest : FunSpec({
         val eventPublisher = EventPublisherInMemory()
         val faultManager = FaultManager(envConfig, eventPublisher, skipErrorLogging = true)
         val eventsMicrostore = EventsMicrostoreInMemory(faultManager)
-        val container = TriggerContainer(envConfig, dynamoDbClient, eventPublisher, eventsMicrostore, faultManager)
+        val container = TriggerContainer(envConfig, eventPublisher, eventsMicrostore, faultManager)
         
         return container
     }

@@ -1,6 +1,5 @@
 package org.myorg.sut
 
-import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.PipelineAssembler
@@ -13,7 +12,6 @@ import io.github.huherto.awsLambdaStream.sinks.*
 
 class TriggerContainer(
     val envConfig: EnvironmentConfig,
-    val dynamoDbClient: DynamoDbClient,
     val eventPublisher: EventPublisher,
     val eventsMicrostore: EventsMicrostore,
     val faultManager: FaultManager,
@@ -33,7 +31,6 @@ class TriggerContainer(
             )
             return TriggerContainer(
                 envConfig = envConfig,
-                dynamoDbClient = dynamoDbClient,
                 eventPublisher = eventPublisher,
                 eventsMicrostore = eventsMicrostore,
                 faultManager = faultManager,
@@ -59,7 +56,6 @@ class TriggerContainer(
         EvaluatePipeline(
             id = "eval1",
             envConfig = envConfig,
-            onEventClass = listOf(TrackedUnitEvent::class),
             eventPublisher = eventPublisher,
             eventsMicrostore = eventsMicrostore,
         )
