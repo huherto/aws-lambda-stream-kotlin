@@ -26,20 +26,36 @@ abstract class BaseEventsMicrostore(
     }
 
     internal fun toQueryRequest(uow: UnitOfWork) : UnitOfWork {
-        val pk = uow.meta?.get("pk")
-        val isCorrelation = uow.meta?.get("correlation").toBoolean()
-        if (!isCorrelation || pk.isNullOrEmpty()) {
+
+        if (uow.queryParams == null) {
             return uow
         }
 
-        val request = QueryRequest {
-            keyConditionExpression = "#pk = :pk"
-            expressionAttributeNames = mapOf("#pk" to "pk")
-            expressionAttributeValues = mapOf(":pk" to AttributeValue.S(pk))
-            consistentRead = true
-        }
+        val pk = uow.queryParams.pk
+        val isCorrelation = uow.queryParams.isCorrelated
+        val data = uow.queryParams.data
 
-        return uow.copy(queryRequest = request)
+        if (isCorrelation) {
+            if (pk.isNullOrEmpty()) return uow
+            val request = QueryRequest {
+                keyConditionExpression = "#pk = :pk"
+                expressionAttributeNames = mapOf("#pk" to "pk")
+                expressionAttributeValues = mapOf(":pk" to AttributeValue.S(pk))
+                consistentRead = true
+            }
+            return uow.copy(queryRequest = request)
+        }
+        else {
+            if (data.isNullOrEmpty()) return uow
+            val request = QueryRequest {
+                indexName = uow.queryParams.index ?: "DataIndex"
+                keyConditionExpression = "#data = :data"
+                expressionAttributeNames = mapOf("#data" to "data")
+                expressionAttributeValues = mapOf(":data" to AttributeValue.S(data))
+                consistentRead = true
+            }
+            return uow.copy(queryRequest = request)
+        }
     }
 
     internal fun unmarshall(eventAsString: String) : Event {

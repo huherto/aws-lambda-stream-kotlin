@@ -4,6 +4,7 @@ import aws.sdk.kotlin.services.dynamodb.model.*
 import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequest
 import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequestEntry
 import io.github.huherto.awsLambdaStream.connectors.ConnectorResponse
+import io.github.huherto.awsLambdaStream.flavors.EvaluatePipeline
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import io.github.huherto.awsLambdaStream.sinks.EventsMicrostore
 
@@ -32,6 +33,7 @@ data class UnitOfWork(
     val timestamp: String? = null,
     val saveOptions: EventsMicrostore.SaveOptions? = null,
     val queryParams: EventsMicrostore.QueryParams? = null,
+    val higherOrderEvent: EvaluatePipeline.HigherOrderEvent? = null,
     val putRequest: PutItemRequest? = null,
     val putResponse: PutItemResponse? = null,
     val meta: Map<String, String?>? = null,

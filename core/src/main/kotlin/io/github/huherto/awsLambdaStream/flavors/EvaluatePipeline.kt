@@ -25,7 +25,7 @@ class EvaluatePipeline (
     val onEventClass: List<KClass<out Event>> = listOf(Event::class),
     val correlationKeySuffix: String = "",
     val index: String? = null,
-    val bufferCapacity: Int = Channel.Factory.BUFFERED,
+    val bufferCapacity: Int = Channel.BUFFERED,
     val unmarshall: ((String) -> Event)? = null,
     val expression: ((UnitOfWork) -> Boolean)? = null,
     val higherOrderEmit: EmitOption? = null,
@@ -60,12 +60,9 @@ class EvaluatePipeline (
         val rawNew = raw?.new ?: RecordImage(mapOf())
         val eventAsString = rawNew.getEvent()?: "{}"
         val eventAsObject = defaultUnmarshall(eventAsString)
-        val record = uow.record as? DynamodbEvent.DynamodbStreamRecord
         val isCorrel = rawNew.get("discriminator")?.s == "CORREL"
         val pk = rawNew.get("pk")?.s
         val data = rawNew.get("data")?.s
-        val expire = rawNew.get("expire")?.b
-        val correlationKey = if (isCorrel) pk else data
         val suffix = rawNew.get("suffix")?.s
         val queryParams = EventsMicrostore.QueryParams(
             pk = pk,
@@ -125,12 +122,18 @@ class EvaluatePipeline (
         override var raw: Any? = null,
         override var eem: Any? = null,
         var type: String? = null,
-        var mappedTriggers: List<Map<String, Any?>>? = null,
+        var mappedTriggers: List<TriggerMapped>? = null,
         var baseEvent: Event? = null // Holds the properties of uow.event if basic is true
     ) : Event {
         override fun eventType(): String = type ?: baseEvent?.eventType() ?: "unknown"
         override fun encoded(): String = baseEvent?.encoded() ?: "{}"
     }
+
+    data class TriggerMapped(
+        val id: String? = null,
+        val type: String? = null,
+        val timestamp: Long? = null,
+    )
 
     internal fun toHigherOrderEvents(uow: UnitOfWork): List<UnitOfWork> {
         val basic = higherOrderEmit is EmitOption.Basic
@@ -139,11 +142,7 @@ class EvaluatePipeline (
         val aggregatedTags = aggregateTags(uow)
 
         val mappedTriggers = uow.triggers?.map {
-            mapOf(
-                "id" to it.id,
-                "type" to it.eventType(),
-                "timestamp" to it.timestamp
-            )
+            TriggerMapped(it.id, it.eventType(), it.timestamp)
         }
 
         val uowMetaId = uow.meta?.get("id") ?: ""
@@ -193,11 +192,15 @@ class EvaluatePipeline (
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun connect(fm: FaultManager, fromFlow: Flow<UnitOfWork>) : Flow<UnitOfWork> {
-        logger.info { "CorrelatePipeline.connect: id=$id" }
+        logger.info { "Evaluate.connect: id=$id" }
         with(fm) {
             val flow = fromFlow
+                .onEach { uow-> printStepPipeline("start evaluate", uow) }
                 .filter{ uow -> faulty(uow){ forEvents(uow) } == true }
+                .onEach { uow-> printStepPipeline("after forEvents", uow) }
                 .mapNotFaulty{  uow -> normalize(uow) }
+                //.onEach { uow-> printStepPipeline("after normalize", uow) }
+                .onEach { uow-> printStepPipeline("class name " + uow.event?.javaClass?.simpleName, uow) }
                 .filterEventTypes(this, *onEventClass.toTypedArray())
                 .onEach { uow -> printStartPipeline(uow) }
                 .filter { uow -> faulty(uow) { onContentType(uow) } == true }

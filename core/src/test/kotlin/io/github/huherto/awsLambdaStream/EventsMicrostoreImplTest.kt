@@ -84,6 +84,10 @@ class EventsMicrostoreImplTest {
     fun `toQueryRequest should set queryRequest when correlation is true and pk is provided`() {
         // Arrange
         val uow = UnitOfWork(
+            queryParams = EventsMicrostore.QueryParams(
+                pk = "test-pk",
+                isCorrelated = true
+            ),
             meta = mapOf("correlation" to "true", "pk" to "test-pk")
         )
 
