@@ -9,6 +9,7 @@ import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.Event
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.filters.EventFilters
 import io.github.huherto.awsLambdaStream.from.RecordImage
 import io.github.huherto.awsLambdaStream.from.RecordPair
 import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
@@ -212,7 +213,7 @@ class CorrelatePipelineTest {
             id = "test-pipeline",
             correlationKey = { "test-correlation-key" },
             envConfig = envConfig,
-            onEventClass = listOf(FakeEvent::class), // specifically matching our FakeEvent
+            eventFilter = EventFilters.classes(FakeEvent::class),
             unmarshall = { eventAsString -> FakeEvent(encodedStr = eventAsString)},
             eventsMicrostore = EventsMicrostoreImpl(
                 envConfig = envConfig,

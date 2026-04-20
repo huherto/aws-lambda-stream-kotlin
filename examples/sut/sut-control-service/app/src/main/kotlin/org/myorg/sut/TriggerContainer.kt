@@ -3,6 +3,7 @@ package org.myorg.sut
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.PipelineAssembler
+import io.github.huherto.awsLambdaStream.filters.EventFilters
 import io.github.huherto.awsLambdaStream.flavors.CorrelatePipeline
 import io.github.huherto.awsLambdaStream.flavors.EvaluatePipeline
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
@@ -47,7 +48,7 @@ class TriggerContainer(
                 val event = uow.event as? TrackedUnitEvent
                 event?.entity?.id ?: "no-correlation-key"
             },
-            onEventClass = listOf(TrackedUnitEvent::class),
+            eventFilter = EventFilters.classes(TrackedUnitEvent::class),
             eventsMicrostore = eventsMicrostore,
         )
     }

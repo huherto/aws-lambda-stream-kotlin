@@ -3,6 +3,7 @@ package org.myorg.sut
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.PipelineAssembler
+import io.github.huherto.awsLambdaStream.filters.EventFilters
 import io.github.huherto.awsLambdaStream.flavors.CollectPipeline
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import io.github.huherto.awsLambdaStream.from.KinesisAdapter
@@ -52,12 +53,12 @@ class ListenerContainer(
             pipelineId = "collect1",
             envConfig = envConfig,
             eventsMicrostore = eventsMicrostore,
-            onEventClass = listOf(TrackedUnitEvent::class)
+            eventFilter = EventFilters.classes(TrackedUnitEvent::class)
         )
     }
 
     val assembler: PipelineAssembler by lazy {
-        PipelineAssembler.Companion
+        PipelineAssembler
             .builder()
             .faultManager(faultManager)
             .addPipeline(collectPipeline)

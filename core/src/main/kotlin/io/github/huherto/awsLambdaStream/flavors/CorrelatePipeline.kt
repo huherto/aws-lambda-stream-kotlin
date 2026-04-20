@@ -2,18 +2,19 @@ package io.github.huherto.awsLambdaStream.flavors
 
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import io.github.huherto.awsLambdaStream.*
+import io.github.huherto.awsLambdaStream.filters.EventFilter
+import io.github.huherto.awsLambdaStream.filters.filterEvents
 import io.github.huherto.awsLambdaStream.from.RecordImage
 import io.github.huherto.awsLambdaStream.from.RecordPair
 import io.github.huherto.awsLambdaStream.sinks.EventsMicrostore
 import kotlinx.coroutines.flow.*
-import kotlin.reflect.KClass
 
 const val CORREL = "CORREL"
 
 class CorrelatePipeline constructor(
     id: String,
     val onContentType: (UnitOfWork) -> Boolean = { true },
-    val onEventClass: List<KClass<out Event>> = listOf(Event::class),
+    val eventFilter: EventFilter = EventFilter.Any,
     val correlationKey: ((UnitOfWork) -> String)? = null,
     val correlationKeySuffix: String = "",
     val envConfig: EnvironmentConfig,
@@ -95,7 +96,7 @@ class CorrelatePipeline constructor(
                 .filterNotNull()
                 .filter{ uow -> faulty(uow){ forCollectedEvents(uow) } == true }
                 .mapNotFaulty{  uow -> normalize(uow) }
-                .filterEventTypes(this, *onEventClass.toTypedArray())
+                .filterEvents(this, eventFilter)
                 .onEach { uow -> printStartPipeline(uow) }
                 .filter { uow -> faulty(uow) { onContentType(uow) } == true }
                 .mapNotFaulty { uow -> addCorrelationKey(uow)}

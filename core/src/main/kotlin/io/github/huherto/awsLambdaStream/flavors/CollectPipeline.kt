@@ -1,18 +1,22 @@
 package io.github.huherto.awsLambdaStream.flavors
 
-import io.github.huherto.awsLambdaStream.*
+import io.github.huherto.awsLambdaStream.EnvironmentConfig
+import io.github.huherto.awsLambdaStream.Event
+import io.github.huherto.awsLambdaStream.FaultManager
+import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.filters.EventFilter
+import io.github.huherto.awsLambdaStream.filters.filterEvents
 import io.github.huherto.awsLambdaStream.sinks.EventsMicrostore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
-import kotlin.reflect.KClass
 
 class CollectPipeline constructor(
     private val  pipelineId: String,
     private val envConfig: EnvironmentConfig,
     private val onContentType: (UnitOfWork) -> Boolean = {  true },
-    private val onEventClass: List<KClass<out Event>> = listOf(Event::class),
+    private val eventFilter: EventFilter = EventFilter.Any,
     private val correlationKey: (UnitOfWork) -> String? = { uow -> uow.event?.partitionKey },
     private val ttlDays: Int? = null,
     private val includeRaw: Boolean = true,
@@ -56,7 +60,7 @@ class CollectPipeline constructor(
         logger.info { "CollectPipeline.connect: id=$id" }
         with(fm) {
             val flow = fromFlow
-                .filterEventTypes(this, *onEventClass.toTypedArray())
+                .filterEvents(fm, eventFilter)
                 .onEach { uow -> printStartPipeline(uow) }
                 .filter { uow -> faulty(uow) { onContentType(uow) } == true }
                 .mapNotFaulty { uow -> uow.copy(key = correlationKey(uow)) }

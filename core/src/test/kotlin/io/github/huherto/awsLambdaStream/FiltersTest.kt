@@ -1,5 +1,7 @@
 package io.github.huherto.awsLambdaStream
 
+import io.github.huherto.awsLambdaStream.filters.EventFilters
+import io.github.huherto.awsLambdaStream.filters.filterEvents
 import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
 import io.mockk.spyk
 import kotlinx.coroutines.flow.flow
@@ -30,7 +32,7 @@ class FiltersTest {
             emit(UnitOfWork(event = myEventA ))
             emit(UnitOfWork(event = myEventB ))
             emit(UnitOfWork(event = myEventC ))
-        }.filterEventTypes(faultManager, MyEventA::class, MyEventB::class)
+        }.filterEvents(faultManager, EventFilters.classes(MyEventA::class, MyEventB::class))
             .onEach {
                 when (it.event) {
                     is MyEventA -> foundMyEventA = true
