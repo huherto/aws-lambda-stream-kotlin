@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 
 class CollectPipeline constructor(
-    private val  pipelineId: String,
+    pipelineId: String,
     private val envConfig: EnvironmentConfig,
     private val onContentType: (UnitOfWork) -> Boolean = {  true },
     private val eventFilter: EventFilter = EventFilter.Any,

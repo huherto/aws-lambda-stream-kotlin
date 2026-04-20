@@ -63,7 +63,7 @@ class TriggerContainer(
     }
 
     val assembler: PipelineAssembler by lazy {
-        PipelineAssembler.Companion
+        PipelineAssembler
             .builder()
             .faultManager(faultManager)
             .addPipeline(correlatePipeline)

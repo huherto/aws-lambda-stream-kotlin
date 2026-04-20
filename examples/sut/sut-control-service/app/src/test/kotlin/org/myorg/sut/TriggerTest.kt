@@ -1,6 +1,5 @@
 package org.myorg.sut
 
-import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.StreamRecord
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
@@ -14,14 +13,12 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
-import io.mockk.mockk
 import io.mockk.spyk
 
 class TriggerTest : FunSpec({
 
     fun createContainer(): TriggerContainer {
         val envConfig = spyk<EnvironmentConfig>()
-        val dynamoDbClient = mockk<DynamoDbClient>(relaxed = true)
         val eventPublisher = EventPublisherInMemory()
         val faultManager = FaultManager(envConfig, eventPublisher, skipErrorLogging = true)
         val eventsMicrostore = EventsMicrostoreInMemory(faultManager)
