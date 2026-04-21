@@ -104,9 +104,12 @@ class ShipmentDeliveredEvent(var signedBy: String? = null) : TrackedUnitEvent()
 class ShipmentExceptionEvent(var exceptionType: String? = null, var description: String? = null) : TrackedUnitEvent()
 
 @Serializable
+@SerialName("VERIFY_TARGET_ADDRESS")
+class VerifyTargetAddressEvent() : TrackedUnitEvent()
+
+@Serializable
 @SerialName("POISON_PILL_EVENT")
 class PoisonPillEvent() : TrackedUnitEvent()
-
 
 val sutJson: Json = Json {
     ignoreUnknownKeys = true

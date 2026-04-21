@@ -6,6 +6,7 @@ import io.github.huherto.awsLambdaStream.filters.EventFilter
 import io.github.huherto.awsLambdaStream.filters.filterEvents
 import io.github.huherto.awsLambdaStream.from.RecordImage
 import io.github.huherto.awsLambdaStream.from.RecordPair
+import io.github.huherto.awsLambdaStream.from.TableChangeEvent
 import io.github.huherto.awsLambdaStream.sinks.EventPublisher
 import io.github.huherto.awsLambdaStream.sinks.EventsMicrostore
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -57,34 +58,33 @@ class EvaluatePipeline (
 
     internal fun normalize(uow: UnitOfWork): UnitOfWork {
 
-        val raw = uow.event?.raw as? RecordPair
-        val rawNew = raw?.new ?: RecordImage(mapOf())
+        val tableChangeEvent = uow.event as? TableChangeEvent ?: return uow
+        val raw = tableChangeEvent.raw as? RecordPair ?: return uow
+
+        val rawNew = raw.new ?: RecordImage(mapOf())
         val eventAsString = rawNew.getEvent()?: "{}"
         val eventAsObject = defaultUnmarshall(eventAsString)
-        val isCorrel = rawNew.get("discriminator")?.s == "CORREL"
-        val pk = rawNew.get("pk")?.s
-        val data = rawNew.get("data")?.s
-        val suffix = rawNew.get("suffix")?.s
+        val correlation = rawNew.getDiscriminator() == "CORREL"
+        val pk = rawNew.getPk()
+        val data = rawNew.getData()
+        val suffix = rawNew.getSuffix()
         val queryParams = EventsMicrostore.QueryParams(
             pk = pk,
-            isCorrelated =  isCorrel,
+            correlation =  correlation,
             data = data,
             index = index,
         )
+
+        val correlationKey = if (correlation) pk else data
+        val partitionKey = correlationKey?.replace(".${suffix}", "")
+
         return uow.copy(
-            meta = mapOf(
-                "id" to uow.event?.id,
-                //"sequenceNumber" to record?.dynamodb?.sequenceNumber,
-                // "ttl" to "" + rawNew.getTtl().toString(),
-                // "expire" to "" + expire,
-                // "pk" to pk,
-                // "data" to rawNew.getData(),
-                //"correlationKey" to correlationKey,
-                "suffix" to suffix,
-                "correlation" to isCorrel.toString()
-            ),
             queryParams = queryParams,
-            event = eventAsObject
+            event = eventAsObject,
+            meta = mapOf(
+                "eventId" to "${tableChangeEvent.id}.${id}",
+                "partitionKey" to partitionKey,
+            )
         )
     }
 
@@ -137,30 +137,8 @@ class EvaluatePipeline (
     )
 
     internal fun toHigherOrderEvents(uow: UnitOfWork): List<UnitOfWork> {
-        val basic = higherOrderEmit is EmitOption.Basic
-        val trigger = uow.triggers?.lastOrNull()
 
-        val aggregatedTags = aggregateTags(uow)
-
-        val mappedTriggers = uow.triggers?.map {
-            TriggerMapped(it.id, it.eventType(), it.timestamp)
-        }
-
-        val uowMetaId = uow.meta?.get("id") ?: ""
-        val uowMetaCorrelationKey = uow.meta?.get("correlationKey") ?: ""
-        val partitionKeyStr = uowMetaCorrelationKey.replace(".${correlationKeySuffix}", "")
-
-        val template = HigherOrderEvent(
-            id = "$uowMetaId.${id}", // plus a suffix if many
-            type = (higherOrderEmit as? EmitOption.Basic)?.type,
-            timestamp = trigger?.timestamp,
-            partitionKey = partitionKeyStr,
-            tags = aggregatedTags,
-            mappedTriggers = mappedTriggers,
-            baseEvent = if (basic) uow.event else null,
-            raw = if (basic) uow.event?.raw else null,
-            eem = if (basic) uow.event?.eem else null
-        )
+        val template = toHigherOrderEventTemplate(uow)
 
         val resultEvents: List<Event> = when (higherOrderEmit) {
             is EmitOption.Basic -> listOf(template)
@@ -172,6 +150,30 @@ class EvaluatePipeline (
         return resultEvents.map { emit ->
             uow.copy(event = emit)
         }
+    }
+
+    internal fun toHigherOrderEventTemplate(uow: UnitOfWork): HigherOrderEvent {
+        val basic = higherOrderEmit is EmitOption.Basic
+        val trigger = uow.triggers?.lastOrNull()
+
+        val aggregatedTags = aggregateTags(uow)
+
+        val mappedTriggers = uow.triggers?.map {
+            TriggerMapped(it.id, it.eventType(), it.timestamp)
+        }
+
+        val template = HigherOrderEvent(
+            id = uow.meta?.get("eventId"),
+            partitionKey = uow.meta?.get("partitionKey"),
+            type = (higherOrderEmit as? EmitOption.Basic)?.type,
+            timestamp = trigger?.timestamp,
+            tags = aggregatedTags,
+            mappedTriggers = mappedTriggers,
+            baseEvent = if (basic) uow.event else null,
+            raw = if (basic) uow.event?.raw else null,
+            eem = if (basic) uow.event?.eem else null
+        )
+        return template
     }
 
     private fun aggregateTags(uow: UnitOfWork): MutableMap<String, String>? {

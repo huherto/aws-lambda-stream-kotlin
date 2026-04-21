@@ -110,11 +110,17 @@ data class RecordPair(val new: RecordImage?, val old: RecordImage?)
 
 class RecordImage(val map: Map<String, EventAV?>) : Map<String, EventAV?> by map  {
 
+    fun getPk(): String? = map["pk"]?.s
+
     fun getTtl(): String? = map["ttl"]?.n
 
     fun getData(): String? = map["data"]?.s
 
     fun getEvent(): String? = map["event"]?.s
+
+    fun getDiscriminator(): String? = map["discriminator"]?.s
+
+    fun getSuffix(): String? = map["suffix"]?.s
 
     fun isDeleted(): Boolean = map.containsKey("deleted") && map["deleted"]?.isBOOL == true
 

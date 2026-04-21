@@ -5,6 +5,7 @@ import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.PipelineAssembler
 import io.github.huherto.awsLambdaStream.filters.EventFilters
 import io.github.huherto.awsLambdaStream.flavors.CorrelatePipeline
+import io.github.huherto.awsLambdaStream.flavors.EmitOption
 import io.github.huherto.awsLambdaStream.flavors.EvaluatePipeline
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import io.github.huherto.awsLambdaStream.from.DynamodbAdapter
@@ -55,10 +56,12 @@ class TriggerContainer(
 
     private val evaluatePipeline: Pipeline by lazy {
         EvaluatePipeline(
-            id = "eval1",
+            id = "eval_vta",
             envConfig = envConfig,
             eventPublisher = eventPublisher,
             eventsMicrostore = eventsMicrostore,
+            eventFilter = EventFilters.name("SHIPMENT_CREATED"),
+            higherOrderEmit = EmitOption.Basic("VERIFY_TARGET_ADDRESS"),
         )
     }
 

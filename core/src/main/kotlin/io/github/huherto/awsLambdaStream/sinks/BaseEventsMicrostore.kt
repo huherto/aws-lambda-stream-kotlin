@@ -32,7 +32,7 @@ abstract class BaseEventsMicrostore(
         }
 
         val pk = uow.queryParams.pk
-        val isCorrelation = uow.queryParams.isCorrelated
+        val isCorrelation = uow.queryParams.correlation
         val data = uow.queryParams.data
 
         if (isCorrelation) {

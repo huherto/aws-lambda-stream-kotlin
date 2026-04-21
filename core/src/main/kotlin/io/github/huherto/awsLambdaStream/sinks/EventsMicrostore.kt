@@ -22,7 +22,7 @@ interface EventsMicrostore {
 
     data class QueryParams(
         val pk: String? = null,
-        val isCorrelated: Boolean,
+        val correlation: Boolean,
         val data: String? = null,
         val index: String? = null,
     )

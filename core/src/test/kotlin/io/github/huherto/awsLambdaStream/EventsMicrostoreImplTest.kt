@@ -86,7 +86,7 @@ class EventsMicrostoreImplTest {
         val uow = UnitOfWork(
             queryParams = EventsMicrostore.QueryParams(
                 pk = "test-pk",
-                isCorrelated = true
+                correlation = true
             ),
             meta = mapOf("correlation" to "true", "pk" to "test-pk")
         )

@@ -2,9 +2,13 @@ package io.github.huherto.awsLambdaStream.flavors
 
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.StreamRecord
-import io.github.huherto.awsLambdaStream.*
+import io.github.huherto.awsLambdaStream.EnvironmentConfig
+import io.github.huherto.awsLambdaStream.Event
+import io.github.huherto.awsLambdaStream.JsonEvent
+import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.from.RecordImage
 import io.github.huherto.awsLambdaStream.from.RecordPair
+import io.github.huherto.awsLambdaStream.from.TableChangeEvent
 import io.github.huherto.awsLambdaStream.sinks.EventPublisher
 import io.github.huherto.awsLambdaStream.sinks.EventsMicrostore
 import io.kotest.assertions.throwables.shouldThrow
@@ -27,7 +31,6 @@ class EvaluatePipelineTest {
     private val envConfig = spyk<EnvironmentConfig>()
     private val eventPublisher = mockk<EventPublisher>()
     private val eventsMicrostore = mockk<EventsMicrostore>()
-    private val faultManager = mockk<FaultManager>()
 
     private fun createPipeline(
         pipelineId: String = "pipeline-1",
@@ -162,10 +165,13 @@ class EvaluatePipelineTest {
                 "expire" to StreamAV().withBOOL(true),
             )
         )
-        val raw = RecordPair(new = rawNew, old = null)
+        val tableChangeEvent = TableChangeEvent().apply {
+            id = "event-1"
+            raw = RecordPair(new = rawNew, old = null)
+        }
         val uow = UnitOfWork(
             record = createInsertRecord(discriminator = "CORREL"),
-            event = createEvent(id = "event-1", raw = raw)
+            event = tableChangeEvent
         )
 
         // Act
@@ -173,16 +179,12 @@ class EvaluatePipelineTest {
 
         // Assert
         val meta = result.meta.shouldNotBeNull()
-        meta["id"] shouldBe "event-1"
-        //meta["pk"] shouldBe "pk-1"
-        //meta["data"] shouldBe "data-1"
-        //meta["correlationKey"] shouldBe "pk-1"
-        meta["suffix"] shouldBe "suffix-1"
-        //meta["correlation"] shouldBe "true"
-        
+        meta["eventId"] shouldBe "event-1.pipeline-1"
+        meta["partitionKey"] shouldBe "pk-1"
+
         result.queryParams.shouldNotBeNull()
         result.queryParams.pk shouldBe "pk-1"
-        result.queryParams.isCorrelated shouldBe true
+        result.queryParams.correlation shouldBe true
         result.event.shouldNotBeNull()
         result.event.id shouldBe "decoded"
         result.event.eventType() shouldBe "DecodedType"
@@ -268,8 +270,8 @@ class EvaluatePipelineTest {
         val uow = UnitOfWork(
             event = baseEvent,
             meta = mapOf(
-                "id" to "uow-1",
-                "correlationKey" to "partition-1.suffix-a"
+                "eventId" to "uow-1.pipeline-basic",
+                "partitionKey" to "partition-1"
             ),
             triggers = listOf(trigger, baseEvent)
         )
