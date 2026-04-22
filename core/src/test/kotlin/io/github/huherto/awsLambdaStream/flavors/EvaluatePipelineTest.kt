@@ -12,7 +12,6 @@ import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeTypeOf
 import io.mockk.every
 import io.mockk.mockk
@@ -25,15 +24,30 @@ import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeVal
 
 class EvaluatePipelineTest {
 
+    class SimpleEventCodec : EventCodec {
+        override fun decode(text: String): Event {
+            val jsonEvent: JsonEvent = try {
+                JsonEvent(text)
+            } catch (e: Exception) {
+                throw e
+            }
+            return jsonEvent
+        }
+
+        override fun encode(value: Event): String {
+            return value.asJson()
+        }
+    }
+
     private val envConfig = spyk<EnvironmentConfig>()
     private val eventPublisher = mockk<EventPublisher>()
     private val eventsMicrostore = mockk<EventsMicrostore>()
+    private val eventCodec = SimpleEventCodec()
 
     private fun createPipeline(
         pipelineId: String = "pipeline-1",
         correlationKeySuffix: String = "",
         index: String? = null,
-        unmarshall: ((String) -> Event)? = null,
         expression: ((UnitOfWork) -> Boolean)? = null,
         higherOrderEmit: EmitOption? = null,
     ): EvaluatePipeline {
@@ -44,7 +58,7 @@ class EvaluatePipelineTest {
             eventsMicrostore = eventsMicrostore,
             correlationKeySuffix = correlationKeySuffix,
             index = index,
-            unmarshall = unmarshall,
+            eventCodec = eventCodec,
             expression = expression,
             higherOrderEmit = higherOrderEmit,
         )
@@ -110,31 +124,6 @@ class EvaluatePipelineTest {
     }
 
     @Test
-    fun `defaultUnmarshall should use custom unmarshall when provided and JsonEvent otherwise`() {
-        // Arrange
-        val customEvent = createEvent(id = "custom-id", type = "CustomType")
-        val pipelineWithCustom = createPipeline(
-            unmarshall = { input ->
-                createEvent(id = "parsed-$input", type = "CustomType")
-            }
-        )
-        val pipelineWithJson = createPipeline()
-
-        // Act
-        val customResult = pipelineWithCustom.defaultUnmarshall("""{"id":"ignored"}""")
-        val jsonResult = pipelineWithJson.defaultUnmarshall("""{"id":"json-id","type":"JsonType"}""")
-
-        // Assert
-        customResult.id shouldBe "parsed-{\"id\":\"ignored\"}"
-        customResult.eventType() shouldBe "CustomType"
-
-        jsonResult.shouldBeTypeOf<JsonEvent>()
-        jsonResult.id shouldBe "json-id"
-        jsonResult.eventType() shouldBe "JsonType"
-        customEvent.id shouldNotBe null
-    }
-
-    @Test
     fun `defaultUnmarshall should throw for invalid json`() {
         // Arrange
         val pipeline = createPipeline()
@@ -149,11 +138,11 @@ class EvaluatePipelineTest {
     fun `normalize should populate meta queryParams and event from record pair`() {
         // Arrange
         val pipeline = createPipeline(
-            unmarshall = { input -> createEvent(id = "decoded", type = "DecodedType", raw = input) }
+            //unmarshall = { input -> createEvent(id = "decoded", type = "DecodedType", raw = input) }
         )
         val rawNew = RecordImage(
             mapOf(
-                "event" to StreamAV().withN("""{"id":"decoded","type":"DecodedType"}"""),
+                "event" to StreamAV().withS("""{"id":"decoded","type":"DecodedType"}"""),
                 "pk" to StreamAV("pk-1"),
                 "data" to StreamAV("data-1"),
                 "discriminator" to StreamAV("CORREL"),

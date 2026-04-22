@@ -61,7 +61,7 @@ class EvaluatePipeline (
     val correlationKeySuffix: String = "",
     val index: String? = null,
     val bufferCapacity: Int = Channel.BUFFERED,
-    val unmarshall: ((String) -> Event)? = null,
+    val eventCodec: EventCodec,
     val expression: ((UnitOfWork) -> Boolean)? = null,
     val higherOrderEmit: EmitOption? = null,
 ) : Pipeline(id) {
@@ -78,15 +78,15 @@ class EvaluatePipeline (
     }
 
     internal fun defaultUnmarshall(eventAsString: String) : Event {
-        if (unmarshall != null) return unmarshall(eventAsString)
+        return eventCodec.decode(eventAsString)
 
-        val jsonEvent: JsonEvent = try {
-            JsonEvent(eventAsString)
-        } catch (e: Exception) {
-            logger.error {"Failed to parse event: $eventAsString, $e" }
-            throw e
-        }
-        return jsonEvent
+//        val jsonEvent: JsonEvent = try {
+//            JsonEvent(eventAsString)
+//        } catch (e: Exception) {
+//            logger.error {"Failed to parse event: $eventAsString, $e" }
+//            throw e
+//        }
+//        return jsonEvent
     }
 
     internal fun normalize(uow: UnitOfWork): UnitOfWork {

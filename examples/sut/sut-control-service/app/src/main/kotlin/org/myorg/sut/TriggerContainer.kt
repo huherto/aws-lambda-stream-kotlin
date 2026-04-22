@@ -60,6 +60,7 @@ class TriggerContainer(
             envConfig = envConfig,
             eventPublisher = eventPublisher,
             eventsMicrostore = eventsMicrostore,
+            eventCodec = TrackedUnitEventCodec,
             eventFilter = EventFilters.name(TrackedUnitEvent.SHIPMENT_CREATED),
             higherOrderEmit = EmitOption.Basic(clazz = VerifyTargetAddressEvent::class.java),
         )
