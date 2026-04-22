@@ -17,8 +17,6 @@ fun getJsonPrimitiveByPath(jsonObject: JsonObject, path: String): JsonPrimitive?
 
 class JsonEvent(jsonString: String) : Event {
 
-    private val logger = mu.KotlinLogging.logger {  }
-
     private val jsonObject = Json.parseToJsonElement(jsonString).jsonObject
     override var id: String?
         get() = jsonObject["id"]?.jsonPrimitive?.content
@@ -38,6 +36,9 @@ class JsonEvent(jsonString: String) : Event {
     override var eem: Any?
         get() = jsonObject["eem"]?.jsonObject?.mapValues { it.value.jsonPrimitive.content }
         set(value) {}
+    override var triggers: List<EventReference>?
+        get() = jsonObject["triggers"]?.jsonArray?.map { EventReference(it.jsonPrimitive.content) }
+        set(value) { }
 
     fun jsonObject(path: String) : JsonObject? {
         return getJsonObjectByPath(jsonObject, path)

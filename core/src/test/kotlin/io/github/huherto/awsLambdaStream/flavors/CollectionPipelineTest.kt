@@ -1,5 +1,6 @@
 package io.github.huherto.awsLambdaStream.flavors
 
+import io.github.huherto.awsLambdaStream.BaseEvent
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.Event
 import io.github.huherto.awsLambdaStream.UnitOfWork
@@ -45,13 +46,10 @@ class CollectionPipelineTest {
         id: String = "event-1",
         timestamp: Long = 1_700_000_000_000L,
         partitionKey: String? = "partition-1",
-    ): Event = object : Event {
+    ): Event = object : BaseEvent() {
         override var id: String? = id
         override var timestamp: Long? = timestamp
         override var partitionKey: String? = partitionKey
-        override var tags: Map<String, String>? = null
-        override var raw: Any? = null
-        override var eem: Any? = null
         override fun eventType() = "TestEvent"
         override fun encoded() = """{"id":"$id"}"""
     }

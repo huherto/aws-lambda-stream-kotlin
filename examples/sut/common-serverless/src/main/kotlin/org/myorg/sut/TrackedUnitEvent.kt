@@ -1,13 +1,13 @@
 package org.myorg.sut
 
-import io.github.huherto.awsLambdaStream.Event
+import io.github.huherto.awsLambdaStream.BaseEvent
 import kotlinx.serialization.*
 import kotlinx.serialization.json.Json
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 
 @Serializable
-sealed class TrackedUnitEvent() : Event {
+sealed class TrackedUnitEvent() : BaseEvent() {
 
     companion object {
         fun fromString(s: String): TrackedUnitEvent {

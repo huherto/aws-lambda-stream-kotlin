@@ -61,7 +61,7 @@ class TriggerContainer(
             eventPublisher = eventPublisher,
             eventsMicrostore = eventsMicrostore,
             eventFilter = EventFilters.name("SHIPMENT_CREATED"),
-            higherOrderEmit = EmitOption.Basic("VERIFY_TARGET_ADDRESS"),
+            higherOrderEmit = EmitOption.Basic(clazz = VerifyTargetAddressEvent::class.java),
         )
     }
 

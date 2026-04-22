@@ -12,11 +12,7 @@ class MyThing {
 }
 
 @Serializable
-sealed class MyEvent() : Event {
-    override var id: String? = null
-    override var timestamp: Long? = null
-    override var partitionKey: String? = null
-    override var tags: Map<String, String>? = mutableMapOf()
+sealed class MyEvent() : BaseEvent() {
 
     var entity: MyThing? = null
 

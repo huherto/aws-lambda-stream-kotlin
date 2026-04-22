@@ -2,10 +2,7 @@ package io.github.huherto.awsLambdaStream.flavors
 
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.StreamRecord
-import io.github.huherto.awsLambdaStream.EnvironmentConfig
-import io.github.huherto.awsLambdaStream.Event
-import io.github.huherto.awsLambdaStream.JsonEvent
-import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.*
 import io.github.huherto.awsLambdaStream.from.RecordImage
 import io.github.huherto.awsLambdaStream.from.RecordPair
 import io.github.huherto.awsLambdaStream.from.TableChangeEvent
@@ -61,7 +58,7 @@ class EvaluatePipelineTest {
         raw: Any? = null,
         eem: Any? = null,
         type: String = "TestEvent",
-    ): Event = object : Event {
+    ): Event = object : BaseEvent() {
         override var id: String? = id
         override var timestamp: Long? = timestamp
         override var partitionKey: String? = partitionKey
@@ -255,6 +252,17 @@ class EvaluatePipelineTest {
         expressionResult[0].meta!!["keep"] shouldBe "true"
     }
 
+    class HigherType : BaseEvent() {
+        override fun eventType(): String {
+            return "HigherType"
+        }
+
+        override fun encoded(): String {
+            TODO("Not yet implemented")
+        }
+
+    }
+
     @Test
     fun `toHigherOrderEvents should create basic higher order event and custom emit events`() {
         // Arrange
@@ -279,15 +287,16 @@ class EvaluatePipelineTest {
         val basicPipeline = createPipeline(
             pipelineId = "pipeline-basic",
             correlationKeySuffix = "suffix-a",
-            higherOrderEmit = EmitOption.Basic(type = "HigherType")
+            higherOrderEmit = EmitOption.Basic(clazz = HigherType::class.java)
         )
         val customPipeline = createPipeline(
             pipelineId = "pipeline-custom",
             correlationKeySuffix = "suffix-a",
             higherOrderEmit = EmitOption.Custom { _, template ->
-                val t2 = template
+                val t1 = template.createEvent(HigherType::class.java)
+                val t2 = template.createEvent(HigherType::class.java)
                 listOf(
-                    template,
+                    t1,
                     t2
                 )
             }
@@ -300,19 +309,19 @@ class EvaluatePipelineTest {
         // Assert
         basicResult shouldHaveSize 1
         val basicEvent = basicResult.first().event.shouldNotBeNull()
-        basicEvent.shouldBeTypeOf<EvaluatePipeline.HigherOrderEvent>()
+        basicEvent.shouldBeTypeOf<HigherType>()
         basicEvent.id shouldBe "uow-1.pipeline-basic"
         basicEvent.eventType() shouldBe "HigherType"
         basicEvent.partitionKey shouldBe "partition-1"
         basicEvent.tags shouldBe mapOf("team" to "core", "env" to "test")
-        basicEvent.mappedTriggers?.shouldHaveSize(2)
-        basicEvent.baseEvent shouldBe baseEvent
+        basicEvent.triggers?.shouldHaveSize(2)
+        // basicEvent.base shouldBe baseEvent
         basicEvent.raw shouldBe "raw-value"
         basicEvent.eem shouldBe mapOf("key" to "value")
 
         customResult shouldHaveSize 2
-        customResult[0].event.shouldNotBeNull().shouldBeTypeOf<EvaluatePipeline.HigherOrderEvent>()
-        customResult[1].event.shouldNotBeNull().shouldBeTypeOf<EvaluatePipeline.HigherOrderEvent>()
+        customResult[0].event.shouldNotBeNull().shouldBeTypeOf<HigherType>()
+        customResult[1].event.shouldNotBeNull().shouldBeTypeOf<HigherType>()
         // fix this. It is failing.
         //customResult[1].event!!.id shouldBe "second-template"
     }

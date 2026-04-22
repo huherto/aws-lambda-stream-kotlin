@@ -5,10 +5,7 @@ import aws.sdk.kotlin.services.dynamodb.model.PutItemResponse
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.StreamRecord
-import io.github.huherto.awsLambdaStream.EnvironmentConfig
-import io.github.huherto.awsLambdaStream.Event
-import io.github.huherto.awsLambdaStream.FaultManager
-import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.*
 import io.github.huherto.awsLambdaStream.filters.EventFilters
 import io.github.huherto.awsLambdaStream.from.RecordImage
 import io.github.huherto.awsLambdaStream.from.RecordPair
@@ -43,7 +40,7 @@ class CorrelatePipelineTest {
         override var raw: Any? = null,
         override var eem: Any? = null,
         private val encodedStr: String = "{}"
-    ) : Event {
+    ) : BaseEvent() {
         override fun eventType() = "TestEvent"
         override fun encoded() = encodedStr
     }

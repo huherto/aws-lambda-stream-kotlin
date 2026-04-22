@@ -13,9 +13,42 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 
+// A concrete implementation of Event to create Higher Order Events
+data class HigherOrderEventTemplate (
+    var clazz: Class<out Event>? = null,
+    var baseEvent: Event? = null,
+) : BaseEvent() {
+    override fun eventType(): String = "Not used"
+    override fun encoded(): String = "Not used"
+
+    fun createEvent(clazz: Class<out Event>): Event {
+        return createEventFromTemplate( clazz, this)
+    }
+
+    fun createEvent(): Event {
+        return createEventFromTemplate( clazz!!, this)
+    }
+}
+
+internal fun createEventFromTemplate(
+    clazz: Class<out Event>,
+    template: HigherOrderEventTemplate
+): Event {
+    val instance = clazz.getDeclaredConstructor().newInstance() as Event
+    return instance.apply {
+        id = template.id
+        timestamp = template.timestamp
+        partitionKey = template.partitionKey
+        tags = template.tags
+        raw = template.raw
+        eem = template.eem
+        triggers = template.triggers
+    }
+}
+
 sealed interface EmitOption {
-    data class Basic(val type: String) : EmitOption
-    data class Custom(val emit: (UnitOfWork, Event) -> List<Event>) : EmitOption
+    data class Basic(val clazz: Class<out Event>) : EmitOption
+    data class Custom(val emit: (UnitOfWork, HigherOrderEventTemplate) -> List<Event>) : EmitOption
 }
 
 class EvaluatePipeline (
@@ -114,34 +147,18 @@ class EvaluatePipeline (
         }
     }
 
-    // A concrete implementation of Event for the newly created higher-order template
-    data class HigherOrderEvent(
-        override var id: String? = null,
-        override var timestamp: Long? = null,
-        override var partitionKey: String? = null,
-        override var tags: Map<String, String>? = null,
-        override var raw: Any? = null,
-        override var eem: Any? = null,
-        var type: String? = null,
-        var mappedTriggers: List<TriggerMapped>? = null,
-        var baseEvent: Event? = null // Holds the properties of uow.event if basic is true
-    ) : Event {
-        override fun eventType(): String = type ?: baseEvent?.eventType() ?: "unknown"
-        override fun encoded(): String = baseEvent?.encoded() ?: "{}"
-    }
-
-    data class TriggerMapped(
-        val id: String? = null,
-        val type: String? = null,
-        val timestamp: Long? = null,
-    )
-
     internal fun toHigherOrderEvents(uow: UnitOfWork): List<UnitOfWork> {
 
         val template = toHigherOrderEventTemplate(uow)
 
+        val instantiatedEvent: Event = if (higherOrderEmit is EmitOption.Basic && template.clazz != null) {
+            template.createEvent()
+        } else {
+            template
+        }
+
         val resultEvents: List<Event> = when (higherOrderEmit) {
-            is EmitOption.Basic -> listOf(template)
+            is EmitOption.Basic -> listOf(instantiatedEvent)
             is EmitOption.Custom -> higherOrderEmit.emit(uow, template)
             null -> throw IllegalArgumentException("higherOrderEmit must be a String or a function")
         }
@@ -152,27 +169,28 @@ class EvaluatePipeline (
         }
     }
 
-    internal fun toHigherOrderEventTemplate(uow: UnitOfWork): HigherOrderEvent {
+    internal fun toHigherOrderEventTemplate(uow: UnitOfWork): HigherOrderEventTemplate {
         val basic = higherOrderEmit is EmitOption.Basic
         val trigger = uow.triggers?.lastOrNull()
 
         val aggregatedTags = aggregateTags(uow)
 
         val mappedTriggers = uow.triggers?.map {
-            TriggerMapped(it.id, it.eventType(), it.timestamp)
+            EventReference(it.id, it.eventType(), it.timestamp)
         }
 
-        val template = HigherOrderEvent(
-            id = uow.meta?.get("eventId"),
-            partitionKey = uow.meta?.get("partitionKey"),
-            type = (higherOrderEmit as? EmitOption.Basic)?.type,
-            timestamp = trigger?.timestamp,
-            tags = aggregatedTags,
-            mappedTriggers = mappedTriggers,
-            baseEvent = if (basic) uow.event else null,
-            raw = if (basic) uow.event?.raw else null,
+        val template = HigherOrderEventTemplate().apply {
+            id = uow.meta?.get("eventId")
+            partitionKey = uow.meta?.get("partitionKey")
+            clazz = (higherOrderEmit as? EmitOption.Basic)?.clazz
+            timestamp = trigger?.timestamp
+            tags = aggregatedTags
+            this.triggers = mappedTriggers
+            baseEvent = if (basic) uow.event else null
+            raw = if (basic) uow.event?.raw else null
             eem = if (basic) uow.event?.eem else null
-        )
+        }
+
         return template
     }
 
