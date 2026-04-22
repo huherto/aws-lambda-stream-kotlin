@@ -1,15 +1,32 @@
 package org.myorg.sut
 
-import io.github.huherto.awsLambdaStream.BaseEvent
-import kotlinx.serialization.*
+import io.github.huherto.awsLambdaStream.Event
+import io.github.huherto.awsLambdaStream.EventReference
+import kotlinx.serialization.Contextual
+import kotlinx.serialization.InternalSerializationApi
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.serializerOrNull
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 
 @Serializable
-sealed class TrackedUnitEvent() : BaseEvent() {
+sealed class TrackedUnitEvent() : Event {
 
     companion object {
+        const val SHIPMENT_CREATED = "SHIPMENT_CREATED"
+        const val SHIPMENT_PICKED_UP = "SHIPMENT_PICKED_UP"
+        const val SHIPMENT_IN_TRANSIT = "SHIPMENT_IN_TRANSIT"
+        const val ARRIVAL_AT_HUB = "ARRIVAL_AT_HUB"
+        const val DEPARTURE_FROM_HUB = "DEPARTURE_FROM_HUB"
+        const val CUSTOMS_CLEARED = "CUSTOMS_CLEARED"
+        const val OUT_FOR_DELIVERY = "OUT_FOR_DELIVERY"
+        const val DELIVERY_ATTEMPTED = "DELIVERY_ATTEMPTED"
+        const val SHIPMENT_DELIVERED = "SHIPMENT_DELIVERED"
+        const val SHIPMENT_EXCEPTION = "SHIPMENT_EXCEPTION"
+        const val VERIFY_TARGET_ADDRESS = "VERIFY_TARGET_ADDRESS"
+        const val POISON_PILL_EVENT = "POISON_PILL_EVENT"
+
         fun fromString(s: String): TrackedUnitEvent {
             return jsonDecode(s)
         }
@@ -27,6 +44,9 @@ sealed class TrackedUnitEvent() : BaseEvent() {
     @Contextual
     override var eem: Any? = null
 
+    @Serializable(with = EventReferenceListSerializer::class)
+    override var triggers: List<EventReference>? = null
+
     @OptIn(InternalSerializationApi::class)
     override fun eventType(): String {
         return this::class.serializerOrNull()?.descriptor?.serialName ?: "unknown"
@@ -42,9 +62,10 @@ sealed class TrackedUnitEvent() : BaseEvent() {
     override fun toString(): String {
         return encoded()
     }
+
 }
 
-fun jsonEncode(event : TrackedUnitEvent) : String {
+fun jsonEncode(event: TrackedUnitEvent): String {
     return sutJson.encodeToString(TrackedUnitEvent.serializer(), event)
 }
 
@@ -53,62 +74,62 @@ fun jsonDecode(s: String): TrackedUnitEvent {
 }
 
 // Not sure if we need this
-fun utf8Encode(s : String) : String {
+fun utf8Encode(s: String): String {
     return StandardCharsets.UTF_8.encode(s).toString()
 }
 
 // .. or this.
-fun utf8Decode(bb : ByteBuffer?) : String {
+fun utf8Decode(bb: ByteBuffer?): String {
     if (bb == null) return ""
     return StandardCharsets.UTF_8.decode(bb).toString()
 }
 
-@Serializable()
-@SerialName("SHIPMENT_CREATED")
+@Serializable
+@kotlinx.serialization.SerialName(TrackedUnitEvent.SHIPMENT_CREATED)
 class ShipmentCreatedEvent : TrackedUnitEvent()
 
 @Serializable
-@SerialName("SHIPMENT_PICKED_UP")
+@kotlinx.serialization.SerialName(TrackedUnitEvent.SHIPMENT_PICKED_UP)
 class ShipmentPickedUpEvent(var carrierName: String? = null) : TrackedUnitEvent()
 
 @Serializable
-@SerialName("SHIPMENT_IN_TRANSIT")
+@kotlinx.serialization.SerialName(TrackedUnitEvent.SHIPMENT_IN_TRANSIT)
 class ShipmentInTransitEvent : TrackedUnitEvent()
 
 @Serializable
-@SerialName("ARRIVAL_AT_HUB")
+@kotlinx.serialization.SerialName(TrackedUnitEvent.ARRIVAL_AT_HUB)
 class ArrivalAtHubEvent(var hubId: String? = null) : TrackedUnitEvent()
 
 @Serializable
-@SerialName("DEPARTURE_FROM_HUB")
+@kotlinx.serialization.SerialName(TrackedUnitEvent.DEPARTURE_FROM_HUB)
 class DepartureFromHubEvent(var nextDestination: String? = null) : TrackedUnitEvent()
 
 @Serializable
-@SerialName("CUSTOMS_CLEARED")
+@kotlinx.serialization.SerialName(TrackedUnitEvent.CUSTOMS_CLEARED)
 class CustomsClearedEvent(var countryCode: String? = null) : TrackedUnitEvent()
 
 @Serializable
-@SerialName("OUT_FOR_DELIVERY")
+@kotlinx.serialization.SerialName(TrackedUnitEvent.OUT_FOR_DELIVERY)
 class OutForDeliveryEvent(var estimatedArrival: String? = null) : TrackedUnitEvent()
 
 @Serializable
-@SerialName("DELIVERY_ATTEMPTED")
+@kotlinx.serialization.SerialName(TrackedUnitEvent.DELIVERY_ATTEMPTED)
 class DeliveryAttemptedEvent(var reason: String? = null) : TrackedUnitEvent()
 
 @Serializable
-@SerialName("SHIPMENT_DELIVERED")
+@kotlinx.serialization.SerialName(TrackedUnitEvent.SHIPMENT_DELIVERED)
 class ShipmentDeliveredEvent(var signedBy: String? = null) : TrackedUnitEvent()
 
 @Serializable
-@SerialName("SHIPMENT_EXCEPTION")
+@kotlinx.serialization.SerialName(TrackedUnitEvent.SHIPMENT_EXCEPTION)
 class ShipmentExceptionEvent(var exceptionType: String? = null, var description: String? = null) : TrackedUnitEvent()
 
 @Serializable
-@SerialName("VERIFY_TARGET_ADDRESS")
+@kotlinx.serialization.SerialName(TrackedUnitEvent.VERIFY_TARGET_ADDRESS)
 class VerifyTargetAddressEvent() : TrackedUnitEvent()
 
 @Serializable
-@SerialName("POISON_PILL_EVENT")
+@kotlinx.serialization.SerialName(TrackedUnitEvent.POISON_PILL_EVENT)
 class PoisonPillEvent() : TrackedUnitEvent()
 
 val sutJson: Json = Json {
