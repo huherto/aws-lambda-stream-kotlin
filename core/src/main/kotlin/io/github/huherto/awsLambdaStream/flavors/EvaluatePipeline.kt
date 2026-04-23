@@ -35,6 +35,19 @@ internal fun createEventFromTemplate(
     template: HigherOrderEventTemplate
 ): Event {
     val instance = clazz.getDeclaredConstructor().newInstance() as Event
+
+    // Copy all fields from template.baseEvent to instance
+    template.baseEvent?.let { baseEvent ->
+        instance.id = baseEvent.id
+        instance.timestamp = baseEvent.timestamp
+        instance.partitionKey = baseEvent.partitionKey
+        instance.tags = baseEvent.tags
+        instance.raw = baseEvent.raw
+        instance.eem = baseEvent.eem
+        instance.triggers = baseEvent.triggers
+    }
+
+    // Override with template's own values
     return instance.apply {
         id = template.id
         timestamp = template.timestamp
@@ -79,14 +92,6 @@ class EvaluatePipeline (
 
     internal fun defaultUnmarshall(eventAsString: String) : Event {
         return eventCodec.decode(eventAsString)
-
-//        val jsonEvent: JsonEvent = try {
-//            JsonEvent(eventAsString)
-//        } catch (e: Exception) {
-//            logger.error {"Failed to parse event: $eventAsString, $e" }
-//            throw e
-//        }
-//        return jsonEvent
     }
 
     internal fun normalize(uow: UnitOfWork): UnitOfWork {
