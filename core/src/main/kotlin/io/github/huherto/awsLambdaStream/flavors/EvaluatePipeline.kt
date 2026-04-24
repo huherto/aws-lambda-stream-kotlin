@@ -9,19 +9,22 @@ import io.github.huherto.awsLambdaStream.from.RecordPair
 import io.github.huherto.awsLambdaStream.from.TableChangeEvent
 import io.github.huherto.awsLambdaStream.sinks.EventPublisher
 import io.github.huherto.awsLambdaStream.sinks.EventsMicrostore
+import io.github.huherto.awsLambdaStream.utils.createFromCommonValues
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
+import kotlin.reflect.KClass
+import kotlin.reflect.full.primaryConstructor
 
 // A concrete implementation of Event to create Higher Order Events
 data class HigherOrderEventTemplate (
-    var clazz: Class<out Event>? = null,
+    var clazz: KClass<out Event>? = null,
     var baseEvent: Event? = null,
 ) : BaseEvent() {
     override fun eventType(): String = "Not used"
     override fun encoded(): String = "Not used"
 
-    fun createEvent(clazz: Class<out Event>): Event {
+    fun createEvent(clazz:KClass<out Event>): Event {
         return createEventFromTemplate( clazz, this)
     }
 
@@ -31,20 +34,13 @@ data class HigherOrderEventTemplate (
 }
 
 internal fun createEventFromTemplate(
-    clazz: Class<out Event>,
+    clazz: KClass<out Event>,
     template: HigherOrderEventTemplate
 ): Event {
-    val instance = clazz.getDeclaredConstructor().newInstance() as Event
-
-    // Copy all fields from template.baseEvent to instance
-    template.baseEvent?.let { baseEvent ->
-        instance.id = baseEvent.id
-        instance.timestamp = baseEvent.timestamp
-        instance.partitionKey = baseEvent.partitionKey
-        instance.tags = baseEvent.tags
-        instance.raw = baseEvent.raw
-        instance.eem = baseEvent.eem
-        instance.triggers = baseEvent.triggers
+    val baseEvent = template.baseEvent
+    val instance = when {
+        baseEvent!= null -> createFromCommonValues<Event>(baseEvent, clazz)
+        else -> clazz.primaryConstructor!!.call() as Event
     }
 
     // Override with template's own values
@@ -187,7 +183,7 @@ class EvaluatePipeline (
         val template = HigherOrderEventTemplate().apply {
             id = uow.meta?.get("eventId")
             partitionKey = uow.meta?.get("partitionKey")
-            clazz = (higherOrderEmit as? EmitOption.Basic)?.clazz
+            clazz = (higherOrderEmit as? EmitOption.Basic)?.clazz?.kotlin
             timestamp = trigger?.timestamp
             tags = aggregatedTags
             this.triggers = mappedTriggers

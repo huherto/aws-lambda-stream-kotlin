@@ -253,7 +253,7 @@ class EvaluatePipelineTest {
     }
 
     @Test
-    fun `toHigherOrderEvents should create basic higher order event and custom emit events`() {
+    fun `toHigherOrderEvents should create basic higher order event`() {
         // Arrange
         val baseEvent = createEvent(
             id = "base-event",
@@ -278,22 +278,9 @@ class EvaluatePipelineTest {
             correlationKeySuffix = "suffix-a",
             higherOrderEmit = EmitOption.Basic(clazz = HigherType::class.java)
         )
-        val customPipeline = createPipeline(
-            pipelineId = "pipeline-custom",
-            correlationKeySuffix = "suffix-a",
-            higherOrderEmit = EmitOption.Custom { _, template ->
-                val t1 = template.createEvent(HigherType::class.java)
-                val t2 = template.createEvent(HigherType::class.java)
-                listOf(
-                    t1,
-                    t2
-                )
-            }
-        )
 
         // Act
         val basicResult = basicPipeline.toHigherOrderEvents(uow)
-        val customResult = customPipeline.toHigherOrderEvents(uow)
 
         // Assert
         basicResult shouldHaveSize 1
@@ -307,7 +294,46 @@ class EvaluatePipelineTest {
         // basicEvent.base shouldBe baseEvent
         basicEvent.raw shouldBe "raw-value"
         basicEvent.eem shouldBe mapOf("key" to "value")
+    }
 
+    @Test
+    fun `toHigherOrderEvents should create custom emit events`() {
+        // Arrange
+        val baseEvent = createEvent(
+            id = "base-event",
+            timestamp = 1_700_000_000_000L,
+            tags = mapOf("region" to "eu-west-1", "source" to "app", "team" to "core", "env" to "test"),
+            raw = "raw-value",
+            eem = mapOf("key" to "value"),
+            type = "BaseType"
+        )
+        val trigger = createEvent(id = "trigger-1", timestamp = 1_700_000_000_123L, type = "TriggerType")
+        val uow = UnitOfWork(
+            event = baseEvent,
+            meta = mapOf(
+                "eventId" to "uow-1.pipeline-custom",
+                "partitionKey" to "partition-1"
+            ),
+            triggers = listOf(trigger, baseEvent)
+        )
+
+        val customPipeline = createPipeline(
+            pipelineId = "pipeline-custom",
+            correlationKeySuffix = "suffix-a",
+            higherOrderEmit = EmitOption.Custom { _, template ->
+                val t1 = template.createEvent(HigherType::class.java.kotlin)
+                val t2 = template.createEvent(HigherType::class.java.kotlin)
+                listOf(
+                    t1,
+                    t2
+                )
+            }
+        )
+
+        // Act
+        val customResult = customPipeline.toHigherOrderEvents(uow)
+
+        // Assert
         customResult shouldHaveSize 2
         customResult[0].event.shouldNotBeNull().shouldBeTypeOf<HigherType>()
         customResult[1].event.shouldNotBeNull().shouldBeTypeOf<HigherType>()
