@@ -9,51 +9,9 @@ import io.github.huherto.awsLambdaStream.from.RecordPair
 import io.github.huherto.awsLambdaStream.from.TableChangeEvent
 import io.github.huherto.awsLambdaStream.sinks.EventPublisher
 import io.github.huherto.awsLambdaStream.sinks.EventsMicrostore
-import io.github.huherto.awsLambdaStream.utils.createFromCommonValues
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
-import kotlin.reflect.KClass
-import kotlin.reflect.full.primaryConstructor
-
-// A concrete implementation of Event to create Higher Order Events
-data class HigherOrderEventTemplate (
-    var clazz: KClass<out Event>? = null,
-    var baseEvent: Event? = null,
-) : BaseEvent() {
-    override fun eventType(): String = "Not used"
-    override fun encoded(): String = "Not used"
-
-    fun createEvent(clazz:KClass<out Event>): Event {
-        return createEventFromTemplate( clazz, this)
-    }
-
-    fun createEvent(): Event {
-        return createEventFromTemplate( clazz!!, this)
-    }
-}
-
-internal fun createEventFromTemplate(
-    clazz: KClass<out Event>,
-    template: HigherOrderEventTemplate
-): Event {
-    val baseEvent = template.baseEvent
-    val instance = when {
-        baseEvent!= null -> createFromCommonValues<Event>(baseEvent, clazz)
-        else -> clazz.primaryConstructor!!.call() as Event
-    }
-
-    // Override with template's own values
-    return instance.apply {
-        id = template.id
-        timestamp = template.timestamp
-        partitionKey = template.partitionKey
-        tags = template.tags
-        raw = template.raw
-        eem = template.eem
-        triggers = template.triggers
-    }
-}
 
 sealed interface EmitOption {
     data class Basic(val clazz: Class<out Event>) : EmitOption
