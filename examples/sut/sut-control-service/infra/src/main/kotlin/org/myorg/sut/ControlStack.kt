@@ -16,6 +16,7 @@ import software.constructs.Construct
 class ControlStack(scope: Construct, serviceProps: ServiceProps) : BaseStack(scope, serviceProps) {
 
     val tableName = "${service()}-${stage()}-events"
+    val busName = "${subsys()}-event-hub-${stage()}-bus"
     val trigger = newTriggerLambda()
     val eventsTable = newDynamoDbTable()
     val listener = newListenerLambda()
@@ -41,6 +42,8 @@ class ControlStack(scope: Construct, serviceProps: ServiceProps) : BaseStack(sco
             .environment(mapOf(
                 "JAVA_TOOL_OPTIONS" to "-Dslf4j.provider=io.github.vitalijr2.aws.lambda.slf4j.AWSLambdaServiceProvider",
                 "EVENT_TABLE_NAME" to tableName,
+                "BUS_NAME" to busName,
+                "BUS_SRC" to "control-service-trigger",
                 "LOG_DEFAULT_LEVEL" to "DEBUG",
             ))
             .build()
@@ -108,6 +111,8 @@ class ControlStack(scope: Construct, serviceProps: ServiceProps) : BaseStack(sco
             .environment(mapOf(
                 "JAVA_TOOL_OPTIONS" to "-Dslf4j.provider=io.github.vitalijr2.aws.lambda.slf4j.AWSLambdaServiceProvider",
                 "EVENT_TABLE_NAME" to tableName,
+                "BUS_NAME" to busName,
+                "BUS_SRC" to "control-service-listener",
                 "LOG_DEFAULT_LEVEL" to "DEBUG",
             ))
             .build()

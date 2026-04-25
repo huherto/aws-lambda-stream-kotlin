@@ -68,6 +68,7 @@ class EnvironmentConfig {
     }
 
     fun busEndPointId() : String? {
+        // Set this if you need to post to a global bus.
         return System.getenv("BUS_ENDPOINT_ID")
     }
 
