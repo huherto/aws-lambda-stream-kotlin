@@ -72,11 +72,14 @@ class CorrelatePipeline constructor(
 
     internal fun Flow<UnitOfWork>.save(): Flow<UnitOfWork> {
         val flow = this.map { uow ->
+            val key = uow.key ?: return@map uow
+            val event: Event = uow.event ?: return@map uow
+            val eventId = event.id ?: return@map uow
             val saveOptions = EventsMicrostore.SaveOptions(
-                pk = uow.key,
-                sk = uow.event?.id,
+                pk = key,
+                sk = eventId,
                 discriminator = CORREL,
-                timeStamp = uow.event?.timestamp.toString(),
+                timeStamp = uow.event.timestamp.toString(),
                 awsRegion = envConfig.awsRegion(),
                 sequenceNumber = uow.meta?.get("sequenceNumber"),
                 ttl = uow.meta?.get("ttl")?.toLongOrNull(),

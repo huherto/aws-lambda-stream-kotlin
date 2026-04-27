@@ -19,6 +19,7 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldMatch
+import io.kotest.matchers.string.shouldNotBeBlank
 import io.kotest.matchers.string.shouldNotBeEmpty
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
@@ -90,12 +91,16 @@ class ControlServiceITest {
             items?.firstOrNull { rec -> rec["sk"]?.asS() == event.id }
         }
         with(correlEvent) {
+            this.shouldNotBeNull()
             checkDbRecord(
                 dbrecord = this,
                 pk = event.entity?.id!!,
-                sk = null,
+                sk = event.id,
                 discriminator = "CORREL",
                 pipelineId = "corre1")
+            val eventAsObject = getEventAsObject(this)
+            eventAsObject.eventType().shouldBe("SHIPMENT_CREATED")
+            eventAsObject.partitionKey shouldBe event.entity?.id
         }
 
         // Finding VERIFY_TARGET_ADDRESS among the correlated events.
@@ -106,15 +111,13 @@ class ControlServiceITest {
         val vtaEventId = with(vtaCorrelEvent) {
             logger.debug { "vtaEvent: $vtaCorrelEvent" }
             this.shouldNotBeNull()
-            this["pk"]?.asS() shouldBe event.entity?.id
-            this["sk"]?.asS().isNullOrEmpty() shouldBe false
-            this["discriminator"]?.asS() shouldBe "CORREL"
-            this["expire"]?.asBool() shouldBe false
-            this["awsregion"]?.asS() shouldBe "us-east-1"
-            this["suffix"]?.asS() shouldBe ""
-            this["pipelineId"]?.asS() shouldBe "corre1"
-
-            val vtaEventAsObject = JsonEvent(this["event"]?.asS() ?: "{}")
+            checkDbRecord(
+                dbrecord = this,
+                pk = event.entity?.id!!,
+                sk = null,
+                discriminator = "CORREL",
+                pipelineId = "corre1")
+            val vtaEventAsObject = getEventAsObject(this)
             vtaEventAsObject.shouldNotBeNull()
             val vtaEventId = vtaEventAsObject.id
             vtaEventId.shouldNotBeNull()
@@ -132,14 +135,12 @@ class ControlServiceITest {
         with(vtaEvent) {
             logger.debug { "vtaEvent: $this" }
             this.shouldNotBeNull()
-            this["pk"]?.asS() shouldBe vtaEventId
-            this["sk"]?.asS() shouldBe "EVENT"
-            this["discriminator"]?.asS() shouldBe "EVENT"
-            this["expire"]?.asBoolOrNull() shouldBe null
-            this["awsregion"]?.asS() shouldBe "us-east-1"
-            this["suffix"]?.asSOrNull() shouldBe null
-            this["pipelineId"]?.asS() shouldBe "collect1"
-
+            checkDbRecord(
+                dbrecord = this,
+                pk = vtaEventId,
+                sk = "EVENT",
+                discriminator = "EVENT",
+                pipelineId = "collect1")
             val vtaEventAsObject = JsonEvent(this["event"]?.asS() ?: "{}")
             vtaEventAsObject.shouldNotBeNull()
             val vtaEventId = vtaEventAsObject.id
@@ -160,12 +161,28 @@ class ControlServiceITest {
         }
     }
 
+    private fun getEventAsObject(map: DBRecord) : JsonEvent {
+        val eventAsString = map.get("event")?.asSOrNull()
+        eventAsString.shouldNotBeNull()
+        val eventAsObject = JsonEvent(eventAsString)
+        eventAsObject.shouldNotBeNull()
+        eventAsObject.id.shouldNotBeNull()
+        eventAsObject.id.shouldNotBeBlank()
+        eventAsObject.partitionKey.shouldNotBeNull()
+        eventAsObject.partitionKey.shouldNotBeBlank()
+        eventAsObject.eventType().shouldNotBeNull()
+        eventAsObject.eventType().shouldNotBeBlank()
+        eventAsObject.timestamp.shouldNotBeNull()
+
+        return eventAsObject
+    }
+
     private fun checkDbRecord(
         dbrecord: DBRecord?,
         pk: String,
-        sk: String? = null,
+        sk: String?,
         discriminator: String,
-        pipelineId: String? = null
+        pipelineId: String?,
     ) {
         dbrecord.shouldNotBeNull()
         dbrecord["pk"]?.asS() shouldBe pk
@@ -173,7 +190,7 @@ class ControlServiceITest {
         dbrecord["sk"]?.asSOrNull().shouldNotBeEmpty()
         sk?.let { dbrecord["sk"]?.asS() shouldBe sk }
         dbrecord["discriminator"]?.asS() shouldBe discriminator
-        dbrecord["expire"]?.asBool() shouldBe false
+        dbrecord["expire"]?.asBoolOrNull() shouldBe false
         dbrecord["awsregion"]?.asS() shouldBe "us-east-1"
         dbrecord["suffix"]?.asS() shouldBe ""
         pipelineId?.let { dbrecord["pipelineId"]?.asS() shouldBe pipelineId }

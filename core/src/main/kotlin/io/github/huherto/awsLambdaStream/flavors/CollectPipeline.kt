@@ -20,7 +20,7 @@ class CollectPipeline constructor(
     private val correlationKey: (UnitOfWork) -> String? = { uow -> uow.event?.partitionKey },
     private val ttlDays: Int? = null,
     private val includeRaw: Boolean = true,
-    private val expire: Boolean? = null,
+    private val expire: Boolean = false,
     private val eventsMicrostore: EventsMicrostore,
 ) : Pipeline(pipelineId) {
 
@@ -28,18 +28,21 @@ class CollectPipeline constructor(
 
         val awsRegion = envConfig.awsRegion()
         val flow = this.map { uow ->
-            val event: Event? = uow.event
+            val event: Event = uow.event ?: return@map uow
+            val eventId = event.id ?: return@map uow
+
             val saveOptions = EventsMicrostore.SaveOptions(
-                pk = event?.id,
+                pk = eventId,
                 sk = "EVENT",
                 discriminator = "EVENT",
-                timeStamp = event?.timestamp.toString(),
+                timeStamp = event.timestamp.toString(),
                 awsRegion = awsRegion,
                 sequenceNumber = uow.sequenceNumber,
                 ttl = ttlRule(uow),
                 expire = expire,
                 data = uow.key,
                 includeRaw = includeRaw,
+                suffix = "",
                 pipelineId = id,
             )
             uow.copy(saveOptions = saveOptions)

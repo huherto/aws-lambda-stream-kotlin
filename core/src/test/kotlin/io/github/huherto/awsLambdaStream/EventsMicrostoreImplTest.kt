@@ -52,6 +52,7 @@ class EventsMicrostoreImplTest {
             ttl = 987654321,
             expire = true,
             data = "uow-key",
+            suffix = "",
         )
 
         val uow = UnitOfWork(

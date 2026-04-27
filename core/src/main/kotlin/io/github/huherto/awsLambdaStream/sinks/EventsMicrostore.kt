@@ -6,17 +6,17 @@ import kotlinx.coroutines.flow.Flow
 interface EventsMicrostore {
 
     data class SaveOptions(
-        val pk: String? = null,
-        val sk: String? = null,
-        val discriminator : String? = null,
-        val timeStamp : String? = null,
+        val pk: String,
+        val sk: String,
+        val discriminator : String,
+        val timeStamp : String,
         val awsRegion : String? = null,
         val sequenceNumber : String? = null,
         val ttl: Long? = null, // Epoch in seconds.
-        val expire: Boolean? = null,
+        val expire: Boolean,
         val data : String? = null,
         val includeRaw: Boolean = true,
-        val suffix : String? = null,
+        val suffix : String,
         val pipelineId : String? = null,
     )
 

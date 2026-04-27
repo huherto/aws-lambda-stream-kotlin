@@ -6,6 +6,7 @@ import io.github.huherto.awsLambdaStream.Event
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.sinks.EventsMicrostore
 import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
@@ -30,7 +31,7 @@ class CollectionPipelineTest {
         pipelineId: String = "pipeline-1",
         ttlDays: Int? = null,
         includeRaw: Boolean = true,
-        expire: Boolean? = null,
+        expire: Boolean = false,
     ): CollectPipeline {
         return CollectPipeline(
             pipelineId = pipelineId,
@@ -119,10 +120,10 @@ class CollectionPipelineTest {
             pipelineId = "pipeline-2",
             ttlDays = null,
             includeRaw = true,
-            expire = null,
+            expire = false,
         )
         val uow = UnitOfWork(
-            event = null,
+            event = createEvent(timestamp = System.currentTimeMillis()),
             key = null,
             sequenceNumber = null,
         )
@@ -138,10 +139,10 @@ class CollectionPipelineTest {
         result shouldHaveSize 1
         val options = result.first().saveOptions.shouldNotBeNull()
 
-        options.pk shouldBe null
-        options.timeStamp shouldBe "null"
-        options.ttl shouldBe 0L
-        options.expire shouldBe null
+        options.pk shouldBe "event-1"
+        options.timeStamp.toLong() shouldBeGreaterThan System.currentTimeMillis() - 5_000L
+        options.ttl shouldNotBe null
+        options.expire shouldBe false
         options.data shouldBe null
         options.includeRaw shouldBe true
         options.pipelineId shouldBe "pipeline-2"
