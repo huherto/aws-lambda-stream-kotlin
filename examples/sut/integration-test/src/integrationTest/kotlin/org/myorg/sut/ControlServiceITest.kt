@@ -4,7 +4,6 @@ import aws.sdk.kotlin.runtime.auth.credentials.StaticCredentialsProvider
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
 import aws.sdk.kotlin.services.dynamodb.model.QueryRequest
-import aws.sdk.kotlin.services.dynamodb.model.QueryResponse
 import aws.sdk.kotlin.services.eventbridge.EventBridgeClient
 import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequest
 import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequestEntry
@@ -13,17 +12,21 @@ import aws.sdk.kotlin.services.kinesis.model.GetRecordsRequest
 import aws.sdk.kotlin.services.kinesis.model.GetShardIteratorRequest
 import aws.sdk.kotlin.services.kinesis.model.ShardIteratorType
 import aws.smithy.kotlin.runtime.net.url.Url
+import io.github.huherto.awsLambdaStream.JsonEvent
 import io.kotest.matchers.longs.shouldBeGreaterThan
 import io.kotest.matchers.longs.shouldBeLessThan
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldMatch
+import io.kotest.matchers.string.shouldNotBeEmpty
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import java.lang.System.currentTimeMillis
+import kotlin.math.abs
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.ExperimentalTime
@@ -49,6 +52,9 @@ class ControlServiceITest {
     fun sendEvents() : Unit = runBlocking {
 
         val event = createShipmentCreatedEvent(createTrackedUnit())
+        event.id.shouldNotBeNull()
+        event.entity.shouldNotBeNull()
+        event.entity?.id.shouldNotBeNull()
 
         logger.info { "Sending event ${event.id}" }
         val res = eventBridgeClient.putEvents(PutEventsRequest {
@@ -62,83 +68,87 @@ class ControlServiceITest {
             )
         })
         res.failedEntryCount shouldBe 0
-        
-        findEventByPK(event.id!!) { response ->
-            val collectedEvent = response.items?.firstOrNull() ?: return@findEventByPK null
 
-            logger.info { "Collected event id: ${event.id}" }
-            logger.debug { "Collected event: $collectedEvent" }
-            collectedEvent.shouldNotBeNull()
-            collectedEvent["pk"]?.asS() shouldBe event.id
-            collectedEvent["sk"]?.asS() shouldBe "EVENT"
-            collectedEvent["discriminator"]?.asS() shouldBe "EVENT"
-            collectedEvent["data"]?.asS() shouldBe event.entity?.id
-            collectedEvent["event"]?.asS().shouldNotBeNull()
+        // Find collected event in DynamoDB.
+        val collectedEvent = findEventByPK(event.id!!) { items ->
+            items?.firstOrNull() ?: return@findEventByPK null
+        }
+        with(collectedEvent) {
+            this.shouldNotBeNull()
+            this["pk"]?.asS() shouldBe event.id
+            this["sk"]?.asS() shouldBe "EVENT"
+            this["discriminator"]?.asS() shouldBe "EVENT"
+            this["data"]?.asS() shouldBe event.entity?.id
+            this["event"]?.asS().shouldNotBeNull()
 
-            val timeStamp = collectedEvent["timestamp"]?.asN()?.toLong()
+            val timeStamp = this["timestamp"]?.asN()?.toLong()
             checkTimestampDiff(timeStamp, event.timestamp)
-
-            collectedEvent
         }
 
-        findEventByPK(event.entity?.id!!) { response ->
-            logger.debug { "Checking correlated event among ${response.items?.size} events" }
-            val correlEvent = response.items?.firstOrNull { rec -> rec["sk"]?.asS() == event.id }
-            if (correlEvent == null) return@findEventByPK null
-
-            logger.info { "Correlated event id: ${event.id}" }
-            logger.debug { "Correlated event: $correlEvent" }
-            correlEvent.shouldNotBeNull()
-            correlEvent["pk"]?.asS() shouldBe event.entity?.id
-            correlEvent["sk"]?.asS() shouldBe event.id
-            correlEvent["discriminator"]?.asS() shouldBe "CORREL"
-            correlEvent["expire"]?.asBool() shouldBe false
-            correlEvent["awsregion"]?.asS() shouldBe "us-east-1"
-            correlEvent["suffix"]?.asS() shouldBe ""
-            correlEvent["pipelineId"]?.asS() shouldBe "corre1"
-
-            val sequenceNumber = correlEvent["sequenceNumber"]?.asS()
-            sequenceNumber.shouldNotBeNull()
-            sequenceNumber shouldMatch "\\d+".toRegex()
-
-            correlEvent["event"]?.asS().shouldNotBeNull()
-
-            val ttl = correlEvent["ttl"]?.asN()?.toLong()
-            ttl.shouldNotBeNull()
-            ttl shouldBeGreaterThan 1742326911L // A date in 2025
-            ttl shouldBeLessThan 1900093311L // A date in 2030
-
-            val timeStamp = correlEvent["timestamp"]?.asN()?.toLong()
-            checkTimestampDiff(timeStamp, event.timestamp)
-
-            correlEvent
+        // Find correlated event in DynamoDB.
+        val correlEvent = findEventByPK(event.entity?.id!!) { items ->
+            items?.firstOrNull { rec -> rec["sk"]?.asS() == event.id }
+        }
+        with(correlEvent) {
+            checkDbRecord(
+                dbrecord = this,
+                pk = event.entity?.id!!,
+                sk = null,
+                discriminator = "CORREL",
+                pipelineId = "corre1")
         }
 
-        var vtaEventId : String? = null
-        findEventByPK(event.entity?.id!!) { response ->
-            val vtaEvent =
-                response.items?.firstOrNull { rec -> rec["type"]?.asS() == "VERIFY_TARGET_ADDRESS" }
-            if (vtaEvent == null) return@findEventByPK null
+        // Finding VERIFY_TARGET_ADDRESS among the correlated events.
+        var vtaCorrelEvent = findEventByPK(event.entity?.id!!) { items ->
+            items?.firstOrNull { rec -> rec["event"]?.asS()?.contains("VERIFY_TARGET_ADDRESS") == true }
+        }
+        vtaCorrelEvent.shouldNotBeNull()
+        val vtaEventId = with(vtaCorrelEvent) {
+            logger.debug { "vtaEvent: $vtaCorrelEvent" }
+            this.shouldNotBeNull()
+            this["pk"]?.asS() shouldBe event.entity?.id
+            this["sk"]?.asS().isNullOrEmpty() shouldBe false
+            this["discriminator"]?.asS() shouldBe "CORREL"
+            this["expire"]?.asBool() shouldBe false
+            this["awsregion"]?.asS() shouldBe "us-east-1"
+            this["suffix"]?.asS() shouldBe ""
+            this["pipelineId"]?.asS() shouldBe "corre1"
 
-            vtaEvent.shouldNotBeNull()
-            vtaEvent["partitionKey"] shouldBe event.entity?.id
-            vtaEvent["type"] shouldBe "VERIFY_TARGET_ADDRESS"
-            vtaEvent["data"] shouldBe event.entity?.id
+            val vtaEventAsObject = JsonEvent(this["event"]?.asS() ?: "{}")
+            vtaEventAsObject.shouldNotBeNull()
+            val vtaEventId = vtaEventAsObject.id
+            vtaEventId.shouldNotBeNull()
+            vtaEventId.endsWith(".eval_vta") shouldBe true
+            vtaEventAsObject.eventType().shouldBe("VERIFY_TARGET_ADDRESS")
+            vtaEventAsObject.partitionKey shouldBe event.entity?.id
 
-            vtaEventId = vtaEvent["id"]?.asS()
-            vtaEventId?.endsWith(".eval_vta") shouldBe true
-            vtaEvent
+            vtaEventId
         }
 
-        vtaEventId.shouldNotBeNull()
-        findEventByPK(vtaEventId!!) { response ->
-            val vtaEvent = response.items?.firstOrNull() ?: return@findEventByPK null
+        // Finding VERIFY_TARGET_ADDRESS by its event id.
+        val vtaEvent = findEventByPK(vtaEventId) { items ->
+            items?.firstOrNull() ?: return@findEventByPK null
+        }
+        with(vtaEvent) {
+            logger.debug { "vtaEvent: $this" }
+            this.shouldNotBeNull()
+            this["pk"]?.asS() shouldBe vtaEventId
+            this["sk"]?.asS() shouldBe "EVENT"
+            this["discriminator"]?.asS() shouldBe "EVENT"
+            this["expire"]?.asBoolOrNull() shouldBe null
+            this["awsregion"]?.asS() shouldBe "us-east-1"
+            this["suffix"]?.asSOrNull() shouldBe null
+            this["pipelineId"]?.asS() shouldBe "collect1"
 
-            vtaEvent.shouldNotBeNull()
-            vtaEvent["partitionKey"] shouldBe event.entity?.id
-            vtaEvent["type"] shouldBe "VERIFY_TARGET_ADDRESS"
-            vtaEvent["data"] shouldBe event.entity?.id
-            vtaEvent
+            val vtaEventAsObject = JsonEvent(this["event"]?.asS() ?: "{}")
+            vtaEventAsObject.shouldNotBeNull()
+            val vtaEventId = vtaEventAsObject.id
+            vtaEventId.shouldNotBeNull()
+            vtaEventId.endsWith(".eval_vta") shouldBe true
+            vtaEventAsObject.eventType().shouldBe("VERIFY_TARGET_ADDRESS")
+            vtaEventAsObject.partitionKey shouldBe event.entity?.id
+
+            vtaEventId
         }
 
         val kinesisEvents = readAllKinesisEvents()
@@ -148,15 +158,46 @@ class ControlServiceITest {
         for (kinesisEvent in kinesisEvents) {
             logger.debug { "Kinesis event: $kinesisEvent" }
         }
-        // kinesisEvents.size shouldBe 1
-        //kinesisEvents[0].shouldMatch("\\{\"pk\":\"ship-\\d+\",\"sk\":\"EVENT\",\"discriminator\":\"EVENT\",\"data\":\"ship-\\d+\",\"event\":\"ShipmentCreatedEvent\"}".toRegex())
+    }
+
+    private fun checkDbRecord(
+        dbrecord: DBRecord?,
+        pk: String,
+        sk: String? = null,
+        discriminator: String,
+        pipelineId: String? = null
+    ) {
+        dbrecord.shouldNotBeNull()
+        dbrecord["pk"]?.asS() shouldBe pk
+        dbrecord["sk"]?.asSOrNull().shouldNotBeNull()
+        dbrecord["sk"]?.asSOrNull().shouldNotBeEmpty()
+        sk?.let { dbrecord["sk"]?.asS() shouldBe sk }
+        dbrecord["discriminator"]?.asS() shouldBe discriminator
+        dbrecord["expire"]?.asBool() shouldBe false
+        dbrecord["awsregion"]?.asS() shouldBe "us-east-1"
+        dbrecord["suffix"]?.asS() shouldBe ""
+        pipelineId?.let { dbrecord["pipelineId"]?.asS() shouldBe pipelineId }
+
+        val sequenceNumber = dbrecord["sequenceNumber"]?.asS()
+        sequenceNumber.shouldNotBeNull()
+        sequenceNumber shouldMatch "\\d+".toRegex()
+
+        dbrecord["event"]?.asS().shouldNotBeNull()
+
+        val ttl = dbrecord["ttl"]?.asN()?.toLong()
+        ttl.shouldNotBeNull()
+        ttl shouldBeGreaterThan 1742326911L // A date in 2025
+        ttl shouldBeLessThan 1900093311L // A date in 2030
+
+        val timeStamp = dbrecord["timestamp"]?.asN()?.toLong()
+        checkTimestampDiff(currentTimeMillis(), timeStamp)
     }
 
     private fun checkTimestampDiff(t1: Long?, t2: Long?) {
         t1.shouldNotBeNull()
         t2.shouldNotBeNull()
-        t1 shouldBeGreaterThan (t2 - 1L)
-        t1 shouldBeLessThan (t2 + 100 * 1000L) // 1000 secs from now
+        val diff = abs(t1 - t2)
+        diff shouldBeLessThan 100 * 1000L
     }
 
     @Test
@@ -178,20 +219,22 @@ class ControlServiceITest {
     }
 
 
-    private suspend fun findEventByPK(pk: String, checkResponse: (QueryResponse)-> DBRecord?)  : DBRecord? {
+    private suspend fun findEventByPK(pk: String, checkResponse: (List<DBRecord>?)-> DBRecord?)  : DBRecord? {
 
         val startTime = System.currentTimeMillis()
         while (true) {
             if (System.currentTimeMillis() - startTime > 10000) {
-                throw RuntimeException("Timed out waiting for event $pk to be inserted.")
+                logger.error { "Timed out waiting for event $pk to be inserted." }
+                return null
             }
+            logger.debug { "find event $pk in ${System.currentTimeMillis() - startTime}" }
             val response = dynamoDbClient.query(QueryRequest {
                 tableName = "sut-control-service-local-events"
                 keyConditionExpression = "pk = :pk"
                 expressionAttributeValues = mapOf(":pk" to AttributeValue.S(pk))
             })
 
-            val found = checkResponse(response)
+            val found = checkResponse(response.items)
             if (found != null) {
                 return found
             }
