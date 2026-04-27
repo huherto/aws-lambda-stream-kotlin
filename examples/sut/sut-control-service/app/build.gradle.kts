@@ -25,7 +25,7 @@ dependencies {
     implementation(platform(libs.aws.sdk.bom))
 
     implementation(project(":core"))
-    implementation(project(":examples:sut:common-serverless"))
+    implementation(project(":examples:sut:common-app"))
 
     implementation(libs.aws.java.core)
     implementation(libs.aws.java.events)

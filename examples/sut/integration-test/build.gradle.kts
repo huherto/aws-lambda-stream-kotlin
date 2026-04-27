@@ -51,7 +51,7 @@ testing {
                 implementation(libs.testcon.localstack)
 
                 implementation(project(":core"))
-                implementation(project(":examples:sut:common-serverless"))
+                implementation(project(":examples:sut:common-app"))
                 implementation(project())
 
             }

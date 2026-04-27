@@ -11,7 +11,7 @@ rootProject.name = "aws-lambda-stream-kotlin"
 
 include("core")
 include("examples:common-infra")
-include("examples:sut:common-serverless")
+include("examples:sut:common-app")
 include("examples:sut:sut-event-hub")
 include("examples:sut:sut-event-hub:app")
 include("examples:sut:sut-event-hub:infra")
