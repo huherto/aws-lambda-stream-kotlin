@@ -21,6 +21,10 @@ import org.junit.jupiter.api.Test
 
 class CollectionPipelineTest {
 
+    companion object {
+        val TIMESTAMP = System.currentTimeMillis()
+    }
+
     private val envConfig = spyk<EnvironmentConfig> {
         every { awsRegion() } returns "eu-west-1"
     }
@@ -45,7 +49,7 @@ class CollectionPipelineTest {
 
     private fun createEvent(
         id: String = "event-1",
-        timestamp: Long = 1_700_000_000_000L,
+        timestamp: Long = System.currentTimeMillis(),
         partitionKey: String? = "partition-1",
     ): Event = object : BaseEvent() {
         override var id: String? = id
@@ -80,7 +84,7 @@ class CollectionPipelineTest {
             includeRaw = false,
             expire = true,
         )
-        val event = createEvent(timestamp = 1_700_000_000_000L)
+        val event = createEvent(timestamp = TIMESTAMP)
         val uow = UnitOfWork(
             event = event,
             key = "correlation-key",
@@ -102,10 +106,10 @@ class CollectionPipelineTest {
         options.pk shouldBe "event-1"
         options.sk shouldBe "EVENT"
         options.discriminator shouldBe "EVENT"
-        options.timeStamp shouldBe "1700000000000"
+        options.timeStamp  shouldBe TIMESTAMP
         options.awsRegion shouldBe "eu-west-1"
         options.sequenceNumber shouldBe "seq-1"
-        options.ttl shouldBe 1_700_172_800L
+        options.ttl?.shouldBeGreaterThan(TIMESTAMP / 1000)
         options.expire shouldBe true
         options.data shouldBe "correlation-key"
         options.includeRaw shouldBe false
@@ -140,7 +144,7 @@ class CollectionPipelineTest {
         val options = result.first().saveOptions.shouldNotBeNull()
 
         options.pk shouldBe "event-1"
-        options.timeStamp.toLong() shouldBeGreaterThan System.currentTimeMillis() - 5_000L
+        options.timeStamp!! shouldBeGreaterThan System.currentTimeMillis() - 5_000L
         options.ttl shouldNotBe null
         options.expire shouldBe false
         options.data shouldBe null

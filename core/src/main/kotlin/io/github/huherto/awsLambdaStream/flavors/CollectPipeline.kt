@@ -35,7 +35,7 @@ class CollectPipeline constructor(
                 pk = eventId,
                 sk = "EVENT",
                 discriminator = "EVENT",
-                timeStamp = event.timestamp.toString(),
+                timeStamp = event.timestamp,
                 awsRegion = awsRegion,
                 sequenceNumber = uow.sequenceNumber,
                 ttl = ttlRule(uow),

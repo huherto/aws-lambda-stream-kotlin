@@ -26,7 +26,11 @@ import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue as EventAV
 
+
 class CorrelatePipelineTest {
+    companion object {
+        val TIMESTAMP = System.currentTimeMillis()
+    }
 
     /**
      * Concrete Fake Event to avoid issues with Kotlin reflection (KClass) on anonymous objects
@@ -34,7 +38,7 @@ class CorrelatePipelineTest {
      */
     class FakeEvent(
         override var id: String? = "event-1",
-        override var timestamp: Long? = 1600000000L,
+        override var timestamp: Long? = TIMESTAMP,
         override var partitionKey: String? = null,
         override var tags: Map<String, String>? = null,
         override var raw: Any? = null,
@@ -188,7 +192,7 @@ class CorrelatePipelineTest {
         saveOptions.pk shouldBe "test-key"
         saveOptions.sk shouldBe "test-event-id"
         saveOptions.discriminator shouldBe "CORREL"
-        saveOptions.timeStamp shouldBe "12345"
+        saveOptions.timeStamp shouldBe 12345
         saveOptions.awsRegion shouldBe "us-east-1" // comes from the envConfig spy
         saveOptions.sequenceNumber shouldBe "seq-1"
         saveOptions.ttl shouldBe 999L

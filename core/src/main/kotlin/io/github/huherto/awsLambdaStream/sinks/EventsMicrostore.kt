@@ -9,7 +9,7 @@ interface EventsMicrostore {
         val pk: String,
         val sk: String,
         val discriminator : String,
-        val timeStamp : String,
+        val timeStamp : Long?,
         val awsRegion : String? = null,
         val sequenceNumber : String? = null,
         val ttl: Long? = null, // Epoch in seconds.

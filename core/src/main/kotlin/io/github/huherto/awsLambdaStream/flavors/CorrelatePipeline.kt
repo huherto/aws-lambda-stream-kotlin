@@ -79,7 +79,7 @@ class CorrelatePipeline constructor(
                 pk = key,
                 sk = eventId,
                 discriminator = CORREL,
-                timeStamp = uow.event.timestamp.toString(),
+                timeStamp = uow.event.timestamp,
                 awsRegion = envConfig.awsRegion(),
                 sequenceNumber = uow.meta?.get("sequenceNumber"),
                 ttl = uow.meta?.get("ttl")?.toLongOrNull(),

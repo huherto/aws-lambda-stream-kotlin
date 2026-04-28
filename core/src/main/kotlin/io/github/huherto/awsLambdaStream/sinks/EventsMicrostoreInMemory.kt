@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.mapNotNull
 
 class EventsMicrostoreInMemory(
     faultManager: FaultManager,
-) : BaseEventsMicrostore(faultManager) {
+) : BaseEventsMicrostore(faultManager, bufferCapacity = 0, tableName = "events") {
 
     private val uowMap: MutableMap<String, UnitOfWork> = mutableMapOf()
     private val itemsMap: MutableMap<String, MutableList<Map<String, AttributeValue>>> = mutableMapOf()

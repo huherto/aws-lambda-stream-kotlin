@@ -46,7 +46,7 @@ class EventsMicrostoreImplTest {
             pk = eventId,
             sk = "EVENT",
             discriminator = "EVENT",
-            timeStamp = eventTimestamp.toString(),
+            timeStamp = eventTimestamp,
             includeRaw = true,
             awsRegion = awsRegion,
             ttl = 987654321,

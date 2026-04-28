@@ -4,7 +4,6 @@ import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
-import io.github.huherto.awsLambdaStream.queries.queryAllDynamoDB
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.buffer
@@ -29,7 +28,7 @@ open class EventsMicrostoreImpl constructor(
         with(faultManager) {
             return flow.mapNotFaulty{ uow -> toQueryRequest(uow) }
                 .buffer(bufferCapacity)
-                .queryAllDynamoDB(dynamoDbClient)
+                .mapNotNull { uow -> faulty(uow) { queryDynamoDb(uow)} }
                 .mapNotNull { uow -> faulty(uow) { toCorrelated(uow) } }
         }
     }

@@ -104,7 +104,7 @@ class ControlServiceITest {
         }
 
         // Finding VERIFY_TARGET_ADDRESS among the correlated events.
-        var vtaCorrelEvent = findEventByPK(event.entity?.id!!) { items ->
+        val vtaCorrelEvent = findEventByPK(event.entity?.id!!) { items ->
             items?.firstOrNull { rec -> rec["event"]?.asS()?.contains("VERIFY_TARGET_ADDRESS") == true }
         }
         vtaCorrelEvent.shouldNotBeNull()
@@ -150,6 +150,44 @@ class ControlServiceITest {
             vtaEventAsObject.partitionKey shouldBe event.entity?.id
 
             vtaEventId
+        }
+
+        // Make two failed attempts to deliver the package.
+        val e1 = createDeliveryAttemptedEvent(event.entity!!)
+        val e2 = createDeliveryAttemptedEvent(event.entity!!)
+        run {
+            val res = eventBridgeClient.putEvents(PutEventsRequest {
+                entries = listOf(
+                    PutEventsRequestEntry {
+                        eventBusName = "sut-event-hub-local-bus"
+                        detail = e1.encoded()
+                        detailType = "my-event"
+                        source = "integration-test"
+                    },
+                    PutEventsRequestEntry {
+                        eventBusName = "sut-event-hub-local-bus"
+                        detail = e2.encoded()
+                        detailType = "my-event"
+                        source = "integration-test"
+                    }
+                )
+            })
+            res.failedEntryCount shouldBe 0
+        }
+        val ccEvent = findEventByPK(event.entity?.id!!) { items ->
+            items?.firstOrNull { rec -> rec["event"]?.asS()?.contains("CONTACT_CUSTOMER") == true }
+        }
+        with(ccEvent) {
+            this.shouldNotBeNull()
+            checkDbRecord(
+                dbrecord = this,
+                pk = event.entity?.id!!,
+                sk = null,
+                discriminator = "CORREL",
+                pipelineId = "corre1")
+            val ccEventAsObject = getEventAsObject(this)
+            ccEventAsObject.shouldNotBeNull()
+            ccEventAsObject.eventType().shouldBe("CONTACT_CUSTOMER")
         }
 
         val kinesisEvents = readAllKinesisEvents()
@@ -357,6 +395,16 @@ class ControlServiceITest {
         location = "Atlanta Hub"
         entity = trackedUnit
     }
+
+    private fun createDeliveryAttemptedEvent(trackedUnit: TrackedUnit) = DeliveryAttemptedEvent().apply {
+        id = "ship-" + generateRandomNumber()
+        partitionKey = trackedUnit.id
+        timestamp = System.currentTimeMillis()
+        location = "Atlanta Hub"
+        reason = "Can't access the door"
+        entity = trackedUnit
+    }
+
 
     private fun createPoisonPillEvent(trackedUnit: TrackedUnit) = ShipmentCreatedEvent().apply {
         id = "poison-" + generateRandomNumber()

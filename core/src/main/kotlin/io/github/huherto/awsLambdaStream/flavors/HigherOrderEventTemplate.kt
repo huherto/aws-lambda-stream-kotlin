@@ -9,7 +9,7 @@ import kotlin.reflect.full.primaryConstructor
 // A concrete implementation of Event to create Higher Order Events
 data class HigherOrderEventTemplate (
     var clazz: KClass<out Event>? = null, // Class of the event to instantiate
-    var baseEvent: Event? = null, // Base event to copy from
+    var baseEvent: Event // Base event to copy from
 ) : BaseEvent() {
     override fun eventType(): String = "Not used"
     override fun encoded(): String = "Not used"
@@ -29,19 +29,24 @@ data class HigherOrderEventTemplate (
     ): Event {
         val baseEvent = template.baseEvent
         val instance = when {
-            baseEvent!= null -> createFromCommonValues<Event>(baseEvent, clazz)
+            baseEvent != null -> createFromCommonValues<Event>(baseEvent, clazz)
             else -> clazz.primaryConstructor!!.call() as Event
         }
 
         // Override with template's own values
-        return instance.apply {
-            id = template.id
-            timestamp = template.timestamp
-            partitionKey = template.partitionKey
-            tags = template.tags
-            raw = template.raw
-            eem = template.eem
-            triggers = template.triggers
-        }
+        return applyTemplate(instance)
+    }
+
+    fun applyTemplate(
+        instance: Event,
+    ): Event {
+        instance.id = this.id
+        instance.timestamp = this.timestamp
+        instance.partitionKey = this.partitionKey
+        instance.tags = this.tags
+        instance.raw = this.raw
+        instance.eem = this.eem
+        instance.triggers = this.triggers
+        return instance
     }
 }

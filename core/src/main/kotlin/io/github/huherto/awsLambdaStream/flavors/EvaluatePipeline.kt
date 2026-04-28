@@ -97,11 +97,17 @@ class EvaluatePipeline (
                 )
             }
         } else {
+            // TODO: these may need to be wrapped in faulty() calls.
             this
                 .filter { uow -> onCorrelationKeySuffix(uow) }
                 .queryCorrelated()
-                .filter { uow ->
-                    expression.invoke(uow)
+                .mapNotNull { uow ->
+                    val result = expression.invoke(uow)
+                    if (result) {
+                        uow.copy( triggers = listOfNotNull(uow.event))
+                    } else {
+                        null
+                    }
                 }
         }
     }
@@ -131,6 +137,7 @@ class EvaluatePipeline (
     internal fun toHigherOrderEventTemplate(uow: UnitOfWork): HigherOrderEventTemplate {
         val basic = higherOrderEmit is EmitOption.Basic
         val trigger = uow.triggers?.lastOrNull()
+        val baseEvent = uow.event ?: throw IllegalArgumentException("Event is null")
 
         val aggregatedTags = aggregateTags(uow)
 
@@ -138,14 +145,13 @@ class EvaluatePipeline (
             EventReference(it.id, it.eventType(), it.timestamp)
         }
 
-        val template = HigherOrderEventTemplate().apply {
+        val template = HigherOrderEventTemplate(baseEvent = baseEvent).apply {
             id = uow.meta?.get("eventId")
             partitionKey = uow.meta?.get("partitionKey")
             clazz = (higherOrderEmit as? EmitOption.Basic)?.clazz?.kotlin
             timestamp = trigger?.timestamp
             tags = aggregatedTags
             this.triggers = mappedTriggers
-            baseEvent = if (basic) uow.event else null
             raw = if (basic) uow.event?.raw else null
             eem = if (basic) uow.event?.eem else null
         }

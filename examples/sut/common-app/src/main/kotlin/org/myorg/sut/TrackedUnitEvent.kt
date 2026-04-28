@@ -25,6 +25,7 @@ sealed class TrackedUnitEvent() : Event {
         const val SHIPMENT_DELIVERED = "SHIPMENT_DELIVERED"
         const val SHIPMENT_EXCEPTION = "SHIPMENT_EXCEPTION"
         const val VERIFY_TARGET_ADDRESS = "VERIFY_TARGET_ADDRESS"
+        const val CONTACT_CUSTOMER = "CONTACT_CUSTOMER"
         const val POISON_PILL_EVENT = "POISON_PILL_EVENT"
 
         fun fromString(s: String): TrackedUnitEvent {
@@ -127,6 +128,10 @@ class ShipmentExceptionEvent(var exceptionType: String? = null, var description:
 @Serializable
 @kotlinx.serialization.SerialName(TrackedUnitEvent.VERIFY_TARGET_ADDRESS)
 class VerifyTargetAddressEvent() : TrackedUnitEvent()
+
+@Serializable
+@kotlinx.serialization.SerialName(TrackedUnitEvent.CONTACT_CUSTOMER)
+class ContactCustomerEvent() : TrackedUnitEvent()
 
 @Serializable
 @kotlinx.serialization.SerialName(TrackedUnitEvent.POISON_PILL_EVENT)

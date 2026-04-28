@@ -16,7 +16,8 @@ fun Flow<UnitOfWork>.filterEvents(
             val event = uow.event
             val matches = event != null && filter.matches(event)
             val eventType = event?.eventType() ?: "unknown"
-            logger.debug{"Event filter matches: ${matches}, event: $eventType"}
+            val pipelineId = uow.pipeline?.id ?: "unknown"
+            logger.debug{"Event filter matches: ${matches}, event: $eventType, pipelineId: $pipelineId"}
             matches
         } == true
     }

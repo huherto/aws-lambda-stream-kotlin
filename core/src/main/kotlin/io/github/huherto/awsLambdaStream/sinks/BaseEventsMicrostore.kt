@@ -16,7 +16,7 @@ import mu.KotlinLogging
 abstract class BaseEventsMicrostore(
     protected val faultManager: FaultManager,
     protected val bufferCapacity: Int = Channel.Factory.BUFFERED,
-    protected val tableName: String = "events",
+    protected val tableName: String,
 ): EventsMicrostore {
 
     private val logger = KotlinLogging.logger {  }
@@ -38,6 +38,7 @@ abstract class BaseEventsMicrostore(
         if (isCorrelation) {
             if (pk.isNullOrEmpty()) return uow
             val request = QueryRequest {
+                tableName = this@BaseEventsMicrostore.tableName
                 keyConditionExpression = "#pk = :pk"
                 expressionAttributeNames = mapOf("#pk" to "pk")
                 expressionAttributeValues = mapOf(":pk" to AttributeValue.S(pk))
@@ -90,7 +91,7 @@ abstract class BaseEventsMicrostore(
                 "pk" to nullableS(pk),
                 "sk" to nullableS(sk),
                 "discriminator" to nullableS(discriminator),
-                "timestamp" to nullableN(timeStamp),
+                "timestamp" to nullableN(timeStamp?.toString()),
                 "awsregion" to nullableS(awsRegion),
                 "sequenceNumber" to nullableS(sequenceNumber),
                 "ttl" to nullableN(ttl?.toString()),
