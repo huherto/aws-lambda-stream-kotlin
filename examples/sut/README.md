@@ -1,16 +1,19 @@
 
 
 
-### Setup environment for running integration tests locally.
+## Setting up the environment for running integration tests locally.
 
-#### Install localstack
+### Install localstack
 https://github.com/localstack/localstack
 
 ```
 $ brew install localstack/tap/localstack-cli
 ```
 
-#### Install awscli-local 
+### Install awscli-local 
+
+https://github.com/localstack/awscli-local
+
 awscli-local is a command-line tool, provided by LocalStack, that acts as a thin wrapper around the standard AWS CLI.
 It provides the awslocal command, which is used to interact with a local, simulated AWS environment rather than the
 actual cloud services.
@@ -25,7 +28,7 @@ A quick test to see if it is working:
 $ awslocal sns list-topics
 ```
 
-##### Install cdklocal
+#### Install cdklocal
 https://github.com/localstack/aws-cdk-local
 
 ```
@@ -34,13 +37,27 @@ $ npm install -g aws-cdk-local aws-cdk
 $ cdklocal --version
 ```
 
-### Run localstack env
+## Running integration tests locally
+
+```aiignore
+cd examples/sut
+```
 
 ```
-export LOCALSTACK_SERVICES=serverless,kinesis,dynamodb
-localstack start
-localstack stop
+docker compose up
 ```
+
+### Deploy services using cdklocal
+
+```aiignore
+$ ./deploy_all.sh 
+```
+
+### Run integration tests
+```aiignore
+$ ./runitest.sh
+```
+
 
 
 
