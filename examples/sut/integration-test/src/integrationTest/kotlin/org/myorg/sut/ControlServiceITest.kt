@@ -1,7 +1,6 @@
 package org.myorg.sut
 
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
-import aws.smithy.kotlin.runtime.net.url.Url
 import io.github.huherto.awsLambdaStream.JsonEvent
 import io.kotest.matchers.longs.shouldBeGreaterThan
 import io.kotest.matchers.longs.shouldBeLessThan
@@ -15,9 +14,12 @@ import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import org.myorg.sut.ShipmentTrackingDomain.createDeliveryAttemptedEvent
+import org.myorg.sut.ShipmentTrackingDomain.createPoisonPillEvent
+import org.myorg.sut.ShipmentTrackingDomain.createShipmentCreatedEvent
+import org.myorg.sut.ShipmentTrackingDomain.createTrackedUnit
 import java.lang.System.currentTimeMillis
 import kotlin.math.abs
-import kotlin.random.Random
 import kotlin.time.ExperimentalTime
 
 typealias DBRecord = Map<String, AttributeValue?>
@@ -34,13 +36,11 @@ class ControlServiceITest {
 
     private val logger = mu.KotlinLogging.logger {}
 
-    fun endPointUrl() = Url.parse("http://localhost:4566")
-
     @OptIn(ExperimentalTime::class)
     @Test
     fun sendEvents() : Unit = runBlocking {
 
-        val event = createShipmentCreatedEvent(createTrackedUnit())
+        val event = createShipmentCreatedEvent(ShipmentTrackingDomain.createTrackedUnit())
         event.id.shouldNotBeNull()
         event.entity.shouldNotBeNull()
         event.entity?.id.shouldNotBeNull()
@@ -228,43 +228,4 @@ class ControlServiceITest {
         AwsFacade.closeAll()
     }
 
-    private fun createTrackedUnit() = TrackedUnit().apply {
-    id = "unit-" + generateRandomNumber()
-        senderFullName = "John Doe"
-        returnAddress = TrackedUnit.Address("123 Main St", "Atlanta", "GA", "30303")
-        destinationAddress = TrackedUnit.Address("456 Oak St", "Miami", "FL", "33101")
-        trackingNumber = "TRK123456789"
-        weight = 10.5
-        dimensions = TrackedUnit.PackageDimensions(12.0, 8.0, 6.0)
-    }
-
-    private fun generateRandomNumber(): String {
-        val rand = Random.Default
-        return String.format("%04d", rand.nextLong(10000))
-    }
-
-    private fun createShipmentCreatedEvent(trackedUnit: TrackedUnit) = ShipmentCreatedEvent().apply {
-        id = "ship-" + generateRandomNumber()
-        partitionKey = trackedUnit.id
-        timestamp = System.currentTimeMillis()
-        location = "Atlanta Hub"
-        entity = trackedUnit
-    }
-
-    private fun createDeliveryAttemptedEvent(trackedUnit: TrackedUnit) = DeliveryAttemptedEvent().apply {
-        id = "ship-" + generateRandomNumber()
-        partitionKey = trackedUnit.id
-        timestamp = System.currentTimeMillis()
-        location = "Atlanta Hub"
-        reason = "Can't access the door"
-        entity = trackedUnit
-    }
-
-    private fun createPoisonPillEvent(trackedUnit: TrackedUnit) = ShipmentCreatedEvent().apply {
-        id = "poison-" + generateRandomNumber()
-        partitionKey = trackedUnit.id
-        timestamp = System.currentTimeMillis()
-        location = "poison-pill"
-        entity = trackedUnit
-    }
 }
