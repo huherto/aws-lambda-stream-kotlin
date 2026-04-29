@@ -60,17 +60,18 @@ $ cdklocal --version
 cd examples/sut
 ```
 
+Run localstack
 ```
 docker compose up
 ```
 
-### Deploy services using cdklocal
+Deploy services using cdklocal
 
 ```aiignore
 $ ./deploy_all.sh 
 ```
 
-### Run integration tests
+Run integration tests
 ```aiignore
 $ ./run_itests.sh
 ```
