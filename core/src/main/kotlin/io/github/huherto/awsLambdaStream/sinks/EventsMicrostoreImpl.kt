@@ -7,20 +7,19 @@ import io.github.huherto.awsLambdaStream.UnitOfWork
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.buffer
-import kotlinx.coroutines.flow.mapNotNull
 
-open class EventsMicrostoreImpl constructor(
+open class EventsMicrostoreImpl(
     envConfig: EnvironmentConfig,
     private val dynamoDbClient: DynamoDbClient,
     faultManager: FaultManager,
-    bufferCapacity: Int = Channel.Factory.BUFFERED,
+    bufferCapacity: Int = Channel.BUFFERED,
 ): BaseEventsMicrostore(faultManager, bufferCapacity, envConfig.tableName() ?: "events") {
 
     override fun save(flow: Flow<UnitOfWork>) : Flow<UnitOfWork> {
         with(faultManager) {
             return flow.mapNotFaulty{ uow -> putRequest(uow) }
                 .buffer(bufferCapacity)
-                .mapNotNull { uow -> faulty(uow) { putDynamoDb(uow) } }
+                .mapNotFaulty { uow -> putDynamoDb(uow)  }
         }
     }
 
@@ -28,8 +27,8 @@ open class EventsMicrostoreImpl constructor(
         with(faultManager) {
             return flow.mapNotFaulty{ uow -> toQueryRequest(uow) }
                 .buffer(bufferCapacity)
-                .mapNotNull { uow -> faulty(uow) { queryDynamoDb(uow)} }
-                .mapNotNull { uow -> faulty(uow) { toCorrelated(uow) } }
+                .mapNotFaulty { uow -> queryDynamoDb(uow) }
+                .mapNotFaulty { uow -> toCorrelated(uow) }
         }
     }
 

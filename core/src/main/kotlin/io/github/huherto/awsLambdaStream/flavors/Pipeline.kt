@@ -18,7 +18,8 @@ abstract class Pipeline(val id : String) {
     fun printEndPipeline(uow: UnitOfWork) {
         val redacted = trimAndRedacted(uow)
         val eventType = uow.event?.eventType() ?: "unknown"
-        logger.debug { "end type:${eventType}, eid:${uow.event?.id}, uow: $redacted" }
+        val pipelineId = this.id
+        logger.debug { "end type:${eventType}, eid:${uow.event?.id}, pipelineId:${pipelineId}, uow: $redacted" }
     }
 
     fun printStepPipeline(step: String, uow: UnitOfWork) {

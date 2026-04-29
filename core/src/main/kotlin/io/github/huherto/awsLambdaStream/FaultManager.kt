@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.*
 import java.util.*
 import java.util.concurrent.ConcurrentLinkedQueue
 
-class FaultManager constructor(
+class FaultManager(
     val envConfig: EnvironmentConfig,
     private val eventPublisher: EventPublisher,
     private val skipErrorLogging: Boolean = false,
@@ -41,7 +41,7 @@ class FaultManager constructor(
     }
 
     inline fun <R> Flow<UnitOfWork>.mapNotFaulty(
-        crossinline block: (UnitOfWork) -> R?
+        crossinline block: suspend (UnitOfWork) -> R?
     ): Flow<R> {
         return this
             .mapNotNull { item ->
@@ -49,7 +49,16 @@ class FaultManager constructor(
             }
     }
 
-    inline fun <R> faulty(uow: UnitOfWork, block: (UnitOfWork) -> R): R? {
+    inline fun Flow<UnitOfWork>.filterNotFaulty(
+        crossinline block: (UnitOfWork) -> Boolean
+    ): Flow<UnitOfWork> {
+        return this
+            .filter { item ->
+                faulty(item, block) == true
+            }
+    }
+
+    suspend inline fun <R> faulty(uow: UnitOfWork, crossinline block: suspend (uow: UnitOfWork) -> R): R? {
         return try {
             block(uow)
         } catch (e: Throwable) {
@@ -70,7 +79,7 @@ class FaultManager constructor(
     fun redirectFailure(ex: FaultException) {
         logError(ex)
         if (!isRetriableException(ex)) {
-            val functionName = awsLambdaFunctionName ?: "undefined"
+            val functionName = awsLambdaFunctionName
             val failureEvent = FaultEvent().apply {
                 id = UUID.randomUUID().toString()
                 partitionKey = UUID.randomUUID().toString()
@@ -104,4 +113,5 @@ class FaultManager constructor(
         logger.debug { "flushFaults: count=$count" }
         return count
     }
+
 }

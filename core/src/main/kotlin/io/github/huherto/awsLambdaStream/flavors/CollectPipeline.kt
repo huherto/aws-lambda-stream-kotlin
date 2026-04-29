@@ -8,7 +8,6 @@ import io.github.huherto.awsLambdaStream.filters.EventFilter
 import io.github.huherto.awsLambdaStream.filters.filterEvents
 import io.github.huherto.awsLambdaStream.sinks.EventsMicrostore
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 
@@ -47,6 +46,7 @@ class CollectPipeline constructor(
             )
             uow.copy(saveOptions = saveOptions)
         }
+        // The eventsMicrostore already has its own fault manager.
         return eventsMicrostore.save(flow)
     }
 
@@ -65,7 +65,7 @@ class CollectPipeline constructor(
             val flow = fromFlow
                 .filterEvents(fm, eventFilter)
                 .onEach { uow -> printStartPipeline(uow) }
-                .filter { uow -> faulty(uow) { onContentType(uow) } == true }
+                .filterNotFaulty { uow -> onContentType(uow) }
                 .mapNotFaulty { uow -> uow.copy(key = correlationKey(uow)) }
                 .save()
                 .onEach { uow -> printEndPipeline(uow) }
