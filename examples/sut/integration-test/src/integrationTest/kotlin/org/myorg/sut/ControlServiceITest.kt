@@ -1,16 +1,8 @@
 package org.myorg.sut
 
-import aws.sdk.kotlin.runtime.auth.credentials.StaticCredentialsProvider
-import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
-import aws.sdk.kotlin.services.dynamodb.model.QueryRequest
-import aws.sdk.kotlin.services.eventbridge.EventBridgeClient
 import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequest
 import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequestEntry
-import aws.sdk.kotlin.services.kinesis.KinesisClient
-import aws.sdk.kotlin.services.kinesis.model.GetRecordsRequest
-import aws.sdk.kotlin.services.kinesis.model.GetShardIteratorRequest
-import aws.sdk.kotlin.services.kinesis.model.ShardIteratorType
 import aws.smithy.kotlin.runtime.net.url.Url
 import io.github.huherto.awsLambdaStream.JsonEvent
 import io.kotest.matchers.longs.shouldBeGreaterThan
@@ -21,7 +13,6 @@ import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldMatch
 import io.kotest.matchers.string.shouldNotBeBlank
 import io.kotest.matchers.string.shouldNotBeEmpty
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Test
@@ -29,7 +20,6 @@ import org.junit.jupiter.api.TestInstance
 import java.lang.System.currentTimeMillis
 import kotlin.math.abs
 import kotlin.random.Random
-import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.ExperimentalTime
 
 typealias DBRecord = Map<String, AttributeValue?>
@@ -58,7 +48,7 @@ class ControlServiceITest {
         event.entity?.id.shouldNotBeNull()
 
         logger.info { "Sending event ${event.id}" }
-        val res = eventBridgeClient.putEvents(PutEventsRequest {
+        val res = AwsFacade.eventBridgeClient.putEvents(PutEventsRequest {
             entries = listOf(
                 PutEventsRequestEntry {
                     eventBusName = "sut-event-hub-local-bus"
@@ -71,7 +61,7 @@ class ControlServiceITest {
         res.failedEntryCount shouldBe 0
 
         // Find collected event in DynamoDB.
-        val collectedEvent = findEventByPK(event.id!!) { items ->
+        val collectedEvent = AwsFacade.findEventByPK(event.id!!) { items ->
             items?.firstOrNull() ?: return@findEventByPK null
         }
         with(collectedEvent) {
@@ -87,7 +77,7 @@ class ControlServiceITest {
         }
 
         // Find correlated event in DynamoDB.
-        val correlEvent = findEventByPK(event.entity?.id!!) { items ->
+        val correlEvent = AwsFacade.findEventByPK(event.entity?.id!!) { items ->
             items?.firstOrNull { rec -> rec["sk"]?.asS() == event.id }
         }
         with(correlEvent) {
@@ -104,7 +94,7 @@ class ControlServiceITest {
         }
 
         // Finding VERIFY_TARGET_ADDRESS among the correlated events.
-        val vtaCorrelEvent = findEventByPK(event.entity?.id!!) { items ->
+        val vtaCorrelEvent = AwsFacade.findEventByPK(event.entity?.id!!) { items ->
             items?.firstOrNull { rec -> rec["event"]?.asS()?.contains("VERIFY_TARGET_ADDRESS") == true }
         }
         vtaCorrelEvent.shouldNotBeNull()
@@ -129,8 +119,8 @@ class ControlServiceITest {
         }
 
         // Finding VERIFY_TARGET_ADDRESS by its event id.
-        val vtaEvent = findEventByPK(vtaEventId) { items ->
-            items?.firstOrNull() ?: return@findEventByPK null
+        val vtaEvent = AwsFacade.findEventByPK(vtaEventId) { items ->
+            items?.firstOrNull()
         }
         with(vtaEvent) {
             logger.debug { "vtaEvent: $this" }
@@ -156,7 +146,7 @@ class ControlServiceITest {
         val e1 = createDeliveryAttemptedEvent(event.entity!!)
         val e2 = createDeliveryAttemptedEvent(event.entity!!)
         run {
-            val res = eventBridgeClient.putEvents(PutEventsRequest {
+            val res = AwsFacade.eventBridgeClient.putEvents(PutEventsRequest {
                 entries = listOf(
                     PutEventsRequestEntry {
                         eventBusName = "sut-event-hub-local-bus"
@@ -174,7 +164,7 @@ class ControlServiceITest {
             })
             res.failedEntryCount shouldBe 0
         }
-        val ccEvent = findEventByPK(event.entity?.id!!) { items ->
+        val ccEvent = AwsFacade.findEventByPK(event.entity?.id!!) { items ->
             items?.firstOrNull { rec -> rec["event"]?.asS()?.contains("CONTACT_CUSTOMER") == true }
         }
         with(ccEvent) {
@@ -190,7 +180,7 @@ class ControlServiceITest {
             ccEventAsObject.eventType().shouldBe("CONTACT_CUSTOMER")
         }
 
-        val kinesisEvents = readAllKinesisEvents()
+        val kinesisEvents = AwsFacade.readAllKinesisEvents()
         kinesisEvents shouldNotBe null
         logger.info { "Read ${kinesisEvents.size} events from Kinesis" }
         println("Read ${kinesisEvents.size} events from Kinesis")
@@ -260,7 +250,7 @@ class ControlServiceITest {
 
         val event = createPoisonPillEvent(createTrackedUnit())
 
-        val res = eventBridgeClient.putEvents(PutEventsRequest {
+        val res = AwsFacade.eventBridgeClient.putEvents(PutEventsRequest {
             entries = listOf(
                 PutEventsRequestEntry {
                     eventBusName = "sut-event-hub-local-bus"
@@ -273,104 +263,9 @@ class ControlServiceITest {
         res.failedEntryCount shouldBe 0
     }
 
-
-    private suspend fun findEventByPK(pk: String, checkResponse: (List<DBRecord>?)-> DBRecord?)  : DBRecord? {
-
-        val startTime = System.currentTimeMillis()
-        while (true) {
-            if (System.currentTimeMillis() - startTime > 10000) {
-                logger.error { "Timed out waiting for event $pk to be inserted." }
-                return null
-            }
-            logger.debug { "find event $pk in ${System.currentTimeMillis() - startTime}" }
-            val response = dynamoDbClient.query(QueryRequest {
-                tableName = "sut-control-service-local-events"
-                keyConditionExpression = "pk = :pk"
-                expressionAttributeValues = mapOf(":pk" to AttributeValue.S(pk))
-            })
-
-            val found = checkResponse(response.items)
-            if (found != null) {
-                return found
-            }
-            delay(1000.milliseconds)
-        }
-    }
-
-    private val eventBridgeClient: EventBridgeClient by lazy {
-        EventBridgeClient {
-            this.region = "us-east-1"
-            this.endpointUrl = endPointUrl()
-            credentialsProvider =
-                StaticCredentialsProvider {
-                    this.accessKeyId = "test"
-                    this.secretAccessKey = "test"
-                }
-        }
-    }
-
-    private val kinesisClient: KinesisClient by lazy {
-        KinesisClient {
-            this.region = "us-east-1"
-            this.endpointUrl = endPointUrl()
-            credentialsProvider =
-                StaticCredentialsProvider {
-                    this.accessKeyId = "test"
-                    this.secretAccessKey = "test"
-                }
-        }
-    }
-
-    private suspend fun readAllKinesisEvents(): List<String> {
-        val streamName = "sut-event-hub-local-s1"
-        val events = mutableListOf<String>()
-
-        val shardIteratorResponse = kinesisClient.getShardIterator(GetShardIteratorRequest {
-            this.streamName = streamName
-            this.shardId = "shardId-000000000000"
-            this.shardIteratorType = ShardIteratorType.TrimHorizon
-        })
-
-        var shardIterator = shardIteratorResponse.shardIterator
-
-        while (shardIterator != null) {
-            val recordsResponse = kinesisClient.getRecords(GetRecordsRequest {
-                this.shardIterator = shardIterator
-            })
-
-            recordsResponse.records.forEach { record ->
-                val data = record.data.decodeToString()
-                events.add(data)
-            }
-
-            shardIterator = recordsResponse.nextShardIterator
-
-            if (recordsResponse.records.isEmpty()) {
-                break
-            }
-        }
-
-        return events
-    }
-
-
-    private val dynamoDbClient: DynamoDbClient by lazy {
-    DynamoDbClient {
-            this.region = "us-east-1"
-            this.endpointUrl = endPointUrl()
-            credentialsProvider =
-                StaticCredentialsProvider {
-                    this.accessKeyId = "test"
-                    this.secretAccessKey = "test"
-                }
-        }
-    }
-
     @AfterAll
     fun tearDownAll() {
-        eventBridgeClient.close()
-        dynamoDbClient.close()
-        kinesisClient.close()
+        AwsFacade.closeAll()
     }
 
     private fun createTrackedUnit() = TrackedUnit().apply {
@@ -404,7 +299,6 @@ class ControlServiceITest {
         reason = "Can't access the door"
         entity = trackedUnit
     }
-
 
     private fun createPoisonPillEvent(trackedUnit: TrackedUnit) = ShipmentCreatedEvent().apply {
         id = "poison-" + generateRandomNumber()
