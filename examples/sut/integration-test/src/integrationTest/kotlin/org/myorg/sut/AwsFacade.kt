@@ -5,11 +5,15 @@ import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
 import aws.sdk.kotlin.services.dynamodb.model.QueryRequest
 import aws.sdk.kotlin.services.eventbridge.EventBridgeClient
+import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequest
+import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequestEntry
 import aws.sdk.kotlin.services.kinesis.KinesisClient
 import aws.sdk.kotlin.services.kinesis.model.GetRecordsRequest
 import aws.sdk.kotlin.services.kinesis.model.GetShardIteratorRequest
 import aws.sdk.kotlin.services.kinesis.model.ShardIteratorType
 import aws.smithy.kotlin.runtime.net.url.Url
+import io.github.huherto.awsLambdaStream.Event
+import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -31,7 +35,7 @@ object AwsFacade {
         }
     }
 
-    val eventBridgeClient: EventBridgeClient by lazy {
+    private val eventBridgeClient: EventBridgeClient by lazy {
         EventBridgeClient {
             this.region = "us-east-1"
             this.endpointUrl = endPointUrl()
@@ -53,6 +57,21 @@ object AwsFacade {
                     this.secretAccessKey = "test"
                 }
         }
+    }
+
+    suspend fun putEvents(vararg events: Event) {
+        val entries = events.map { event ->
+            PutEventsRequestEntry {
+                eventBusName = "sut-event-hub-local-bus"
+                detail = event.encoded()
+                detailType = "my-event"
+                source = "integration-test"
+            }
+        }
+        val res = eventBridgeClient.putEvents(PutEventsRequest {
+            this.entries = entries
+        })
+        res.failedEntryCount shouldBe 0
     }
 
     suspend fun findEventByPK(pk: String, checkResponse: (List<DBRecord>?)-> DBRecord?)  : DBRecord? {

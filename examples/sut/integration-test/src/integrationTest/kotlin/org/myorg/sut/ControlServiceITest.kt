@@ -1,8 +1,6 @@
 package org.myorg.sut
 
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
-import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequest
-import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequestEntry
 import aws.smithy.kotlin.runtime.net.url.Url
 import io.github.huherto.awsLambdaStream.JsonEvent
 import io.kotest.matchers.longs.shouldBeGreaterThan
@@ -48,17 +46,7 @@ class ControlServiceITest {
         event.entity?.id.shouldNotBeNull()
 
         logger.info { "Sending event ${event.id}" }
-        val res = AwsFacade.eventBridgeClient.putEvents(PutEventsRequest {
-            entries = listOf(
-                PutEventsRequestEntry {
-                    eventBusName = "sut-event-hub-local-bus"
-                    detail = event.encoded()
-                    detailType = "my-event"
-                    source = "integration-test"
-                }
-            )
-        })
-        res.failedEntryCount shouldBe 0
+        AwsFacade.putEvents(event)
 
         // Find collected event in DynamoDB.
         val collectedEvent = AwsFacade.findEventByPK(event.id!!) { items ->
@@ -145,25 +133,7 @@ class ControlServiceITest {
         // Make two failed attempts to deliver the package.
         val e1 = createDeliveryAttemptedEvent(event.entity!!)
         val e2 = createDeliveryAttemptedEvent(event.entity!!)
-        run {
-            val res = AwsFacade.eventBridgeClient.putEvents(PutEventsRequest {
-                entries = listOf(
-                    PutEventsRequestEntry {
-                        eventBusName = "sut-event-hub-local-bus"
-                        detail = e1.encoded()
-                        detailType = "my-event"
-                        source = "integration-test"
-                    },
-                    PutEventsRequestEntry {
-                        eventBusName = "sut-event-hub-local-bus"
-                        detail = e2.encoded()
-                        detailType = "my-event"
-                        source = "integration-test"
-                    }
-                )
-            })
-            res.failedEntryCount shouldBe 0
-        }
+        AwsFacade.putEvents(e1, e2)
         val ccEvent = AwsFacade.findEventByPK(event.entity?.id!!) { items ->
             items?.firstOrNull { rec -> rec["event"]?.asS()?.contains("CONTACT_CUSTOMER") == true }
         }
@@ -250,17 +220,7 @@ class ControlServiceITest {
 
         val event = createPoisonPillEvent(createTrackedUnit())
 
-        val res = AwsFacade.eventBridgeClient.putEvents(PutEventsRequest {
-            entries = listOf(
-                PutEventsRequestEntry {
-                    eventBusName = "sut-event-hub-local-bus"
-                    detail = event.encoded()
-                    detailType = "my-event"
-                    source = "integration-test"
-                }
-            )
-        })
-        res.failedEntryCount shouldBe 0
+        AwsFacade.putEvents(event)
     }
 
     @AfterAll
