@@ -153,8 +153,8 @@ class EvaluatePipeline (
             timestamp = trigger?.timestamp
             tags = aggregatedTags
             this.triggers = mappedTriggers
-            raw = if (basic) uow.event?.raw else null
-            eem = if (basic) uow.event?.eem else null
+            raw = if (basic) baseEvent.raw else null
+            eem = if (basic) baseEvent.eem else null
         }
 
         return template

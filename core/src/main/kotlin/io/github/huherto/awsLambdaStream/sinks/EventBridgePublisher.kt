@@ -44,6 +44,7 @@ class EventBridgePublisher(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun publish(flow: Flow<UnitOfWork>): Flow<UnitOfWork> {
+        // TODO: Do these need to have a  FaultManager?
         return flow
             .map { toPublishRequestEntry(it, opt) }
             .chunked(opt.batchSize)

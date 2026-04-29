@@ -43,6 +43,7 @@ class EvaluatePipelineTest {
     private val eventPublisher = mockk<EventPublisher>()
     private val eventsMicrostore = mockk<EventsMicrostore>()
     private val eventCodec = SimpleEventCodec()
+    private val faultManager = mockk<FaultManager>()
 
     private fun createPipeline(
         pipelineId: String = "pipeline-1",
@@ -224,10 +225,10 @@ class EvaluatePipelineTest {
 
         // Act
         val noExpressionResult = pipelineWithNoExpression.run {
-            flowOf(first, second).complex().toList()
+            flowOf(first, second).complex(faultManager).toList()
         }
         val expressionResult = expressionPipeline.run {
-            flowOf(matchingUow, rejectedUow).complex().toList()
+            flowOf(matchingUow, rejectedUow).complex(faultManager).toList()
         }
 
         // Assert
