@@ -1,10 +1,27 @@
 
 
 
-## Setting up the environment for running integration tests locally.
+## Setting Up the Local Integration Test Environment
 
-### Install localstack
-https://github.com/localstack/localstack
+This guide explains how to set up the required local tooling and run integration tests against a LocalStack-based AWS environment.
+
+## Prerequisites
+
+Ensure you have the following installed:
+
+- Docker
+- Docker Compose
+- Node.js and npm
+- Python package manager such as `pip`, `pip3`, or `pipx`
+- Homebrew, if installing LocalStack on macOS
+
+## Install LocalStack
+
+LocalStack provides a local AWS-compatible environment for development and testing.
+
+For more information, see the [LocalStack GitHub repository](https://github.com/localstack/localstack).
+
+Install the LocalStack CLI:
 
 ```
 $ brew install localstack/tap/localstack-cli
