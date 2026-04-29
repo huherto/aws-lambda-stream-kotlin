@@ -72,7 +72,7 @@ $ ./deploy_all.sh
 
 ### Run integration tests
 ```aiignore
-$ ./runitest.sh
+$ ./run_itests.sh
 ```
 
 
