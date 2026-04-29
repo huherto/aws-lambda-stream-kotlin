@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.onEach
 
 const val CORREL = "CORREL"
 
-class CorrelatePipeline constructor(
+class CorrelatePipeline(
     id: String,
     val onContentType: (UnitOfWork) -> Boolean = { true },
     val eventFilter: EventFilter = EventFilter.Any,
