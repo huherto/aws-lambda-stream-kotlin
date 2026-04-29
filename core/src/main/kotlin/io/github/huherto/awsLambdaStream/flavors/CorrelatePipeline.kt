@@ -7,7 +7,9 @@ import io.github.huherto.awsLambdaStream.filters.filterEvents
 import io.github.huherto.awsLambdaStream.from.RecordImage
 import io.github.huherto.awsLambdaStream.from.RecordPair
 import io.github.huherto.awsLambdaStream.sinks.EventsMicrostore
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 
 const val CORREL = "CORREL"
 
@@ -89,6 +91,7 @@ class CorrelatePipeline constructor(
             )
             uow.copy(saveOptions = saveOptions)
         }
+        // Save already has a fault manager.
         return eventsMicrostore.save(flow)
     }
 
@@ -96,12 +99,11 @@ class CorrelatePipeline constructor(
         logger.info { "CorrelatePipeline.connect: id=$id" }
         with(fm) {
             val flow = fromFlow
-                .filterNotNull()
-                .filter{ uow -> faulty(uow){ forCollectedEvents(uow) } == true }
+                .filterNotFaulty{ uow ->  forCollectedEvents(uow) }
                 .mapNotFaulty{  uow -> normalize(uow) }
                 .filterEvents(this, eventFilter)
                 .onEach { uow -> printStartPipeline(uow) }
-                .filter { uow -> faulty(uow) { onContentType(uow) } == true }
+                .filterNotFaulty { uow -> onContentType(uow) }
                 .mapNotFaulty { uow -> addCorrelationKey(uow)}
                 .save()
                 .onEach { uow -> printEndPipeline(uow) }

@@ -86,10 +86,11 @@ class EvaluatePipeline (
     }
 
     internal fun Flow<UnitOfWork>.queryCorrelated() : Flow<UnitOfWork> {
+        // queryByPK already has a fault manager.
         return eventsMicrostore.queryByPk(this)
     }
 
-    internal fun Flow<UnitOfWork>.complex(): Flow<UnitOfWork> {
+    internal fun Flow<UnitOfWork>.complex(fm : FaultManager): Flow<UnitOfWork> {
         return if (expression == null) {
             this.map { uow ->
                 uow.copy(
@@ -97,18 +98,18 @@ class EvaluatePipeline (
                 )
             }
         } else {
-            // TODO: these may need to be wrapped in faulty() calls.
             this
-                .filter { uow -> onCorrelationKeySuffix(uow) }
+                .filter { uow -> fm.faulty(uow) { onCorrelationKeySuffix(uow) } == true }
                 .queryCorrelated()
                 .mapNotNull { uow ->
-                    val result = expression.invoke(uow)
-                    if (result) {
-                        uow.copy( triggers = listOfNotNull(uow.event))
+                    val result = fm.faulty(uow) { expression(uow) }
+                    if (result == true) {
+                        uow.copy(triggers = listOfNotNull(uow.event))
                     } else {
                         null
                     }
                 }
+
         }
     }
 
@@ -181,12 +182,12 @@ class EvaluatePipeline (
         logger.info { "Evaluate.connect: id=$id" }
         with(fm) {
             val flow = fromFlow
-                .filter{ uow -> faulty(uow){ forEvents(uow) } == true }
+                .filterNotFaulty{ uow -> forEvents(uow) }
                 .mapNotFaulty{  uow -> normalize(uow) }
                 .filterEvents(fm, eventFilter)
                 .onEach { uow -> printStartPipeline(uow) }
-                .filter { uow -> faulty(uow) { onContentType(uow) } == true }
-                .complex()
+                .filterNotFaulty { uow -> onContentType(uow) }
+                .complex(fm)
                 .flatMapMerge { uow ->
                     faulty(uow) { toHigherOrderEvents(uow) }?.asFlow() ?: emptyFlow()
                 }

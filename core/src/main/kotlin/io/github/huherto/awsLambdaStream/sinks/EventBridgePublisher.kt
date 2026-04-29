@@ -77,7 +77,7 @@ class EventBridgePublisher(
     internal fun toPublishRequest(batchUow: UnitOfWork, opt: EventBridgePublishOptions): UnitOfWork {
 
         val entries = batchUow.batch?.mapNotNull{ it.publishRequestEntry }
-        if (entries == null || entries.isEmpty()) return batchUow
+        if (entries.isNullOrEmpty()) return batchUow
         val putEventsRequest = PutEventsRequest.Companion {
             this.entries = entries
             this.endpointId = opt.endpointId
