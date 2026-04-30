@@ -7,6 +7,24 @@ import kotlinx.coroutines.flow.*
 import java.util.*
 import java.util.concurrent.ConcurrentLinkedQueue
 
+/**
+ * Handles failures that occur while processing pipeline flows.
+ *
+ * `FaultManager` wraps pipeline operations, captures non-retriable failures as [FaultEvent]s,
+ * and publishes those fault events through the configured [eventPublisher] when [flushFaults]
+ * is called.
+ *
+ * When stream retry is enabled, retryable AWS SDK exceptions are rethrown so the upstream stream
+ * processor can retry the batch. Non-retryable exceptions are converted into fault events and held
+ * in an in-memory queue until flushed.
+ *
+ * @param envConfig Environment-backed configuration used to determine retry behavior and function name.
+ * @param eventPublisher Publisher used to emit generated [FaultEvent]s.
+ * @param skipErrorLogging When `true`, suppresses error logging. Useful for tests.
+ * @param isStreamRetryEnabled Whether retryable stream-processing failures should be rethrown.
+ * Defaults to [EnvironmentConfig.streamRetryEnabled].
+ * @param awsLambdaFunctionName Lambda function name attached to generated fault-event tags.
+ */
 class FaultManager(
     val envConfig: EnvironmentConfig,
     private val eventPublisher: EventPublisher,
@@ -16,10 +34,15 @@ class FaultManager(
 ) {
 
     private val logger = mu.KotlinLogging.logger { }
-    
+
     private val theFaults = ConcurrentLinkedQueue<FaultEvent>()
 
-    // We may no longer need this.
+    /**
+     * Internal placeholder pipeline used when publishing fault events.
+     *
+     * Fault events are emitted as [UnitOfWork] instances and therefore need an associated [Pipeline].
+     * This pipeline is not intended to process regular application events.
+     */
     class FaultManagerPipeline(id: String) : Pipeline(id) {
         override fun connect(
             fm: FaultManager,
@@ -32,14 +55,26 @@ class FaultManager(
 
     private val faultManagerPipeline = FaultManagerPipeline("fault1")
 
+    /**
+     * Returns a snapshot of currently queued fault events.
+     */
     fun getFaults(): List<FaultEvent> {
         return theFaults.toList()
     }
 
+    /**
+     * Returns the event publisher used by this fault manager.
+     */
     fun publisher() : EventPublisher {
         return eventPublisher
     }
 
+    /**
+     * Maps each [UnitOfWork] with [block], capturing any thrown exception as a fault.
+     *
+     * Items for which [block] throws are redirected through [redirectFailure] and omitted from the
+     * returned flow.
+     */
     inline fun <R> Flow<UnitOfWork>.mapNotFaulty(
         crossinline block: suspend (UnitOfWork) -> R?
     ): Flow<R> {
@@ -49,6 +84,11 @@ class FaultManager(
             }
     }
 
+    /**
+     * Filters a flow while converting predicate failures into fault events.
+     *
+     * If [block] throws for an item, the exception is captured and that item is filtered out.
+     */
     inline fun Flow<UnitOfWork>.filterNotFaulty(
         crossinline block: (UnitOfWork) -> Boolean
     ): Flow<UnitOfWork> {
@@ -58,6 +98,11 @@ class FaultManager(
             }
     }
 
+    /**
+     * Executes [block] for [uow] and captures failures as fault events.
+     *
+     * @return The result of [block], or `null` when [block] throws.
+     */
     suspend inline fun <R> faulty(uow: UnitOfWork, crossinline block: suspend (uow: UnitOfWork) -> R): R? {
         return try {
             block(uow)
@@ -68,6 +113,12 @@ class FaultManager(
         }
     }
 
+    /**
+     * Returns whether [exception] should be rethrown to allow stream retry handling.
+     *
+     * Only AWS SDK exceptions marked retryable are considered retriable, and only when stream retry
+     * support is enabled.
+     */
     private fun isRetriableException(exception: FaultException): Boolean {
         if (!isStreamRetryEnabled) return false
         if (exception.cause is SdkBaseException) {
@@ -76,6 +127,12 @@ class FaultManager(
         return false
     }
 
+    /**
+     * Handles a pipeline failure.
+     *
+     * Retriable AWS SDK failures are rethrown so the stream processor can retry. Other failures are
+     * converted into [FaultEvent] instances and queued for later publishing by [flushFaults].
+     */
     fun redirectFailure(ex: FaultException) {
         logError(ex)
         if (!isRetriableException(ex)) {
@@ -93,6 +150,9 @@ class FaultManager(
         }
     }
 
+    /**
+     * Logs [exception] unless error logging has been disabled.
+     */
     fun logError(exception: Throwable) {
         if (!skipErrorLogging) { // Use it to keep logs clean on unit tests.
             logger.error {
@@ -101,6 +161,14 @@ class FaultManager(
         }
     }
 
+    /**
+     * Publishes all queued fault events and removes them from the queue.
+     *
+     * Each fault event is wrapped in a [UnitOfWork] associated with the internal fault-manager
+     * pipeline before publishing.
+     *
+     * @return The number of fault events published.
+     */
     suspend fun flushFaults() : Int {
         val flow = flow {
             while (true) {
