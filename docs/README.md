@@ -11,7 +11,7 @@ Components communicate with each other through events. The event format defines 
 
 Similarly, subsystems communicate with each other through events or APIs. These communication mechanisms must have stable, well-defined contracts.
 
-## Component Types
+## Service Types
 
 ### Control Services
 
@@ -19,7 +19,7 @@ Control Services orchestrate the flow of events within a subsystem.
 
 They coordinate business processes, determine how events should be handled, and trigger the appropriate downstream actions.
 
-A Control Service may include:
+A Control Service includes three main components:
 
 - A Listener Lambda function that receives and processes incoming events.
 - A DynamoDB table that stores events for correlation and evaluation.
