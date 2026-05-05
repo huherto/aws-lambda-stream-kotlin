@@ -30,5 +30,7 @@ data class UnitOfWork(
     val publishRequestEntry: PutEventsRequestEntry? = null,
     val publishRequest: PutEventsRequest? = null,
     val publishResponse: ConnectorResponse? = null,
+    val updateRequest:  UpdateItemRequest? = null,
+    val updateResponse: UpdateItemResponse? = null,
 )
 

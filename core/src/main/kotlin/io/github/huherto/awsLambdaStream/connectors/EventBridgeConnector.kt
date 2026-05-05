@@ -30,11 +30,11 @@ data class ConnectorResponse(
 )
 
 interface EventBridgeClientFactory {
-    fun createClient(pipelineId: String): EventBridgeClient
+    fun createClient(): EventBridgeClient
 }
 
-class EventBridgeClientFactoryImpl(private val envConfig: EnvironmentConfig) : EventBridgeClientFactory {
-    override fun createClient(pipelineId: String): EventBridgeClient {
+class DefaultEventBridgeClientFactory(private val envConfig: EnvironmentConfig) : EventBridgeClientFactory {
+    override fun createClient(): EventBridgeClient {
         val endpointUrl = envConfig.endPointUrl()?.ifEmpty { null }
         val region = envConfig.awsRegion()
         return EventBridgeClient {
@@ -66,7 +66,7 @@ class EventBridgeConnector(
 
         fun getClient(pipelineId: String, clientFactory: EventBridgeClientFactory): EventBridgeClient {
             return clients.computeIfAbsent(pipelineId) {
-                clientFactory.createClient(pipelineId)
+                clientFactory.createClient()
             }
         }
 

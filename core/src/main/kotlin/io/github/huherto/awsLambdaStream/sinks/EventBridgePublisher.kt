@@ -4,8 +4,8 @@ import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequest
 import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequestEntry
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.connectors.DefaultEventBridgeClientFactory
 import io.github.huherto.awsLambdaStream.connectors.EventBridgeClientFactory
-import io.github.huherto.awsLambdaStream.connectors.EventBridgeClientFactoryImpl
 import io.github.huherto.awsLambdaStream.connectors.EventBridgeConnector
 import io.github.huherto.awsLambdaStream.connectors.RetryConfig
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -35,7 +35,7 @@ data class EventBridgePublishOptions(
     val endpointId: String? = envConfig.busEndPointId(),
     val handleErrors: Boolean = true,
     val step: String = "publish",
-    val clientFactory: EventBridgeClientFactory = EventBridgeClientFactoryImpl(envConfig = envConfig)
+    val clientFactory: EventBridgeClientFactory = DefaultEventBridgeClientFactory(envConfig = envConfig)
 )
 
 class EventBridgePublisher(

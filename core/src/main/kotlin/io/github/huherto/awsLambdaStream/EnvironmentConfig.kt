@@ -18,6 +18,10 @@ class EnvironmentConfig {
         return System.getenv("AWS_REGION")
     }
 
+    fun awsDefaultRegion(): String? {
+        return System.getenv("AWS_DEFAULT_REGION")
+    }
+
     fun endPointUrl() : String? {
         return System.getenv("AWS_ENDPOINT_URL")
     }
@@ -80,5 +84,16 @@ class EnvironmentConfig {
         return System.getenv("TIMEOUT")?.toLongOrNull()
     }
 
+    fun project() : String? {
+        return System.getenv("PROJECT")
+    }
+
+    fun serverlessProject() : String? {
+        return System.getenv("SERVERLESS_PROJECT")
+    }
+
+    fun dynamodbTimeout() : Long? {
+        return System.getenv("DYNAMODB_TIMEOUT")?.toLongOrNull()
+    }
 
 }

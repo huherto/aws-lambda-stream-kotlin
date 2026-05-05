@@ -39,9 +39,9 @@ class EventBridgeConnectorTest {
         val firstClient = mockk<EventBridgeClient>()
         val secondClient = mockk<EventBridgeClient>()
 
-        every { clientFactory.createClient("pipeline-1") } returns firstClient
-        every { clientFactory.createClient("pipeline-2") } returns secondClient
-
+        every { clientFactory.createClient() } returnsMany
+                listOf(firstClient, secondClient)
+        
         // Act
         val clientA1 = EventBridgeConnector.getClient("pipeline-1", clientFactory)
         val clientA2 = EventBridgeConnector.getClient("pipeline-1", clientFactory)
@@ -51,8 +51,7 @@ class EventBridgeConnectorTest {
         clientA1 shouldBe firstClient
         clientA2 shouldBe firstClient
         clientB shouldBe secondClient
-        verify(exactly = 1) { clientFactory.createClient("pipeline-1") }
-        verify(exactly = 1) { clientFactory.createClient("pipeline-2") }
+        verify(exactly = 2) { clientFactory.createClient() }
     }
 
     @Test
@@ -63,7 +62,7 @@ class EventBridgeConnectorTest {
         val metrics = mockk<Metrics>()
         val response = PutEventsResponse { failedEntryCount = 0 }
 
-        every { clientFactory.createClient("pipeline-1") } returns client
+        every { clientFactory.createClient() } returns client
         coEvery { client.putEvents(request) } returns response
         justRun { metrics.capture(client, request, "eventbridge", any(), null) }
 
@@ -93,7 +92,7 @@ class EventBridgeConnectorTest {
         val metrics = mockk<Metrics>()
         val exception = IOException("boom")
 
-        every { clientFactory.createClient("pipeline-1") } returns client
+        every { clientFactory.createClient() } returns client
         coEvery { client.putEvents(request) } throws exception
         justRun { metrics.capture(client, request, "eventbridge", any(), null) }
 
@@ -124,7 +123,7 @@ class EventBridgeConnectorTest {
         val clientFactory = mockk<EventBridgeClientFactory>()
         val response = PutEventsResponse { failedEntryCount = 0 }
 
-        every { clientFactory.createClient("pipeline-1") } returns client
+        every { clientFactory.createClient() } returns client
         coEvery { client.putEvents(request) } returns response
 
         val connector = EventBridgeConnector(
