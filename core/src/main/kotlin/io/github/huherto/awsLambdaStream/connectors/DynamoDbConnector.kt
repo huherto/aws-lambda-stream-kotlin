@@ -29,21 +29,29 @@ data class DynamoDbConnectorOptions(
     val throwConditionFailure: Boolean = false,
     val metrics: DynamoDbConnectorMetrics? = null,
     val region: String? = envConfig.awsRegion() ?: envConfig.awsDefaultRegion(),
+    val clientFactory: EventBridgeClientFactory = DefaultEventBridgeClientFactory(envConfig = envConfig)
 )
 
-class DynamoDbConnector(
-    private val options: DynamoDbConnectorOptions
-) {
+interface DynamoDbClientFactory : ClientFactory<DynamoDbClient>
 
+class DefaultDynamoDbClientFactory(private val envConfig: EnvironmentConfig) : DynamoDbClientFactory, AbstractClientFactory<DynamoDbClient>() {
+    override fun create(): DynamoDbClient {
+        val region = envConfig.awsRegion()
+        return DynamoDbClient {
+            this.region = region
+            this.credentialsProvider = EnvironmentCredentialsProvider()
+        }
+    }
+}
+
+class DynamoDbConnector(
+    private val options: DynamoDbConnectorOptions,
+    private val clientFactory: DynamoDbClientFactory,
+) {
+    private val client: DynamoDbClient = clientFactory.getClient(options.pipelineId)
     private val tableName: String = options.tableName
     private val retryConfig: RetryConfig = options.retryConfig
     private val throwConditionFailure: Boolean = options.throwConditionFailure
-
-    private val client: DynamoDbClient =
-        getClient(
-            pipelineId = options.pipelineId,
-            region = options.region,
-        )
 
     private fun batchGetRetryExecutor(ctx: Any?) =
         RetryExecutor(
@@ -148,7 +156,7 @@ class DynamoDbConnector(
             val lastEvaluatedKey = response.lastEvaluatedKey
             val shouldContinue =
                 !lastEvaluatedKey.isNullOrEmpty() &&
-                    (limit == null || items.size < limit)
+                        (limit == null || items.size < limit)
 
             cursor = if (shouldContinue) {
                 lastEvaluatedKey
@@ -211,75 +219,53 @@ class DynamoDbConnector(
         }
     }
 
-    companion object {
-        private val clients = mutableMapOf<String, DynamoDbClient>()
-
-        private fun getClient(
-            pipelineId: String,
-            region: String?,
-        ): DynamoDbClient {
-            return synchronized(clients) {
-                clients.getOrPut(pipelineId) {
-                    DynamoDbClient {
-                        if (!region.isNullOrBlank()) {
-                            this.region = region
-                        }
-
-                        credentialsProvider = EnvironmentCredentialsProvider()
-                    }
-                }
+    private fun UpdateItemRequest.withTableNameIfMissing(
+        tableName: String,
+    ): UpdateItemRequest {
+        return if (this.tableName.isNullOrBlank()) {
+            copy {
+                this.tableName = tableName
             }
+        } else {
+            this
+        }
+    }
+
+    private fun PutItemRequest.withTableNameIfMissing(
+        tableName: String,
+    ): PutItemRequest {
+        return if (this.tableName.isNullOrBlank()) {
+            copy {
+                this.tableName = tableName
+            }
+        } else {
+            this
+        }
+    }
+
+    private fun QueryRequest.withTableNameIfMissing(
+        tableName: String,
+    ): QueryRequest {
+        return if (this.tableName.isNullOrBlank()) {
+            copy {
+                this.tableName = tableName
+            }
+        } else {
+            this
+        }
+    }
+
+    private fun ScanRequest.withTableNameIfMissing(
+        tableName: String,
+    ): ScanRequest {
+        return if (this.tableName.isNullOrBlank()) {
+            copy {
+                this.tableName = tableName
+            }
+        } else {
+            this
         }
     }
 }
-
-private fun UpdateItemRequest.withTableNameIfMissing(
-    tableName: String,
-): UpdateItemRequest {
-    return if (this.tableName.isNullOrBlank()) {
-        copy {
-            this.tableName = tableName
-        }
-    } else {
-        this
-    }
-}
-
-private fun PutItemRequest.withTableNameIfMissing(
-    tableName: String,
-): PutItemRequest {
-    return if (this.tableName.isNullOrBlank()) {
-        copy {
-            this.tableName = tableName
-        }
-    } else {
-        this
-    }
-}
-
-private fun QueryRequest.withTableNameIfMissing(
-    tableName: String,
-): QueryRequest {
-    return if (this.tableName.isNullOrBlank()) {
-        copy {
-            this.tableName = tableName
-        }
-    } else {
-        this
-    }
-}
-
-private fun ScanRequest.withTableNameIfMissing(
-    tableName: String,
-): ScanRequest {
-    return if (this.tableName.isNullOrBlank()) {
-        copy {
-            this.tableName = tableName
-        }
-    } else {
-        this
-    }
-}
-
 
 

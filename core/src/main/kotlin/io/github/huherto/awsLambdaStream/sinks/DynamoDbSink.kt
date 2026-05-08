@@ -1,8 +1,7 @@
 package io.github.huherto.awsLambdaStream.sinks
 
-import aws.sdk.kotlin.services.dynamodb.model.PutItemResponse
-import aws.sdk.kotlin.services.dynamodb.model.UpdateItemResponse
 import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.channelFlow
@@ -31,9 +30,7 @@ fun updateExpression(item: Map<String, Any?>): DynamoDbUpdateExpression {
             val isDeleteSet = key.endsWith("_delete")
             val baseKey = if (isDeleteSet) key.removeSuffix("_delete") else key
 
-            val alias = baseKey.replace(Regex("[^a-zA-Z0-9_]")) { match ->
-                "_x${match.value.first().code.toString(16)}_"
-            }
+            val alias = makeAliasForKey(baseKey)
 
             expressionAttributeNames["#$alias"] = baseKey
 
@@ -74,6 +71,10 @@ fun updateExpression(item: Map<String, Any?>): DynamoDbUpdateExpression {
     )
 }
 
+private fun makeAliasForKey(baseKey: String): String = baseKey.replace(Regex("[^a-zA-Z0-9_]")) { match ->
+    "_x${match.value.first().code.toString(16)}_"
+}
+
 fun timestampCondition(fieldName: String = "timestamp"): Map<String, String> =
     mapOf(
         "ConditionExpression" to "attribute_not_exists(#$fieldName) OR #$fieldName < :$fieldName",
@@ -103,14 +104,9 @@ data class DynamoDbSinkOptions(
     val step: String = "save",
 )
 
-interface DynamoDbConnector {
-    suspend fun update(request: Any, uow: UnitOfWork): UpdateItemResponse?
-    suspend fun put(request: Any, uow: UnitOfWork): PutItemResponse?
-}
-
 class DynamoDbSink(
-    private val connector: DynamoDbConnector,
     private val options: DynamoDbSinkOptions = DynamoDbSinkOptions(),
+    private val connector: DynamoDbConnector,
 ) {
     fun update(source: Flow<UnitOfWork>): Flow<UnitOfWork> =
         source

@@ -6,7 +6,6 @@ import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequest
 import aws.sdk.kotlin.services.eventbridge.model.PutEventsResponse
 import aws.smithy.kotlin.runtime.net.url.Url
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
-import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Duration
 
 data class ConnectorOptions(
@@ -29,12 +28,11 @@ data class ConnectorResponse(
     val attempts: List<PutEventsResponse>
 )
 
-interface EventBridgeClientFactory {
-    fun createClient(): EventBridgeClient
+interface EventBridgeClientFactory : ClientFactory<EventBridgeClient> {
 }
 
-class DefaultEventBridgeClientFactory(private val envConfig: EnvironmentConfig) : EventBridgeClientFactory {
-    override fun createClient(): EventBridgeClient {
+class DefaultEventBridgeClientFactory(private val envConfig: EnvironmentConfig) : EventBridgeClientFactory, AbstractClientFactory<EventBridgeClient>() {
+    override fun create(): EventBridgeClient {
         val endpointUrl = envConfig.endPointUrl()?.ifEmpty { null }
         val region = envConfig.awsRegion()
         return EventBridgeClient {
@@ -53,27 +51,13 @@ class EventBridgeConnector(
     private val opt: ConnectorOptions = ConnectorOptions(),
     private val clientFactory: EventBridgeClientFactory,
 ) {
-    private val client: EventBridgeClient = getClient(pipelineId, clientFactory)
+    private val client: EventBridgeClient = clientFactory.getClient(pipelineId)
     private val logger = mu.KotlinLogging.logger {}
     private val retryExecutor = RetryExecutor(
         retryConfig = retryConfig,
         strategy = EventBridgeRetryStrategy(),
         send = { request -> sendCommand(request, null) }
     )
-
-    companion object {
-        private val clients = ConcurrentHashMap<String, EventBridgeClient>()
-
-        fun getClient(pipelineId: String, clientFactory: EventBridgeClientFactory): EventBridgeClient {
-            return clients.computeIfAbsent(pipelineId) {
-                clientFactory.createClient()
-            }
-        }
-
-        internal fun clearClients() {
-            clients.clear()
-        }
-    }
 
     suspend fun putEvents(params: PutEventsRequest, ctx: Any? = null): ConnectorResponse {
         return retryExecutor.execute(params)
