@@ -6,6 +6,7 @@ import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.StreamRecord
 import io.github.huherto.awsLambdaStream.*
+import io.github.huherto.awsLambdaStream.connectors.DynamoDbClientFactory
 import io.github.huherto.awsLambdaStream.filters.EventFilters
 import io.github.huherto.awsLambdaStream.from.RecordImage
 import io.github.huherto.awsLambdaStream.from.RecordPair
@@ -18,6 +19,7 @@ import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
 import kotlinx.coroutines.flow.flowOf
@@ -207,6 +209,8 @@ class CorrelatePipelineTest {
     fun `connect should successfully process a valid UnitOfWork`() : Unit = runBlocking {
         // Arrange
         val dynamoDbClientMock = mockk<DynamoDbClient>()
+        val dynamoDbClientFactory = spyk<DynamoDbClientFactory>()
+        every { dynamoDbClientFactory.getClient(any()) } returns dynamoDbClientMock
         coEvery { dynamoDbClientMock.putItem(any()) } returns PutItemResponse.invoke {}
 
         val faultManager = FaultManager(envConfig, eventPublisher = EventPublisherInMemory())
@@ -218,7 +222,7 @@ class CorrelatePipelineTest {
             unmarshall = { eventAsString -> FakeEvent(encodedStr = eventAsString)},
             eventsMicrostore = EventsMicrostoreImpl(
                 envConfig = envConfig,
-                dynamoDbClient = dynamoDbClientMock,
+                dynamoDbClientFactory = dynamoDbClientFactory,
                 faultManager = faultManager),
         )
 

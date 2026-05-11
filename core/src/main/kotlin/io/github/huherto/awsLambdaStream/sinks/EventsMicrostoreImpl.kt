@@ -4,6 +4,7 @@ import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.connectors.DynamoDbClientFactory
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.buffer
@@ -58,13 +59,13 @@ import kotlinx.coroutines.flow.buffer
  * buffered using [bufferCapacity], which defaults to [Channel.BUFFERED].
  *
  * @param envConfig Provides environment configuration, including the DynamoDB table name.
- * @param dynamoDbClient AWS SDK DynamoDB client used for `PutItem` and `Query` calls.
+ * @param dynamoDbClientFactory A factory to create AWS SDK DynamoDB client used for `PutItem` and `Query` calls.
  * @param faultManager Fault handling strategy used while processing flows.
  * @param bufferCapacity Coroutine flow buffer capacity between request-building and DynamoDB calls.
  */
 open class EventsMicrostoreImpl(
     envConfig: EnvironmentConfig,
-    private val dynamoDbClient: DynamoDbClient,
+    private val dynamoDbClientFactory: DynamoDbClientFactory,
     faultManager: FaultManager,
     bufferCapacity: Int = Channel.BUFFERED,
 ): BaseEventsMicrostore(faultManager, bufferCapacity, envConfig.tableName() ?: "events") {
@@ -86,16 +87,23 @@ open class EventsMicrostoreImpl(
         }
     }
 
+    private fun getClient(uow: UnitOfWork) : DynamoDbClient {
+        val pipelineId = uow.pipeline?.id ?: "unknown"
+        return dynamoDbClientFactory.getClient(pipelineId)
+    }
+
     private val putDynamoDb: suspend (UnitOfWork) -> UnitOfWork = { uow ->
+        val client = getClient(uow)
         val putResponse = uow.putRequest?.let {
-            dynamoDbClient.putItem(uow.putRequest)
+            client.putItem(uow.putRequest)
         }
         uow.copy(putResponse = putResponse)
     }
 
     private val queryDynamoDb: suspend (UnitOfWork) -> UnitOfWork = { uow ->
+        val client = getClient(uow)
         val queryResponse = uow.queryRequest?.let {
-            dynamoDbClient.query(uow.queryRequest)
+            client.query(uow.queryRequest)
         }
         uow.copy(queryResponse = queryResponse)
     }

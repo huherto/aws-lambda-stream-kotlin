@@ -3,6 +3,7 @@ package org.myorg.sut
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.PutItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.PutItemResponse
+import io.github.huherto.awsLambdaStream.connectors.DynamoDbClientFactory
 import mu.KotlinLogging
 
 // Integration tests helper.
@@ -19,5 +20,12 @@ class DynamoDBClientWrapper(val dynamoDBClient: DynamoDbClient) : DynamoDbClient
         }
         logger.info { "Putting item: $eventId" }
         return dynamoDBClient.putItem(input)
+    }
+}
+
+class DynamoDBClientWrapperFactory(private val factory: DynamoDbClientFactory) :  DynamoDbClientFactory by factory {
+    override fun getClient(pipelineId: String): DynamoDbClient {
+        val client = factory.getClient(pipelineId)
+        return DynamoDBClientWrapper(client)
     }
 }

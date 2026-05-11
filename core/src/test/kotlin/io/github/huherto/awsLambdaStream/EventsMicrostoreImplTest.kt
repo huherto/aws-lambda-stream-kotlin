@@ -3,6 +3,7 @@ package io.github.huherto.awsLambdaStream
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
 import aws.sdk.kotlin.services.dynamodb.model.QueryResponse
+import io.github.huherto.awsLambdaStream.connectors.DynamoDbClientFactory
 import io.github.huherto.awsLambdaStream.sinks.EventsMicrostore
 import io.github.huherto.awsLambdaStream.sinks.EventsMicrostoreImpl
 import io.kotest.matchers.collections.shouldHaveSize
@@ -24,8 +25,13 @@ class EventsMicrostoreImplTest {
     }
     private val dynamoDbClient = mockk<DynamoDbClient>()
     private val faultManager = mockk<FaultManager>()
+    private val dynamoDbClientFactory by lazy {
+        val factory = spyk<DynamoDbClientFactory>()
+        every { factory.getClient(any()) } returns dynamoDbClient
+        factory
+    }
 
-    private val eventMicrostore = EventsMicrostoreImpl(envConfig, dynamoDbClient, faultManager)
+    private val eventMicrostore = EventsMicrostoreImpl(envConfig, dynamoDbClientFactory, faultManager)
 
     @Test
     fun `putRequest should correctly populate PutItemRequest based on UnitOfWork, Event, and EnvironmentConfig`() {

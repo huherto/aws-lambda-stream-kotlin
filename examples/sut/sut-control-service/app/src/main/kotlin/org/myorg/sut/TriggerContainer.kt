@@ -1,6 +1,7 @@
 package org.myorg.sut
 
 import io.github.huherto.awsLambdaStream.*
+import io.github.huherto.awsLambdaStream.connectors.DefaultDynamoDbClientFactory
 import io.github.huherto.awsLambdaStream.filters.EventFilters
 import io.github.huherto.awsLambdaStream.flavors.*
 import io.github.huherto.awsLambdaStream.from.DynamodbAdapter
@@ -20,13 +21,13 @@ class TriggerContainer(
 
         fun build() : TriggerContainer {
             val envConfig = EnvironmentConfig()
-            val dynamoDbClient = getDynamoDbClient(envConfig)
+            val dynamoDbClientFactory = DefaultDynamoDbClientFactory(envConfig)
             val eventPublisherOptions = EventBridgePublishOptions(envConfig)
             val eventPublisher = EventBridgePublisher(eventPublisherOptions)
             val faultManager = FaultManager(envConfig, eventPublisher)
             val eventsMicrostore = EventsMicrostoreImpl(
                 envConfig = envConfig,
-                dynamoDbClient = dynamoDbClient,
+                dynamoDbClientFactory = dynamoDbClientFactory,
                 faultManager = faultManager,
             )
             return TriggerContainer(
