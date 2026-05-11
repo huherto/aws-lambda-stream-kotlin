@@ -1,35 +1,35 @@
 package org.myorg.sut
 
-import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.PipelineAssembler
+import io.github.huherto.awsLambdaStream.connectors.DefaultDynamoDbClientFactory
+import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
 import io.github.huherto.awsLambdaStream.filters.EventFilters
 import io.github.huherto.awsLambdaStream.flavors.MaterializePipeline
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import io.github.huherto.awsLambdaStream.from.KinesisAdapter
-import io.github.huherto.awsLambdaStream.getDynamoDbClient
-import io.github.huherto.awsLambdaStream.sinks.DynamoDbSink
 import io.github.huherto.awsLambdaStream.sinks.EventBridgePublishOptions
 import io.github.huherto.awsLambdaStream.sinks.EventBridgePublisher
 import java.nio.ByteBuffer
 
 class ListenerContainer(
     val envConfig: EnvironmentConfig,
-    val dynamoDbClient: DynamoDbClient,
+    val dynamoDbConnector: DynamoDbConnector,
     val faultManager: FaultManager,
 ) {
 
     companion object {
         fun build() : ListenerContainer {
             val envConfig = EnvironmentConfig()
-            val dynamoDbClient = DynamoDBClientWrapper(getDynamoDbClient(envConfig))
+            val dynamoDbClientFactory = DefaultDynamoDbClientFactory(envConfig)
+            val dynamoDbConnector = DynamoDbConnector(clientFactory = dynamoDbClientFactory)
             val eventPublisherOptions = EventBridgePublishOptions(envConfig)
             val eventPublisher = EventBridgePublisher(eventPublisherOptions)
             val faultManager = FaultManager(envConfig, eventPublisher)
             return ListenerContainer(
                 envConfig = envConfig,
-                dynamoDbClient = dynamoDbClient,
+                dynamoDbConnector = dynamoDbConnector,
                 faultManager = faultManager
             )
         }
@@ -48,11 +48,8 @@ class ListenerContainer(
             pipelineId = "m1",
             envConfig = envConfig,
             eventFilter = EventFilters.classes(TrackedUnitEvent::class),
-            dynamoDbSink = DynamoDbSink(
-                dynamoDbClient = dynamoDbClient,
-                tableName = envConfig.entityTableName(),
-            ),
-            toUpdateRequest = {},
+            toUpdateRequest = { null }, // TODO: Implement
+            dynamoDbConnector = dynamoDbConnector,
         )
     }
 
@@ -60,7 +57,7 @@ class ListenerContainer(
         PipelineAssembler
             .builder()
             .faultManager(faultManager)
-            .addPipeline(collectPipeline)
+            .addPipeline(materializePipeline)
             .build()
     }
 

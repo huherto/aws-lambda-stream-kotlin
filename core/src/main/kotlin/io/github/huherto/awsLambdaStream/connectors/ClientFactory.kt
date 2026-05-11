@@ -6,9 +6,9 @@ interface ClientFactory<out T> {
     fun getClient(pipelineId: String): T
 }
 
-abstract class AbstractClientFactory<out T> : ClientFactory<T> {
+abstract class AbstractClientFactory<T> : ClientFactory<T> {
 
-    private val clients = ConcurrentHashMap<String, T >()
+    private val clients = ConcurrentHashMap<String, T>()
 
     override fun getClient(pipelineId: String): T {
         return clients.computeIfAbsent(pipelineId) {

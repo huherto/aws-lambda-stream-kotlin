@@ -4,6 +4,7 @@ import aws.sdk.kotlin.services.dynamodb.model.UpdateItemRequest
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
 import io.github.huherto.awsLambdaStream.filters.EventFilter
 import io.github.huherto.awsLambdaStream.filters.filterEvents
 import io.github.huherto.awsLambdaStream.sinks.DynamoDbSink
@@ -16,9 +17,11 @@ class MaterializePipeline(
     private val eventFilter: EventFilter = EventFilter.Any,
     private val onContentType: (UnitOfWork) -> Boolean = { true },
     private val compact: (Flow<UnitOfWork>) -> Flow<UnitOfWork> = { it },
-    private val toUpdateRequest: suspend (UnitOfWork, MaterializePipeline) -> UpdateItemRequest?,
-    private val dynamoDbSink: DynamoDbSink,
+    private val toUpdateRequest: suspend (UnitOfWork) -> UpdateItemRequest?,
+    private val dynamoDbConnector: DynamoDbConnector,
 ) : Pipeline(pipelineId) {
+
+    private val dynamoDbSink: DynamoDbSink by lazy { DynamoDbSink(envConfig, dynamoDbConnector) }
 
     private fun outSourceIsSelf(uow: UnitOfWork) : Boolean {
         val source = uow.event?.tags?.get("source") ?: return true
@@ -41,7 +44,7 @@ class MaterializePipeline(
                 .let { flow -> compact(flow) }
                 .mapNotFaulty { uow ->
                     uow.copy(
-                        updateRequest = toUpdateRequest(uow, this@MaterializePipeline),
+                        updateRequest = toUpdateRequest(uow),
                     )
                 }
                 .let { flow -> dynamoDbSink.update(flow) }

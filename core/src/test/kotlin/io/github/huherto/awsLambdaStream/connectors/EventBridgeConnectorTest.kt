@@ -30,28 +30,6 @@ class EventBridgeConnectorTest {
         clearAllMocks()
     }
 
-//    @Test
-//    fun `getClient caches client per pipeline id and reuses existing client`() {
-//        // Arrange
-//        val clientFactory = mockk<EventBridgeClientFactory>()
-//        val firstClient = mockk<EventBridgeClient>()
-//        val secondClient = mockk<EventBridgeClient>()
-//
-//        every { clientFactory.getClient("pipeline-1") } returns firstClient
-//        every { clientFactory.getClient("pipeline-2") } returns firstClient
-//
-//        // Act
-//        val clientA1 = EventBridgeConnector.getClient("pipeline-1", clientFactory)
-//        val clientA2 = EventBridgeConnector.getClient("pipeline-1", clientFactory)
-//        val clientB = EventBridgeConnector.getClient("pipeline-2", clientFactory)
-//
-//        // Assert
-//        clientA1 shouldBe firstClient
-//        clientA2 shouldBe firstClient
-//        clientB shouldBe secondClient
-//        verify(exactly = 2) { clientFactory.createClient() }
-//    }
-
     @Test
     fun `sendCommand captures metrics before sending and returns client response`() = runTest {
         // Arrange

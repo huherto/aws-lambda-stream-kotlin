@@ -1,10 +1,12 @@
 package io.github.huherto.awsLambdaStream.sinks
 
+import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 
@@ -85,33 +87,15 @@ fun pkCondition(fieldName: String = "pk"): Map<String, String> =
         "ConditionExpression" to "attribute_not_exists($fieldName)",
     )
 
-data class DynamoDbSinkOptions(
-    val pipelineId: String? = null,
-    val tableName: String? = System.getenv("ENTITY_TABLE_NAME") ?: System.getenv("EVENT_TABLE_NAME"),
-    val updateRequestField: String = "updateRequest",
-    val updateResponseField: String = "updateResponse",
-    val putRequestField: String = "putRequest",
-    val parallel: Int =
-        System.getenv("UPDATE_PARALLEL")?.toIntOrNull()
-            ?: System.getenv("PARALLEL")?.toIntOrNull()
-            ?: 4,
-    val timeout: Long =
-        System.getenv("DYNAMODB_TIMEOUT")?.toLongOrNull()
-            ?: System.getenv("TIMEOUT")?.toLongOrNull()
-            ?: 1_000L,
-    val removeUndefinedValues: Boolean = true,
-    val throwConditionFailure: Boolean = false,
-    val step: String = "save",
-)
 
 class DynamoDbSink(
-    private val options: DynamoDbSinkOptions = DynamoDbSinkOptions(),
+    private val envConfig: EnvironmentConfig,
     private val connector: DynamoDbConnector,
+    private val parallel: Int = envConfig.parallel() ?: 4,
 ) {
     fun update(source: Flow<UnitOfWork>): Flow<UnitOfWork> =
         source
-            .rateLimit(options)
-            .mapParallel(options.parallel) { uow ->
+            .mapParallel(parallel) { uow ->
                 val request = uow.updateRequest ?: return@mapParallel uow
 
                 try {
@@ -125,7 +109,7 @@ class DynamoDbSink(
 
     fun put(source: Flow<UnitOfWork>): Flow<UnitOfWork> =
         source
-            .mapParallel(options.parallel) { uow ->
+            .mapParallel(parallel) { uow ->
                 val request = uow.putRequest ?: return@mapParallel uow
 
                 try {
@@ -138,13 +122,6 @@ class DynamoDbSink(
             }
 }
 
-private fun Flow<UnitOfWork>.rateLimit(
-    options: DynamoDbSinkOptions,
-): Flow<UnitOfWork> {
-    // Equivalent placeholder for the TypeScript `.through(ratelimit(opt))`.
-    // Implement throttling here if your Kotlin pipeline has rate-limit options.
-    return this
-}
 
 private fun <T, R> Flow<T>.mapParallel(
     parallelism: Int,
@@ -153,8 +130,10 @@ private fun <T, R> Flow<T>.mapParallel(
     val semaphore = Semaphore(parallelism)
 
     collect { value ->
-        semaphore.withPermit {
-            send(transform(value))
+        launch {
+            semaphore.withPermit {
+                send(transform(value))
+            }
         }
     }
 }.buffer(parallelism)
