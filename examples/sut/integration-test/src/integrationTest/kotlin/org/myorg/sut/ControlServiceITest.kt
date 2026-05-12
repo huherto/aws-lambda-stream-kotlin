@@ -36,6 +36,8 @@ class ControlServiceITest {
 
     private val logger = mu.KotlinLogging.logger {}
 
+    private val awsFacade = AwsFacade()
+
     @OptIn(ExperimentalTime::class)
     @Test
     fun happyPath() : Unit = runBlocking {
@@ -46,10 +48,10 @@ class ControlServiceITest {
         event.entity?.id.shouldNotBeNull()
 
         logger.info { "Sending event ${event.id}" }
-        AwsFacade.putEvents(event)
+        awsFacade.putEvents(event)
 
         // Find collected event in DynamoDB.
-        val collectedEvent = AwsFacade.findEventByPK(event.id!!) { items ->
+        val collectedEvent = awsFacade.findEventByPK(event.id!!) { items ->
             items?.firstOrNull() ?: return@findEventByPK null
         }
         with(collectedEvent) {
@@ -65,7 +67,7 @@ class ControlServiceITest {
         }
 
         // Find correlated event in DynamoDB.
-        val correlEvent = AwsFacade.findEventByPK(event.entity?.id!!) { items ->
+        val correlEvent = awsFacade.findEventByPK(event.entity?.id!!) { items ->
             items?.firstOrNull { rec -> rec["sk"]?.asS() == event.id }
         }
         with(correlEvent) {
@@ -82,7 +84,7 @@ class ControlServiceITest {
         }
 
         // Finding VERIFY_TARGET_ADDRESS among the correlated events.
-        val vtaCorrelEvent = AwsFacade.findEventByPK(event.entity?.id!!) { items ->
+        val vtaCorrelEvent = awsFacade.findEventByPK(event.entity?.id!!) { items ->
             items?.firstOrNull { rec -> rec["event"]?.asS()?.contains("VERIFY_TARGET_ADDRESS") == true }
         }
         vtaCorrelEvent.shouldNotBeNull()
@@ -107,7 +109,7 @@ class ControlServiceITest {
         }
 
         // Finding VERIFY_TARGET_ADDRESS by its event id.
-        val vtaEvent = AwsFacade.findEventByPK(vtaEventId) { items ->
+        val vtaEvent = awsFacade.findEventByPK(vtaEventId) { items ->
             items?.firstOrNull()
         }
         with(vtaEvent) {
@@ -133,8 +135,8 @@ class ControlServiceITest {
         // Make two failed attempts to deliver the package.
         val e1 = createDeliveryAttemptedEvent(event.entity!!)
         val e2 = createDeliveryAttemptedEvent(event.entity!!)
-        AwsFacade.putEvents(e1, e2)
-        val ccEvent = AwsFacade.findEventByPK(event.entity?.id!!) { items ->
+        awsFacade.putEvents(e1, e2)
+        val ccEvent = awsFacade.findEventByPK(event.entity?.id!!) { items ->
             items?.firstOrNull { rec -> rec["event"]?.asS()?.contains("CONTACT_CUSTOMER") == true }
         }
         with(ccEvent) {
@@ -150,7 +152,7 @@ class ControlServiceITest {
             ccEventAsObject.eventType().shouldBe("CONTACT_CUSTOMER")
         }
 
-        val kinesisEvents = AwsFacade.readAllKinesisEvents()
+        val kinesisEvents = awsFacade.readAllKinesisEvents()
         kinesisEvents shouldNotBe null
         logger.info { "Read ${kinesisEvents.size} events from Kinesis" }
         println("Read ${kinesisEvents.size} events from Kinesis")
@@ -220,12 +222,12 @@ class ControlServiceITest {
 
         val event = createPoisonPillEvent(createTrackedUnit())
 
-        AwsFacade.putEvents(event)
+        awsFacade.putEvents(event)
     }
 
     @AfterAll
     fun tearDownAll() {
-        AwsFacade.closeAll()
+        awsFacade.closeAll()
     }
 
 }

@@ -28,3 +28,4 @@ awslocal logs filter-log-events --log-group-name "/aws/lambda/sut-control-servic
 awslocal logs filter-log-events --log-group-name "/aws/lambda/sut-control-service-local-trigger"  | prefilter > $LOGS/control-service-trigger.json
 awslocal logs filter-log-events --log-group-name "/aws/events/sut-event-hub-local-events"  | prefilter > $LOGS/event-hub-local-events.json
 awslocal logs filter-log-events --log-group-name "/aws/events/sut-event-hub-local-faults"  | prefilter > $LOGS/event-hub-local-faults.json
+awslocal logs filter-log-events --log-group-name "/aws/lambda/sut-shipment-bff-local-listener" | prefilter > $LOGS/shipment-bff-listener.json

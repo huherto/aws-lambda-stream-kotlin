@@ -59,7 +59,7 @@ class ListenerContainer(
 
             key = mapOf(
                 "pk" to AttributeValue.S(entityId),
-                "sk" to AttributeValue.S("TrackedUnitEvent")
+                "sk" to AttributeValue.S("SHIPMENT")
             )
 
             val map = mutableMapOf(
@@ -84,7 +84,7 @@ class ListenerContainer(
         }
     }
 
-        private val materializePipeline: Pipeline by lazy {
+    private val materializePipeline: Pipeline by lazy {
         MaterializePipeline(
             pipelineId = "m1",
             envConfig = envConfig,

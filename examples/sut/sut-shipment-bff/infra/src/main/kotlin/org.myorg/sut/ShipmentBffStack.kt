@@ -44,8 +44,7 @@ class ShipmentBffStack(scope: Construct, serviceProps: ServiceProps) : BaseStack
                 "JAVA_TOOL_OPTIONS" to "-Dslf4j.provider=io.github.vitalijr2.aws.lambda.slf4j.AWSLambdaServiceProvider",
                 "EVENT_TABLE_NAME" to tableName,
                 "BUS_NAME" to busName,
-                "BUS_SRC" to "shipment-bff" +
-                        "-trigger",
+                "BUS_SRC" to "shipment-bff-trigger",
                 "LOG_DEFAULT_LEVEL" to "DEBUG",
             ))
             .build()
@@ -104,8 +103,7 @@ class ShipmentBffStack(scope: Construct, serviceProps: ServiceProps) : BaseStack
 
     private fun newListenerLambda(): Function =
         Function.Builder.create(this, "listener")
-            .functionName("${subsys()}-shipment-bff" +
-                    "-${stage()}-listener")
+            .functionName("${subsys()}-shipment-bff-${stage()}-listener")
             .code(Code.fromAsset("../app/build/libs/sut-shipment-bff.jar"))
             .handler("org.myorg.sut.Listener::handleRequest")
             .timeout(Duration.seconds(50))
@@ -113,10 +111,9 @@ class ShipmentBffStack(scope: Construct, serviceProps: ServiceProps) : BaseStack
             .runtime(Runtime.JAVA_21)
             .environment(mapOf(
                 "JAVA_TOOL_OPTIONS" to "-Dslf4j.provider=io.github.vitalijr2.aws.lambda.slf4j.AWSLambdaServiceProvider",
-                "EVENT_TABLE_NAME" to tableName,
+                "ENTITY_TABLE_NAME" to tableName,
                 "BUS_NAME" to busName,
-                "BUS_SRC" to "shipment-bff" +
-                        "-listener",
+                "BUS_SRC" to "shipment-bff-listener",
                 "LOG_DEFAULT_LEVEL" to "DEBUG",
             ))
             .build()

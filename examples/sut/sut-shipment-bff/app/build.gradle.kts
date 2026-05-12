@@ -50,7 +50,7 @@ dependencies {
 }
 
 tasks.shadowJar {
-    archiveBaseName.set("sut-control-service")
+    archiveBaseName.set("sut-shipment-bff")
     archiveClassifier.set("")
     archiveVersion.set("")
 }

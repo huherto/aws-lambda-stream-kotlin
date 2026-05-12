@@ -17,7 +17,7 @@ import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
 
-object AwsFacade {
+class AwsFacade {
 
     private val logger = mu.KotlinLogging.logger {  }
 
@@ -85,6 +85,29 @@ object AwsFacade {
             logger.debug { "find event $pk in ${System.currentTimeMillis() - startTime}" }
             val response = dynamoDbClient.query(QueryRequest {
                 tableName = "sut-control-service-local-events"
+                keyConditionExpression = "pk = :pk"
+                expressionAttributeValues = mapOf(":pk" to AttributeValue.S(pk))
+            })
+
+            val found = checkResponse(response.items)
+            if (found != null) {
+                return found
+            }
+            delay(1000.milliseconds)
+        }
+    }
+
+    suspend fun findEntityByPK(pk: String, checkResponse: (List<DBRecord>?)-> DBRecord?)  : DBRecord? {
+
+        val startTime = System.currentTimeMillis()
+        while (true) {
+            if (System.currentTimeMillis() - startTime > 10000) {
+                logger.error { "Timed out waiting for event $pk to be inserted." }
+                return null
+            }
+            logger.debug { "find entity $pk in ${System.currentTimeMillis() - startTime}" }
+            val response = dynamoDbClient.query(QueryRequest {
+                tableName = "sut-shipment-bff-local-shipments"
                 keyConditionExpression = "pk = :pk"
                 expressionAttributeValues = mapOf(":pk" to AttributeValue.S(pk))
             })
