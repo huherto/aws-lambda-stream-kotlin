@@ -38,7 +38,7 @@ class ControlServiceITest {
 
     @OptIn(ExperimentalTime::class)
     @Test
-    fun sendEvents() : Unit = runBlocking {
+    fun happyPath() : Unit = runBlocking {
 
         val event = createShipmentCreatedEvent(ShipmentTrackingDomain.createTrackedUnit())
         event.id.shouldNotBeNull()

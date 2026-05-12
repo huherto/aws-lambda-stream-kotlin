@@ -10,6 +10,11 @@ fun nullableN(s: String?): SdkAV {
     return s?.let { SdkAV.N(it) } ?: SdkAV.Null(true)
 }
 
+fun nullableN(value: Double?) : SdkAV {
+    if (value == null) return SdkAV.Null(true)
+    return SdkAV.N(value.toString())
+}
+
 fun nullableBool(s: Boolean?): SdkAV {
     return s?.let { SdkAV.Bool(it) } ?: SdkAV.Null(true)
 }

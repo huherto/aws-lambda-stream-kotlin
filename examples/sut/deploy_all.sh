@@ -29,4 +29,4 @@ cdklocal_deploy() {
 # There is logical order in which these should be deployed.
 cdklocal_deploy "sut-event-hub"
 cdklocal_deploy "sut-control-service"
-# cdklocal_deploy "sut-shipment-bff"
+cdklocal_deploy "sut-shipment-bff"
