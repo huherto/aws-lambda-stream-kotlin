@@ -31,7 +31,7 @@ class DynamoDbSink(
      *
      * If a unit of work does not contain an update request, it is emitted unchanged.
      * If the update succeeds, the returned unit of work contains the update response.
-     * If the update fails, the failure is delegated to [rejectWithFault].
+     * If the update fails, the failure is handled by the [FaultManager].
      *
      * @param source flow of units of work to process.
      * @return a flow containing the processed units of work.
@@ -51,7 +51,7 @@ class DynamoDbSink(
      *
      * If a unit of work does not contain a put request, it is emitted unchanged.
      * If the put succeeds, the returned unit of work contains the put response.
-     * If the put fails, the failure is delegated to [rejectWithFault].
+     * If the update fails, the failure is handled by the [FaultManager].
      *
      * @param source flow of units of work to process.
      * @return a flow containing the processed units of work.
