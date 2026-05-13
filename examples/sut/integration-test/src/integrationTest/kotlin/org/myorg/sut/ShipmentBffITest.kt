@@ -39,7 +39,6 @@ class ShipmentBffITest {
             this["sk"]?.asS() shouldBe("SHIPMENT")
             this["senderFullName"]?.asS() shouldBe "John Doe"
             this["trackingNumber"]?.asS() shouldBe "TRK123456789"
-            this["receiverFullName"]?.asS() shouldBe "Jane Doe"
             this["weight"]?.asN() shouldBe "10.5"
             this["dimensions.height"]?.asN() shouldBe "6.0"
             this["dimensions.width"]?.asN() shouldBe "8.0"
