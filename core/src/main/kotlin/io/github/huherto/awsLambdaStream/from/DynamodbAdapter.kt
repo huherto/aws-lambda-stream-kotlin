@@ -66,7 +66,7 @@ class DynamodbAdapter (private val faultManager: FaultManager) {
         }
     }
 
-    private fun calculateEventType(dynamodbRecord: DynamodbEvent.DynamodbStreamRecord): String? {
+    private fun calculateEventType(dynamodbRecord: DynamodbEvent.DynamodbStreamRecord): String {
         val eventTypePrefix = calculateEventTypePrefix(dynamodbRecord)
         val eventTypeSuffix = calculateEventTypeSuffix(dynamodbRecord)
         return "$eventTypePrefix-$eventTypeSuffix"
@@ -124,4 +124,5 @@ class RecordImage(val map: Map<String, EventAV?>) : Map<String, EventAV?> by map
 
     fun isDeleted(): Boolean = map.containsKey("deleted") && map["deleted"]?.isBOOL == true
 
+    fun latched(): Boolean = map.containsKey("latched") && map["latched"]?.isBOOL == true
 }

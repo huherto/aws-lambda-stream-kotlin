@@ -7,6 +7,7 @@ import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
 import io.github.huherto.awsLambdaStream.filters.EventFilter
 import io.github.huherto.awsLambdaStream.filters.filterEvents
+import io.github.huherto.awsLambdaStream.filters.outSourceIsSelf
 import io.github.huherto.awsLambdaStream.sinks.DynamoDbSink
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.onEach
@@ -23,12 +24,6 @@ class MaterializePipeline(
 
     private val dynamoDbSink: DynamoDbSink by lazy { DynamoDbSink(envConfig, dynamoDbConnector) }
 
-    private fun outSourceIsSelf(uow: UnitOfWork) : Boolean {
-        val source = uow.event?.tags?.get("source") ?: return true
-        val project = envConfig.project() ?: envConfig.serverlessProject()
-        return source != project
-    }
-
     override fun connect(
         fm: FaultManager,
         fromFlow: Flow<UnitOfWork>,
@@ -37,7 +32,7 @@ class MaterializePipeline(
 
         with(fm) {
             return fromFlow
-                .filterNotFaulty { uow -> outSourceIsSelf(uow) }
+                .filterNotFaulty { uow -> outSourceIsSelf(envConfig, uow) }
                 .filterEvents(fm, eventFilter)
                 .onEach { uow -> printStartPipeline(uow) }
                 .filterNotFaulty { uow -> onContentType(uow) }
