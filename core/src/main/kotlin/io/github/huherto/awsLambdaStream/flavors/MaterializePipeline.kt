@@ -47,7 +47,7 @@ class MaterializePipeline(
                         updateRequest = toUpdateRequest(uow),
                     )
                 }
-                .let { flow -> dynamoDbSink.update(flow) }
+                .let { flow -> dynamoDbSink.update(this, flow) }
                 .onEach { uow -> printEndPipeline(uow) }
         }
     }

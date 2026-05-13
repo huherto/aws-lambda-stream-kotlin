@@ -5,9 +5,9 @@ import aws.sdk.kotlin.services.dynamodb.model.PutItemResponse
 import aws.sdk.kotlin.services.dynamodb.model.UpdateItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.UpdateItemResponse
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
+import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
-import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
@@ -24,12 +24,15 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
+import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DynamoDbSinkTest {
 
     private val envConfig = mockk<EnvironmentConfig>(relaxed = true)
     private val connector = mockk<DynamoDbConnector>()
+    private val eventPublisher = mockk<EventPublisher>()
+    private val fm = FaultManager(envConfig, eventPublisher, skipErrorLogging = true)
 
     @Test
     fun `update returns original unit of work when update request is missing`() = runTest {
@@ -38,7 +41,7 @@ class DynamoDbSinkTest {
         val uow = UnitOfWork(key = "without-update-request")
 
         // act
-        val result = sink.update(flowOf(uow)).toList()
+        val result = sink.update(fm, flowOf(uow)).toList()
 
         // assert
         result shouldBe listOf(uow)
@@ -52,7 +55,7 @@ class DynamoDbSinkTest {
         val uow = UnitOfWork(key = "without-put-request")
 
         // act
-        val result = sink.put(flowOf(uow)).toList()
+        val result = sink.put(fm, flowOf(uow)).toList()
 
         // assert
         result shouldBe listOf(uow)
@@ -70,7 +73,7 @@ class DynamoDbSinkTest {
         coEvery { connector.update(request, uow) } returns response
 
         // act
-        val result = sink.update(flowOf(uow)).toList()
+        val result = sink.update(fm, flowOf(uow)).toList()
 
         // assert
         result shouldBe listOf(uow.copy(updateResponse = response))
@@ -89,7 +92,7 @@ class DynamoDbSinkTest {
         coEvery { connector.put(request, uow) } returns response
 
         // act
-        val result = sink.put(flowOf(uow)).toList()
+        val result = sink.put(fm, flowOf(uow)).toList()
 
         // assert
         result shouldBe listOf(uow.copy(putResponse = response))
@@ -114,17 +117,12 @@ class DynamoDbSinkTest {
         coEvery { connector.put(putRequest, putUow) } throws putError
 
         // act
-        val thrownUpdateError = shouldThrow<IllegalStateException> {
-            sink.update(flowOf(updateUow)).toList()
-        }
+        sink.update(fm, flowOf(updateUow)).toList()
 
-        val thrownPutError = shouldThrow<IllegalArgumentException> {
-            sink.put(flowOf(putUow)).toList()
-        }
+        sink.put(fm, flowOf(putUow)).toList()
 
         // assert
-        thrownUpdateError shouldBe updateError
-        thrownPutError shouldBe putError
+        fm.getFaults() shouldHaveSize 2
 
         coVerify(exactly = 1) { connector.update(updateRequest, updateUow) }
         coVerify(exactly = 1) { connector.put(putRequest, putUow) }
@@ -164,7 +162,7 @@ class DynamoDbSinkTest {
                         firstTwoTransformsStarted.complete(Unit)
                     }
 
-                    delay(100)
+                    delay(100.milliseconds)
                     activeTransforms -= 1
 
                     value
@@ -181,18 +179,4 @@ class DynamoDbSinkTest {
         maxActiveTransforms shouldBe 2
     }
 
-    @Test
-    fun `rejectWithFault throws the original error`() = runTest {
-        // arrange
-        val uow = UnitOfWork(key = "faulty")
-        val error = RuntimeException("boom")
-
-        // act
-        val thrown = shouldThrow<RuntimeException> {
-            rejectWithFault(uow, error)
-        }
-
-        // assert
-        thrown shouldBe error
-    }
 }

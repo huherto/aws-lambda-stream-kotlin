@@ -1,6 +1,7 @@
 package io.github.huherto.awsLambdaStream.sinks
 
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
+import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
 import kotlinx.coroutines.flow.Flow
@@ -35,17 +36,13 @@ class DynamoDbSink(
      * @param source flow of units of work to process.
      * @return a flow containing the processed units of work.
      */
-    fun update(source: Flow<UnitOfWork>): Flow<UnitOfWork> =
+    fun update(fm: FaultManager, source: Flow<UnitOfWork>): Flow<UnitOfWork> =
         source
             .mapParallel(parallel) { uow ->
                 val request = uow.updateRequest ?: return@mapParallel uow
-
-                try {
-                    val updateResponse =  connector.update(request, uow)
-
+                fm.faulty(uow) {
+                    val updateResponse = connector.update(request, uow)
                     uow.copy(updateResponse = updateResponse)
-                } catch (error: Throwable) {
-                    rejectWithFault(uow, error)
                 }
             }
 
@@ -59,17 +56,13 @@ class DynamoDbSink(
      * @param source flow of units of work to process.
      * @return a flow containing the processed units of work.
      */
-    fun put(source: Flow<UnitOfWork>): Flow<UnitOfWork> =
+    fun put(fm: FaultManager, source: Flow<UnitOfWork>): Flow<UnitOfWork> =
         source
             .mapParallel(parallel) { uow ->
                 val request = uow.putRequest ?: return@mapParallel uow
-
-                try {
+                fm.faulty(uow) {
                     val putResponse = connector.put(request, uow)
-
                     uow.copy(putResponse = putResponse)
-                } catch (error: Throwable) {
-                    rejectWithFault(uow, error)
                 }
             }
 }
@@ -87,24 +80,18 @@ class DynamoDbSink(
  */
 internal fun <T, R> Flow<T>.mapParallel(
     parallelism: Int,
-    transform: suspend (T) -> R,
+    transform: suspend (T) -> R?,
 ): Flow<R> = channelFlow {
     val semaphore = Semaphore(parallelism)
 
     collect { value ->
         launch {
             semaphore.withPermit {
-                send(transform(value))
+                val element = transform(value)
+                if (element != null) {
+                    send(element)
+                }
             }
         }
     }
 }.buffer(parallelism)
-
-internal suspend fun rejectWithFault(
-    uow: UnitOfWork,
-    error: Throwable,
-): UnitOfWork {
-    // Equivalent placeholder for `rejectWithFault(uow)` from TypeScript.
-    // Replace with your project’s FaultManager/fault representation.
-    throw error
-}
