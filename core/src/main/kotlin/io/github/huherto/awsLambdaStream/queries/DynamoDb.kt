@@ -18,54 +18,59 @@ val memoryCache = ConcurrentHashMap<String, Any>()
 /**
  * Common configuration options for DynamoDB operations.
  */
+typealias MapDecryptFunc = suspend (Map<String, AttributeValue>) -> Map<String, AttributeValue>
+
 data class DynamoDbOptions(
-    val pipelineId: String? = null,
-    val tableName: String = System.getenv("EVENT_TABLE_NAME") ?: System.getenv("ENTITY_TABLE_NAME") ?: "Table",
-    val parallel: Int = System.getenv("PARALLEL")?.toIntOrNull() ?: 4,
-    val timeout: Long = System.getenv("DYNAMODB_TIMEOUT")?.toLongOrNull() ?: System.getenv("TIMEOUT")?.toLongOrNull() ?: 1000L,
-    val step: String = "get",
-    val decrypt: suspend (Map<String, AttributeValue>) -> Map<String, AttributeValue> = { it }
+    // Removed all the options except for decrypt.
+    val decrypt: MapDecryptFunc? = null
 )
 
 fun Flow<UnitOfWork>.batchGetDynamoDB(
     dynamoDbClient: DynamoDbClient,
-    options: DynamoDbOptions = DynamoDbOptions(step = "get")
+    options: DynamoDbOptions = DynamoDbOptions()
 ): Flow<UnitOfWork> = this.map { uow ->
     val request = uow.batchGetRequest ?: return@map uow
 
     val reqKey = request.toString() // Or JSON serialization of request
-    val cachedResponse = memoryCache[reqKey] as? BatchGetItemResponse
-
-    val response = if (cachedResponse != null) {
-        cachedResponse
-    } else {
+    var cachedResponse = memoryCache[reqKey] as? BatchGetItemResponse
+    if (cachedResponse == null) {
         val result = dynamoDbClient.batchGetItem(request)
-
-        // Decrypt responses
-        val decryptedResponses = coroutineScope {
-            result.responses?.mapValues { (_, items) ->
-                items.map { item ->
-                    async { options.decrypt(item) }
-                }.awaitAll()
-            }
-        }
-
-        val finalResponse = result.copy {
-            responses = decryptedResponses
-        }
-
-        memoryCache[reqKey] = finalResponse
-        finalResponse
+        val decryptedResponses = decryptResponses(result.responses, options.decrypt)
+        cachedResponse = result.copy { responses = decryptedResponses }
+        memoryCache[reqKey] = cachedResponse
     }
+    uow.copy(batchGetResponse = cachedResponse)
+}
 
-    // uow.copy(batchGetResponse = response) // Adapt based on actual UoW class structure
-    uow
-} // Optional: You can implement parallelism using flatMapMerge { flow { emit(invoke(it)) } }
+private suspend fun decryptResponses(
+    responses: Map<String, List<Map<String, AttributeValue>>>?,
+    decrypt: MapDecryptFunc?
+): Map<String, List<Map<String, AttributeValue>>>? {
+    if (decrypt == null) return responses
+    val decryptedResponses = coroutineScope {
+        responses?.mapValues { (_, items) ->
+            items.map { item ->
+                async { decrypt(item) }
+            }.awaitAll()
+        }
+    }
+    return decryptedResponses
+}
 
+private suspend fun decryptItems(
+    items: List<Map<String, AttributeValue>>,
+    decrypt: MapDecryptFunc?
+): List<Map<String, AttributeValue>> {
+    if (decrypt == null) return items
+    return coroutineScope {
+            items.map { item ->
+                async { decrypt(item) }
+            }.awaitAll()
+        }
+}
 
 fun Flow<UnitOfWork>.queryAllDynamoDB(
     dynamoDbClient: DynamoDbClient,
-    options: DynamoDbOptions = DynamoDbOptions(step = "query")
 ): Flow<UnitOfWork> = this.map { uow ->
     val request = uow.queryRequest ?: return@map uow
 
@@ -80,7 +85,7 @@ fun Flow<UnitOfWork>.queryAllDynamoDB(
 
 fun Flow<UnitOfWork>.scanSplitDynamoDB(
     dynamoDbClient: DynamoDbClient,
-    options: DynamoDbOptions = DynamoDbOptions(step = "scan")
+    options: DynamoDbOptions = DynamoDbOptions()
 ): Flow<UnitOfWork> = this.transform { uow ->
     val baseRequest = uow.scanRequest ?: run {
         emit(uow)
@@ -97,9 +102,7 @@ fun Flow<UnitOfWork>.scanSplitDynamoDB(
 
         val response = dynamoDbClient.scan(currentRequest)
 
-        val decryptedItems = coroutineScope {
-            response.items?.map { async { options.decrypt(it) } }?.awaitAll() ?: emptyList()
-        }
+        val decryptedItems = decryptItems(response.items ?: emptyList(), options.decrypt)
 
         itemsCount += decryptedItems.size
 
@@ -110,7 +113,7 @@ fun Flow<UnitOfWork>.scanSplitDynamoDB(
             cursor = null
         }
 
-        decryptedItems.forEach { item ->
+        decryptedItems?.forEach { item ->
             // emit(uow.copy(scanRequest = currentRequest, scanResponseItem = item, lastEvaluatedKey = cursor))
             emit(uow)
         }
@@ -120,7 +123,7 @@ fun Flow<UnitOfWork>.scanSplitDynamoDB(
 
 fun Flow<UnitOfWork>.querySplitDynamoDB(
     dynamoDbClient: DynamoDbClient,
-    options: DynamoDbOptions = DynamoDbOptions(step = "query")
+    options: DynamoDbOptions = DynamoDbOptions()
 ): Flow<UnitOfWork> = this.transform { uow ->
     val baseRequest = uow.queryRequest ?: run {
         emit(uow)
@@ -137,9 +140,7 @@ fun Flow<UnitOfWork>.querySplitDynamoDB(
 
         val response = dynamoDbClient.query(currentRequest)
 
-        val decryptedItems = coroutineScope {
-            response.items?.map { async { options.decrypt(it) } }?.awaitAll() ?: emptyList()
-        }
+        val decryptedItems = decryptItems(response.items?: emptyList(), options.decrypt)
 
         itemsCount += decryptedItems.size
 

@@ -127,8 +127,8 @@ class DynamodbQueriesTest {
         }
 
         // Act - Execute Flows
-        val queryResults = flowOf(queryUow).queryAllDynamoDB(dynamoDbClient, options).toList()
-        val batchResults = flowOf(batchUow).batchGetDynamoDB(dynamoDbClient, options).toList()
+        val queryResults = flowOf(queryUow).queryAllDynamoDB(dynamoDbClient).toList()
+        val batchResults = flowOf(batchUow).batchGetDynamoDB(dynamoDbClient).toList()
 
         // Assert - Decryption Output
         queryResults.size shouldBe 1
@@ -139,7 +139,7 @@ class DynamodbQueriesTest {
         batchResults.size shouldBe 1
 
         // Act & Assert - Caching (Second call should hit memoryCache, verifying no subsequent AWS calls)
-        flowOf(queryUow).queryAllDynamoDB(dynamoDbClient, options).toList()
+        flowOf(queryUow).queryAllDynamoDB(dynamoDbClient).toList()
         coVerify(exactly = 1) { dynamoDbClient.query(any()) }
 
         flowOf(batchUow).batchGetDynamoDB(dynamoDbClient, options).toList()

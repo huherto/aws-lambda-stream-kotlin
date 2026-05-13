@@ -12,7 +12,7 @@ fun toClaimcheckEvent(detail: Any, claimCheckBucketName: String): Any = TODO()
 
 // Used after batch steps
 fun toBatchUow(batch: List<UnitOfWork>): UnitOfWork {
-    return UnitOfWork(batch = batch)
+    return UnitOfWork(batch = batch,)
 }
 
 // Use with flatMap/flatten
@@ -53,7 +53,7 @@ data class CompactRule(
     val sort: ((UnitOfWork, UnitOfWork) -> Int)? = null
 )
 
-suspend fun Flow<UnitOfWork>.group(rule: PipelineRule): Flow<UnitOfWork> = flow {
+fun Flow<UnitOfWork>.group(rule: PipelineRule): Flow<UnitOfWork> = flow {
     if (!rule.group) {
         emitAll(this@group)
         return@flow
