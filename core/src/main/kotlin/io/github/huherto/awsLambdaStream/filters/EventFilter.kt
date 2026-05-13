@@ -31,6 +31,13 @@ sealed interface EventFilter {
             regex.matches(event.eventType())
     }
 
+    data class OnContent(
+        val predicate: (Event) -> Boolean
+    ) : EventFilter {
+        override fun matches(event: Event): Boolean =
+            predicate(event)
+    }
+
     data class AnyOf(
         val filters: List<EventFilter>
     ) : EventFilter {

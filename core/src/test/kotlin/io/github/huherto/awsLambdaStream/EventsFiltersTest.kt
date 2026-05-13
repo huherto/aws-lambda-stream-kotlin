@@ -34,6 +34,16 @@ class EventsFiltersTest {
     }
 
     @Test
+    fun `test onContent filter matches event type by  predicate`() {
+        val filter = EventFilters.onContent { event ->
+            event.eventType().contains("MY_EVENT_A") }
+
+        assertTrue { filter.matches(MyEventA()) }
+        assertFalse { filter.matches(MyEventB()) }
+        assertFalse { filter.matches(MyEventC()) }
+    }
+
+    @Test
     fun `test anyOf filter matches when any nested filter matches`() {
         val filter = EventFilters.anyOf(
             EventFilters.name("MY_EVENT_A"),

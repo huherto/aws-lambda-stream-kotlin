@@ -16,6 +16,9 @@ object EventFilters {
     fun regex(pattern: String): EventFilter =
         EventFilter.ByRegex(Regex(pattern))
 
+    fun onContent(predicate: (Event) -> Boolean): EventFilter =
+        EventFilter.OnContent(predicate)
+
     fun anyOf(vararg filters: EventFilter): EventFilter =
         EventFilter.AnyOf(filters.toList())
 
