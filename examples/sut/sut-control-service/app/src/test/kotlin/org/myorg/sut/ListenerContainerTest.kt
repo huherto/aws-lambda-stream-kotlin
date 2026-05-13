@@ -15,7 +15,8 @@ class ListenerContainerTest {
     @Test
     fun `MyKinesisAdapter should decode valid JSON payload into TrackedUnitEvent`() {
         // Arrange
-        val adapter = ListenerContainer.MyKinesisAdapter()
+        val faultManager: FaultManager = mockk(relaxed = true)
+        val adapter = ListenerContainer.MyKinesisAdapter(faultManager)
         val originalEvent = ShipmentCreatedEvent().apply {
             id = "test-event-123"
             partitionKey = "pk-1"

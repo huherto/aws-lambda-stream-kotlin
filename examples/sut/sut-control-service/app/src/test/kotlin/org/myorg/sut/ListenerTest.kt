@@ -104,7 +104,7 @@ class ListenerTest {
 
         // Act
         val flow = container.kinesisAdapter
-            .fromKinesis(container.faultManager, event)
+            .fromKinesis(event)
 
         runBlocking {
             val eventList = flow.toList()

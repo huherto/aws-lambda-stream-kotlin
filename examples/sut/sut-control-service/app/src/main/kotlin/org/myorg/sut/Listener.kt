@@ -12,9 +12,8 @@ class Listener(private var container : ListenerContainer = ListenerContainer.bui
 
     override fun handleRequest(kinesisEvent: KinesisEvent, context: Context): Void? = runBlocking{
         val assembler = container.assembler
-        val faultManager = container.faultManager
         val headFlow = container.kinesisAdapter
-            .fromKinesis(faultManager, kinesisEvent)
+            .fromKinesis(kinesisEvent)
 
         assembler
             .assemble(headFlow, true)

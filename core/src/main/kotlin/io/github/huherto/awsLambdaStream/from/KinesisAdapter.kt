@@ -9,9 +9,9 @@ import java.nio.ByteBuffer
 
 // TODO - This class needs unit tests.
 //
-abstract class KinesisAdapter {
+abstract class KinesisAdapter(private val faultManager: FaultManager) {
 
-    fun  fromKinesis(faultManager: FaultManager, kinesisEvent: KinesisEvent): Flow<UnitOfWork> {
+    fun  fromKinesis(kinesisEvent: KinesisEvent): Flow<UnitOfWork> {
         if (kinesisEvent.records.isNullOrEmpty()) {
             return emptyFlow()
         }

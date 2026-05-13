@@ -39,13 +39,13 @@ class ListenerContainer(
         }
     }
 
-    class MyKinesisAdapter : KinesisAdapter() {
+    class MyKinesisAdapter(faultManager: FaultManager) : KinesisAdapter(faultManager = faultManager) {
         override fun decodePayload(payload: ByteBuffer?): TrackedUnitEvent {
             return sutJson.decodeFromString<TrackedUnitEvent>(utf8Decode(payload))
         }
     }
 
-    val kinesisAdapter: KinesisAdapter by lazy { MyKinesisAdapter() }
+    val kinesisAdapter: KinesisAdapter by lazy { MyKinesisAdapter(faultManager = faultManager) }
 
     suspend fun toUpdateRequest(uow: UnitOfWork): UpdateItemRequest? {
 
