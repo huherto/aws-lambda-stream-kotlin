@@ -1,4 +1,4 @@
-package io.github.huherto.awsLambdaStream.utils
+package org.myorg.sut
 
 typealias Item = MutableMap<String, Any?>
 typealias Context = Map<String, Any?>
@@ -90,10 +90,12 @@ fun aggregateMapper(
         .filter(::deletedFilter)
         .fold(mutableMapOf<String, Any?>()) { accumulator, current ->
             val discriminator = current["discriminator"] as? String
-            val mapping = options.mappers[discriminator]
-                ?: { item: Item, _: Context -> item }
+            var mapping = options.mappers[discriminator]
+            if (mapping == null) {
+                mapping = { item: Item, _: Context -> item }
+            }
 
-            val mapped = mapping(current, ctx)
+            val mapped = mapping.invoke(current, ctx)
 
             if (discriminator == options.aggregate) {
                 mutableMapOf<String, Any?>().apply {
@@ -104,23 +106,23 @@ fun aggregateMapper(
                 val sortKey = current["sk"] as? String
                     ?: return@fold accumulator
 
-                    val role = sortKey.split(options.delimiter)[0]
-                    val allowsMultiple = (options.cardinality[role] ?: 0) > 1
+                val role = sortKey.split(options.delimiter)[0]
+                val allowsMultiple = (options.cardinality[role] ?: 0) > 1
 
-                    val existing = accumulator.computeIfAbsent(role) {
-                        if (allowsMultiple) {
-                            mutableListOf<Map<String, Any?>>()
-                        } else {
-                            mapped
-                        }
-                    }
-
+                val existing = accumulator.computeIfAbsent(role) {
                     if (allowsMultiple) {
-                        @Suppress("UNCHECKED_CAST")
-                        (existing as MutableList<Map<String, Any?>>).add(mapped)
+                        mutableListOf<Map<String, Any?>>()
+                    } else {
+                        mapped
                     }
-
-                    accumulator
                 }
+
+                if (allowsMultiple) {
+                    @Suppress("UNCHECKED_CAST")
+                    (existing as MutableList<Map<String, Any?>>).add(mapped)
+                }
+
+                accumulator
             }
-    }
+        }
+}

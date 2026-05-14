@@ -17,6 +17,15 @@ class ShipmentBffStack(scope: Construct, serviceProps: ServiceProps) : BaseStack
 
     val tableName = "${service()}-${stage()}-shipments"
     val busName = "${subsys()}-event-hub-${stage()}-bus"
+    val JarFile = Code.fromAsset("../app/build/libs/sut-shipment-bff.jar")
+    val runtime: Runtime = Runtime.JAVA_21!!
+    val runtimeEnvironment = mapOf(
+        "JAVA_TOOL_OPTIONS" to "-Dslf4j.provider=io.github.vitalijr2.aws.lambda.slf4j.AWSLambdaServiceProvider",
+        "ENTITY_TABLE_NAME" to tableName,
+        "BUS_NAME" to busName,
+        "BUS_SRC" to "shipment-bff",
+        "LOG_DEFAULT_LEVEL" to "DEBUG",
+    )
     val trigger = newTriggerLambda()
     val entityTable = newDynamoDbTable()
     val listener = newListenerLambda()
@@ -33,23 +42,16 @@ class ShipmentBffStack(scope: Construct, serviceProps: ServiceProps) : BaseStack
 
     private fun newTriggerLambda(): Function =
         Function.Builder.create(this, "trigger")
-            .functionName("${subsys()}-shipment-bff" +
-                    "-${stage()}-trigger")
-            .code(Code.fromAsset("../app/build/libs/sut-shipment-bff.jar"))
+            .functionName("${subsys()}-shipment-bff-${stage()}-trigger")
+            .code(JarFile)
             .handler("org.myorg.sut.Trigger::handleRequest")
             .timeout(Duration.seconds(50))
             .memorySize(1024)
-            .runtime(Runtime.JAVA_21)
-            .environment(mapOf(
-                "JAVA_TOOL_OPTIONS" to "-Dslf4j.provider=io.github.vitalijr2.aws.lambda.slf4j.AWSLambdaServiceProvider",
-                "EVENT_TABLE_NAME" to tableName,
-                "BUS_NAME" to busName,
-                "BUS_SRC" to "shipment-bff-trigger",
-                "LOG_DEFAULT_LEVEL" to "DEBUG",
-            ))
+            .runtime(runtime)
+            .environment(runtimeEnvironment)
             .build()
 
-    private fun newDynamoDbTable() : TableV2 = TableV2.Builder.create(this, "EventsTable")
+    private fun newDynamoDbTable(): TableV2 = TableV2.Builder.create(this, "EventsTable")
         .tableName(tableName)
         .partitionKey(
             Attribute.builder()
@@ -80,44 +82,55 @@ class ShipmentBffStack(scope: Construct, serviceProps: ServiceProps) : BaseStack
     }
 
     private fun addGSI(eventsTable: TableV2) {
-        eventsTable.addGlobalSecondaryIndex(GlobalSecondaryIndexPropsV2.builder()
-            .indexName("gsi1")
-            .partitionKey(Attribute.builder()
-                .name("discriminator")
-                .type(AttributeType.STRING)
-                .build())
-            .sortKey(Attribute.builder()
-                .name("pk")
-                .type(AttributeType.STRING)
-                .build())
-            .projectionType(ProjectionType.ALL)
-            .build())
+        eventsTable.addGlobalSecondaryIndex(
+            GlobalSecondaryIndexPropsV2.builder()
+                .indexName("gsi1")
+                .partitionKey(
+                    Attribute.builder()
+                        .name("discriminator")
+                        .type(AttributeType.STRING)
+                        .build()
+                )
+                .sortKey(
+                    Attribute.builder()
+                        .name("pk")
+                        .type(AttributeType.STRING)
+                        .build()
+                )
+                .projectionType(ProjectionType.ALL)
+                .build()
+        )
     }
 
     private fun addReplicas(eventsTable: TableV2) {
         eventsTable.addReplica(
             ReplicaTableProps.builder()
                 .region("us-east-1")
-                .build())
+                .build()
+        )
     }
 
     private fun newListenerLambda(): Function =
         Function.Builder.create(this, "listener")
             .functionName("${subsys()}-shipment-bff-${stage()}-listener")
-            .code(Code.fromAsset("../app/build/libs/sut-shipment-bff.jar"))
+            .code(JarFile)
             .handler("org.myorg.sut.Listener::handleRequest")
             .timeout(Duration.seconds(50))
             .memorySize(1024)
-            .runtime(Runtime.JAVA_21)
-            .environment(mapOf(
-                "JAVA_TOOL_OPTIONS" to "-Dslf4j.provider=io.github.vitalijr2.aws.lambda.slf4j.AWSLambdaServiceProvider",
-                "ENTITY_TABLE_NAME" to tableName,
-                "BUS_NAME" to busName,
-                "BUS_SRC" to "shipment-bff-listener",
-                "LOG_DEFAULT_LEVEL" to "DEBUG",
-            ))
+            .runtime(runtime)
+            .environment(runtimeEnvironment)
             .build()
 
+    private fun newRestApiLambda(): Function =
+        Function.Builder.create(this, "restapi")
+            .functionName("${subsys()}-shipment-bff-${stage()}-restapi")
+            .code(JarFile)
+            .handler("org.myorg.sut.RestApi::handleRequest")
+            .timeout(Duration.seconds(50))
+            .memorySize(1024)
+            .runtime(runtime)
+            .environment(runtimeEnvironment)
+            .build()
 
     private fun addKinesisEventSourceToListener(listener: Function) {
         val streamName = "${subsys()}-event-hub-${stage()}-s1"

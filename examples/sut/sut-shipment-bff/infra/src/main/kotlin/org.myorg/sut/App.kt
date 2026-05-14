@@ -6,7 +6,7 @@ fun main() {
     val app = App()
 
     println("Working Directory = " + System.getProperty("user.dir"))
-    println("Starting CDK App")
+    println("Starting CDK ShipmentBff App")
     val serviceProps = ServiceProps(
         org = "myorg",
         subsys = "sut",
