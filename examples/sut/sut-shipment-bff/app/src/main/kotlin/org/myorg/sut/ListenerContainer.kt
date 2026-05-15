@@ -49,6 +49,7 @@ class ListenerContainer(
 
         val event = uow.event as? TrackedUnitEvent ?: return null
         val entity = event.entity ?: return null
+        // No rules implemented yet.
         return null
     }
 
