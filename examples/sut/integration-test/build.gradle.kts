@@ -40,15 +40,19 @@ testing {
             dependencies {
                 implementation(platform(libs.aws.sdk.bom))
 
+                // Please keep these sorted alphabetically.
+                implementation(libs.aws.java.events)
                 implementation(libs.aws.sdk.dynamodb)
                 implementation(libs.aws.sdk.eventbridge)
                 implementation(libs.aws.sdk.kinesis)
                 implementation(libs.aws.sdk.lambda)
                 implementation(libs.kotest.assertions)
                 implementation(libs.kotlin.logging)
+                implementation(libs.kotlinx.serialization.json)
                 implementation(libs.slf4j.simple)
                 implementation(libs.testcon.junit.jupiter)
                 implementation(libs.testcon.localstack)
+                implementation(libs.jackson.kotlin)
 
                 implementation(project(":core"))
                 implementation(project(":examples:sut:common-app"))

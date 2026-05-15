@@ -8,7 +8,6 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.myorg.sut.ShipmentTrackingDomain.createShipmentCreatedEvent
-import kotlin.time.ExperimentalTime
 
 // Components tested.
 //   - Send event to event bridge. sut-event-hub-local-bus.
@@ -19,11 +18,12 @@ import kotlin.time.ExperimentalTime
 class ShipmentBffITest {
     private val logger = mu.KotlinLogging.logger {}
 
-    private val awsFacade = AwsFacade()
+    private val awsFacade = AwsFacade(entityTable = "sut-shipment-bff-local-shipments")
 
-    @OptIn(ExperimentalTime::class)
-    @Test
-    fun happyPath() : Unit = runBlocking {
+    private val restApiFacade = RestApiFacade()
+
+//    @Test
+    fun happyPath_old() : Unit = runBlocking {
         val event = createShipmentCreatedEvent(ShipmentTrackingDomain.createTrackedUnit())
         event.id.shouldNotBeNull()
         event.entity.shouldNotBeNull()
@@ -47,8 +47,33 @@ class ShipmentBffITest {
             this["returnAddress"]?.asS() shouldNotBe null
 
         }
+    }
 
+    @Test
+    fun postShipmentToRestApi() : Unit = runBlocking {
+        val shipment = ShipmentTrackingDomain.createTrackedUnit()
+        val shipmentId = shipment.id.shouldNotBeNull()
 
+        val response = restApiFacade.post(shipment)
+
+        response.statusCode shouldBe 201
+        response.headers["Content-Type"] shouldBe "application/json"
+        response.body.shouldNotBeNull()
+
+        val savedEntity = awsFacade.findEntityByPK(shipmentId) { it?.firstOrNull() }
+        savedEntity.shouldNotBeNull()
+        with(savedEntity) {
+            this["pk"]?.asS() shouldBe shipmentId
+            this["sk"]?.asS() shouldBe("SHIPMENT")
+            this["senderFullName"]?.asS() shouldBe "John Doe"
+            this["trackingNumber"]?.asS() shouldBe "TRK123456789"
+            this["weight"]?.asN() shouldBe "10.5"
+            this["dimensions.height"]?.asN() shouldBe "6.0"
+            this["dimensions.width"]?.asN() shouldBe "8.0"
+            this["dimensions.length"]?.asN() shouldBe "12.0"
+            this["destinationAddress"]?.asS() shouldNotBe null
+            this["returnAddress"]?.asS() shouldNotBe null
+        }
     }
 
     @AfterAll

@@ -17,11 +17,15 @@ import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
 
-class AwsFacade {
+class AwsFacade(val entityTable : String? = null) {
 
     private val logger = mu.KotlinLogging.logger {  }
 
     fun endPointUrl() = Url.parse("http://localhost:4566")
+
+    fun entityTableName() : String {
+        return entityTable ?: error("entityTable is required")
+    }
 
     private val dynamoDbClient: DynamoDbClient by lazy {
         DynamoDbClient {
@@ -107,7 +111,7 @@ class AwsFacade {
             }
             logger.debug { "find entity $pk in ${System.currentTimeMillis() - startTime}" }
             val response = dynamoDbClient.query(QueryRequest {
-                tableName = "sut-shipment-bff-local-shipments"
+                tableName = entityTableName()
                 keyConditionExpression = "pk = :pk"
                 expressionAttributeValues = mapOf(":pk" to AttributeValue.S(pk))
             })

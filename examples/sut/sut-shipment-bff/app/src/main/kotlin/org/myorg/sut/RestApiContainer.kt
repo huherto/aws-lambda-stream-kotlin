@@ -5,7 +5,7 @@ import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import kotlinx.coroutines.runBlocking
 
 class RestApiContainer(
-    val envConfig: EnvironmentConfig,
+    envConfig: EnvironmentConfig,
     val dynamoDBClient: DynamoDbClient) {
 
     companion object {
@@ -22,5 +22,7 @@ class RestApiContainer(
 
     val tableName = envConfig.entityTableName()
         ?: error("ENTITY_TABLE_NAME is not configured")
+
+    val shipmentDao: ShipmentDao = ShipmentDao(dynamoDBClient, tableName)
 
 }

@@ -25,31 +25,31 @@ data class DynamoDbUpdateExpression(
  * Describes a single DynamoDB update operation for an attribute.
  *
  * DynamoDB supports multiple update actions:
- * - [Set] assigns or replaces an attribute value.
- * - [Remove] removes an attribute from the item.
- * - [Add] adds a numeric value to an existing number or adds elements to a set.
- * - [Delete] removes elements from a set.
+ * - [DbSet] assigns or replaces an attribute value.
+ * - [DbRemove] removes an attribute from the item.
+ * - [DbAdd] adds a numeric value to an existing number or adds elements to a set.
+ * - [DbDelete] removes elements from a set.
  */
 sealed interface DynamoDbUpdateValue {
     /**
      * Sets an attribute to the provided [value].
      */
-    data class Set(val value: AttributeValue) : DynamoDbUpdateValue
+    data class DbSet(val value: AttributeValue) : DynamoDbUpdateValue
 
     /**
      * Removes an attribute from the item.
      */
-    data object Remove : DynamoDbUpdateValue
+    data object DbRemove : DynamoDbUpdateValue
 
     /**
      * Adds the provided [value] to an existing number or set attribute.
      */
-    data class Add(val value: AttributeValue) : DynamoDbUpdateValue
+    data class DbAdd(val value: AttributeValue) : DynamoDbUpdateValue
 
     /**
      * Deletes the provided [value] from an existing set attribute.
      */
-    data class Delete(val value: AttributeValue) : DynamoDbUpdateValue
+    data class DbDelete(val value: AttributeValue) : DynamoDbUpdateValue
 }
 
 /**
@@ -83,21 +83,21 @@ fun updateExpression(item: Map<String, DynamoDbUpdateValue>): DynamoDbUpdateExpr
             expressionAttributeNames[namePlaceholder] = attributeName
 
             when (updateValue) {
-                is DynamoDbUpdateValue.Set -> {
+                is DynamoDbUpdateValue.DbSet -> {
                     expressionAttributeValues[valuePlaceholder] = updateValue.value
                     setClauses += "$namePlaceholder = $valuePlaceholder"
                 }
 
-                DynamoDbUpdateValue.Remove -> {
+                DynamoDbUpdateValue.DbRemove -> {
                     removeClauses += namePlaceholder
                 }
 
-                is DynamoDbUpdateValue.Add -> {
+                is DynamoDbUpdateValue.DbAdd -> {
                     expressionAttributeValues[valuePlaceholder] = updateValue.value
                     addClauses += "$namePlaceholder $valuePlaceholder"
                 }
 
-                is DynamoDbUpdateValue.Delete -> {
+                is DynamoDbUpdateValue.DbDelete -> {
                     expressionAttributeValues[valuePlaceholder] = updateValue.value
                     deleteClauses += "$namePlaceholder $valuePlaceholder"
                 }

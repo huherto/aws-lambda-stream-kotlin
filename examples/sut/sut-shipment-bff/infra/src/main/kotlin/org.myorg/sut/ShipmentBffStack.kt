@@ -29,6 +29,7 @@ class ShipmentBffStack(scope: Construct, serviceProps: ServiceProps) : BaseStack
     val trigger = newTriggerLambda()
     val entityTable = newDynamoDbTable()
     val listener = newListenerLambda()
+    val restapi = newRestApiLambda()
 
     init {
         addDynamoDBStreamToLambda(trigger, entityTable)
@@ -36,9 +37,6 @@ class ShipmentBffStack(scope: Construct, serviceProps: ServiceProps) : BaseStack
         // addReplicas(eventsTable)
         addKinesisEventSourceToListener(listener)
     }
-
-    private fun deviceIdKey() =
-        Attribute.builder().name("id").type(AttributeType.STRING).build()
 
     private fun newTriggerLambda(): Function =
         Function.Builder.create(this, "trigger")

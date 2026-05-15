@@ -14,10 +14,10 @@ class DynamoDbUpdateExpressionTest {
         val counterValue = AttributeValue.N("1")
         val tagValue = AttributeValue.Ss(listOf("archived"))
         val item = mapOf(
-            "name" to DynamoDbUpdateValue.Set(nameValue),
-            "obsolete" to DynamoDbUpdateValue.Remove,
-            "counter" to DynamoDbUpdateValue.Add(counterValue),
-            "tags" to DynamoDbUpdateValue.Delete(tagValue),
+            "name" to DynamoDbUpdateValue.DbSet(nameValue),
+            "obsolete" to DynamoDbUpdateValue.DbRemove,
+            "counter" to DynamoDbUpdateValue.DbAdd(counterValue),
+            "tags" to DynamoDbUpdateValue.DbDelete(tagValue),
         )
 
         // Act
@@ -51,13 +51,13 @@ class DynamoDbUpdateExpressionTest {
         val secondSetValue = AttributeValue.S("second")
         val secondAddValue = AttributeValue.N("2")
         val item = mapOf(
-            "firstSet" to DynamoDbUpdateValue.Set(firstSetValue),
-            "firstAdd" to DynamoDbUpdateValue.Add(firstAddValue),
-            "firstRemove" to DynamoDbUpdateValue.Remove,
-            "secondSet" to DynamoDbUpdateValue.Set(secondSetValue),
-            "firstDelete" to DynamoDbUpdateValue.Delete(AttributeValue.Ss(listOf("old"))),
-            "secondAdd" to DynamoDbUpdateValue.Add(secondAddValue),
-            "secondRemove" to DynamoDbUpdateValue.Remove,
+            "firstSet" to DynamoDbUpdateValue.DbSet(firstSetValue),
+            "firstAdd" to DynamoDbUpdateValue.DbAdd(firstAddValue),
+            "firstRemove" to DynamoDbUpdateValue.DbRemove,
+            "secondSet" to DynamoDbUpdateValue.DbSet(secondSetValue),
+            "firstDelete" to DynamoDbUpdateValue.DbDelete(AttributeValue.Ss(listOf("old"))),
+            "secondAdd" to DynamoDbUpdateValue.DbAdd(secondAddValue),
+            "secondRemove" to DynamoDbUpdateValue.DbRemove,
         )
 
         // Act
@@ -76,10 +76,10 @@ class DynamoDbUpdateExpressionTest {
         // Arrange
         val value = AttributeValue.S("value")
         val item = mapOf(
-            "profile.name" to DynamoDbUpdateValue.Set(value),
-            "status-code" to DynamoDbUpdateValue.Remove,
-            "snake_case" to DynamoDbUpdateValue.Set(value),
-            "space key" to DynamoDbUpdateValue.Add(AttributeValue.N("1")),
+            "profile.name" to DynamoDbUpdateValue.DbSet(value),
+            "status-code" to DynamoDbUpdateValue.DbRemove,
+            "snake_case" to DynamoDbUpdateValue.DbSet(value),
+            "space key" to DynamoDbUpdateValue.DbAdd(AttributeValue.N("1")),
         )
 
         // Act
