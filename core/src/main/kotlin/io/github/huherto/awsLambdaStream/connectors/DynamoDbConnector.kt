@@ -7,7 +7,6 @@ import aws.smithy.kotlin.runtime.net.url.Url
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.UnitOfWork
 
-
 interface DynamoDbClientFactory : ClientFactory<DynamoDbClient>
 
 class DefaultDynamoDbClientFactory(private val envConfig: EnvironmentConfig) : DynamoDbClientFactory, AbstractClientFactory<DynamoDbClient>() {
@@ -29,11 +28,55 @@ class DynamoDbConnector(
     val debug: (Any?) -> Unit = {},
     val throwConditionFailure: Boolean = false,
     private val clientFactory: DynamoDbClientFactory,
+    private val retryConfig: RetryConfig = RetryConfig(),
 ) {
 
     fun getClient(uow: UnitOfWork): DynamoDbClient {
         val pipelineId = uow.pipeline?.id ?: "unknown"
         return clientFactory.getClient(pipelineId)
+    }
+
+    suspend fun queryAll(
+        queryRequest: QueryRequest,
+        uow: UnitOfWork,
+    ): QueryResponse {
+        val client = getClient(uow)
+
+        var cursor: Map<String, AttributeValue>? = queryRequest.exclusiveStartKey
+        var itemsCount = 0
+        val allItems = mutableListOf<Map<String, AttributeValue>>()
+        var lastResponse: QueryResponse?
+
+        do {
+            val currentRequest = queryRequest.copy {
+                exclusiveStartKey = cursor
+            }
+
+            val response = sendCommand {
+                client.query(currentRequest)
+            }
+
+            val items = response.items ?: emptyList()
+            itemsCount += items.size
+            allItems += items
+            lastResponse = response
+
+            cursor =
+                if (
+                    response.lastEvaluatedKey?.isNotEmpty() == true &&
+                    (currentRequest.limit == null || itemsCount < currentRequest.limit!!)
+                ) {
+                    response.lastEvaluatedKey
+                } else {
+                    null
+                }
+        } while (cursor != null)
+
+        return lastResponse.copy {
+            items = allItems
+            lastEvaluatedKey = null
+            count = allItems.size
+        }
     }
 
     suspend fun update(
@@ -62,6 +105,23 @@ class DynamoDbConnector(
         return sendCommand() {
             client.putItem(putRequest)
         }
+    }
+
+    suspend fun batchGetItem(
+        batchGetRequest: BatchGetItemRequest,
+        uow: UnitOfWork,
+    ): BatchGetItemResponse {
+        val client = getClient(uow)
+
+        return RetryExecutor(
+            retryConfig = retryConfig,
+            strategy = DynamoDbBatchGetRetryStrategy(),
+            send = { request ->
+                sendCommand {
+                    client.batchGetItem(request)
+                }
+            },
+        ).execute(batchGetRequest)
     }
 
     private suspend fun <T> sendCommand(

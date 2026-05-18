@@ -1,11 +1,11 @@
 package io.github.huherto.awsLambdaStream.flavors
 
-import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.BatchGetItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.QueryRequest
 import io.github.huherto.awsLambdaStream.Event
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
 import io.github.huherto.awsLambdaStream.filters.EventFilter
 import io.github.huherto.awsLambdaStream.filters.filterEvents
 import io.github.huherto.awsLambdaStream.filters.outLatched
@@ -43,7 +43,7 @@ import kotlinx.coroutines.flow.onEach
  * 12. Log pipeline completion.
  *
  * @param id Unique identifier for this pipeline.
- * @param dynamoDbClient Client used for query and batch-get stages.
+ * @param dynamoDbConnector Connector used for query and batch-get stages.
  * @param eventPublisher Sink responsible for publishing final events.
  * @param eventFilter Event-level filter applied before pipeline-specific processing starts.
  * @param onContentType Predicate used to accept or reject a [UnitOfWork] after event filtering.
@@ -58,7 +58,7 @@ import kotlinx.coroutines.flow.onEach
  */
 class CdcPipeline(
     id: String,
-    private val dynamoDbClient: DynamoDbClient,
+    private val dynamoDbConnector: DynamoDbConnector,
     private val eventPublisher: EventPublisher,
     private val eventFilter: EventFilter = EventFilter.Any,
     private val onContentType: (UnitOfWork) -> Boolean = { true },
@@ -145,9 +145,9 @@ class CdcPipeline(
                 .filterNotFaulty { uow -> onContentType(uow) }
                 .compact(compactRule)
                 .mapNotFaulty { uow -> addQueryRequest(uow) }
-                .queryAllDynamoDB(dynamoDbClient)
+                .queryAllDynamoDB(dynamoDbConnector)
                 .mapNotFaulty { uow -> addBatchGetRequest(uow) }
-                .batchGetDynamoDB(dynamoDbClient)
+                .batchGetDynamoDB(dynamoDbConnector)
                 .mapNotFaulty { uow -> addEvent(uow) }
                 .buffer(parallel)
                 .mapNotFaulty { uow -> encrypt(uow) }

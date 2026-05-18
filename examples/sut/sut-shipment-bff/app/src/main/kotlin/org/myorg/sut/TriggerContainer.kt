@@ -1,17 +1,23 @@
 package org.myorg.sut
 
-import io.github.huherto.awsLambdaStream.*
+import io.github.huherto.awsLambdaStream.EnvironmentConfig
+import io.github.huherto.awsLambdaStream.FaultManager
+import io.github.huherto.awsLambdaStream.PipelineAssembler
 import io.github.huherto.awsLambdaStream.connectors.DefaultDynamoDbClientFactory
+import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
 import io.github.huherto.awsLambdaStream.filters.EventFilters
-import io.github.huherto.awsLambdaStream.flavors.*
+import io.github.huherto.awsLambdaStream.flavors.CdcPipeline
+import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import io.github.huherto.awsLambdaStream.from.DynamodbAdapter
-import io.github.huherto.awsLambdaStream.sinks.*
+import io.github.huherto.awsLambdaStream.sinks.EventBridgePublishOptions
+import io.github.huherto.awsLambdaStream.sinks.EventBridgePublisher
+import io.github.huherto.awsLambdaStream.sinks.EventPublisher
 import mu.KotlinLogging.logger
 
 class TriggerContainer(
     val envConfig: EnvironmentConfig,
+    val dynamoDbConnector: DynamoDbConnector,
     val eventPublisher: EventPublisher,
-    val eventsMicrostore: EventsMicrostore,
     val faultManager: FaultManager,
 ) {
 
@@ -22,78 +28,35 @@ class TriggerContainer(
         fun build() : TriggerContainer {
             val envConfig = EnvironmentConfig()
             val dynamoDbClientFactory = DefaultDynamoDbClientFactory(envConfig)
+            val dynamoDbConnector = DynamoDbConnector(clientFactory = dynamoDbClientFactory)
             val eventPublisherOptions = EventBridgePublishOptions(envConfig)
             val eventPublisher = EventBridgePublisher(eventPublisherOptions)
             val faultManager = FaultManager(envConfig, eventPublisher)
-            val eventsMicrostore = EventsMicrostoreImpl(
-                envConfig = envConfig,
-                dynamoDbClientFactory = dynamoDbClientFactory,
-                faultManager = faultManager,
-            )
+
             return TriggerContainer(
                 envConfig = envConfig,
                 eventPublisher = eventPublisher,
-                eventsMicrostore = eventsMicrostore,
+                dynamoDbConnector = dynamoDbConnector,
                 faultManager = faultManager,
             )
         }
     }
 
-    private val correlatePipeline: Pipeline by lazy {
-        CorrelatePipeline(
-            id = "corre1",
-            envConfig = envConfig,
-            unmarshall = { eventAsString: String -> jsonDecode(eventAsString) },
-            correlationKey = { uow ->
-                val event = uow.event as? TrackedUnitEvent
-                event?.entity?.id ?: "no-correlation-key"
-            },
+    private val cdcPipeline: Pipeline by lazy {
+        CdcPipeline(
+            id = "cdc1",
             eventFilter = EventFilters.classes(TrackedUnitEvent::class),
-            eventsMicrostore = eventsMicrostore,
-        )
-    }
-
-    private val evaluatePipeline1: Pipeline by lazy {
-        EvaluatePipeline(
-            id = "eval_vta",
-            envConfig = envConfig,
+            dynamoDbConnector = dynamoDbConnector,
             eventPublisher = eventPublisher,
-            eventsMicrostore = eventsMicrostore,
-            eventCodec = TrackedUnitEventCodec,
-            eventFilter = EventFilters.name(TrackedUnitEvent.SHIPMENT_CREATED),
-            higherOrderEmit = EmitOption.Basic(clazz = VerifyTargetAddressEvent::class.java),
-        )
-    }
-
-    fun contactCustomer(
-        uow: UnitOfWork,
-        template: HigherOrderEventTemplate
-    ) : List<Event> {
-        val deliveryAttempts = uow.correlated?.filter { it is DeliveryAttemptedEvent }
-        deliveryAttempts?.let {
-            if (it.size == 1) return emptyList()
-            val baseEvent = uow.event as? TrackedUnitEvent ?: return emptyList()
-            val e1 = ContactCustomerEvent().apply {
-                entity = baseEvent.entity
-            }
-            logger.debug{"template.timestamp: ${template.timestamp}"}
-            template.applyTemplate(e1)
-            logger.debug{"Emitting event: $e1"}
-            return listOf(e1)
-        }
-        return emptyList()
-    }
-
-    private val evaluatePipeline2: Pipeline by lazy {
-        EvaluatePipeline(
-            id = "eval2",
-            envConfig = envConfig,
-            eventPublisher = eventPublisher,
-            eventsMicrostore = eventsMicrostore,
-            eventCodec = TrackedUnitEventCodec,
-            eventFilter = EventFilters.name(TrackedUnitEvent.DELIVERY_ATTEMPTED),
-            higherOrderEmit = EmitOption.Custom(::contactCustomer),
-            expression = { uow -> true },
+            //onContentType = TODO(),
+            //compactRule = TODO(),
+            queryRule = TODO(),
+            //queryRelated = TODO(),
+            //toQueryRequest = TODO(),
+            //toGetRequest = TODO(),
+            //toEvent = TODO(),
+            //encryptEvent = TODO(),
+            //parallel = TODO(),
         )
     }
 
@@ -101,9 +64,6 @@ class TriggerContainer(
         PipelineAssembler
             .builder()
             .faultManager(faultManager)
-            .addPipeline(correlatePipeline)
-            .addPipeline(evaluatePipeline1)
-            .addPipeline(evaluatePipeline2)
             .build()
     }
 

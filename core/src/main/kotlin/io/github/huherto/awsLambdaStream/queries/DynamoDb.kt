@@ -3,6 +3,7 @@ package io.github.huherto.awsLambdaStream.queries
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.*
 import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
 import io.github.huherto.awsLambdaStream.from.RecordPair
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -26,7 +27,7 @@ data class DynamoDbOptions(
 )
 
 fun Flow<UnitOfWork>.batchGetDynamoDB(
-    dynamoDbClient: DynamoDbClient,
+    dynamoDbConnector: DynamoDbConnector,
     options: DynamoDbOptions = DynamoDbOptions()
 ): Flow<UnitOfWork> = this.map { uow ->
     val request = uow.batchGetRequest ?: return@map uow
@@ -34,7 +35,7 @@ fun Flow<UnitOfWork>.batchGetDynamoDB(
     val reqKey = request.toString() // Or JSON serialization of request
     var cachedResponse = memoryCache[reqKey] as? BatchGetItemResponse
     if (cachedResponse == null) {
-        val result = dynamoDbClient.batchGetItem(request)
+        val result = dynamoDbConnector.batchGetItem(request, uow)
         val decryptedResponses = decryptResponses(result.responses, options.decrypt)
         cachedResponse = result.copy { responses = decryptedResponses }
         memoryCache[reqKey] = cachedResponse
@@ -70,14 +71,14 @@ private suspend fun decryptItems(
 }
 
 fun Flow<UnitOfWork>.queryAllDynamoDB(
-    dynamoDbClient: DynamoDbClient,
+    dynamoDbConnector: DynamoDbConnector,
 ): Flow<UnitOfWork> = this.map { uow ->
     val request = uow.queryRequest ?: return@map uow
 
     val reqKey = request.toString()
     var cachedResponse = memoryCache[reqKey] as? QueryResponse
     if (cachedResponse == null) {
-        cachedResponse = dynamoDbClient.query(request)
+        cachedResponse = dynamoDbConnector.queryAll(request, uow)
         memoryCache[reqKey] = cachedResponse
     }
     uow.copy(queryResponse = cachedResponse)
@@ -113,7 +114,7 @@ fun Flow<UnitOfWork>.scanSplitDynamoDB(
             cursor = null
         }
 
-        decryptedItems?.forEach { item ->
+        decryptedItems.forEach { item ->
             // emit(uow.copy(scanRequest = currentRequest, scanResponseItem = item, lastEvaluatedKey = cursor))
             emit(uow)
         }

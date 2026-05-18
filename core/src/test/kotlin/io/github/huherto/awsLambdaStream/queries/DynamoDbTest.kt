@@ -4,6 +4,7 @@ import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.*
 import io.github.huherto.awsLambdaStream.Event
 import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
 import io.github.huherto.awsLambdaStream.from.RecordImage
 import io.github.huherto.awsLambdaStream.from.RecordPair
 import io.kotest.matchers.nulls.shouldBeNull
@@ -85,9 +86,9 @@ class DynamodbQueriesTest {
         request.requestItems.shouldNotBeNull()
         val keysAndAttrs = request.requestItems!!["my-table"]
         keysAndAttrs.shouldNotBeNull()
-        keysAndAttrs.keys?.size shouldBe 1
+        keysAndAttrs.keys.size shouldBe 1
 
-        val key = keysAndAttrs.keys!![0]
+        val key = keysAndAttrs.keys[0]
         (key["sk"] as? AttributeValue.S)?.value shouldBe "discriminator"
         (key["pk"] as? AttributeValue.S)?.value shouldBe "my-pk"
 
@@ -103,7 +104,7 @@ class DynamodbQueriesTest {
     // @Test - decryption was removed from the implementation.
     fun `should execute batch and query flows with caching and decryption`() = runBlocking {
         // Arrange - Common setup
-        val dynamoDbClient = mockk<DynamoDbClient>()
+        val dynamoDbConnector = mockk<DynamoDbConnector>()
         val options = DynamoDbOptions(decrypt = { item ->
             item + ("decrypted" to AttributeValue.S("true"))
         })
@@ -111,7 +112,7 @@ class DynamodbQueriesTest {
         // Arrange - Query Mocks
         val queryReq = QueryRequest { tableName = "test-table" }
         val queryUow = UnitOfWork(queryRequest = queryReq)
-        coEvery { dynamoDbClient.query(any()) } returns QueryResponse {
+        coEvery { dynamoDbConnector.queryAll(queryReq, uow = queryUow) } returns QueryResponse {
             this.items = listOf(mapOf("id" to AttributeValue.S("q1")))
         }
 
@@ -122,13 +123,13 @@ class DynamodbQueriesTest {
 
         val batchUow = UnitOfWork(batchGetRequest = batchReq)
 
-        coEvery { dynamoDbClient.batchGetItem(any()) } returns BatchGetItemResponse {
+        coEvery { dynamoDbConnector.batchGetItem(any(), batchUow) } returns BatchGetItemResponse {
             responses = mapOf("table" to listOf(mapOf("id" to AttributeValue.S("b1"))))
         }
 
         // Act - Execute Flows
-        val queryResults = flowOf(queryUow).queryAllDynamoDB(dynamoDbClient).toList()
-        val batchResults = flowOf(batchUow).batchGetDynamoDB(dynamoDbClient).toList()
+        val queryResults = flowOf(queryUow).queryAllDynamoDB(dynamoDbConnector).toList()
+        val batchResults = flowOf(batchUow).batchGetDynamoDB(dynamoDbConnector).toList()
 
         // Assert - Decryption Output
         queryResults.size shouldBe 1
@@ -139,11 +140,11 @@ class DynamodbQueriesTest {
         batchResults.size shouldBe 1
 
         // Act & Assert - Caching (Second call should hit memoryCache, verifying no subsequent AWS calls)
-        flowOf(queryUow).queryAllDynamoDB(dynamoDbClient).toList()
-        coVerify(exactly = 1) { dynamoDbClient.query(any()) }
+        flowOf(queryUow).queryAllDynamoDB(dynamoDbConnector).toList()
+        coVerify(exactly = 1) { dynamoDbConnector.queryAll(any(), any()) }
 
-        flowOf(batchUow).batchGetDynamoDB(dynamoDbClient, options).toList()
-        coVerify(exactly = 1) { dynamoDbClient.batchGetItem(any()) }
+        flowOf(batchUow).batchGetDynamoDB(dynamoDbConnector, options).toList()
+        coVerify(exactly = 1) { dynamoDbConnector.batchGetItem(any(), any()) }
     }
 
     @Test
