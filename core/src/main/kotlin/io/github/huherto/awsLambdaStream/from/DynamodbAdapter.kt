@@ -6,6 +6,7 @@ import io.github.huherto.awsLambdaStream.UnitOfWork
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.serialization.json.Json.Default.decodeFromString
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue as EventAV
 
 class DynamodbAdapter (private val faultManager: FaultManager) {
@@ -108,7 +109,7 @@ class DynamodbAdapter (private val faultManager: FaultManager) {
 
 data class RecordPair(val new: RecordImage?, val old: RecordImage?)
 
-class RecordImage(val map: Map<String, EventAV?>) : Map<String, EventAV?> by map  {
+class RecordImage(val map: Map<String, EventAV?>) : Map<String, EventAV?> by map {
 
     fun getPk(): String? = map["pk"]?.s
 
@@ -125,4 +126,17 @@ class RecordImage(val map: Map<String, EventAV?>) : Map<String, EventAV?> by map
     fun isDeleted(): Boolean = map.containsKey("deleted") && map["deleted"]?.isBOOL == true
 
     fun latched(): Boolean = map.containsKey("latched") && map["latched"]?.isBOOL == true
+
+    fun getS(fieldName: String): String? = map[fieldName]?.s
+
+    fun getDouble(fieldName: String): Double? = map[fieldName]?.n?.toDouble()
+
+    fun getLong(fieldName: String): Long? = map[fieldName]?.n?.toLong()
+
+    // TODO: Not sure if this is the best way to do this. It adds a dependency on kotlinx.serialization.
+    inline fun <reified T> getDecodedObject(fieldName: String): T? {
+        return getS(fieldName)?.let {
+            decodeFromString<T>(it)
+        }
+    }
 }

@@ -28,7 +28,7 @@ class ShipmentDao(
         )
 
         val item = response.item ?: return null
-        return mapItemToShipment(item)
+        return itemMapToShipment(item)
     }
 
     suspend fun saveShipment(entity: Shipment) {
