@@ -54,7 +54,7 @@ class ShipmentBffITest {
         savedEntity.shouldNotBeNull()
         with(savedEntity) {
             this["pk"]?.asS() shouldBe shipmentId
-            this["sk"]?.asS() shouldBe ("SHIPMENT")
+            this["sk"]?.asS() shouldBe (SHIPMENT)
             this["senderFullName"]?.asS() shouldBe "John Doe"
             this["trackingNumber"]?.asS() shouldBe "TRK123456789"
             this["weight"]?.asN() shouldBe "10.5"

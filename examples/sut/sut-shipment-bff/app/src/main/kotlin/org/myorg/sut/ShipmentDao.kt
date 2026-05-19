@@ -22,7 +22,7 @@ class ShipmentDao(
                 tableName = tableName()
                 key = mapOf(
                     "pk" to AttributeValue.S(shipmentId),
-                    "sk" to AttributeValue.S("SHIPMENT")
+                    "sk" to AttributeValue.S(SHIPMENT)
                 )
             }
         )

@@ -64,19 +64,20 @@ class TriggerContainer(
     suspend fun toEvent(uow: UnitOfWork) : Event? {
         val raw = uow.record as? RecordPair ?: return null
         val newImage : RecordImage = raw.new ?: return null
-        if (raw.old == null) {
-
+        if (newImage.getS("sk") == SHIPMENT) {
             val shipment = recordImageToShipment(newImage)
-            val event = ShipmentCreatedEvent().apply {
-                id = randomUUID().toString()
-                timestamp = System.currentTimeMillis()
-                partitionKey = shipment.id
-                tags = emptyMap()
-                entity = shipment
-                location = "Unknown"
-                result = "Success"
+            if (raw.old == null) {
+                val event = ShipmentCreatedEvent().apply {
+                    id = randomUUID().toString()
+                    timestamp = System.currentTimeMillis()
+                    partitionKey = shipment.id
+                    tags = emptyMap()
+                    entity = shipment
+                    location = "Unknown"
+                    result = "Success"
+                }
+                return event
             }
-            return event
         }
 
         return null
