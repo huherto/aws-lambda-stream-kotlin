@@ -50,7 +50,7 @@ fun AttributeValueMapReader.getAddress(fieldName: String) : TrackedUnit.Address?
 }
 
 fun toEvent(uow: UnitOfWork) : Event? {
-    val raw = uow.record as? RecordPair ?: return null
+    val raw = uow.event?.raw as? RecordPair ?: return null
     val newImage : RecordImage = raw.new ?: return null
     if (newImage.getS("sk") == SHIPMENT) {
         val shipment = recordImageToShipment(newImage)

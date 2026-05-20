@@ -36,13 +36,13 @@ class ControlServiceITest {
 
     private val logger = mu.KotlinLogging.logger {}
 
-    private val awsFacade = AwsFacade()
+    private val awsFacade = AwsFacade(eventTable = "sut-control-service-local-events")
 
     @OptIn(ExperimentalTime::class)
     @Test
     fun happyPath() : Unit = runBlocking {
 
-        val event = createShipmentCreatedEvent(ShipmentTrackingDomain.createTrackedUnit())
+        val event = createShipmentCreatedEvent(createTrackedUnit())
         event.id.shouldNotBeNull()
         event.entity.shouldNotBeNull()
         event.entity?.id.shouldNotBeNull()

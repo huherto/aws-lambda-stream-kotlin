@@ -17,7 +17,7 @@ import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
 
-class AwsFacade(val entityTable : String? = null) {
+class AwsFacade(val entityTable : String? = null, val eventTable : String? = null) {
 
     private val logger = mu.KotlinLogging.logger {  }
 
@@ -25,6 +25,10 @@ class AwsFacade(val entityTable : String? = null) {
 
     fun entityTableName() : String {
         return entityTable ?: error("entityTable is required")
+    }
+
+    fun eventTableName() : String {
+        return eventTable ?: error("eventTable is required")
     }
 
     private val dynamoDbClient: DynamoDbClient by lazy {
@@ -88,7 +92,7 @@ class AwsFacade(val entityTable : String? = null) {
             }
             logger.debug { "find event $pk in ${System.currentTimeMillis() - startTime}" }
             val response = dynamoDbClient.query(QueryRequest {
-                tableName = "sut-control-service-local-events"
+                tableName = eventTableName()
                 keyConditionExpression = "pk = :pk"
                 expressionAttributeValues = mapOf(":pk" to AttributeValue.S(pk))
             })

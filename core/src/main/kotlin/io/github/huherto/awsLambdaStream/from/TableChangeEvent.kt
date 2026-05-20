@@ -10,7 +10,7 @@ class TableChangeEvent : BaseEvent() {
     var type: String? = null
 
     override fun eventType(): String {
-        return type ?: "unknown"
+        return type ?: "table_change"
     }
 
     override fun toString(): String {

@@ -1,5 +1,6 @@
 package org.myorg.sut
 
+import io.github.huherto.awsLambdaStream.JsonEvent
 import io.kotest.matchers.equality.shouldBeEqualToComparingFields
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
@@ -18,7 +19,10 @@ import org.junit.jupiter.api.TestInstance
 class ShipmentBffITest {
     private val logger = mu.KotlinLogging.logger {}
 
-    private val awsFacade = AwsFacade(entityTable = "sut-shipment-bff-local-shipments")
+    private val awsFacade = AwsFacade(
+        entityTable = "sut-shipment-bff-local-shipments",
+        eventTable = "sut-control-service-local-events"
+    )
 
     private val restApiFacade = RestApiFacade()
 
@@ -33,6 +37,21 @@ class ShipmentBffITest {
 
         verifyGetShipmentReturned(shipmentId, shipment)
 
+        verifyShipmentCreatedEventWasPublished(shipmentId)
+
+    }
+
+    private suspend fun verifyShipmentCreatedEventWasPublished(shipmentId: String) {
+        val shipmentCreatedEvent = awsFacade.findEventByPK(shipmentId) { events ->
+            events?.firstOrNull {
+                val eventAsString = it.get("event")?.asSOrNull()
+                logger.info { "Event: $eventAsString" }
+                eventAsString.shouldNotBeNull()
+                val eventAsObject = JsonEvent(eventAsString)
+                eventAsObject.eventType() == "SHIPMENT_CREATED"
+            }
+        }
+        shipmentCreatedEvent.shouldNotBeNull()
     }
 
     private fun verifyGetShipmentReturned(shipmentId: String, shipment: TrackedUnit) {
@@ -54,7 +73,7 @@ class ShipmentBffITest {
         savedEntity.shouldNotBeNull()
         with(savedEntity) {
             this["pk"]?.asS() shouldBe shipmentId
-            this["sk"]?.asS() shouldBe (SHIPMENT)
+            this["sk"]?.asS() shouldBe "SHIPMENT"
             this["senderFullName"]?.asS() shouldBe "John Doe"
             this["trackingNumber"]?.asS() shouldBe "TRK123456789"
             this["weight"]?.asN() shouldBe "10.5"
