@@ -6,7 +6,7 @@ import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging
 
-class Trigger constructor(private val container: TriggerContainer = TriggerContainer.build()): RequestHandler<DynamodbEvent, String> {
+class Trigger (private val container: TriggerContainer = TriggerContainer.build()): RequestHandler<DynamodbEvent, String> {
 
     private val logger = KotlinLogging.logger {  }
 
