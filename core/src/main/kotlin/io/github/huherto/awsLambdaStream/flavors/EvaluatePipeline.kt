@@ -193,14 +193,8 @@ class EvaluatePipeline (
 
         val template = toHigherOrderEventTemplate(uow)
 
-        val instantiatedEvent: Event = if (higherOrderEmit is EmitOption.Basic && template.clazz != null) {
-            template.createEvent()
-        } else {
-            template
-        }
-
         val resultEvents: List<Event> = when (higherOrderEmit) {
-            is EmitOption.Basic -> listOf(instantiatedEvent)
+            is EmitOption.Basic -> listOf(template.createEvent(higherOrderEmit.clazz.kotlin))
             is EmitOption.Custom -> higherOrderEmit.emit(uow, template)
             null -> throw IllegalArgumentException("higherOrderEmit must be a String or a function")
         }
@@ -231,7 +225,6 @@ class EvaluatePipeline (
         val template = HigherOrderEventTemplate(baseEvent = baseEvent).apply {
             id = uow.meta?.get("eventId")
             partitionKey = uow.meta?.get("partitionKey")
-            clazz = (higherOrderEmit as? EmitOption.Basic)?.clazz?.kotlin
             timestamp = trigger?.timestamp
             tags = aggregatedTags
             this.triggers = mappedTriggers
