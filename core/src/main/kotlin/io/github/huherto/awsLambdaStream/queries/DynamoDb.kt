@@ -164,7 +164,7 @@ fun Flow<UnitOfWork>.querySplitDynamoDB(
 // Request Generators
 // ------------------------------------------------------------------------
 
-data class Rule(
+data class QueryRule(
     val pkFn: String? = null,
     val indexNm: String? = null,
     val indexFn: String? = null,
@@ -172,34 +172,34 @@ data class Rule(
     val tableName: String = ""
 )
 
-fun toPkQueryRequest(uow: UnitOfWork, rule: Rule): QueryRequest {
+fun toPkQueryRequest(uow: UnitOfWork, queryRule: QueryRule): QueryRequest {
     return QueryRequest {
         keyConditionExpression = "#pk = :pk"
-        expressionAttributeNames = mapOf("#pk" to (rule.pkFn ?: "pk"))
+        expressionAttributeNames = mapOf("#pk" to (queryRule.pkFn ?: "pk"))
         // Assuming your event class has partitionKey property or you extract it safely
         expressionAttributeValues = mapOf(":pk" to AttributeValue.S(uow.event?.partitionKey ?: ""))
         consistentRead = true
     }
 }
 
-fun toIndexQueryRequest(uow: UnitOfWork, rule: Rule): QueryRequest {
+fun toIndexQueryRequest(uow: UnitOfWork, queryRule: QueryRule): QueryRequest {
     return QueryRequest {
-        indexName = rule.indexNm
+        indexName = queryRule.indexNm
         keyConditionExpression = "#pk = :pk"
-        expressionAttributeNames = mapOf("#pk" to (rule.indexFn ?: "pk"))
+        expressionAttributeNames = mapOf("#pk" to (queryRule.indexFn ?: "pk"))
         expressionAttributeValues = mapOf(":pk" to AttributeValue.S(uow.event?.partitionKey ?: ""))
         consistentRead = false
     }
 }
 
-fun toGetRequest(uow: UnitOfWork, rule: Rule): BatchGetItemRequest {
+fun toGetRequest(uow: UnitOfWork, queryRule: QueryRule): BatchGetItemRequest {
     val raw = uow.event?.raw as? RecordPair
     val rawNew = raw?.new
     val rawOld = raw?.old
 
     val data = rawNew ?: rawOld ?: return BatchGetItemRequest { }
 
-    val keysList = rule.fks.mapNotNull { fk ->
+    val keysList = queryRule.fks.mapNotNull { fk ->
         val value = data[fk]?.s
         if (value != null) {
             val parts = value.split("|")
@@ -216,7 +216,7 @@ fun toGetRequest(uow: UnitOfWork, rule: Rule): BatchGetItemRequest {
 
     return BatchGetItemRequest {
         requestItems = mapOf(
-            rule.tableName to KeysAndAttributes {
+            queryRule.tableName to KeysAndAttributes {
                 keys = keysList
             }
         )

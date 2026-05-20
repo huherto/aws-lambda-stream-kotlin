@@ -1,11 +1,15 @@
 package org.myorg.sut
 
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
+import io.github.huherto.awsLambdaStream.Event
+import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.from.RecordImage
+import io.github.huherto.awsLambdaStream.from.RecordPair
 import io.github.huherto.awsLambdaStream.utils.AttributeValueMapReader
 import io.github.huherto.awsLambdaStream.utils.DynamoDbAttributeValueMapReader
 import io.github.huherto.awsLambdaStream.utils.StreamAttributeValueMapReader
 import kotlinx.serialization.json.Json.Default.decodeFromString
+import java.util.UUID.randomUUID
 
 typealias Shipment = TrackedUnit
 typealias ItemMap = Map<String, AttributeValue?>
@@ -43,4 +47,26 @@ fun AttributeValueMapReader.getAddress(fieldName: String) : TrackedUnit.Address?
     return this.getS(fieldName)?.let {
         decodeFromString<TrackedUnit.Address>(it)
     }
+}
+
+fun toEvent(uow: UnitOfWork) : Event? {
+    val raw = uow.record as? RecordPair ?: return null
+    val newImage : RecordImage = raw.new ?: return null
+    if (newImage.getS("sk") == SHIPMENT) {
+        val shipment = recordImageToShipment(newImage)
+        if (raw.old == null) {
+            val event = ShipmentCreatedEvent().apply {
+                id = randomUUID().toString()
+                timestamp = System.currentTimeMillis()
+                partitionKey = shipment.id
+                tags = emptyMap()
+                entity = shipment
+                location = "Unknown"
+                result = "Success"
+            }
+            return event
+        }
+    }
+
+    return null
 }

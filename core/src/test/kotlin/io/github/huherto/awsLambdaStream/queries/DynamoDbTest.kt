@@ -37,12 +37,12 @@ class DynamodbQueriesTest {
         }
         val uow = UnitOfWork(event = mockEvent)
 
-        val defaultRule = Rule()
-        val customPkRule = Rule(pkFn = "customPk")
-        val indexRule = Rule(indexNm = "my-index", indexFn = "customIndexPk")
+        val defaultQueryRule = QueryRule()
+        val customPkQueryRule = QueryRule(pkFn = "customPk")
+        val indexQueryRule = QueryRule(indexNm = "my-index", indexFn = "customIndexPk")
 
         // Act & Assert - Default PK Query
-        toPkQueryRequest(uow, defaultRule).let { req ->
+        toPkQueryRequest(uow, defaultQueryRule).let { req ->
             req.keyConditionExpression shouldBe "#pk = :pk"
             req.expressionAttributeNames shouldBe mapOf("#pk" to "pk")
             (req.expressionAttributeValues?.get(":pk") as? AttributeValue.S)?.value shouldBe "test-pk"
@@ -50,12 +50,12 @@ class DynamodbQueriesTest {
         }
 
         // Act & Assert - Custom PK Query
-        toPkQueryRequest(uow, customPkRule).let { req ->
+        toPkQueryRequest(uow, customPkQueryRule).let { req ->
             req.expressionAttributeNames shouldBe mapOf("#pk" to "customPk")
         }
 
         // Act & Assert - Index Query
-        toIndexQueryRequest(uow, indexRule).let { req ->
+        toIndexQueryRequest(uow, indexQueryRule).let { req ->
             req.indexName shouldBe "my-index"
             req.keyConditionExpression shouldBe "#pk = :pk"
             req.expressionAttributeNames shouldBe mapOf("#pk" to "customIndexPk")
@@ -77,10 +77,10 @@ class DynamodbQueriesTest {
             every { raw } returns rawPair
         }
         val uowWithData = UnitOfWork(event = mockEventWithData)
-        val rule = Rule(fks = listOf("fk1", "missing_fk"), tableName = "my-table")
+        val queryRule = QueryRule(fks = listOf("fk1", "missing_fk"), tableName = "my-table")
 
         // Act - Request with Data
-        val request = toGetRequest(uowWithData, rule)
+        val request = toGetRequest(uowWithData, queryRule)
 
         // Assert - Request with Data
         request.requestItems.shouldNotBeNull()
@@ -96,7 +96,7 @@ class DynamodbQueriesTest {
         val emptyUow = UnitOfWork(event = null)
 
         // Act - Empty Request
-        val emptyRequest = toGetRequest(emptyUow, rule)
+        val emptyRequest = toGetRequest(emptyUow, queryRule)
 
         // Assert - Empty Request Fallback
         emptyRequest.requestItems.shouldBeNull()
