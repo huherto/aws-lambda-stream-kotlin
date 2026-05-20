@@ -65,10 +65,10 @@ Run localstack
 docker compose up
 ```
 
-Deploy services using cdklocal
+Deploy services using cdklocal. Look at the `deploy_stacks.sh` script to see what stacks are deployed.
 
 ```aiignore
-$ ./deploy_all.sh 
+$ ./deploy_stacks.sh 
 ```
 
 Run integration tests
