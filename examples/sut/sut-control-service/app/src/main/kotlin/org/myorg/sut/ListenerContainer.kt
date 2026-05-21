@@ -12,7 +12,6 @@ import io.github.huherto.awsLambdaStream.sinks.EventBridgePublishOptions
 import io.github.huherto.awsLambdaStream.sinks.EventBridgePublisher
 import io.github.huherto.awsLambdaStream.sinks.EventsMicrostore
 import io.github.huherto.awsLambdaStream.sinks.EventsMicrostoreImpl
-import java.nio.ByteBuffer
 
 class ListenerContainer(
     val envConfig: EnvironmentConfig,
@@ -40,17 +39,16 @@ class ListenerContainer(
         }
     }
 
-    class MyKinesisAdapter(faultManager: FaultManager) : KinesisAdapter(faultManager = faultManager) {
-        override fun decodePayload(payload: ByteBuffer?): TrackedUnitEvent {
-            return sutJson.decodeFromString<TrackedUnitEvent>(utf8Decode(payload))
-        }
+    val kinesisAdapter: KinesisAdapter by lazy {
+        KinesisAdapter(
+            faultManager = faultManager,
+            eventCodec = TrackedUnitEventCodec,
+            )
     }
-
-    val kinesisAdapter: KinesisAdapter by lazy { MyKinesisAdapter(faultManager = faultManager) }
 
     private val collectPipeline: Pipeline by lazy {
         CollectPipeline(
-            pipelineId = "collect1",
+            pipelineId = "coll1",
             envConfig = envConfig,
             eventsMicrostore = eventsMicrostore,
             eventFilter = EventFilters.classes(TrackedUnitEvent::class)

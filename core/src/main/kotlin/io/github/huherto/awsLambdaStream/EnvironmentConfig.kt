@@ -96,4 +96,8 @@ class EnvironmentConfig {
         return System.getenv("DYNAMODB_TIMEOUT")?.toLongOrNull()
     }
 
+    fun skip() : Boolean {
+        return System.getenv("SKIP")?.toBoolean() ?: false
+    }
+
 }

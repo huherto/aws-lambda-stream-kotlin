@@ -13,7 +13,6 @@ import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import io.github.huherto.awsLambdaStream.from.KinesisAdapter
 import io.github.huherto.awsLambdaStream.sinks.EventBridgePublishOptions
 import io.github.huherto.awsLambdaStream.sinks.EventBridgePublisher
-import java.nio.ByteBuffer
 
 class ListenerContainer(
     val envConfig: EnvironmentConfig,
@@ -37,13 +36,12 @@ class ListenerContainer(
         }
     }
 
-    class MyKinesisAdapter(faultManager: FaultManager) : KinesisAdapter(faultManager = faultManager) {
-        override fun decodePayload(payload: ByteBuffer?): TrackedUnitEvent {
-            return sutJson.decodeFromString<TrackedUnitEvent>(utf8Decode(payload))
-        }
+    val kinesisAdapter: KinesisAdapter by lazy {
+        KinesisAdapter(
+            faultManager = faultManager,
+            eventCodec = TrackedUnitEventCodec,
+        )
     }
-
-    val kinesisAdapter: KinesisAdapter by lazy { MyKinesisAdapter(faultManager = faultManager) }
 
     suspend fun toUpdateRequest(uow: UnitOfWork): UpdateItemRequest? {
 

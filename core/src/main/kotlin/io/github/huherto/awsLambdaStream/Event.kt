@@ -24,11 +24,6 @@ data class EventReference(
     val timestamp: Long? = null,
 )
 
-interface EventCodec {
-    fun decode(text: String): Event
-    fun encode(value: Event): String
-}
-
 // Base class for all events.
 abstract class BaseEvent : Event {
     override var id: String? = null

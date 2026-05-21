@@ -76,9 +76,7 @@ class TriggerContainer(
             val e1 = ContactCustomerEvent().apply {
                 entity = baseEvent.entity
             }
-            logger.debug{"template.timestamp: ${template.timestamp}"}
             template.applyTemplate(e1)
-            logger.debug{"Emitting event: $e1"}
             return listOf(e1)
         }
         return emptyList()
