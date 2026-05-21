@@ -7,8 +7,6 @@ import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import kotlinx.coroutines.flow.*
 
-// TODO - This class needs unit tests.
-//
 class KinesisAdapter(
     private val faultManager: FaultManager,
     private val eventCodec: EventCodec,

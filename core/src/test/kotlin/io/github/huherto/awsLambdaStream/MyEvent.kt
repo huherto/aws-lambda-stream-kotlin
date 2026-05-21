@@ -1,10 +1,13 @@
 package io.github.huherto.awsLambdaStream
 
-import kotlinx.serialization.*
+import kotlinx.serialization.InternalSerializationApi
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
+import kotlinx.serialization.serializerOrNull
 
 @Serializable
 class MyThing {
@@ -12,15 +15,9 @@ class MyThing {
 }
 
 @Serializable
-sealed class MyEvent() : BaseEvent() {
+sealed class MyEvent : BaseEvent() {
 
     var entity: MyThing? = null
-
-    @Contextual
-    override var raw: Any? = null
-
-    @Contextual
-    override var eem: Any? = null
 
     @OptIn(InternalSerializationApi::class)
     override fun eventType(): String {
@@ -43,6 +40,17 @@ data class MyEventB(var foo: String? = null, var bar: String? = null) : MyEvent(
 @Serializable
 @SerialName("MY_EVENT_C")
 data class MyEventC(var foo: String? = null, var bar: String? = null) : MyEvent()
+
+class MyEventCodec : EventCodec {
+
+    override fun decode(text: String): Event {
+        return sutJson.decodeFromString(MyEvent.serializer(), text)
+    }
+
+    override fun encode(value: Event): String {
+        return sutJson.encodeToString(value)
+    }
+}
 
 val sutJson: Json = Json {
     ignoreUnknownKeys = true
