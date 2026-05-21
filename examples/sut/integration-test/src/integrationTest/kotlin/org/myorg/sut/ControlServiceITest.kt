@@ -120,7 +120,7 @@ class ControlServiceITest {
                 pk = vtaEventId,
                 sk = "EVENT",
                 discriminator = "EVENT",
-                pipelineId = "collect1")
+                pipelineId = "coll1")
             val vtaEventAsObject = JsonEvent(this["event"]?.asS() ?: "{}")
             vtaEventAsObject.shouldNotBeNull()
             val vtaEventId = vtaEventAsObject.id
