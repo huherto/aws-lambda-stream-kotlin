@@ -5,10 +5,7 @@ import io.github.huherto.awsLambdaStream.EventReference
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.serializerOrNull
-import java.nio.ByteBuffer
-import java.nio.charset.StandardCharsets
 
 @Serializable
 sealed class TrackedUnitEvent() : Event {
@@ -28,9 +25,6 @@ sealed class TrackedUnitEvent() : Event {
         const val CONTACT_CUSTOMER = "CONTACT_CUSTOMER"
         const val POISON_PILL_EVENT = "POISON_PILL_EVENT"
 
-        fun fromString(s: String): TrackedUnitEvent {
-            return jsonDecode(s)
-        }
     }
 
     override var id: String? = null
@@ -54,7 +48,7 @@ sealed class TrackedUnitEvent() : Event {
     }
 
     override fun encoded(): String {
-        return jsonEncode(this)
+        return TrackedUnitEventCodec.encode(this)
     }
 
     var location : String? = null
@@ -64,25 +58,6 @@ sealed class TrackedUnitEvent() : Event {
         return encoded()
     }
 
-}
-
-fun jsonEncode(event: TrackedUnitEvent): String {
-    return sutJson.encodeToString(TrackedUnitEvent.serializer(), event)
-}
-
-fun jsonDecode(s: String): TrackedUnitEvent {
-    return sutJson.decodeFromString(TrackedUnitEvent.serializer(), s)
-}
-
-// Not sure if we need this
-fun utf8Encode(s: String): String {
-    return StandardCharsets.UTF_8.encode(s).toString()
-}
-
-// .. or this.
-fun utf8Decode(bb: ByteBuffer?): String {
-    if (bb == null) return ""
-    return StandardCharsets.UTF_8.decode(bb).toString()
 }
 
 @Serializable
@@ -136,9 +111,3 @@ class ContactCustomerEvent() : TrackedUnitEvent()
 @Serializable
 @kotlinx.serialization.SerialName(TrackedUnitEvent.POISON_PILL_EVENT)
 class PoisonPillEvent() : TrackedUnitEvent()
-
-val sutJson: Json = Json {
-    ignoreUnknownKeys = true
-    prettyPrint = true
-    isLenient = true
-}

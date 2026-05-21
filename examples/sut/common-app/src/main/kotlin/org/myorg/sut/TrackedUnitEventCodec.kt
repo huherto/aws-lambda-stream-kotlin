@@ -2,6 +2,7 @@ package org.myorg.sut
 
 import io.github.huherto.awsLambdaStream.Event
 import io.github.huherto.awsLambdaStream.EventCodec
+import kotlinx.serialization.json.Json
 
 object TrackedUnitEventCodec : EventCodec {
 
@@ -12,4 +13,10 @@ object TrackedUnitEventCodec : EventCodec {
     override fun encode(value: Event): String {
         return sutJson.encodeToString(TrackedUnitEvent.serializer(), value as TrackedUnitEvent)
     }
+}
+
+val sutJson: Json = Json {
+    ignoreUnknownKeys = true
+    prettyPrint = true
+    isLenient = true
 }
