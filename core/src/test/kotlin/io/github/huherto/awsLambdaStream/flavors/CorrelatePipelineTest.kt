@@ -45,10 +45,20 @@ class CorrelatePipelineTest {
         override var tags: Map<String, String>? = null,
         override var raw: Any? = null,
         override var eem: Any? = null,
-        private val encodedStr: String = "{}"
+        val encodedStr: String = "{}"
     ) : BaseEvent() {
         override fun eventType() = "TestEvent"
         override fun encoded() = encodedStr
+    }
+
+    class FakeEventCodec : EventCodec {
+        override fun encode(event: Event): String {
+            return (event as FakeEvent).encodedStr
+        }
+
+        override fun decode(eventAsString: String): Event {
+            return FakeEvent(encodedStr = eventAsString)
+        }
     }
 
     private fun createFakeEvent(
@@ -74,7 +84,6 @@ class CorrelatePipelineTest {
 
     fun createEventsMicrostore() : EventsMicrostoreInMemory {
         val faultManager = mockk<FaultManager>(relaxed = true)
-        val envConfig = spyk(EnvironmentConfig())
         val eventsMicrostore = EventsMicrostoreInMemory(faultManager)
         return eventsMicrostore
     }
@@ -219,7 +228,7 @@ class CorrelatePipelineTest {
             correlationKey = { "test-correlation-key" },
             envConfig = envConfig,
             eventFilter = EventFilters.classes(FakeEvent::class),
-            unmarshall = { eventAsString -> FakeEvent(encodedStr = eventAsString)},
+            eventCodec = FakeEventCodec(),
             eventsMicrostore = EventsMicrostoreImpl(
                 envConfig = envConfig,
                 dynamoDbClientFactory = dynamoDbClientFactory,

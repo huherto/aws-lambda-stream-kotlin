@@ -41,7 +41,7 @@ const val CORREL = "CORREL"
  * same logical key needs to support multiple independent rule sets.
  * @param envConfig Environment-backed configuration used for AWS region lookup.
  * @param eventsMicrostore Sink responsible for persisting correlation records.
- * @param unmarshall Optional custom event deserializer. When `null`, events are parsed as [JsonEvent].
+ * @param eventCodec Optional event deserializer. When `null`, events are parsed as [JsonEvent].
  * @param expire Whether the microstore record should be written as expirable.
  */
 class CorrelatePipeline(
@@ -52,7 +52,7 @@ class CorrelatePipeline(
     val correlationKeySuffix: String = "",
     val envConfig: EnvironmentConfig,
     var eventsMicrostore: EventsMicrostore,
-    val unmarshall: ((String) -> Event)? = null,
+    val eventCodec: EventCodec? = null,
     val expire: Boolean = false,
 ) : Pipeline(id) {
 
@@ -82,7 +82,7 @@ class CorrelatePipeline(
      * @throws Exception when the payload cannot be parsed.
      */
     internal fun defaultUnmarshall(eventAsString: String) : Event {
-        if (unmarshall != null) return unmarshall(eventAsString)
+        if (eventCodec != null) return eventCodec.decode(eventAsString)
 
         val jsonEvent: JsonEvent = try {
             JsonEvent(eventAsString)

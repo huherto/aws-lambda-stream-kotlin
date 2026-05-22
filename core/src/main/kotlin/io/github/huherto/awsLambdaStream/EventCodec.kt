@@ -4,8 +4,8 @@ import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 
 interface EventCodec {
-    fun decode(text: String): Event
-    fun encode(value: Event): String
+    fun decode(eventAsString: String): Event
+    fun encode(event: Event): String
     fun decode(payload: ByteBuffer?): Event {
         requireNotNull(payload) { "Cannot decode null ByteBuffer payload" }
 

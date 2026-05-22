@@ -43,7 +43,6 @@ class TriggerContainer(
         CorrelatePipeline(
             id = "corre1",
             envConfig = envConfig,
-            unmarshall = { eventAsString: String -> jsonDecode(eventAsString) },
             correlationKey = { uow ->
                 val event = uow.event as? TrackedUnitEvent
                 event?.entity?.id ?: "no-correlation-key"
