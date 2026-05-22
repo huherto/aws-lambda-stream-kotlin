@@ -66,7 +66,7 @@ class SqsAdapter(
                     uow
                 }
                 .filter { uow ->
-                    !outSkip(uow)
+                    outSkip(uow)
                 }
                 .map { uow ->
                     // TODO: call claim_check processing

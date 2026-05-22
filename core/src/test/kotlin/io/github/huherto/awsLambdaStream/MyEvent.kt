@@ -43,12 +43,12 @@ data class MyEventC(var foo: String? = null, var bar: String? = null) : MyEvent(
 
 class MyEventCodec : EventCodec {
 
-    override fun decode(text: String): Event {
-        return sutJson.decodeFromString(MyEvent.serializer(), text)
+    override fun decode(eventAsString: String): Event {
+        return sutJson.decodeFromString(MyEvent.serializer(), eventAsString)
     }
 
-    override fun encode(value: Event): String {
-        return sutJson.encodeToString(value)
+    override fun encode(event: Event): String {
+        return sutJson.encodeToString(event)
     }
 }
 
