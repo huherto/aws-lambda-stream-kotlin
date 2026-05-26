@@ -31,7 +31,7 @@ class JsonEvent(jsonString: String) : Event {
         get() = jsonObject["tags"]?.jsonObject?.mapValues { it.value.jsonPrimitive.content }
         set(value) {}
     override var raw: Any?
-        get() = jsonObject
+        get() = jsonObject["raw"]?.jsonObject?.mapValues { it.value.jsonPrimitive.content }
         set(value) {}
     override var eem: Any?
         get() = jsonObject["eem"]?.jsonObject?.mapValues { it.value.jsonPrimitive.content }
@@ -54,8 +54,6 @@ class JsonEvent(jsonString: String) : Event {
     }
 
     override fun encoded(): String {
-        return jsonObject.asJson()
+        return jsonObject.toString()
     }
-
-
 }
