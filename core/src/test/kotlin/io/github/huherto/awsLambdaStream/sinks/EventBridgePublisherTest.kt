@@ -38,12 +38,15 @@ class EventBridgePublisherTest {
         @Test
         fun `should map correctly based on event presence`() {
             // Arrange
-            val opt = EventBridgePublishOptions(
-                envConfig = mockEnvConfig(),
+//            val opt = EventBridgePublishOptions(
+//                envConfig = mockEnvConfig(),
+//                busName = "test-bus",
+//                source = "test-source"
+//            )
+            val publisher = EventBridgePublisher(
+                mockEnvConfig(),
                 busName = "test-bus",
-                source = "test-source"
-            )
-            val publisher = EventBridgePublisher(opt)
+                source = "test-source")
 
             val mockEvent = mockk<Event>()
             every { mockEvent.eventType() } returns "test-type"
@@ -53,8 +56,8 @@ class EventBridgePublisherTest {
             val uowWithoutEvent = UnitOfWork(event = null)
 
             // Act
-            val resultWithEvent = publisher.toPublishRequestEntry(uowWithEvent, opt)
-            val resultWithoutEvent = publisher.toPublishRequestEntry(uowWithoutEvent, opt)
+            val resultWithEvent = publisher.toPublishRequestEntry(uowWithEvent)
+            val resultWithoutEvent = publisher.toPublishRequestEntry(uowWithoutEvent)
 
             // Assert
             resultWithEvent.publishRequestEntry.shouldNotBeNull()
@@ -73,11 +76,11 @@ class EventBridgePublisherTest {
         @Test
         fun `should handle batch correctly based on entries presence`() {
             // Arrange
-            val opt = EventBridgePublishOptions(
-                envConfig = mockEnvConfig(),
-                endpointId = "test-endpoint"
-            )
-            val publisher = EventBridgePublisher(opt)
+//            val opt = EventBridgePublishOptions(
+//                envConfig = mockEnvConfig(),
+//                endpointId = "test-endpoint"
+//            )
+            val publisher = EventBridgePublisher(mockEnvConfig(), endpointId = "test-endpoint")
 
             val entry1 = PutEventsRequestEntry.Companion { source = "source1" }
 
@@ -91,9 +94,9 @@ class EventBridgePublisherTest {
             val uowNullBatch = UnitOfWork(batch = null)
 
             // Act
-            val resultWithBatch = publisher.toPublishRequest(uowWithBatch, opt)
-            val resultEmptyBatch = publisher.toPublishRequest(uowEmptyBatch, opt)
-            val resultNullBatch = publisher.toPublishRequest(uowNullBatch, opt)
+            val resultWithBatch = publisher.toPublishRequest(uowWithBatch)
+            val resultEmptyBatch = publisher.toPublishRequest(uowEmptyBatch)
+            val resultNullBatch = publisher.toPublishRequest(uowNullBatch)
 
             // Assert
             resultWithBatch.publishRequest.shouldNotBeNull()
@@ -116,16 +119,15 @@ class EventBridgePublisherTest {
             val mockResponse = mockk<ConnectorResponse>()
             coEvery { anyConstructed<EventBridgeConnector>().putEvents(any()) } returns mockResponse
 
-            val opt = EventBridgePublishOptions(envConfig = mockEnvConfig())
-            val publisher = EventBridgePublisher(opt)
+            val publisher = EventBridgePublisher(mockEnvConfig())
 
             val request = PutEventsRequest.Companion { endpointId = "test-endpoint" }
             val uowWithRequest = UnitOfWork(publishRequest = request)
             val uowWithoutRequest = UnitOfWork(publishRequest = null)
 
             // Act
-            val resultWithRequest = publisher.putEvents(uowWithRequest, opt)
-            val resultWithoutRequest = publisher.putEvents(uowWithoutRequest, opt)
+            val resultWithRequest = publisher.putEvents(uowWithRequest)
+            val resultWithoutRequest = publisher.putEvents(uowWithoutRequest)
 
             // Assert
             resultWithRequest.publishResponse shouldBe mockResponse
@@ -145,13 +147,11 @@ class EventBridgePublisherTest {
             val mockResponse = mockk<ConnectorResponse>()
             coEvery { anyConstructed<EventBridgeConnector>().putEvents(any()) } returns mockResponse
 
-            val opt = EventBridgePublishOptions(
-                envConfig = mockEnvConfig(),
-                batchSize = 2,
+            val publisher = EventBridgePublisher(
+                mockEnvConfig(),
                 busName = "flow-bus",
-                source = "flow-source"
-            )
-            val publisher = EventBridgePublisher(opt)
+                source = "flow-source",
+                batchSize = 2)
 
             val mockEvent1 = mockk<Event>()
             every { mockEvent1.eventType() } returns "type1"

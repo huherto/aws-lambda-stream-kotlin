@@ -5,7 +5,10 @@ import io.github.huherto.awsLambdaStream.connectors.DefaultDynamoDbClientFactory
 import io.github.huherto.awsLambdaStream.filters.EventFilters
 import io.github.huherto.awsLambdaStream.flavors.*
 import io.github.huherto.awsLambdaStream.from.DynamodbAdapter
-import io.github.huherto.awsLambdaStream.sinks.*
+import io.github.huherto.awsLambdaStream.sinks.EventBridgePublisher
+import io.github.huherto.awsLambdaStream.sinks.EventPublisher
+import io.github.huherto.awsLambdaStream.sinks.EventsMicrostore
+import io.github.huherto.awsLambdaStream.sinks.EventsMicrostoreImpl
 import mu.KotlinLogging.logger
 
 class TriggerContainer(
@@ -22,8 +25,7 @@ class TriggerContainer(
         fun build() : TriggerContainer {
             val envConfig = EnvironmentConfig()
             val dynamoDbClientFactory = DefaultDynamoDbClientFactory(envConfig)
-            val eventPublisherOptions = EventBridgePublishOptions(envConfig)
-            val eventPublisher = EventBridgePublisher(eventPublisherOptions)
+            val eventPublisher = EventBridgePublisher(envConfig)
             val faultManager = FaultManager(envConfig, eventPublisher)
             val eventsMicrostore = EventsMicrostoreImpl(
                 envConfig = envConfig,

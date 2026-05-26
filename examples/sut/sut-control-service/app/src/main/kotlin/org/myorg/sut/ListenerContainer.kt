@@ -8,7 +8,6 @@ import io.github.huherto.awsLambdaStream.filters.EventFilters
 import io.github.huherto.awsLambdaStream.flavors.CollectPipeline
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import io.github.huherto.awsLambdaStream.from.KinesisAdapter
-import io.github.huherto.awsLambdaStream.sinks.EventBridgePublishOptions
 import io.github.huherto.awsLambdaStream.sinks.EventBridgePublisher
 import io.github.huherto.awsLambdaStream.sinks.EventsMicrostore
 import io.github.huherto.awsLambdaStream.sinks.EventsMicrostoreImpl
@@ -23,8 +22,7 @@ class ListenerContainer(
         fun build() : ListenerContainer {
             val envConfig = EnvironmentConfig()
             val dynamoDbClientFactory = DynamoDBClientWrapperFactory(DefaultDynamoDbClientFactory(envConfig))
-            val eventPublisherOptions = EventBridgePublishOptions(envConfig)
-            val eventPublisher = EventBridgePublisher(eventPublisherOptions)
+            val eventPublisher = EventBridgePublisher(envConfig)
             val faultManager = FaultManager(envConfig, eventPublisher)
             val eventsMicrostore = EventsMicrostoreImpl(
                 envConfig = envConfig,

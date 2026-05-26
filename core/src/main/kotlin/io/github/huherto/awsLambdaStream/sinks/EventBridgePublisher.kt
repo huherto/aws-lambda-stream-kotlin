@@ -24,7 +24,7 @@ class EventPublisherInMemory : EventPublisher {
     fun events() = uows.map{ it.event }.toList()
 }
 
-data class EventBridgePublishOptions(
+class EventBridgePublisher(
     val envConfig: EnvironmentConfig,
     val busName: String = envConfig.busName()?: "undefined",
     val source: String = envConfig.busSource() ?: "custom",
@@ -34,25 +34,20 @@ data class EventBridgePublishOptions(
     val parallel: Int = (envConfig.publishParallel() ?: envConfig.parallel()?: 8),
     val endpointId: String? = envConfig.busEndPointId(),
     val handleErrors: Boolean = true,
-    val step: String = "publish",
     val clientFactory: EventBridgeClientFactory = DefaultEventBridgeClientFactory(envConfig = envConfig)
-)
-
-class EventBridgePublisher(
-    private val opt: EventBridgePublishOptions
 ) : EventPublisher {
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun publish(flow: Flow<UnitOfWork>): Flow<UnitOfWork> {
         // TODO: Do these need to have a  FaultManager?
         return flow
-            .map { toPublishRequestEntry(it, opt) }
-            .chunked(opt.batchSize)
+            .map { toPublishRequestEntry(it) }
+            .chunked(batchSize)
             .map { batchedList -> UnitOfWork(pipeline = batchedList.first().pipeline, batch = batchedList) }
-            .map { toPublishRequest(it, opt) }
-            .flatMapMerge(opt.parallel) { batchUow ->
+            .map { toPublishRequest(it) }
+            .flatMapMerge(parallel) { batchUow ->
                 flow {
-                    emit(putEvents(batchUow, opt))
+                    emit(putEvents(batchUow))
                 }
             }
             // for cleaner logging and testing downstream
@@ -61,12 +56,12 @@ class EventBridgePublisher(
             }
     }
 
-    internal fun toPublishRequestEntry(uow: UnitOfWork, opt: EventBridgePublishOptions): UnitOfWork {
+    internal fun toPublishRequestEntry(uow: UnitOfWork): UnitOfWork {
         val event = uow.event
         if (event != null) {
             val entry = PutEventsRequestEntry.Companion {
-                eventBusName = opt.busName
-                source = opt.source
+                eventBusName = busName
+                source = this@EventBridgePublisher.source
                 detailType = event.eventType()
                 detail = event.encoded()
             }
@@ -75,27 +70,27 @@ class EventBridgePublisher(
         return uow
     }
 
-    internal fun toPublishRequest(batchUow: UnitOfWork, opt: EventBridgePublishOptions): UnitOfWork {
+    internal fun toPublishRequest(batchUow: UnitOfWork): UnitOfWork {
 
         val entries = batchUow.batch?.mapNotNull{ it.publishRequestEntry }
         if (entries.isNullOrEmpty()) return batchUow
         val putEventsRequest = PutEventsRequest.Companion {
             this.entries = entries
-            this.endpointId = opt.endpointId
+            this.endpointId = this@EventBridgePublisher.endpointId
         }
         return batchUow.copy(publishRequest = putEventsRequest)
     }
 
-    internal suspend fun putEvents(batchUow: UnitOfWork, opt: EventBridgePublishOptions): UnitOfWork {
+    internal suspend fun putEvents(batchUow: UnitOfWork): UnitOfWork {
 
         if (batchUow.publishRequest != null) {
 
             val connector = EventBridgeConnector(
                 pipelineId = batchUow.pipeline?.id ?: "undefined",
-                envConfig = opt.envConfig,
+                envConfig = envConfig,
                 retryConfig = RetryConfig(),
-                timeout = opt.envConfig.timeout()?.milliseconds ?: 1000.milliseconds,
-                clientFactory = opt.clientFactory
+                timeout = envConfig.timeout()?.milliseconds ?: 1000.milliseconds,
+                clientFactory = clientFactory
             )
             val publishResponse = connector.putEvents(batchUow.publishRequest)
             return batchUow.copy(publishResponse = publishResponse)
