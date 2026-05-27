@@ -5,11 +5,16 @@ import io.github.huherto.awsLambdaStream.Event
 import io.github.huherto.awsLambdaStream.EventCodec
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
-import kotlinx.coroutines.flow.*
+import io.github.huherto.awsLambdaStream.queries.ClaimCheckRedeemer
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.mapNotNull
 
 class KinesisAdapter(
     private val faultManager: FaultManager,
     private val eventCodec: EventCodec,
+    private val claimCheckRedeemer: ClaimCheckRedeemer? = null
 ) {
 
     fun  fromKinesis(kinesisEvent: KinesisEvent): Flow<UnitOfWork> {
@@ -31,9 +36,14 @@ class KinesisAdapter(
                         event.id = (record.eventID)
                     }
                     uow.copy( event = event, sequenceNumber = record.kinesis?.sequenceNumber)
-                }.map { uow ->
-                    // TODO: call claim_check processing
-                    uow
+                }.let { flow ->
+                    if (claimCheckRedeemer != null) {
+                        with(claimCheckRedeemer) {
+                            flow.redeemClaimCheck()
+                        }
+                    } else {
+                        flow
+                    }
                 }
         }
 
