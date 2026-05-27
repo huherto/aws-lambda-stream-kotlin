@@ -34,7 +34,8 @@ class EventBridgePublisher(
     val parallel: Int = (envConfig.publishParallel() ?: envConfig.parallel()?: 8),
     val endpointId: String? = envConfig.busEndPointId(),
     val handleErrors: Boolean = true,
-    val clientFactory: EventBridgeClientFactory = DefaultEventBridgeClientFactory(envConfig = envConfig)
+    val clientFactory: EventBridgeClientFactory = DefaultEventBridgeClientFactory(envConfig = envConfig),
+    val claimCheckStore: ClaimCheckStore? = null,
 ) : EventPublisher {
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -44,6 +45,15 @@ class EventBridgePublisher(
             .map { toPublishRequestEntry(it) }
             .chunked(batchSize)
             .map { batchedList -> UnitOfWork(pipeline = batchedList.first().pipeline, batch = batchedList) }
+            .let { flow ->
+                if (claimCheckStore != null) {
+                    with(claimCheckStore) {
+                        storeClaimCheck(flow)
+                    }
+                } else {
+                    flow
+                }
+            }
             .map { toPublishRequest(it) }
             .flatMapMerge(parallel) { batchUow ->
                 flow {

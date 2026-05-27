@@ -36,33 +36,37 @@ class ClaimCheckStore(
         val key: String,
     )
 
-    data class ClaimCheckEvent(
-        override var id: String?,
+    class ClaimCheckEvent(
+        eventId: String?,
         private val type: String,
-        override var partitionKey: String?,
-        override var timestamp: Long?,
-        override var tags: Map<String, String>?,
+        eventPartitionKey: String?,
+        eventTimestamp: Long?,
+        eventTags: Map<String, String>?,
         val s3: ClaimCheck,
-        override var raw: Any? = null,
-        override var eem: Any? = null,
-        override var triggers: List<io.github.huherto.awsLambdaStream.EventReference>? = null,
     ) : BaseEvent() {
+        init {
+            id = eventId
+            partitionKey = eventPartitionKey
+            timestamp = eventTimestamp
+            tags = eventTags
+        }
+
         override fun eventType(): String = type
 
         override fun encoded(): String {
             return """
-                {
-                  "id": ${id?.let { "\"$it\"" }},
-                  "type": "$type",
-                  "partitionKey": ${partitionKey?.let { "\"$it\"" }},
-                  "timestamp": $timestamp,
-                  "tags": $tags,
-                  "s3": {
-                    "bucket": "${s3.bucket}",
-                    "key": "${s3.key}"
-                  }
-                }
-            """.trimIndent()
+            {
+              "id": ${id?.let { "\"$it\"" }},
+              "type": "$type",
+              "partitionKey": ${partitionKey?.let { "\"$it\"" }},
+              "timestamp": $timestamp,
+              "tags": $tags,
+              "s3": {
+                "bucket": "${s3.bucket}",
+                "key": "${s3.key}"
+              }
+            }
+        """.trimIndent()
         }
     }
 
@@ -82,11 +86,11 @@ class ClaimCheckStore(
         bucket: String,
     ): ClaimCheckEvent {
         return ClaimCheckEvent(
-            id = event.id,
+            eventId = event.id,
             type = event.eventType(),
-            partitionKey = event.partitionKey,
-            timestamp = event.timestamp,
-            tags = event.tags,
+            eventPartitionKey = event.partitionKey,
+            eventTimestamp = event.timestamp,
+            eventTags = event.tags,
             s3 = ClaimCheck(
                 bucket = bucket,
                 key = formatKey(event),
