@@ -2,11 +2,16 @@ package io.github.huherto.awsLambdaStream.from
 
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
 import io.github.huherto.awsLambdaStream.*
+import io.github.huherto.awsLambdaStream.queries.ClaimCheckRedeemer
 import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
+import io.mockk.every
+import io.mockk.mockk
 import io.mockk.spyk
+import io.mockk.verify
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
@@ -110,6 +115,45 @@ class KinesisAdapterTest {
 
         faultManager.getFaults().shouldHaveSize(1)
         faultManager.getFaults()[0].failureException?.uow?.record shouldBe invalidRecord
+    }
+
+    @Test
+    fun `fromKinesis should redeem claim checks when claim check redeemer is configured`() : Unit = runBlocking {
+        // Arrange
+        val claimCheckRedeemer = mockk<ClaimCheckRedeemer>()
+        val adapter = KinesisAdapter(faultManager, eventCodec, claimCheckRedeemer)
+        val event = MyEventA(foo = "claim-foo", bar = "claim-bar")
+        val record = createKinesisRecord(
+            eventId = "kinesis-event-with-claim-check",
+            sequenceNumber = "sequence-with-claim-check",
+            payload = event.encoded(),
+        )
+        val kinesisEvent = KinesisEvent().apply {
+            records = listOf(record)
+        }
+
+        with(claimCheckRedeemer) {
+            every {
+                any<Flow<UnitOfWork>>().redeemClaimCheck()
+            } answers {
+                firstArg()
+            }
+        }
+
+        // Act
+        val results = adapter.fromKinesis(kinesisEvent).toList()
+
+        // Assert
+        results.shouldHaveSize(1)
+        results[0].record shouldBe record
+        results[0].event shouldBe event
+        results[0].sequenceNumber shouldBe "sequence-with-claim-check"
+
+        with(claimCheckRedeemer) {
+            verify(exactly = 1) {
+                any<Flow<UnitOfWork>>().redeemClaimCheck()
+            }
+        }
     }
 
     private fun createKinesisRecord(
