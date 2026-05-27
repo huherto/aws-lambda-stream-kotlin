@@ -54,7 +54,6 @@ class ClaimCheckRedeemer(
 
     private fun clearClaimCheck(uow: UnitOfWork): UnitOfWork {
         if (uow.s3.getRequest == null) {
-            // Backwards compatibility with the TypeScript behavior:
             // when no claim-check request was created, remove transient S3 response state too.
             return uow.copyS3 {
                 copy(

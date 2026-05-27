@@ -44,6 +44,8 @@ data class S3UnitOfWork(
     val getResponse: GetObjectResponse? = null,
     val getResponseText: String? = null,
     val getResponseBytes: ByteArray? = null,
+    val putRequest: PutObjectRequest? = null,
+    val putResponse: PutObjectResponse? = null,
     val listRequest: ListObjectsV2Request? = null,
     val listResponse: ListObjectsV2Response? = null,
     val listResponseObject: Object? = null,
