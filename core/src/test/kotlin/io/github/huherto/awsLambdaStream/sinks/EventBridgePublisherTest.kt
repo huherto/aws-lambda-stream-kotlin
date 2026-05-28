@@ -37,11 +37,7 @@ class EventBridgePublisherTest {
         @Test
         fun `should map correctly based on event presence`() {
             // Arrange
-//            val opt = EventBridgePublishOptions(
-//                envConfig = mockEnvConfig(),
-//                busName = "test-bus",
-//                source = "test-source"
-//            )
+
             val publisher = EventBridgePublisher(
                 mockEnvConfig(),
                 busName = "test-bus",
@@ -75,10 +71,7 @@ class EventBridgePublisherTest {
         @Test
         fun `should handle batch correctly based on entries presence`() {
             // Arrange
-//            val opt = EventBridgePublishOptions(
-//                envConfig = mockEnvConfig(),
-//                endpointId = "test-endpoint"
-//            )
+
             val publisher = EventBridgePublisher(mockEnvConfig(), endpointId = "test-endpoint")
 
             val entry1 = PutEventsRequestEntry.Companion { source = "source1" }
