@@ -8,6 +8,7 @@ import io.github.huherto.awsLambdaStream.connectors.DefaultEventBridgeClientFact
 import io.github.huherto.awsLambdaStream.connectors.EventBridgeClientFactory
 import io.github.huherto.awsLambdaStream.connectors.EventBridgeConnector
 import io.github.huherto.awsLambdaStream.connectors.RetryConfig
+import io.github.huherto.awsLambdaStream.utils.adornStandardTags
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlin.time.Duration.Companion.milliseconds
@@ -42,6 +43,7 @@ class EventBridgePublisher(
     override fun publish(flow: Flow<UnitOfWork>): Flow<UnitOfWork> {
         // TODO: Do these need to have a  FaultManager?
         return flow
+            .map { adornStandardTags(envConfig, it) }
             .map { toPublishRequestEntry(it) }
             .chunked(batchSize)
             .map { batchedList -> UnitOfWork(pipeline = batchedList.first().pipeline, batch = batchedList) }

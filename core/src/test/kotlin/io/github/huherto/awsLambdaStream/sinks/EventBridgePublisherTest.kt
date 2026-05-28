@@ -20,7 +20,6 @@ import org.junit.jupiter.api.Test
 
 class EventBridgePublisherTest {
 
-
     fun mockEnvConfig() : EnvironmentConfig {
         val spy = spyk(EnvironmentConfig())
         every { spy.awsRegion() } returns "us-east-1"
@@ -153,11 +152,11 @@ class EventBridgePublisherTest {
                 source = "flow-source",
                 batchSize = 2)
 
-            val mockEvent1 = mockk<Event>()
+            val mockEvent1 = spyk<Event>()
             every { mockEvent1.eventType() } returns "type1"
             every { mockEvent1.encoded() } returns "data1"
 
-            val mockEvent2 = mockk<Event>()
+            val mockEvent2 = spyk<Event>()
             every { mockEvent2.eventType() } returns "type2"
             every { mockEvent2.encoded() } returns "data2"
 
