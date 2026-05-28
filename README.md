@@ -29,5 +29,5 @@ will be added to demonstrate interoperability and usage from Java code.
 
 - [core](core) — Framework code and reusable components.
 - [examples/sut](examples/sut) — Example application: Shipment Unit Tracking.
-- [examples/sut/README.md]() — Explains how to run the example application.
+- [examples/sut/README.md](examples/sut/README.md) — Explains how to run the example application.
 - [docs](docs) — Documentation for the framework.
