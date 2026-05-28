@@ -18,6 +18,26 @@ class EnvironmentConfig {
         return System.getenv("AWS_REGION")
     }
 
+    fun region(): String? {
+        return System.getenv("AWS_REGION")
+    }
+
+    fun accountName(): String? {
+        return System.getenv("ACCOUNT_NAME")
+    }
+
+    fun stage(): String? {
+        return System.getenv("STAGE")
+    }
+
+    fun serverlessStage(): String? {
+        return System.getenv("SERVERLESS_STAGE")
+    }
+
+    fun service(): String? {
+        return System.getenv("SERVICE")
+    }
+
     fun awsDefaultRegion(): String? {
         return System.getenv("AWS_DEFAULT_REGION")
     }
