@@ -9,6 +9,7 @@ import aws.smithy.kotlin.runtime.net.url.Url
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.copyS3
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapConcat
 import kotlinx.coroutines.flow.flow
@@ -163,6 +164,7 @@ fun Flow<UnitOfWork>.getObjectFromS3AsByteArray(
  * This Kotlin version reads the object as text, splits it, filters it,
  * and emits one UnitOfWork per matching part.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 fun Flow<UnitOfWork>.getObjectFromS3AsStream(
     s3Connector: S3Connector,
     delimiter: String = "\n",
@@ -192,6 +194,7 @@ fun Flow<UnitOfWork>.getObjectFromS3AsStream(
  *
  * This expects getResponseBytes to already contain the S3 object body.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 fun Flow<UnitOfWork>.splitS3Object(
     delimiter: String = "\n",
 ): Flow<UnitOfWork> = this.flatMapConcat { uow ->
@@ -231,6 +234,7 @@ fun Flow<UnitOfWork>.listObjectsFromS3(
  *
  * Emits one UnitOfWork per S3 object across all pages.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 fun Flow<UnitOfWork>.pageObjectsFromS3(
     s3Connector: S3Connector,
     debug: (Any?) -> Unit = {},

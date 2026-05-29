@@ -5,6 +5,7 @@ import aws.sdk.kotlin.services.s3.model.ListObjectsV2Request
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.S3Connector
 import io.github.huherto.awsLambdaStream.copyS3
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapConcat
 import kotlinx.coroutines.flow.flow
@@ -64,6 +65,7 @@ fun Flow<UnitOfWork>.getObjectFromS3(
         }
     }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 fun Flow<UnitOfWork>.getObjectFromS3AsStream(
     s3Connector: S3Connector,
     delimiter: String = "\n",
@@ -105,6 +107,7 @@ fun Flow<UnitOfWork>.getObjectFromS3AsByteArray(
         }
     }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 fun Flow<UnitOfWork>.splitS3Object(
     delimiter: String = "\n",
 ): Flow<UnitOfWork> =
@@ -143,6 +146,7 @@ fun Flow<UnitOfWork>.listObjectsFromS3(
         }
     }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 fun Flow<UnitOfWork>.pageObjectsFromS3(
     s3Connector: S3Connector,
     debug: (Any?) -> Unit = {},

@@ -25,17 +25,17 @@ import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeVal
 class EvaluatePipelineTest {
 
     class SimpleEventCodec : EventCodec {
-        override fun decode(text: String): Event {
+        override fun decode(eventAsString: String): Event {
             val jsonEvent: JsonEvent = try {
-                JsonEvent(text)
+                JsonEvent(eventAsString)
             } catch (e: Exception) {
                 throw e
             }
             return jsonEvent
         }
 
-        override fun encode(value: Event): String {
-            return value.asJson()
+        override fun encode(event: Event): String {
+            return event.asJson()
         }
     }
 

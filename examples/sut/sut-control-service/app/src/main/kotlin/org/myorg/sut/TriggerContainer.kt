@@ -49,7 +49,8 @@ class TriggerContainer(
                 val event = uow.event as? TrackedUnitEvent
                 event?.entity?.id ?: "no-correlation-key"
             },
-            eventFilter = EventFilters.classes(TrackedUnitEvent::class),
+            // eventFilter = EventFilters.name(TrackedUnitEvent.SHIPMENT_CREATED),
+            eventCodec = TrackedUnitEventCodec,
             eventsMicrostore = eventsMicrostore,
         )
     }
