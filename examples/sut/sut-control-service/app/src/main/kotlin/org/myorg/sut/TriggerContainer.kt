@@ -45,11 +45,12 @@ class TriggerContainer(
         CorrelatePipeline(
             id = "corre1",
             envConfig = envConfig,
-            correlationKey = { uow ->
+            correlationKeySupplier = { uow ->
                 val event = uow.event as? TrackedUnitEvent
-                event?.entity?.id ?: "no-correlation-key"
+                event?.entity?.id ?: throw RuntimeException(
+                    "Entity id is not set in TrackedUnitEvent"
+                )
             },
-            // eventFilter = EventFilters.name(TrackedUnitEvent.SHIPMENT_CREATED),
             eventCodec = TrackedUnitEventCodec,
             eventsMicrostore = eventsMicrostore,
         )

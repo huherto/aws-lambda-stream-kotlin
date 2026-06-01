@@ -35,7 +35,7 @@ const val CORREL = "CORREL"
  * @param id Unique identifier for this pipeline.
  * @param onContentType Predicate used to accept or reject a [UnitOfWork] after event filtering.
  * @param eventFilter Event-level filter applied after the source record has been normalized.
- * @param correlationKey Function used to derive the key under which the event is correlated.
+ * @param correlationKeySupplier Function used to derive the key under which the event is correlated.
  * Must be configured before the pipeline processes records.
  * @param correlationKeySuffix Optional suffix appended to the correlation key. Use this when the
  * same logical key needs to support multiple independent rule sets.
@@ -48,11 +48,11 @@ class CorrelatePipeline(
     id: String,
     val onContentType: (UnitOfWork) -> Boolean = { true },
     val eventFilter: EventFilter = EventFilter.Any,
-    val correlationKey: ((UnitOfWork) -> String)? = null,
+    val correlationKeySupplier: ((UnitOfWork) -> String),
     val correlationKeySuffix: String = "",
     val envConfig: EnvironmentConfig,
     var eventsMicrostore: EventsMicrostore,
-    val eventCodec: EventCodec? = null,
+    val eventCodec: EventCodec,
     val expire: Boolean = false,
 ) : Pipeline(id) {
 
@@ -75,22 +75,10 @@ class CorrelatePipeline(
 
     /**
      * Deserializes a persisted event payload.
-     *
-     * If [unmarshall] is configured, it is used as the custom decoder. Otherwise, the payload is parsed
-     * as a [JsonEvent].
-     *
      * @throws Exception when the payload cannot be parsed.
      */
-    internal fun defaultUnmarshall(eventAsString: String) : Event {
-        if (eventCodec != null) return eventCodec.decode(eventAsString)
-
-        val jsonEvent: JsonEvent = try {
-            JsonEvent(eventAsString)
-        } catch (e: Exception) {
-            logger.error {"Failed to parse event: $eventAsString, $e" }
-            throw e
-        }
-        return jsonEvent
+    internal fun decodeEvent(eventAsString: String) : Event {
+        return eventCodec.decode(eventAsString)
     }
 
     /**
@@ -103,9 +91,11 @@ class CorrelatePipeline(
         val raw = uow.event?.raw as? RecordPair
         val rawNew = raw?.new ?: RecordImage(mapOf())
         val eventAsString = rawNew.getEvent()?: "{}"
-        val eventAsObject = defaultUnmarshall(eventAsString)
+        val eventAsObject = decodeEvent(eventAsString)
         val record = uow.record as? DynamodbEvent.DynamodbStreamRecord
-
+        if (eventAsObject.id == null) {
+            logger.warn { "Event id is null: $eventAsString" }
+        }
         return uow.copy(
             meta = mapOf(
                 "sequenceNumber" to record?.dynamodb?.sequenceNumber,
@@ -122,13 +112,12 @@ class CorrelatePipeline(
      * The configured [correlationKeySuffix] is appended to the key so separate rule sets can reuse the
      * same base key without sharing correlation records.
      *
-     * @throws IllegalArgumentException when [correlationKey] is not configured.
+     * @throws IllegalArgumentException when [correlationKeySupplier] is not configured.
      */
     private fun addCorrelationKey(uow: UnitOfWork) : UnitOfWork {
-        require(correlationKey != null) { "correlationKey must be set" }
-
+        val correlationKey = correlationKeySupplier(uow)
         // use a suffix when you need the same key for different sets of rules
-        val key = correlationKey(uow) + correlationKeySuffix
+        val key = correlationKeySupplier(uow) + correlationKeySuffix
         return uow.copy(key = key)
     }
 

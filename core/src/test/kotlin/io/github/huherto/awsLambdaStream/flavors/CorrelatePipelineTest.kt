@@ -96,6 +96,8 @@ class CorrelatePipelineTest {
         val pipeline = CorrelatePipeline(
             "test-pipeline",
             envConfig = envConfig,
+            correlationKeySupplier = { "test-correlation-key" },
+            eventCodec = FakeEventCodec(),
             eventsMicrostore = createEventsMicrostore()
         )
         
@@ -143,6 +145,8 @@ class CorrelatePipelineTest {
         val pipeline = CorrelatePipeline(
             "test-pipeline",
             envConfig = envConfig,
+            correlationKeySupplier = { "test-correlation-key" },
+            eventCodec = FakeEventCodec(),
             eventsMicrostore = createEventsMicrostore()
         )
 
@@ -166,7 +170,7 @@ class CorrelatePipelineTest {
         resultPopulated.meta?.get("sequenceNumber") shouldBe "seq-123"
         resultPopulated.meta?.get("ttl") shouldBe "999"
         resultPopulated.meta?.get("data") shouldBe "test-data"
-        resultPopulated.event!!::class.simpleName shouldBe "JsonEvent"
+        resultPopulated.event!!::class.simpleName shouldBe "FakeEvent"
     }
 
     @Test
@@ -177,6 +181,8 @@ class CorrelatePipelineTest {
             envConfig = envConfig,
             eventsMicrostore = createEventsMicrostore(),
             expire = true,
+            correlationKeySupplier = { "test-correlation-key" },
+            eventCodec = FakeEventCodec(),
             correlationKeySuffix = "-suffix"
         )
 
@@ -225,7 +231,7 @@ class CorrelatePipelineTest {
         val faultManager = FaultManager(envConfig, eventPublisher = EventPublisherInMemory())
         val pipeline = CorrelatePipeline(
             id = "test-pipeline",
-            correlationKey = { "test-correlation-key" },
+            correlationKeySupplier = { "test-correlation-key" },
             envConfig = envConfig,
             eventFilter = EventFilters.classes(FakeEvent::class),
             eventCodec = FakeEventCodec(),
@@ -269,7 +275,8 @@ class CorrelatePipelineTest {
         val pipeline = CorrelatePipeline(
             id = "test-pipeline",
             envConfig = envConfig,
-            correlationKey = { "test-correlation-key" },
+            correlationKeySupplier = { "test-correlation-key" },
+            eventCodec = FakeEventCodec(),
             eventsMicrostore = createEventsMicrostore(),
         )
 
@@ -299,7 +306,8 @@ class CorrelatePipelineTest {
         val pipeline = CorrelatePipeline(
             id = "test-pipeline",
             envConfig = envConfig,
-            correlationKey = { "test-correlation-key" },
+            correlationKeySupplier = { "test-correlation-key" },
+            eventCodec = FakeEventCodec(),
             onContentType = { false }, // This will cause the event to be filtered mid-pipeline
             eventsMicrostore = createEventsMicrostore(),
         )
