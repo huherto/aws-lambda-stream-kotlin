@@ -28,11 +28,6 @@ fun EventFaultMonitorStack.newLogStream(logGroup: LogGroup): LogStream =
         .removalPolicy(RemovalPolicy.DESTROY)
         .build()
 
-fun EventFaultMonitorStack.newBucket(): Bucket =
-    Bucket.Builder.create(this, "Bucket")
-        .bucketName(bucketName)
-        .removalPolicy(RemovalPolicy.RETAIN)
-        .build()
 
 fun EventFaultMonitorStack.newTransformLambda(): Function =
     Function.Builder.create(this, "TransformLambdaFunction")

@@ -1,6 +1,5 @@
 package org.myorg.sut
 
-import software.amazon.awscdk.Aws
 import software.amazon.awscdk.services.lambda.Code
 import software.amazon.awscdk.services.lambda.Runtime
 import software.constructs.Construct
@@ -9,7 +8,7 @@ class EventFaultMonitorStack(scope: Construct, serviceProps: ServiceProps) : Bas
 
     val logGroupName = "/aws/kinesisfirehose/${service()}-${stage()}-DeliveryStream"
     val busName = "${subsys()}-event-hub-${stage()}-bus"
-    val bucketName = "${service()}-${stage()}-${Aws.ACCOUNT_ID}-${Aws.REGION}"
+    val bucketName = "${org()}-${service()}-${stage()}-${regionName()}"
     val jarFile = Code.fromAsset("../app/build/libs/sut-event-fault-monitor.jar")
     val runtime: Runtime = Runtime.JAVA_21!!
 
@@ -23,7 +22,10 @@ class EventFaultMonitorStack(scope: Construct, serviceProps: ServiceProps) : Bas
 
     init {
         newEventRule(deliveryStream, eventBridgeRole)
+        newBucketOutputs(bucket)
+
+        // Enable these after the destination bucket exists in the mirror region.
+        // val bucketReplicationRole = newBucketReplicationRole(bucket)
+        // newBucketReplicationPolicy(bucket)
     }
-
-
 }
