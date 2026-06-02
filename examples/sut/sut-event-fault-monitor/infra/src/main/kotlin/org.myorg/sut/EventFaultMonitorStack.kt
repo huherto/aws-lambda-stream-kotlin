@@ -15,6 +15,7 @@ class EventFaultMonitorStack(scope: Construct, serviceProps: ServiceProps) : Bas
     val logGroup = newLogGroup()
     val logStream = newLogStream(logGroup)
     val bucket = newBucket()
+    val topic = newTopic()
     val transformLambda = newTransformLambda()
     val deliveryRole = newDeliveryRole(bucket, logGroup, transformLambda)
     val deliveryStream = newDeliveryStream(bucket, deliveryRole, logGroup, logStream, transformLambda)
@@ -22,7 +23,9 @@ class EventFaultMonitorStack(scope: Construct, serviceProps: ServiceProps) : Bas
 
     init {
         newEventRule(deliveryStream, eventBridgeRole)
+        grantTopicPublish(topic, transformLambda)
         newBucketOutputs(bucket)
+        newTopicOutputs(topic)
 
         // Enable these after the destination bucket exists in the mirror region.
         // val bucketReplicationRole = newBucketReplicationRole(bucket)
