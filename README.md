@@ -21,9 +21,17 @@ building reusable libraries and components. It is also a great fit for serverles
 choice for this framework. In particular, support for coroutines and the Flow framework make it a natural fit for building
 [serverless pipelines](docs/KotlinCoRoutinesAndFlow.md)
 
-
 A key goal of this project is to make these components usable by Java developers as well. A Java-based example application 
 will be added to demonstrate interoperability and usage from Java code.
+
+## Documentation Contents
+
+* [Architectural Approach](docs/ArchitecturalApproach.md)
+* [Understanding Events and Event Types](docs/Events.md)
+* [What types of Services are there](docs/AutonomousServiceTypes.md)
+* [Benefits of Kotlin CoRoutines and the Flow Framework](docs/KotlinCoRoutinesAndFlow.md)
+* [How Claim Check works](docs/ClaimCheck.md)
+* [How the Events Microstore works](docs/EventsMicrostore.md)
 
 ## High Level Project Structure
 
@@ -31,4 +39,4 @@ will be added to demonstrate interoperability and usage from Java code.
 - [tools](tools) — Utilities for managing events.
 - [examples/sut](examples/sut) — Example application: Shipment Unit Tracking.
 - [examples/sut/README.md](examples/sut/README.md) — Explains how to run the example application.
-- [docs](docs) — Documentation for the framework.
+
