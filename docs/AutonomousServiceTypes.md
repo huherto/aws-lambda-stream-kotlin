@@ -5,6 +5,8 @@
 - [Control Services](#control-services)
 - [Event Hubs](#event-hubs)
 - [External Service Gateways](#external-service-gateways)
+  - [Ingress Gateways](#ingress-gateways)
+  - [Egress Gateways]( #egress-gateways)
 - [Backends for Frontends (BFFs)](#backends-for-frontends-bffs)
 - [Fault Monitoring Services](#fault-monitoring-services)
 
@@ -42,11 +44,16 @@ External Service Gateways act as an Anticorruption Layer (ACL), translating betw
 
 They may receive events from other services, publish events to other other services, or interact with external APIs.
 
-External Service Gateways act as an Anticorruption Layer (ACL), translating between internal events, external events, and external APIs. This prevents external models or contracts from leaking into the internal architecture.
-
 There are two types of External Service Gateways:
-- *Ingress Gateways* – These services are used to receive events from external systems and publish them to the internal system. They convert the external event format to the internal event format.
-- *Egress Gateways* – These services are used to publish events to external systems. They convert the internal event format to the external event format. Or they convert an internal event to a call to an external API.
+
+### Ingress Gateways
+
+These services are used to receive events from external systems and publish them to the internal system. They convert the external event format to the internal event format.
+
+### Egress Gateways
+
+These services are used to publish events to external systems. They convert the internal event format to the external event format. Or they convert an internal event to a call to an external API.
+
 
 ## Backends for Frontends (BFFs)
 
