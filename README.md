@@ -25,9 +25,10 @@ choice for this framework. In particular, support for coroutines and the Flow fr
 A key goal of this project is to make these components usable by Java developers as well. A Java-based example application 
 will be added to demonstrate interoperability and usage from Java code.
 
-## Project Structure
+## High Level Project Structure
 
 - [core](core) — Framework code and reusable components.
+- [tools](tools) — Utilities for managing events.
 - [examples/sut](examples/sut) — Example application: Shipment Unit Tracking.
 - [examples/sut/README.md](examples/sut/README.md) — Explains how to run the example application.
 - [docs](docs) — Documentation for the framework.
