@@ -1,4 +1,4 @@
-package io.gthub.huherto.awsLambdaStream
+package io.github.huherto.awsLambdaStream
 
 import aws.sdk.kotlin.services.lambda.LambdaClient
 import aws.sdk.kotlin.services.lambda.model.InvocationType
@@ -249,7 +249,7 @@ private suspend fun main() {
     println("======================================")
 }
 
-private fun filterByFunctionName(argv: Args): (UnitOfWork) -> Boolean {
+internal fun filterByFunctionName(argv: Args): (UnitOfWork) -> Boolean {
     return { uow ->
         if (argv.functionname == "*") {
             true
@@ -261,7 +261,7 @@ private fun filterByFunctionName(argv: Args): (UnitOfWork) -> Boolean {
     }
 }
 
-private fun hasRecord(uow: UnitOfWork): Boolean {
+internal fun hasRecord(uow: UnitOfWork): Boolean {
     val uowJson = uow.event?.jsonObject("uow") ?: return false
 
     if (uowJson["record"] != null) {
@@ -274,7 +274,7 @@ private fun hasRecord(uow: UnitOfWork): Boolean {
     return first["record"] != null
 }
 
-private fun withInvokeRequest(
+internal fun withInvokeRequest(
     uow: UnitOfWork,
     argv: Args,
 ): UnitOfWork {
@@ -371,7 +371,7 @@ private suspend fun invokeLambdaRateLimited(
     return results
 }
 
-private fun errors(
+internal fun errors(
     error: Throwable,
     uow: UnitOfWork,
 ): UnitOfWork {
@@ -384,7 +384,7 @@ private fun errors(
     return uow.copy(err = error)
 }
 
-private fun count(
+internal fun count(
     counters: Counters,
     uow: UnitOfWork,
 ): Counters {
@@ -615,7 +615,7 @@ private suspend fun getObjectFromS3(
     }
 }
 
-private fun splitLines(uow: UnitOfWork): List<UnitOfWork> {
+internal fun splitLines(uow: UnitOfWork): List<UnitOfWork> {
     val text = uow.getResponseLine ?: return listOf(uow)
 
     return text
