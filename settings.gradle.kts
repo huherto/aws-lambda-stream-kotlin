@@ -10,6 +10,9 @@
 rootProject.name = "aws-lambda-stream-kotlin"
 
 include("core")
+
+include(":tools:resubmit-events")
+
 include("examples:common-infra")
 include("examples:sut:common-app")
 include("examples:sut:sut-event-hub")
@@ -25,5 +28,4 @@ include("examples:sut:sut-event-fault-monitor")
 include("examples:sut:sut-event-fault-monitor:app")
 include("examples:sut:sut-event-fault-monitor:infra")
 include("examples:sut:integration-test")
-
 include("examples:sut:sut-shipment-bff")

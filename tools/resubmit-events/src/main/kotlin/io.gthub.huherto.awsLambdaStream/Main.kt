@@ -1,4 +1,4 @@
-package org.myorg.sut
+package io.gthub.huherto.awsLambdaStream
 
 import aws.sdk.kotlin.services.lambda.LambdaClient
 import aws.sdk.kotlin.services.lambda.model.InvocationType
@@ -10,9 +10,11 @@ import aws.smithy.kotlin.runtime.content.toByteArray
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
+import kotlinx.datetime.TimeZone
 import kotlinx.datetime.number
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.json.*
+import kotlinx.serialization.serializer
 import java.io.File
 import kotlin.math.floor
 import kotlin.time.Clock
@@ -99,7 +101,7 @@ private fun toPrettyString(data: Any?): String {
     return when (data) {
         null -> "null"
         is Args -> json.encodeToString(
-            kotlinx.serialization.serializer(),
+            serializer(),
             mapOf(
                 "bucket" to data.bucket,
                 "region" to data.region,
@@ -180,7 +182,7 @@ private fun JsonObject.intValue(name: String): Int? {
 
 @OptIn(ExperimentalTime::class)
 private fun loadArgs(): Args {
-    val now = Clock.System.now().toLocalDateTime(kotlinx.datetime.TimeZone.UTC)
+    val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
     val defaultPrefix = "%04d/%02d/%02d/".format(now.year, now.month.number, now.day)
     val config = findUpConfigFile()
         ?.readText()
@@ -339,7 +341,7 @@ private suspend fun invokeLambdaRateLimited(
 
     for (chunk in chunks) {
         val invoked = chunk.map { uow ->
-            kotlinx.coroutines.GlobalScope.async(Dispatchers.IO) {
+            GlobalScope.async(Dispatchers.IO) {
                 semaphore.withPermit {
                     try {
                         val request = uow.invokeRequest
@@ -464,7 +466,7 @@ private suspend fun head(
     val getSemaphore = Semaphore(argv.parallel)
 
     return listed.map { uow ->
-        kotlinx.coroutines.GlobalScope.async(Dispatchers.IO) {
+        GlobalScope.async(Dispatchers.IO) {
             getSemaphore.withPermit {
                 val key = uow.listResponse?.key
                     ?: error("Missing listed object key")
@@ -515,7 +517,7 @@ private suspend fun pageObjectsFromS3(
     val semaphore = Semaphore(parallel)
 
     return uows.map { uow ->
-        kotlinx.coroutines.GlobalScope.async(Dispatchers.IO) {
+        GlobalScope.async(Dispatchers.IO) {
             semaphore.withPermit {
                 listAllObjectsForPrefix(s3, uow)
             }
