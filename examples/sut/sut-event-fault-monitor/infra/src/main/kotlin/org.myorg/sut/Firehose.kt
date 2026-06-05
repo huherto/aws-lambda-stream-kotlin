@@ -122,6 +122,7 @@ fun EventFaultMonitorStack.newDeliveryStream(
     transformLambda: Function,
 ): CfnDeliveryStream =
     CfnDeliveryStream.Builder.create(this, "DeliveryStream")
+        .deliveryStreamName(deliveryStreamName)
         .deliveryStreamType("DirectPut")
         .extendedS3DestinationConfiguration(
             CfnDeliveryStream.ExtendedS3DestinationConfigurationProperty.builder()

@@ -19,6 +19,7 @@ export CDK_DISABLE_LEGACY_EXPORT_WARNING=1 # Disable annoying warning.
 # This is the logical order to deploy the stacks.
 STACKS=(
 	"sut-event-hub"
+	"sut-event-fault-monitor"
 	"sut-control-service"
 	"sut-shipment-bff"
 )

@@ -7,6 +7,7 @@ import software.constructs.Construct
 class EventFaultMonitorStack(scope: Construct, serviceProps: ServiceProps) : BaseStack(scope, serviceProps) {
 
     val logGroupName = "/aws/kinesisfirehose/${service()}-${stage()}-DeliveryStream"
+    val deliveryStreamName = "${service()}-${stage()}-DeliveryStream"
     val busName = "${subsys()}-event-hub-${stage()}-bus"
     val bucketName = "${org()}-${service()}-${stage()}-${regionName()}"
     val jarFile = Code.fromAsset("../app/build/libs/sut-event-fault-monitor.jar")

@@ -9,6 +9,7 @@ services:
     environment:
       # LocalStack configuration: https://docs.localstack.cloud/references/configuration/
       - DEBUG=${DEBUG:-0}
+      # - DEBUG=1 LS_LOG=debug
       # - LAMBDA_JAVA_OPTS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
       # - LAMBDA_DOCKER_FLAGS=-p 127.0.0.1:5005:5005 -e DEBUG=1
       - AWS_ACCESS_KEY_ID=test
