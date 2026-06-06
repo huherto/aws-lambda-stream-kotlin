@@ -2,13 +2,11 @@
 
 LOGS=./.awslocal_logs
 mkdir -p $LOGS
-sleep 5 # Wait for the output to be ready to be retrieved.
 
 # I use lnav to view the logs. This prefilter makes them easier to parse.
 prefilter() {
 	jq -c '.events[]'
 }
-
 
 awslocal logs filter-log-events --log-group-name "/aws/lambda/sut-control-service-local-listener" | prefilter > $LOGS/control-service-listener.json
 awslocal logs filter-log-events --log-group-name "/aws/lambda/sut-control-service-local-trigger"  | prefilter > $LOGS/control-service-trigger.json
@@ -17,3 +15,4 @@ awslocal logs filter-log-events --log-group-name "/aws/events/sut-event-hub-loca
 awslocal logs filter-log-events --log-group-name "/aws/lambda/sut-shipment-bff-local-listener" | prefilter > $LOGS/shipment-bff-listener.json
 awslocal logs filter-log-events --log-group-name "/aws/lambda/sut-shipment-bff-local-restapi" | prefilter > $LOGS/shipment-bff-restapi.json
 awslocal logs filter-log-events --log-group-name "/aws/lambda/sut-shipment-bff-local-trigger" | prefilter > $LOGS/shipment-bff-trigger.json
+awslocal logs filter-log-events --log-group-name "/aws/kinesisfirehose/sut-event-fault-monitor-local-DeliveryStream" | prefilter > $LOGS/event-fault-monitor.json

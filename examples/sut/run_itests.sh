@@ -23,6 +23,7 @@ else
 fi
 GW_STATUS=$?
 
+sleep 5 # Give it a bit of time to complete logging.
 ./export_awslogs.sh
 
 exit $GW_STATUS

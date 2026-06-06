@@ -1,0 +1,39 @@
+package org.myorg.sut
+
+import kotlinx.coroutines.runBlocking
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestInstance
+import org.myorg.sut.ShipmentTrackingDomain.createPoisonPillEvent
+import org.myorg.sut.ShipmentTrackingDomain.createTrackedUnit
+
+// Components tested.
+//   - Send poison event to event bridge. sut-event-hub-local-bus.
+//   - Event bridge will send event to kinesis stream. sut-event-hub-local-s1
+//   - sut-control-service-local-listener will read event from the kinesis stream.
+//   - sut-control-service-local-listener will reject the event and create a fault event, and send it event bridge.
+//   - Event bridge will send the event to the firehose delivery stream.
+//   - Firehose delivery stream will send the fault event to S3. myorg-sut-event-fault-monitor-local-us-east-1
+//   - We should verify that the fault event is stored in S3.
+//   - The Transform function should send a notification to SNS.
+//   - We should verify that the notification is sent to SNS.
+
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+class EventFaultMonitorITest {
+
+    private val logger = mu.KotlinLogging.logger {}
+
+    private val awsFacade = AwsFacade(eventTable = "sut-control-service-local-events")
+
+
+    @Test
+    fun sendPoisonPillEvent() : Unit = runBlocking {
+
+        val event = createPoisonPillEvent(createTrackedUnit())
+
+        awsFacade.putEvents(event)
+
+        awsFacade.verifyFaultEventStoredInS3()
+    }
+
+
+}

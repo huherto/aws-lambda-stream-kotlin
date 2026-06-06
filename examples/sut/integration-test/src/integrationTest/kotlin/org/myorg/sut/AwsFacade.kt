@@ -11,6 +11,7 @@ import aws.sdk.kotlin.services.kinesis.KinesisClient
 import aws.sdk.kotlin.services.kinesis.model.GetRecordsRequest
 import aws.sdk.kotlin.services.kinesis.model.GetShardIteratorRequest
 import aws.sdk.kotlin.services.kinesis.model.ShardIteratorType
+import aws.sdk.kotlin.services.s3.S3Client
 import aws.smithy.kotlin.runtime.net.url.Url
 import io.github.huherto.awsLambdaStream.Event
 import io.kotest.matchers.shouldBe
@@ -57,6 +58,18 @@ class AwsFacade(val entityTable : String? = null, val eventTable : String? = nul
 
     private val kinesisClient: KinesisClient by lazy {
         KinesisClient {
+            this.region = "us-east-1"
+            this.endpointUrl = endPointUrl()
+            credentialsProvider =
+                StaticCredentialsProvider {
+                    this.accessKeyId = "test"
+                    this.secretAccessKey = "test"
+                }
+        }
+    }
+
+    private val s3Client: S3Client by lazy {
+        S3Client {
             this.region = "us-east-1"
             this.endpointUrl = endPointUrl()
             credentialsProvider =
@@ -164,6 +177,13 @@ class AwsFacade(val entityTable : String? = null, val eventTable : String? = nul
         dynamoDbClient.close()
         eventBridgeClient.close()
         kinesisClient.close()
+        s3Client.close()
+    }
+
+    suspend fun verifyFaultEventStoredInS3() {
+        delay(3000.milliseconds)
+        val result = s3Client.listBuckets()
+        logger.info { "S3 buckets: $result" }
     }
 
 }

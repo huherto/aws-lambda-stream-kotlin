@@ -46,6 +46,7 @@ testing {
                 implementation(libs.aws.sdk.eventbridge)
                 implementation(libs.aws.sdk.kinesis)
                 implementation(libs.aws.sdk.lambda)
+                implementation(libs.aws.sdk.s3)
                 implementation(libs.kotest.assertions)
                 implementation(libs.kotlin.logging)
                 implementation(libs.kotlinx.serialization.json)
