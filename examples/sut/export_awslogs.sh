@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 
+
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+GW=$(realpath $SCRIPT_DIR/../../gradlew)
+
+cd $SCRIPT_DIR
+
 LOGS=./.awslocal_logs
 mkdir -p $LOGS
 
@@ -16,3 +22,5 @@ awslocal logs filter-log-events --log-group-name "/aws/lambda/sut-shipment-bff-l
 awslocal logs filter-log-events --log-group-name "/aws/lambda/sut-shipment-bff-local-restapi" | prefilter > $LOGS/shipment-bff-restapi.json
 awslocal logs filter-log-events --log-group-name "/aws/lambda/sut-shipment-bff-local-trigger" | prefilter > $LOGS/shipment-bff-trigger.json
 awslocal logs filter-log-events --log-group-name "/aws/kinesisfirehose/sut-event-fault-monitor-local-DeliveryStream" | prefilter > $LOGS/event-fault-monitor.json
+awslocal logs filter-log-events --log-group-name "/aws/lambda/sut-event-fault-monitor-local-transform" | prefilter > $LOGS/event-fault-monitor-transform.json
+

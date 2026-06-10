@@ -1,5 +1,8 @@
 package org.myorg.sut
 
+import io.github.huherto.awsLambdaStream.FaultEvent
+import io.github.huherto.awsLambdaStream.FaultException
+import io.github.huherto.awsLambdaStream.UnitOfWork
 import kotlin.math.pow
 import kotlin.random.Random
 
@@ -47,5 +50,15 @@ object ShipmentTrackingDomain {
         timestamp = System.currentTimeMillis()
         location = "poison-pill"
         entity = trackedUnit
+    }
+
+    class TestException(message: String) : RuntimeException(message, null, false, false)
+
+    fun createFaultEvent() = FaultEvent().apply {
+        id = "fault-" + generateRandomNumber()
+        timestamp = System.currentTimeMillis()
+        failureException = FaultException(UnitOfWork(), "",
+            TestException("Test exception"), enableSuppression = false, writableStackTrace = false
+        )
     }
 }

@@ -37,7 +37,7 @@ fun EventFaultMonitorStack.newTransformLambda(): Function =
     Function.Builder.create(this, "TransformLambdaFunction")
         .functionName("${service()}-${stage()}-transform")
         .code(jarFile)
-        .handler("org.myorg.sut.Transform::handleRequest")
+        .handler("org.myorg.sut.Transform2::handleRequest")
         .timeout(Duration.seconds(60))
         .memorySize(1024)
         .runtime(runtime)
@@ -189,7 +189,7 @@ fun EventFaultMonitorStack.newEventRule(
 
     val firehoseTarget = FirehoseDeliveryStream.Builder
         .create(importedDeliveryStream)
-        .message(RuleTargetInput.fromText("<aws.events.event>\n"))
+        .message(RuleTargetInput.fromEventPath("$.detail"))
         .build()
 
     return Rule.Builder.create(this, "EventRule")

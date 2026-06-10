@@ -85,7 +85,7 @@ class AwsFacade(val entityTable : String? = null, val eventTable : String? = nul
             PutEventsRequestEntry {
                 eventBusName = "sut-event-hub-local-bus"
                 detail = event.encoded()
-                detailType = "my-event"
+                detailType = event.eventType()
                 source = "integration-test"
             }
         }

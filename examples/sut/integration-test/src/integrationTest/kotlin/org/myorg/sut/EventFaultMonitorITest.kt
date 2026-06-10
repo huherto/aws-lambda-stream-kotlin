@@ -3,8 +3,7 @@ package org.myorg.sut
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
-import org.myorg.sut.ShipmentTrackingDomain.createPoisonPillEvent
-import org.myorg.sut.ShipmentTrackingDomain.createTrackedUnit
+import org.myorg.sut.ShipmentTrackingDomain.createFaultEvent
 
 // Components tested.
 //   - Send poison event to event bridge. sut-event-hub-local-bus.
@@ -24,16 +23,14 @@ class EventFaultMonitorITest {
 
     private val awsFacade = AwsFacade(eventTable = "sut-control-service-local-events")
 
-
     @Test
-    fun sendPoisonPillEvent() : Unit = runBlocking {
+    fun sendFaultEvent() : Unit = runBlocking {
 
-        val event = createPoisonPillEvent(createTrackedUnit())
+        val event = createFaultEvent()
 
         awsFacade.putEvents(event)
 
         awsFacade.verifyFaultEventStoredInS3()
     }
-
 
 }

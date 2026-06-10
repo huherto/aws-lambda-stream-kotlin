@@ -43,10 +43,18 @@ abstract class BaseEvent : Event {
     override var triggers: List<EventReference>? = null
 }
 
-class FaultException(
-    val uow: UnitOfWork,
-    cause: Throwable?
-) : RuntimeException( cause)
+class FaultException : RuntimeException {
+    val uow: UnitOfWork
+
+    constructor(uow: UnitOfWork, cause: Throwable?) : super(cause) {
+        this.uow = uow
+    }
+
+    constructor(uow: UnitOfWork, message: String, cause: Throwable?,enableSuppression: Boolean,
+                writableStackTrace: Boolean) : super(message, cause, enableSuppression, writableStackTrace) {
+        this.uow = uow
+    }
+}
 
 const val FAULT_EVENT_TYPE : String = "fault"
 

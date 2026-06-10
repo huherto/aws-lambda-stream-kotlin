@@ -4,17 +4,35 @@ import aws.sdk.kotlin.services.sns.SnsClient
 import aws.sdk.kotlin.services.sns.model.PublishRequest
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
+import com.amazonaws.services.lambda.runtime.RequestStreamHandler
 import com.amazonaws.services.lambda.runtime.events.KinesisFirehoseEvent
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
 import mu.KotlinLogging
 import java.io.ByteArrayInputStream
+import java.io.InputStream
+import java.io.OutputStream
 import java.nio.charset.StandardCharsets
 import java.time.Instant
 import java.time.ZoneId
 import java.util.*
 import java.util.zip.GZIPInputStream
+
+class Transform2 : RequestStreamHandler {
+    private val logger = KotlinLogging.logger {}
+
+    override fun handleRequest(
+        input: InputStream,
+        output: OutputStream,
+        context: Context,
+    ) {
+        val raw = input.readBytes().toString(Charsets.UTF_8)
+        logger.info { "Raw Firehose event: $raw" }
+
+        // parse manually after inspecting shape
+    }
+}
 
 class Transform : RequestHandler<KinesisFirehoseEvent, FirehoseTransformResponse> {
 
@@ -27,9 +45,10 @@ class Transform : RequestHandler<KinesisFirehoseEvent, FirehoseTransformResponse
         val notifications = linkedMapOf<String, Notification>()
 
         val results = input.records.map { record ->
+            val originalData = StandardCharsets.UTF_8.decode(record.data).toString()
             val uow = TransformUnitOfWork(
                 recordId = record.recordId,
-                originalData = StandardCharsets.UTF_8.decode(record.data).toString(),
+                originalData = originalData,
                 ctx = context,
                 notifications = notifications,
             )
