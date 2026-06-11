@@ -12,15 +12,19 @@ import aws.sdk.kotlin.services.kinesis.model.GetRecordsRequest
 import aws.sdk.kotlin.services.kinesis.model.GetShardIteratorRequest
 import aws.sdk.kotlin.services.kinesis.model.ShardIteratorType
 import aws.sdk.kotlin.services.s3.S3Client
+import aws.sdk.kotlin.services.s3.listObjectsV2
+import aws.sdk.kotlin.services.s3.model.GetObjectRequest
+import aws.smithy.kotlin.runtime.content.decodeToString
 import aws.smithy.kotlin.runtime.net.url.Url
 import io.github.huherto.awsLambdaStream.Event
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.delay
+import mu.KotlinLogging
 import kotlin.time.Duration.Companion.milliseconds
 
 class AwsFacade(val entityTable : String? = null, val eventTable : String? = null) {
 
-    private val logger = mu.KotlinLogging.logger {  }
+    private val logger = KotlinLogging.logger {  }
 
     fun endPointUrl() = Url.parse("http://localhost:4566")
 
@@ -72,6 +76,7 @@ class AwsFacade(val entityTable : String? = null, val eventTable : String? = nul
         S3Client {
             this.region = "us-east-1"
             this.endpointUrl = endPointUrl()
+            this.forcePathStyle = true // Required for LocalStack S3 bucket/object operations
             credentialsProvider =
                 StaticCredentialsProvider {
                     this.accessKeyId = "test"
@@ -180,10 +185,46 @@ class AwsFacade(val entityTable : String? = null, val eventTable : String? = nul
         s3Client.close()
     }
 
-    suspend fun verifyFaultEventStoredInS3() {
-        delay(3000.milliseconds)
-        val result = s3Client.listBuckets()
-        logger.info { "S3 buckets: $result" }
+    suspend fun verifyFaultEventStoredInS3(faultId: String) : String? {
+
+        val startTime = System.currentTimeMillis()
+        while (true) {
+            if (System.currentTimeMillis() - startTime > 10000) {
+                logger.error { "Timed out waiting for s3 object with faultId: $faultId to be inserted." }
+                return null
+            }
+            val bucketName = "myorg-sut-event-fault-monitor-local-us-east-1"
+            val response = s3Client.listObjectsV2 {
+                this.bucket = bucketName
+            }
+
+            val contents = response.contents.orEmpty()
+
+            logger.info {
+                "S3 list response: keyCount=${response.keyCount}, " +
+                        "isTruncated=${response.isTruncated}, " +
+                        "contents=${contents.map { it.key }}"
+            }
+
+            val keys = contents.sortedBy { it.key }.map { it.key }.reversed()
+
+            keys.take(5).forEach { key ->
+                logger.info { "S3 object key: $key" }
+                val content = s3Client.getObject(GetObjectRequest {
+                    this.bucket = bucketName
+                    this.key = key
+                }) { response ->
+                    val content = response.body?.decodeToString()
+                    logger.info { "S3 object content: $content" }
+                    content
+                }
+                if (content != null && content.contains(faultId)) {
+                    logger.info { "Fault found in S3 object: $key" }
+                    return content
+                }
+            }
+            delay(1000.milliseconds)
+        }
     }
 
 }

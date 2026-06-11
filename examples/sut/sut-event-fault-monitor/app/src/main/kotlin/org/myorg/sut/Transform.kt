@@ -1,11 +1,14 @@
 package org.myorg.sut
 
+import aws.sdk.kotlin.runtime.auth.credentials.EnvironmentCredentialsProvider
 import aws.sdk.kotlin.services.sns.SnsClient
 import aws.sdk.kotlin.services.sns.model.PublishRequest
+import aws.smithy.kotlin.runtime.net.url.Url
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.RequestStreamHandler
 import com.amazonaws.services.lambda.runtime.events.KinesisFirehoseEvent
+import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
@@ -38,6 +41,8 @@ class Transform : RequestHandler<KinesisFirehoseEvent, FirehoseTransformResponse
 
     private val logger = KotlinLogging.logger {}
 
+    private val envConfig = EnvironmentConfig()
+
     override fun handleRequest(
         input: KinesisFirehoseEvent,
         context: Context,
@@ -46,31 +51,67 @@ class Transform : RequestHandler<KinesisFirehoseEvent, FirehoseTransformResponse
 
         val results = input.records.map { record ->
             val originalData = StandardCharsets.UTF_8.decode(record.data).toString()
-            val uow = TransformUnitOfWork(
+            fixRecordId(record)
+            logger.info { "Original data: $originalData" }
+            val event = json.parseToJsonElement(originalData)
+            val notification = createNotification(event as JsonObject)
+            notification?.let { notifications[it.messageDeduplicationId] = it }
+            val outputData = Base64.getEncoder()
+                .encodeToString(
+                    originalData.toByteArray()
+                )
+            FirehoseTransformRecord(
                 recordId = record.recordId,
-                originalData = originalData,
-                ctx = context,
-                notifications = notifications,
+                result = "Ok",
+                data = outputData,
             )
-
-            tryCatch(::unbase64Data)(uow)
-                .let(tryCatch(::parseEvent))
-                .let(tryCatch(::decompressEvent))
-                .let(tryCatch(::stringifyEvent))
-                .let(tryCatch(::base64Data))
-                .let(tryCatch(::addNotification))
-                .let { processed ->
-                    FirehoseTransformRecord(
-                        recordId = processed.recordId,
-                        result = "Ok",
-                        data = processed.data ?: processed.originalData,
-                    )
-                }
         }
 
         sendNotifications(notifications)
 
         FirehoseTransformResponse(records = results)
+    }
+
+    private fun processAsPipeline(
+        record: KinesisFirehoseEvent.Record?,
+        originalData: String,
+        context: Context,
+        notifications: LinkedHashMap<String, Notification>
+    ): FirehoseTransformRecord {
+        val uow = TransformUnitOfWork(
+            recordId = record!!.recordId,
+            originalData = originalData,
+            ctx = context,
+            notifications = notifications,
+        )
+
+        return tryCatch(::unbase64Data)(uow)
+            .let(tryCatch(::parseEvent))
+            .let(tryCatch(::decompressEvent))
+            .let(tryCatch(::stringifyEvent))
+            .let(tryCatch(::base64Data))
+            .let(tryCatch(::addNotification))
+            .let { processed ->
+                FirehoseTransformRecord(
+                    recordId = processed.recordId,
+                    result = "Ok",
+                    data = processed.data ?: processed.originalData,
+                )
+            }
+    }
+
+    private fun isLocalStack(): Boolean = System.getenv("LOCALSTACK_HOSTNAME") != null ||
+            System.getenv("AWS_SAM_LOCAL") == "true"
+
+    private fun fixRecordId(record: KinesisFirehoseEvent.Record) {
+        if (record.recordId == null) {
+            if (isLocalStack()) {
+                // Look for an embedded EventBridge event ID within the record payload
+                record.recordId = "local-eb-${UUID.randomUUID()}"
+            } else {
+                throw IllegalArgumentException("Malformed Firehose Record: 'recordId' is missing.")
+            }
+        }
     }
 
     private fun tryCatch(
@@ -154,7 +195,16 @@ class Transform : RequestHandler<KinesisFirehoseEvent, FirehoseTransformResponse
 
     private fun addNotification(uow: TransformUnitOfWork): TransformUnitOfWork {
         val event = uow.event as? JsonObject ?: return uow
-        val detail = event["detail"] as? JsonObject ?: return uow
+        val notification = createNotification(event)
+        if (notification != null) {
+            uow.notifications[notification.messageDeduplicationId] = notification
+        }
+
+        return uow
+    }
+
+    private fun createNotification(event: JsonObject): Notification? {
+        val detail = event["detail"] as? JsonObject ?: return null
         val tags = detail["tags"] as? JsonObject ?: JsonObject(emptyMap())
         val err = detail["err"] as? JsonObject ?: JsonObject(emptyMap())
 
@@ -186,14 +236,12 @@ class Transform : RequestHandler<KinesisFirehoseEvent, FirehoseTransformResponse
             error
         }
 
-        uow.notifications[messageDeduplicationId] = Notification(
+        return Notification(
             subject = subject,
             messageDeduplicationId = messageDeduplicationId,
             messageGroupId = subject,
             message = message,
         )
-
-        return uow
     }
 
     private suspend fun sendNotifications(
@@ -204,9 +252,14 @@ class Transform : RequestHandler<KinesisFirehoseEvent, FirehoseTransformResponse
         }
 
         val topicArn = System.getenv("TOPIC_ARN")
-
+        val endpointUrl = envConfig.endPointUrl()
+        val region = envConfig.awsRegion()
         SnsClient {
-            region = System.getenv("AWS_REGION") ?: "us-east-1"
+            this.region = region
+            this.credentialsProvider = EnvironmentCredentialsProvider()
+
+            // If an endpoint URL is provided (like http://localhost:4566), use it
+            endpointUrl?.let { this.endpointUrl = Url.parse(it) }
         }.use { sns ->
             notifications.values.forEach { notification ->
                 try {

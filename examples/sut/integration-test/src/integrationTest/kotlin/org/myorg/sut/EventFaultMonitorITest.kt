@@ -1,5 +1,6 @@
 package org.myorg.sut
 
+import io.kotest.matchers.nulls.shouldNotBeNull
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
@@ -30,7 +31,9 @@ class EventFaultMonitorITest {
 
         awsFacade.putEvents(event)
 
-        awsFacade.verifyFaultEventStoredInS3()
+        val objectContent =awsFacade.verifyFaultEventStoredInS3(event.id!!)
+        objectContent.shouldNotBeNull()
+        logger.info { "Fault event stored in S3: $objectContent" }
     }
 
 }

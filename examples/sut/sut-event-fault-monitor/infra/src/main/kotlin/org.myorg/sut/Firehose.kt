@@ -37,7 +37,7 @@ fun EventFaultMonitorStack.newTransformLambda(): Function =
     Function.Builder.create(this, "TransformLambdaFunction")
         .functionName("${service()}-${stage()}-transform")
         .code(jarFile)
-        .handler("org.myorg.sut.Transform2::handleRequest")
+        .handler("org.myorg.sut.Transform::handleRequest")
         .timeout(Duration.seconds(60))
         .memorySize(1024)
         .runtime(runtime)
@@ -45,6 +45,7 @@ fun EventFaultMonitorStack.newTransformLambda(): Function =
             mapOf(
                 "JAVA_TOOL_OPTIONS" to "-Dslf4j.provider=io.github.vitalijr2.aws.lambda.slf4j.AWSLambdaServiceProvider",
                 "LOG_DEFAULT_LEVEL" to "DEBUG",
+                "TOPIC_ARN" to topic.topicArn,
             )
         )
         .build()
@@ -138,6 +139,7 @@ fun EventFaultMonitorStack.newDeliveryStream(
             .bufferingInterval(Duration.seconds(60))
             .bufferingSize(Size.mebibytes(50))
             .compression(Compression.GZIP)
+            //.compression(Compression.UNCOMPRESSED)
             .loggingConfig(EnableLogging(logGroup))
             .processors(listOf(processor))
             .build()
@@ -189,7 +191,8 @@ fun EventFaultMonitorStack.newEventRule(
 
     val firehoseTarget = FirehoseDeliveryStream.Builder
         .create(importedDeliveryStream)
-        .message(RuleTargetInput.fromEventPath("$.detail"))
+        //.message(RuleTargetInput.fromEventPath("$.detail"))
+        .message(RuleTargetInput.fromEventPath("$"))
         .build()
 
     return Rule.Builder.create(this, "EventRule")
