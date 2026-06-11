@@ -1,7 +1,15 @@
 
-# Events Microstore Pattern
+# Events Microstore
 
-## What is an Event Microstore?
+## Table of Contents
+
+- [What is an Events Microstore?](#what-is-an-events-microstore)
+- [How does it work?](#how-does-it-work)
+    - [Collection](#collection)
+    - [Correlation](#correlation)
+    - [Evaluation](#evaluation)
+
+## What is an Events Microstore?
 
 An Event Microstore is a small, purpose-built event store owned by a service or pipeline. It keeps a queryable copy of the events that the service needs in order to process, correlate, evaluate, or recover event-driven workflows.
 
@@ -21,7 +29,7 @@ The store is intentionally narrow in scope. It is not the system of record for b
 
 # How does it work?
 
-When an events arrives, coming from a Kinesis stream, SQS queue, or other event source.
+Given that an event arrives, coming from a Kinesis stream, SQS queue, or other event source.
 ```
 {
     id: "ev-001",
