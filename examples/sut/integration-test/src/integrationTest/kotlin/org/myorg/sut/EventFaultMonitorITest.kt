@@ -29,9 +29,16 @@ class EventFaultMonitorITest {
 
         awsFacade.putEvents(event)
 
-        val objectContent =awsFacade.verifyFaultEventStoredInS3(event.id!!)
+        val objectContent = awsFacade.verifyFaultEventStoredInS3(event.id!!)
         objectContent.shouldNotBeNull()
         logger.info { "Fault event stored in S3: $objectContent" }
+        val notification = awsFacade.verifyNotificationSentToSns(
+            queueName = "sut-event-fault-monitor-local-notification-verification.fifo",
+            expectedContent = event.id!!,
+        )
+        notification.shouldNotBeNull()
+        logger.info { "SNS notification received: $notification" }
+
     }
 
 }

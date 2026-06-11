@@ -1,9 +1,9 @@
 package org.myorg.sut
 
 import com.amazonaws.services.lambda.runtime.Context
-import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.maps.shouldContainKey
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.mockk.mockk
 import kotlinx.serialization.json.*
 import org.junit.jupiter.api.Test
@@ -216,6 +216,7 @@ class TransformTest {
         val event = json.parseToJsonElement(
             """
             {
+              "id": "event-1",
               "detail": {
                 "timestamp": $timestamp,
                 "tags": {
@@ -234,7 +235,7 @@ class TransformTest {
         val uow = uow(event = event, notifications = notifications)
         val expectedDate = Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault())
         val expectedTimeBucket = "${expectedDate.year}${expectedDate.monthValue - 1}${expectedDate.dayOfMonth}${expectedDate.hour}"
-        val expectedDeduplicationId = "function-apipeline-a${expectedTimeBucket}boom"
+        val expectedDeduplicationId = "event-1-function-a-pipeline-a-${expectedTimeBucket}-boom"
 
         // Act
         val result = invokeUowFunction("addNotification", uow)
@@ -257,6 +258,7 @@ class TransformTest {
         val event = json.parseToJsonElement(
             """
             {
+              "id": "event-1",
               "detail": {
                 "timestamp": 0
               }
@@ -266,18 +268,20 @@ class TransformTest {
         val uow = uow(event = event, notifications = notifications)
         val expectedDate = Instant.ofEpochMilli(0).atZone(ZoneId.systemDefault())
         val expectedTimeBucket = "${expectedDate.year}${expectedDate.monthValue - 1}${expectedDate.dayOfMonth}${expectedDate.hour}"
-        val expectedDeduplicationId = "undefinedundefined$expectedTimeBucket"
+        val expectedDeduplicationId = "event-1-undef-functionname-undef-pipeline-$expectedTimeBucket-"
 
         // Act
         invokeUowFunction("addNotification", uow)
 
         // Assert
-        notifications.keys.shouldContainExactly(expectedDeduplicationId)
+        val key = notifications.keys.firstOrNull()
+        key shouldNotBe null
+        key shouldBe expectedDeduplicationId
 
         val notification = notifications.getValue(expectedDeduplicationId)
-        notification.stringProperty("subject") shouldBe "Fault: undefined,undefined,undefined,undefined"
+        notification.stringProperty("subject") shouldBe "Fault: undef-account,undef-region,undef-functionname,undef-pipeline"
         notification.stringProperty("messageDeduplicationId") shouldBe expectedDeduplicationId
-        notification.stringProperty("messageGroupId") shouldBe "Fault: undefined,undefined,undefined,undefined"
+        notification.stringProperty("messageGroupId") shouldBe "Fault: undef-account,undef-region,undef-functionname,undef-pipeline"
         json.parseToJsonElement(notification.stringProperty("message")) shouldBe event
     }
 

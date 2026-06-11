@@ -208,6 +208,7 @@ class Transform : RequestHandler<KinesisFirehoseEvent, FirehoseTransformResponse
         val tags = detail["tags"] as? JsonObject ?: JsonObject(emptyMap())
         val err = detail["err"] as? JsonObject ?: JsonObject(emptyMap())
 
+        val eventId = event.stringOrNull("id") ?: UUID.randomUUID().toString()
         val timestamp = detail.longOrNull("timestamp") ?: 0L
 
         val d = Instant.ofEpochMilli(timestamp)
@@ -215,13 +216,13 @@ class Transform : RequestHandler<KinesisFirehoseEvent, FirehoseTransformResponse
 
         val t = "${d.year}${d.monthValue - 1}${d.dayOfMonth}${d.hour}"
 
-        val account = tags.stringOrNull("account") ?: "undefined"
-        val region = tags.stringOrNull("region") ?: "undefined"
-        val functionName = tags.stringOrNull("functionname") ?: "undefined"
-        val pipeline = tags.stringOrNull("pipeline") ?: "undefined"
+        val account = tags.stringOrNull("account") ?: "undef-account"
+        val region = tags.stringOrNull("region") ?: "undef-region"
+        val functionName = tags.stringOrNull("functionname") ?: "undef-functionname"
+        val pipeline = tags.stringOrNull("pipeline") ?: "undef-pipeline"
         val errorMessage = err.stringOrNull("message") ?: ""
 
-        val messageDeduplicationId = "$functionName$pipeline$t$errorMessage"
+        val messageDeduplicationId = "$eventId-$functionName-$pipeline-$t-$errorMessage"
             .take(128)
 
         val subject = "Fault: $account,$region,$functionName,$pipeline"
@@ -263,14 +264,16 @@ class Transform : RequestHandler<KinesisFirehoseEvent, FirehoseTransformResponse
         }.use { sns ->
             notifications.values.forEach { notification ->
                 try {
+                    val request = PublishRequest {
+                        this.topicArn = topicArn
+                        this.subject = notification.subject
+                        this.message = notification.message
+                        this.messageDeduplicationId = notification.messageDeduplicationId
+                        this.messageGroupId = notification.messageGroupId
+                    }
+                    logger.info { "SNS publish request: $request" }
                     val response = sns.publish(
-                        PublishRequest {
-                            this.topicArn = topicArn
-                            this.subject = notification.subject
-                            this.message = notification.message
-                            this.messageDeduplicationId = notification.messageDeduplicationId
-                            this.messageGroupId = notification.messageGroupId
-                        }
+                        request
                     )
 
                     logger.info { "SNS publish response: $response" }

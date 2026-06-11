@@ -16,10 +16,11 @@ aws-sdk-bom = { module="aws.sdk.kotlin:bom", version.ref="awsSdk" }
 aws-sdk-dynamodb = { module = "aws.sdk.kotlin:dynamodb" }
 aws-sdk-eventbridge = { module = "aws.sdk.kotlin:eventbridge" }
 aws-sdk-firehose = { module = "aws.sdk.kotlin:firehose" }
-aws-sdk-sns = { module = "aws.sdk.kotlin:sns" }
 aws-sdk-kinesis = { module = "aws.sdk.kotlin:kinesis" }
 aws-sdk-lambda = { module = "aws.sdk.kotlin:lambda" }
 aws-sdk-s3 = { module = "aws.sdk.kotlin:s3" }
+aws-sdk-sns = { module = "aws.sdk.kotlin:sns" }
+aws-sdk-sqs = { module = "aws.sdk.kotlin:sqs" }
 
 jackson-kotlin = { module="com.fasterxml.jackson.module:jackson-module-kotlin", version="2.15.2" }
 kotest-assertions = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }

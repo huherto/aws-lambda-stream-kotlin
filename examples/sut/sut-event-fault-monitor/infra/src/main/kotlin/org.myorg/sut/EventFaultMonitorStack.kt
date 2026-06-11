@@ -17,13 +17,16 @@ class EventFaultMonitorStack(scope: Construct, serviceProps: ServiceProps) : Bas
     val logStream = newLogStream(logGroup)
     val bucket = newBucket()
     val topic = newTopic()
+    val notificationVerificationQueue = newNotificationVerificationQueue()
     val transformLambda = newTransformLambda()
     val deliveryStream = newDeliveryStream(bucket, logGroup, logStream, transformLambda)
     val eventBridgeRole = newEventBridgeRole(deliveryStream)
 
     init {
         newEventRule(deliveryStream, eventBridgeRole)
+        subscribeNotificationVerificationQueue(topic, notificationVerificationQueue)
         grantTopicPublish(topic, transformLambda)
+        newNotificationVerificationQueueOutputs(notificationVerificationQueue)
         newBucketOutputs(bucket)
         newTopicOutputs(topic)
 

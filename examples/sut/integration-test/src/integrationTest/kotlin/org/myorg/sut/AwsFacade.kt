@@ -14,6 +14,9 @@ import aws.sdk.kotlin.services.kinesis.model.ShardIteratorType
 import aws.sdk.kotlin.services.s3.S3Client
 import aws.sdk.kotlin.services.s3.listObjectsV2
 import aws.sdk.kotlin.services.s3.model.GetObjectRequest
+import aws.sdk.kotlin.services.sqs.SqsClient
+import aws.sdk.kotlin.services.sqs.model.GetQueueUrlRequest
+import aws.sdk.kotlin.services.sqs.model.ReceiveMessageRequest
 import aws.smithy.kotlin.runtime.content.decodeToString
 import aws.smithy.kotlin.runtime.net.url.Url
 import io.github.huherto.awsLambdaStream.Event
@@ -85,6 +88,17 @@ class AwsFacade(val entityTable : String? = null, val eventTable : String? = nul
         }
     }
 
+    private val sqsClient: SqsClient by lazy {
+        SqsClient {
+            this.region = "us-east-1"
+            this.endpointUrl = endPointUrl()
+            credentialsProvider =
+                StaticCredentialsProvider {
+                    this.accessKeyId = "test"
+                    this.secretAccessKey = "test"
+                }
+        }
+    }
     suspend fun putEvents(vararg events: Event) {
         val entries = events.map { event ->
             PutEventsRequestEntry {
@@ -183,6 +197,7 @@ class AwsFacade(val entityTable : String? = null, val eventTable : String? = nul
         eventBridgeClient.close()
         kinesisClient.close()
         s3Client.close()
+        sqsClient.close()
     }
 
     suspend fun verifyFaultEventStoredInS3(faultId: String) : String? {
@@ -223,6 +238,43 @@ class AwsFacade(val entityTable : String? = null, val eventTable : String? = nul
                     return content
                 }
             }
+            delay(1000.milliseconds)
+        }
+    }
+
+    suspend fun verifyNotificationSentToSns(
+        queueName: String,
+        expectedContent: String,
+    ): String? {
+        val queueUrl = sqsClient.getQueueUrl(GetQueueUrlRequest {
+            this.queueName = queueName
+        }).queueUrl ?: error("Queue URL not found for queue: $queueName")
+
+        val startTime = System.currentTimeMillis()
+
+        while (true) {
+            if (System.currentTimeMillis() - startTime > 10000) {
+                logger.error { "Timed out waiting for SNS notification containing: $expectedContent" }
+                return null
+            }
+
+            val response = sqsClient.receiveMessage(ReceiveMessageRequest {
+                this.queueUrl = queueUrl
+                this.maxNumberOfMessages = 10
+                this.waitTimeSeconds = 1
+            })
+
+            response.messages.orEmpty().forEach { message ->
+                val body = message.body
+
+                logger.info { "Received SNS/SQS message: $body" }
+
+                if (body != null && body.contains(expectedContent)) {
+                    logger.info { "SNS notification found in queue $queueName" }
+                    return body
+                }
+            }
+
             delay(1000.milliseconds)
         }
     }
