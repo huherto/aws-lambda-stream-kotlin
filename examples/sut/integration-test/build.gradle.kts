@@ -52,8 +52,6 @@ testing {
                 implementation(libs.kotlin.logging)
                 implementation(libs.kotlinx.serialization.json)
                 implementation(libs.slf4j.simple)
-                implementation(libs.testcon.junit.jupiter)
-                implementation(libs.testcon.localstack)
                 implementation(libs.jackson.kotlin)
 
                 implementation(project(":core"))

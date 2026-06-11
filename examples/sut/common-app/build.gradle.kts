@@ -28,7 +28,6 @@ dependencies {
     implementation(libs.kotlin.stdlib)
     implementation(libs.kotlinx.coroutines)
     implementation(libs.kotlinx.serialization.json)
-    implementation(libs.testcon.localstack)
     implementation(project(":core"))
 
 
