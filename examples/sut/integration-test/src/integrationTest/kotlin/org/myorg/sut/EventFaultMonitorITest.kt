@@ -7,10 +7,8 @@ import org.junit.jupiter.api.TestInstance
 import org.myorg.sut.ShipmentTrackingDomain.createFaultEvent
 
 // Components tested.
-//   - Send poison event to event bridge. sut-event-hub-local-bus.
-//   - Event bridge will send event to kinesis stream. sut-event-hub-local-s1
-//   - sut-control-service-local-listener will read event from the kinesis stream.
-//   - sut-control-service-local-listener will reject the event and create a fault event, and send it event bridge.
+//
+//   - A fault event is created and sent to event bridge.
 //   - Event bridge will send the event to the firehose delivery stream.
 //   - Firehose delivery stream will send the fault event to S3. myorg-sut-event-fault-monitor-local-us-east-1
 //   - We should verify that the fault event is stored in S3.
