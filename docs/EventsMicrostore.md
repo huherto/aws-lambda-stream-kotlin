@@ -49,42 +49,38 @@ Given that an event arrives, coming from a Kinesis stream, SQS queue, or other e
 
 When the event is collected. It is stored in the events microstore implemented using dynamodb.
 
-| pk     | sk    | discriminator | timestamp  | awsregion | sequenceNumber | ttl        | expire | suffix | data      | pipelineId | event |
-|--------|-------|---------------|------------|-----------|----------------|------------|--------|--------|-----------|------------|-------|
-| ev-001 | EVENT | EVENT         | 1775658343 | us-east-1 | ...0121231223  | 1775690000 | TRUE   | null   | thing-005 | col1       | {...} |
-
-* **pk** is the partition key, stores the event id.
-* **sk** is the sort key stores the constant "EVENT" to indicate that this is an event.
-* **discriminator** is used to distinguish between different types of events.
-* **timestamp** is the time the event was collected.
-* **awsregion** is the aws region where the event was collected.
-* **sequenceNumber** is a monotonically increasing number. Usually comes as part of  the Kinesis Record.
-* **ttl** is the time to live for the event.
-* **expire** is a boolean flag indicating whether the event should be expired.
-* **suffix** not used for EVENT events.
-* **data** is a reference to the entity correlated to the event.
-* **pipelineId** is the id of the pipeline that collected the event.
-* **event** is the raw event data.
+| Property       | Value         | Description                                                                     |
+|----------------|---------------|---------------------------------------------------------------------------------|
+| pk             | ev-001        | The partition key, stores the event id.                                         |
+| sk             | EVENT         | The sort key stores the constant "EVENT" to indicate that this is an event.     |
+| discriminator  | EVENT         | Used to distinguish between different types of events.                          |
+| timestamp      | 1775658343    | The time the event was collected.                                               |
+| awsregion      | us-east-1     | The aws region where the event was collected.                                   |
+| sequenceNumber | ...0121231223 | A monotonically increasing number. Usually comes as part of the Kinesis Record. |
+| ttl            | 1775690000    | The time to live for the event.                                                 |
+| expire         | TRUE          | A boolean flag indicating whether the event should be expired.                  |
+| suffix         | null          | Not used for EVENT events.                                                      |
+| data           | thing-005     | A reference to the entity correlated to the event.                              |
+| pipelineId     | col1          | The id of the pipeline that collected the event.                                |
+| event          | {...}         | The raw event data.                                                             |
 
 ## Correlation
 This event is consumed by the correlate pipeline generating new 'CORREL' events which is inserted in the events microstore.
 
-| pk        | sk     | discriminator | timestamp  | awsregion | sequenceNumber | ttl        | expire | suffix | data | pipelineId | event |
-|-----------|--------|---------------|------------|-----------|----------------|------------|--------|--------|------|------------|-------|
-| thing-005 | ev-001 | CORREL        | 1775658343 | us-east-1 | ...0121232334  | 1775690000 | TRUE   | ""     | null | corr1      | {...} |
-
-* **pk** is the partition key, stores the correlation key (in this case the entity id "thing-005" from the original event).
-* **sk** is the sort key, stores the event id ("ev-001") that was correlated to this partition.
-* **discriminator** is set to "CORREL" to indicate that this is a correlation record rather than an original event.
-* **timestamp** is the time the original event was collected (inherited from the source event).
-* **awsregion** is the aws region where the event was collected.
-* **sequenceNumber** is a monotonically increasing number that is used to order events within a partition.
-* **ttl** is the time to live for the correlation record.
-* **expire** is a boolean flag indicating whether the correlation record should be expired.
-* **suffix** can be used when events are correlated to other entities.
-* **data** is null for correlation records (no secondary reference needed).
-* **pipelineId** is the id of the correlation pipeline that created this correlation record.
-* **event** is the raw event data (same as the original event).
+| Property       | Value         | Description                                                                                         |
+|----------------|---------------|-----------------------------------------------------------------------------------------------------|
+| pk             | thing-005     | The partition key, stores the correlation key (in this case the entity id from the original event). |
+| sk             | ev-001        | The sort key, stores the event id that was correlated to this partition.                            |
+| discriminator  | CORREL        | Set to "CORREL" to indicate that this is a correlation record rather than an original event.        |
+| timestamp      | 1775658343    | The time the original event was collected (inherited from the source event).                        |
+| awsregion      | us-east-1     | The aws region where the event was collected.                                                       |
+| sequenceNumber | ...0121231223 | A monotonically increasing number. Usually comes as part of the Kinesis Record.                     |
+| ttl            | 1775690000    | The time to live for the correlation record.                                                        |
+| expire         | TRUE          | A boolean flag indicating whether the correlation record should be expired.                         |
+| suffix         | ""            | Can be used when events are correlated to other entities.                                           |
+| data           | null          | Null for correlation records (no secondary reference needed).                                       |
+| pipelineId     | corr1         | The id of the correlation pipeline that created this correlation record.                            |
+| event          | {...}         | The raw event data (same as the original event).                                                    |
 
 ## Evaluation
 Both, the collected event and the correlated event are processed by the evaluate pipeline.
