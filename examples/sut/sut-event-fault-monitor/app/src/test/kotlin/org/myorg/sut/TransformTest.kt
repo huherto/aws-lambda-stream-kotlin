@@ -1,7 +1,6 @@
 package org.myorg.sut
 
 import com.amazonaws.services.lambda.runtime.Context
-import io.kotest.matchers.maps.shouldContainKey
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.mockk.mockk
@@ -242,12 +241,14 @@ class TransformTest {
 
         // Assert
         result shouldBe uow
-        notifications shouldContainKey expectedDeduplicationId
+        val key = notifications.keys.firstOrNull()
+        key shouldNotBe null
+        key shouldBe expectedDeduplicationId
 
         val notification = notifications.getValue(expectedDeduplicationId)
         notification.stringProperty("subject") shouldBe "Fault: acct-1,eu-west-1,function-a,pipeline-a"
         notification.stringProperty("messageDeduplicationId") shouldBe expectedDeduplicationId
-        notification.stringProperty("messageGroupId") shouldBe "Fault: acct-1,eu-west-1,function-a,pipeline-a"
+        notification.stringProperty("messageGroupId") shouldBe "Fault:acct-1,eu-west-1,function-a,pipeline-a"
         json.parseToJsonElement(notification.stringProperty("message")) shouldBe event
     }
 
@@ -268,7 +269,7 @@ class TransformTest {
         val uow = uow(event = event, notifications = notifications)
         val expectedDate = Instant.ofEpochMilli(0).atZone(ZoneId.systemDefault())
         val expectedTimeBucket = "${expectedDate.year}${expectedDate.monthValue - 1}${expectedDate.dayOfMonth}${expectedDate.hour}"
-        val expectedDeduplicationId = "event-1-undef-functionname-undef-pipeline-$expectedTimeBucket-"
+        val expectedDeduplicationId = "event-1-functionname-pipeline-$expectedTimeBucket-"
 
         // Act
         invokeUowFunction("addNotification", uow)
@@ -279,9 +280,9 @@ class TransformTest {
         key shouldBe expectedDeduplicationId
 
         val notification = notifications.getValue(expectedDeduplicationId)
-        notification.stringProperty("subject") shouldBe "Fault: undef-account,undef-region,undef-functionname,undef-pipeline"
+        notification.stringProperty("subject") shouldBe "Fault: account,region,functionname,pipeline"
         notification.stringProperty("messageDeduplicationId") shouldBe expectedDeduplicationId
-        notification.stringProperty("messageGroupId") shouldBe "Fault: undef-account,undef-region,undef-functionname,undef-pipeline"
+        notification.stringProperty("messageGroupId") shouldBe "Fault:account,region,functionname,pipeline"
         json.parseToJsonElement(notification.stringProperty("message")) shouldBe event
     }
 

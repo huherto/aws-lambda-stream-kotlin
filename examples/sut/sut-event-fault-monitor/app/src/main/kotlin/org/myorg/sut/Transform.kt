@@ -216,10 +216,10 @@ class Transform : RequestHandler<KinesisFirehoseEvent, FirehoseTransformResponse
 
         val t = "${d.year}${d.monthValue - 1}${d.dayOfMonth}${d.hour}"
 
-        val account = tags.stringOrNull("account") ?: "undef-account"
-        val region = tags.stringOrNull("region") ?: "undef-region"
-        val functionName = tags.stringOrNull("functionname") ?: "undef-functionname"
-        val pipeline = tags.stringOrNull("pipeline") ?: "undef-pipeline"
+        val account = tags.stringOrNull("account") ?: "account"
+        val region = tags.stringOrNull("region") ?: "region"
+        val functionName = tags.stringOrNull("functionname") ?: "functionname"
+        val pipeline = tags.stringOrNull("pipeline") ?: "pipeline"
         val errorMessage = err.stringOrNull("message") ?: ""
 
         val messageDeduplicationId = "$eventId-$functionName-$pipeline-$t-$errorMessage"
@@ -227,6 +227,8 @@ class Transform : RequestHandler<KinesisFirehoseEvent, FirehoseTransformResponse
 
         val subject = "Fault: $account,$region,$functionName,$pipeline"
             .take(100)
+
+        val messageGroupId = "Fault:$account,$region,$functionName,$pipeline"
 
         val fault = prettyJson.encodeToString(JsonElement.serializer(), event)
         val error = prettyJson.encodeToString(JsonElement.serializer(), err)
@@ -240,7 +242,7 @@ class Transform : RequestHandler<KinesisFirehoseEvent, FirehoseTransformResponse
         return Notification(
             subject = subject,
             messageDeduplicationId = messageDeduplicationId,
-            messageGroupId = subject,
+            messageGroupId = messageGroupId,
             message = message,
         )
     }

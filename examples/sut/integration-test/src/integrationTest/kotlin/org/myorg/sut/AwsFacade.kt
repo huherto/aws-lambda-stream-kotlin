@@ -267,10 +267,9 @@ class AwsFacade(val entityTable : String? = null, val eventTable : String? = nul
             response.messages.orEmpty().forEach { message ->
                 val body = message.body
 
-                logger.info { "Received SNS/SQS message: $body" }
+                logger.info { "Received SNS/SQS message" }
 
                 if (body != null && body.contains(expectedContent)) {
-                    logger.info { "SNS notification found in queue $queueName" }
                     return body
                 }
             }
