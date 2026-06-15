@@ -22,12 +22,13 @@ dependencies {
     implementation(libs.aws.sdk.dynamodb)
     implementation(libs.aws.sdk.eventbridge)
     implementation(libs.aws.sdk.kinesis)
-    implementation(libs.aws.sdk.s3)
     implementation(libs.aws.sdk.lambda)
+    implementation(libs.aws.sdk.s3)
     implementation(libs.jackson.kotlin)
     implementation(libs.kotlin.logging)
     implementation(libs.kotlin.stdlib)
     implementation(libs.kotlinx.coroutines)
+    implementation(libs.kotlinx.datetime)
     implementation(libs.kotlinx.serialization.json)
 
 
