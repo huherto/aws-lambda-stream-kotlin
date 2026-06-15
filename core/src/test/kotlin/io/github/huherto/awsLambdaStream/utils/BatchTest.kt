@@ -2,17 +2,22 @@ package io.github.huherto.awsLambdaStream.utils
 
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.kotest.assertions.throwables.shouldThrow
-import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.runBlocking
+import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Nested
+import kotlin.test.Test
 
-class BatchTest : FunSpec({
+class BatchTest {
 
-    context("toBatchUow & unBatchUow") {
-
-        test("should wrap multiple units of work into a batch and unwrap them applying outer properties") {
+    @Nested
+    @DisplayName("toBatchUow & unBatchUow")
+    inner class ToBatchUowUnBatchUow {
+        @Test
+        fun `should wrap multiple units of work into a batch and unwrap them applying outer properties`() {
             // Arrange
             val inner1 = UnitOfWork(key = "Inner1")
             val inner2 = UnitOfWork(key = "Inner2")
@@ -32,7 +37,8 @@ class BatchTest : FunSpec({
             unbatched[1].batch shouldBe null
         }
 
-        test("should return original unit of work as a singleton list if batch is null") {
+        @Test
+        fun `should return original unit of work as a singleton list if batch is null`() {
             // Arrange
             val uow = UnitOfWork(key = "SingleItem")
 
@@ -43,11 +49,15 @@ class BatchTest : FunSpec({
             unbatched shouldHaveSize 1
             unbatched.first() shouldBe uow
         }
+
     }
 
-    context("group & toGroupUows") {
+    @Nested
+    @DisplayName("group & toGroupUows")
+    inner class GroupAndToGroupUows {
 
-        test("should group items or pass them through directly based on PipelineRule") {
+        @Test
+        fun `should group items or pass them through directly based on PipelineRule`() : Unit = runBlocking {
             // Arrange
             val uows = listOf(UnitOfWork(key = "1"), UnitOfWork(key = "2"))
             val activeRule = PipelineRule(group = true)
@@ -65,7 +75,8 @@ class BatchTest : FunSpec({
             groupedResult[0].batch?.shouldHaveSize(2)
         }
 
-        test("toGroupUows should map a grouped map to a list of UnitOfWork batches") {
+        @Test
+        fun `toGroupUows should map a grouped map to a list of UnitOfWork batches`() {
             // Arrange
             val groups = mapOf<String?, List<UnitOfWork>>(
                 "groupA" to listOf(UnitOfWork(key = "1")),
@@ -82,9 +93,12 @@ class BatchTest : FunSpec({
         }
     }
 
-    context("compact") {
+    @Nested
+    @DisplayName("compact")
+    inner class Compact {
 
-        test("should compact items based on custom grouping/sorting, or pass through if rule is empty") {
+        @Test
+        fun `should compact items based on custom grouping or sorting or pass through if rule is empty`() : Unit = runBlocking {
             // Arrange
             val uows = listOf(
                 UnitOfWork(key = "A"),
@@ -92,8 +106,8 @@ class BatchTest : FunSpec({
                 UnitOfWork(key = "C")
             )
             val compactRule = CompactRule(
-                    group = { "StaticGroup" },
-                    sort = { a, b -> a.key.orEmpty().compareTo(b.key.orEmpty()) }
+                group = { "StaticGroup" },
+                sort = { a, b -> a.key.orEmpty().compareTo(b.key.orEmpty()) }
             )
 
             // Act
@@ -110,9 +124,12 @@ class BatchTest : FunSpec({
         }
     }
 
-    context("batchWithSize") {
+    @Nested
+    @DisplayName("batchWithSize")
+    inner class BatchWithSize {
 
-        test("should batch items together depending on element count OR max aggregate size limits") {
+        @Test
+        fun `should batch items together depending on element count OR max aggregate size limits`() : Unit = runBlocking {
             // Arrange
             val items = listOf(
                 UnitOfWork(key = "A"),
@@ -147,7 +164,8 @@ class BatchTest : FunSpec({
             resultBySize[1].map { it.key } shouldBe listOf("C", "D")
         }
 
-        test("should bypass batching entirely and emit a singleton list if getRequestEntry evaluates to null") {
+        @Test
+        fun `should bypass batching entirely and emit a singleton list if getRequestEntry evaluates to null`() : Unit = runBlocking {
             // Arrange
             val items = listOf(
                 UnitOfWork(key = null),
@@ -169,7 +187,8 @@ class BatchTest : FunSpec({
             result[1].map { it.key } shouldBe listOf("ValidEntry")
         }
 
-        test("should reject flow or attempt claim check when a single item size exceeds maxRequestSize") {
+        @Test
+        fun `should reject flow or attempt claim check when a single item size exceeds maxRequestSize`() : Unit = runBlocking {
             // Arrange
             val items = listOf(UnitOfWork(key = "OversizedItem")) // String is 13 bytes
             val optionsWithoutBucket = BatchSizeOptions(
@@ -195,9 +214,12 @@ class BatchTest : FunSpec({
         }
     }
 
-    context("batchWithPayloadSizeOrCount") {
+    @Nested
+    @DisplayName("batchWithPayloadSizeOrCount")
+    inner class BatchWithPayloadSizeOrCount {
 
-        test("should batch items together depending on element count OR max aggregate payload size limits") {
+        @Test
+        fun `should batch items together depending on element count OR max aggregate payload size limits`() : Unit = runBlocking {
             // Arrange
             val items = listOf(
                 UnitOfWork(key = "1"),
@@ -229,7 +251,8 @@ class BatchTest : FunSpec({
             resultBySize[1].map { it.key } shouldBe listOf("3")
         }
 
-        test("should bypass batching and emit a singleton list immediately if getPayload returns null") {
+        @Test
+        fun `should bypass batching and emit a singleton list immediately if getPayload returns null`() : Unit = runBlocking {
             // Arrange
             val items = listOf(
                 UnitOfWork(key = null),
@@ -250,7 +273,8 @@ class BatchTest : FunSpec({
             result[1].map { it.key } shouldBe listOf("ValidPayload")
         }
 
-        test("should throw an exception if a single isolated payload size exceeds maxPayloadSize") {
+        @Test
+        fun `should throw an exception if a single isolated payload size exceeds maxPayloadSize`() : Unit = runBlocking {
             // Arrange
             val items = listOf(UnitOfWork(key = "MassivePayload")) // String is 14 bytes
             val options = PayloadSizeOptions(
@@ -266,4 +290,4 @@ class BatchTest : FunSpec({
             exception.message shouldBe "Payload size: 14, exceeded max: 10"
         }
     }
-})
+}

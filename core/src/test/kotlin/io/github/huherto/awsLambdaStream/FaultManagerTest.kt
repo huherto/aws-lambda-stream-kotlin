@@ -3,7 +3,6 @@ package io.github.huherto.awsLambdaStream
 import aws.smithy.kotlin.runtime.SdkBaseException
 import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
 import io.kotest.assertions.throwables.shouldThrow
-import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
@@ -12,26 +11,30 @@ import io.mockk.mockk
 import io.mockk.spyk
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.runBlocking
+import org.junit.jupiter.api.Test
 
-class FaultManagerTest : FunSpec({
+class FaultManagerTest {
 
-    val envConfig = spyk<EnvironmentConfig>()
+    private val envConfig = spyk<EnvironmentConfig>()
 
-    test("faulty should return block result when no exception occurs") {
+    @Test
+    fun `faulty should return block result when no exception occurs`(): Unit = runBlocking {
         // Arrange
         val eventPublisher = EventPublisherInMemory()
         val faultManager = FaultManager(envConfig, eventPublisher)
         val uow = mockk<UnitOfWork>(relaxed = true)
-        
+
         // Act
         val result = faultManager.faulty(uow) { "success" }
-        
+
         // Assert
         result shouldBe "success"
         faultManager.getFaults().shouldBeEmpty()
     }
 
-    test("faulty should catch exception, redirect failure, and return null") {
+    @Test
+    fun `faulty should catch exception, redirect failure, and return null`(): Unit = runBlocking {
         // Arrange
         val envConfig = spyk<EnvironmentConfig>()
         every { envConfig.awsLambdaFunctionName() } returns "test-function"
@@ -40,13 +43,13 @@ class FaultManagerTest : FunSpec({
         val eventPublisher = EventPublisherInMemory()
         val faultManager = spyk(FaultManager(envConfig, eventPublisher))
         every { faultManager.logError(any()) } returns Unit
-        
+
         val uow = UnitOfWork()
         val exception = RuntimeException("test error")
-        
+
         // Act
         val result = faultManager.faulty(uow) { throw exception }
-        
+
         // Assert
         result shouldBe null
         val faults = faultManager.getFaults()
@@ -54,7 +57,8 @@ class FaultManagerTest : FunSpec({
         faults.first().failureException?.cause shouldBe exception
     }
 
-    test("redirectFailure should add a fault for non-retriable exceptions when stream retry is disabled") {
+    @Test
+    fun `redirectFailure should add a fault for non-retriable exceptions when stream retry is disabled`() {
         // Arrange
         val envConfig = spyk<EnvironmentConfig>()
         every { envConfig.awsLambdaFunctionName() } returns "test-function"
@@ -75,7 +79,8 @@ class FaultManagerTest : FunSpec({
         faultManager.getFaults()[0].failureException shouldBe nonRetriableEx
     }
 
-    test("redirectFailure should throw for retriable SDK exceptions when stream retry is enabled") {
+    @Test
+    fun `redirectFailure should throw for retriable SDK exceptions when stream retry is enabled`() {
         // Arrange
         val envConfig = spyk<EnvironmentConfig>()
         every { envConfig.awsLambdaFunctionName() } returns "test-function"
@@ -97,7 +102,8 @@ class FaultManagerTest : FunSpec({
         faultManager.getFaults() shouldHaveSize 0
     }
 
-    test("redirectFailure should add a fault for non-retriable SDK exceptions when stream retry is enabled") {
+    @Test
+    fun `redirectFailure should add a fault for non-retriable SDK exceptions when stream retry is enabled`() {
         // Arrange
         val envConfig = spyk<EnvironmentConfig>()
         every { envConfig.awsLambdaFunctionName() } returns "test-function"
@@ -120,20 +126,21 @@ class FaultManagerTest : FunSpec({
         faultManager.getFaults()[0].failureException shouldBe nonRetriableSdkEx
     }
 
-    test("mapNotFaulty should filter out faulty items and accumulate faults") {
+    @Test
+    fun `mapNotFaulty should filter out faulty items and accumulate faults`(): Unit = runBlocking {
         // Arrange
         every { envConfig.awsLambdaFunctionName() } returns "test-function"
         every { envConfig.streamRetryEnabled() } returns false
         val eventPublisher = EventPublisherInMemory()
         val faultManager = spyk(FaultManager(envConfig, eventPublisher))
         every { faultManager.logError(any()) } returns Unit
-        
+
         val uow1 = mockk<UnitOfWork>(relaxed = true)
         val uow2 = mockk<UnitOfWork>(relaxed = true)
         val uow3 = mockk<UnitOfWork>(relaxed = true)
-        
+
         val flow = flowOf(uow1, uow2, uow3)
-        
+
         // Act
         val resultFlow = with(faultManager) {
             flow.mapNotFaulty { uow ->
@@ -142,7 +149,7 @@ class FaultManagerTest : FunSpec({
             }
         }
         val resultList = resultFlow.toList()
-        
+
         // Assert
         resultList shouldBe listOf(uow1, uow3)
         val faults = faultManager.getFaults()
@@ -150,7 +157,8 @@ class FaultManagerTest : FunSpec({
         faults[0].failureException?.cause?.message shouldBe "error on uow2"
     }
 
-    test("flushFaults should map accumulated faults to UnitOfWork and pass them to publishFlow") {
+    @Test
+    fun `flushFaults should map accumulated faults to UnitOfWork and pass them to publishFlow`(): Unit = runBlocking {
         // Arrange
         every { envConfig.awsLambdaFunctionName() } returns "test-function"
         every { envConfig.streamRetryEnabled() } returns false
@@ -158,17 +166,17 @@ class FaultManagerTest : FunSpec({
         val eventPublisher = EventPublisherInMemory()
         val faultManager = spyk(FaultManager(envConfig, eventPublisher))
         every { faultManager.logError(any()) } returns Unit
-        
+
         val uow = mockk<UnitOfWork>(relaxed = true)
-        
+
         faultManager.faulty(uow) { throw RuntimeException("error 1") }
         faultManager.faulty(uow) { throw RuntimeException("error 2") }
-        
+
         faultManager.getFaults() shouldHaveSize 2
-        
+
         // Act
         faultManager.flushFaults()
-        
+
         // Assert
         faultManager.getFaults().shouldBeEmpty()
 
@@ -179,14 +187,14 @@ class FaultManagerTest : FunSpec({
         (emittedList[1] as FaultEvent).failureException?.cause?.message shouldBe "error 2"
     }
 
-    test("logError should not throw exceptions") {
+    @Test
+    fun `logError should not throw exceptions`() {
         // Arrange
         val eventPublisher = EventPublisherInMemory()
         val faultManager = FaultManager(envConfig, eventPublisher)
-        
+
         // Act & Assert
         // Ensuring it doesn't crash the execution
         faultManager.logError(RuntimeException("Test exception"))
     }
-
-})
+}

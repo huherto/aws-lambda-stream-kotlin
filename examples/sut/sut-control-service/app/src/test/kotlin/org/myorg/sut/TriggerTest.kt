@@ -9,13 +9,14 @@ import io.github.huherto.awsLambdaStream.from.DynamodbAdapter
 import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
 import io.github.huherto.awsLambdaStream.sinks.EventsMicrostoreInMemory
 import io.github.huherto.awsLambdaStream.testsupport.TestContext
-import io.kotest.core.spec.style.FunSpec
+
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.spyk
+import org.junit.jupiter.api.Test
 
-class TriggerTest : FunSpec({
+class TriggerTest {
 
     fun createContainer(): TriggerContainer {
         val envConfig = spyk<EnvironmentConfig>()
@@ -27,60 +28,56 @@ class TriggerTest : FunSpec({
         return container
     }
 
-    context("Trigger internal pipeline initialization") {
-        test("should lazily initialize container") {
-            // Arrange
-            val container = createContainer()
+    @Test
+    fun `should lazily initialize container`() {
+        // Arrange
+        val container = createContainer()
 
-            // Act
-            val assembler = container.assembler
-            val dynamoDBAdapter = container.dynamoDbAdapter
+        // Act
+        val assembler = container.assembler
+        val dynamoDBAdapter = container.dynamoDbAdapter
 
-            // Assert
-            assembler shouldNotBe null
-            assembler.shouldBeInstanceOf<PipelineAssembler>()
+        // Assert
+        assembler shouldNotBe null
+        assembler.shouldBeInstanceOf<PipelineAssembler>()
 
-            assembler.getFaultManager() shouldNotBe null
-            assembler.getFaultManager() shouldBe container.faultManager
+        assembler.getFaultManager() shouldNotBe null
+        assembler.getFaultManager() shouldBe container.faultManager
 
-            dynamoDBAdapter shouldNotBe null
-            dynamoDBAdapter.shouldBeInstanceOf<DynamodbAdapter>()
+        dynamoDBAdapter shouldNotBe null
+        dynamoDBAdapter.shouldBeInstanceOf<DynamodbAdapter>()
 
-        }
     }
+    @Test
+    fun `should process DynamodbEvent successfully and return 'Done' for various record scenarios`() {
+        // Arrange
+        val container = createContainer()
+        val trigger = Trigger(container)
+        val testContext = TestContext()
 
+        val emptyEvent = DynamodbEvent().apply {
+            records = emptyList()
+        }
 
-    context("Trigger handleRequest") {
-        test("should process DynamodbEvent successfully and return 'Done' for various record scenarios") {
-            // Arrange
-            val container = createContainer()
-            val trigger = Trigger(container)
-            val testContext = TestContext()
-
-            val emptyEvent = DynamodbEvent().apply { 
-                records = emptyList() 
-            }
-
-            val singleRecordEvent = DynamodbEvent().apply {
-                records = listOf(
-                    DynamodbEvent.DynamodbStreamRecord().apply {
-                        eventName = "INSERT"
-                        dynamodb = StreamRecord().apply {
-                            keys = emptyMap()
-                            newImage = emptyMap()
-                            oldImage = emptyMap()
-                        }
+        val singleRecordEvent = DynamodbEvent().apply {
+            records = listOf(
+                DynamodbEvent.DynamodbStreamRecord().apply {
+                    eventName = "INSERT"
+                    dynamodb = StreamRecord().apply {
+                        keys = emptyMap()
+                        newImage = emptyMap()
+                        oldImage = emptyMap()
                     }
-                )
-            }
-
-            // Act
-            val emptyEventResult = trigger.handleRequest(emptyEvent, testContext)
-            val singleRecordResult = trigger.handleRequest(singleRecordEvent, testContext)
-
-            // Assert
-            emptyEventResult shouldBe "Done"
-            singleRecordResult shouldBe "Done"
+                }
+            )
         }
+
+        // Act
+        val emptyEventResult = trigger.handleRequest(emptyEvent, testContext)
+        val singleRecordResult = trigger.handleRequest(singleRecordEvent, testContext)
+
+        // Assert
+        emptyEventResult shouldBe "Done"
+        singleRecordResult shouldBe "Done"
     }
-})
+}
