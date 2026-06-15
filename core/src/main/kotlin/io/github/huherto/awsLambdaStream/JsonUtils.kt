@@ -2,6 +2,7 @@ package io.github.huherto.awsLambdaStream
 
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue
 import com.fasterxml.jackson.annotation.JsonAutoDetect
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.PropertyAccessor
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.JsonSerializer
@@ -27,27 +28,15 @@ class ByteBufferSerializer : JsonSerializer<ByteBuffer>() {
     }
 }
 
-
-class PipelineSerializer<T : Any> : JsonSerializer<T>() {
-    override fun serialize(value: T?, gen: JsonGenerator, serializers: SerializerProvider) {
+class PipelineSerializer : JsonSerializer<Pipeline>() {
+    override fun serialize(value: Pipeline?, gen: JsonGenerator, serializers: SerializerProvider) {
         if (value == null) {
             gen.writeNull()
             return
         }
 
         gen.writeStartObject()
-        value::class.members
-            .filterIsInstance<kotlin.reflect.KProperty<*>>()
-            .filter { it.getter.annotations.none { annotation -> annotation.annotationClass.simpleName == "Transient" } }
-            .forEach { property ->
-                try {
-                    val propName = property.name
-                    val propValue = property.getter.call(value)
-                    gen.writeObjectField(propName, propValue)
-                } catch (e: Exception) {
-                    // Skip non-serializable fields or inaccessible properties
-                }
-            }
+        gen.writeObjectField("id", value.id)
         gen.writeEndObject()
     }
 }
@@ -111,6 +100,7 @@ class AttributeValueSerializer : JsonSerializer<AttributeValue>() {
 private val jacksonMapper = jacksonObjectMapper().apply {
     enable(SerializationFeature.INDENT_OUTPUT) // Pretty print
     disable(SerializationFeature.FAIL_ON_EMPTY_BEANS) // Prevent crashes on objects with no public properties
+    setSerializationInclusion(JsonInclude.Include.NON_NULL);
 
     val module = SimpleModule()
     module.addSerializer(ByteBuffer::class.java, ByteBufferSerializer())

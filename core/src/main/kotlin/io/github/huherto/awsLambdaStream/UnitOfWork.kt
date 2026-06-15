@@ -51,7 +51,43 @@ data class S3UnitOfWork(
     val listResponseObject: Object? = null,
     val headRequest: HeadObjectRequest? = null,
     val headResponse: HeadObjectResponse? = null,
-)
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as S3UnitOfWork
+
+        if (getRequest != other.getRequest) return false
+        if (getResponse != other.getResponse) return false
+        if (getResponseText != other.getResponseText) return false
+        if (!getResponseBytes.contentEquals(other.getResponseBytes)) return false
+        if (putRequest != other.putRequest) return false
+        if (putResponse != other.putResponse) return false
+        if (listRequest != other.listRequest) return false
+        if (listResponse != other.listResponse) return false
+        if (listResponseObject != other.listResponseObject) return false
+        if (headRequest != other.headRequest) return false
+        if (headResponse != other.headResponse) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = getRequest?.hashCode() ?: 0
+        result = 31 * result + (getResponse?.hashCode() ?: 0)
+        result = 31 * result + (getResponseText?.hashCode() ?: 0)
+        result = 31 * result + (getResponseBytes?.contentHashCode() ?: 0)
+        result = 31 * result + (putRequest?.hashCode() ?: 0)
+        result = 31 * result + (putResponse?.hashCode() ?: 0)
+        result = 31 * result + (listRequest?.hashCode() ?: 0)
+        result = 31 * result + (listResponse?.hashCode() ?: 0)
+        result = 31 * result + (listResponseObject?.hashCode() ?: 0)
+        result = 31 * result + (headRequest?.hashCode() ?: 0)
+        result = 31 * result + (headResponse?.hashCode() ?: 0)
+        return result
+    }
+}
 
 fun UnitOfWork.copyS3(
     transform: S3UnitOfWork.() -> S3UnitOfWork,

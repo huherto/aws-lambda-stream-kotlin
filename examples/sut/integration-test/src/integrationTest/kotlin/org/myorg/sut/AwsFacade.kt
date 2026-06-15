@@ -270,6 +270,7 @@ class AwsFacade(val entityTable : String? = null, val eventTable : String? = nul
                 logger.info { "Received SNS/SQS message" }
 
                 if (body != null && body.contains(expectedContent)) {
+
                     return body
                 }
             }
