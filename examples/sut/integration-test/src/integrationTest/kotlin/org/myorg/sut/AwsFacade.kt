@@ -11,6 +11,7 @@ import aws.sdk.kotlin.services.kinesis.KinesisClient
 import aws.sdk.kotlin.services.kinesis.model.GetRecordsRequest
 import aws.sdk.kotlin.services.kinesis.model.GetShardIteratorRequest
 import aws.sdk.kotlin.services.kinesis.model.ShardIteratorType
+import aws.sdk.kotlin.services.lambda.LambdaClient
 import aws.sdk.kotlin.services.s3.S3Client
 import aws.sdk.kotlin.services.s3.listObjectsV2
 import aws.sdk.kotlin.services.s3.model.GetObjectRequest
@@ -39,7 +40,7 @@ class AwsFacade(val entityTable : String? = null, val eventTable : String? = nul
         return eventTable ?: error("eventTable is required")
     }
 
-    private val dynamoDbClient: DynamoDbClient by lazy {
+    val dynamoDbClient: DynamoDbClient by lazy {
         DynamoDbClient {
             this.region = "us-east-1"
             this.endpointUrl = endPointUrl()
@@ -75,7 +76,7 @@ class AwsFacade(val entityTable : String? = null, val eventTable : String? = nul
         }
     }
 
-    private val s3Client: S3Client by lazy {
+    val s3Client: S3Client by lazy {
         S3Client {
             this.region = "us-east-1"
             this.endpointUrl = endPointUrl()
@@ -99,6 +100,19 @@ class AwsFacade(val entityTable : String? = null, val eventTable : String? = nul
                 }
         }
     }
+
+    val lambdaClient: LambdaClient by lazy {
+        LambdaClient {
+            this.region = "us-east-1"
+            this.endpointUrl = endPointUrl()
+            credentialsProvider =
+                StaticCredentialsProvider {
+                    this.accessKeyId = "test"
+                    this.secretAccessKey = "test"
+                }
+        }
+    }
+
     suspend fun putEvents(vararg events: Event) {
         val entries = events.map { event ->
             PutEventsRequestEntry {

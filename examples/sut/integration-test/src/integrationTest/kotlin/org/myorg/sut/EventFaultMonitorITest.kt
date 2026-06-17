@@ -1,10 +1,16 @@
 package org.myorg.sut
 
+import io.github.huherto.awsLambdaStream.tools.resubmit.ResubmitEvents
 import io.kotest.matchers.nulls.shouldNotBeNull
 import kotlinx.coroutines.runBlocking
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.number
+import kotlinx.datetime.toLocalDateTime
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.myorg.sut.ShipmentTrackingDomain.createFaultEvent
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
 // Components tested.
 //
@@ -22,6 +28,7 @@ class EventFaultMonitorITest {
 
     private val awsFacade = AwsFacade(eventTable = "sut-control-service-local-events")
 
+    @OptIn(ExperimentalTime::class)
     @Test
     fun sendFaultEvent() : Unit = runBlocking {
 
@@ -37,6 +44,29 @@ class EventFaultMonitorITest {
             expectedContent = event.id!!,
         )
         notification.shouldNotBeNull()
+
+        // val d = Instant.now().atZone(TimeZone.UTC)
+        // val datePart = "${d.year}/${d.monthValue - 1}/${d.dayOfMonth}/${d.hour}"
+        val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
+        val datePart = "%04d/%02d/%02d/%02d".format(now.year, now.month.number, now.day, now.hour)
+
+
+        val resubmit = ResubmitEvents()
+        val argv = ResubmitEvents.Args(
+            prefix = "us-east-1/${datePart}/sut-event-fault-monitor-local",
+            bucket = "myorg-sut-event-fault-monitor-local-us-east-1",
+            dry = true,
+            parallel = 16,
+            batch = 25,
+            async = false,
+            batchTimeout = 5_000,
+            rate= 3,
+            window = 500,
+        )
+
+        val preparedEventRequests = resubmit.filterAndPrepareRequests(argv, awsFacade.s3Client)
+
+        resubmit.invokeLambdas(argv, preparedEventRequests, awsFacade.lambdaClient)
 
     }
 

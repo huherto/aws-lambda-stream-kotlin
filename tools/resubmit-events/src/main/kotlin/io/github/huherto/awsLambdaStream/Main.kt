@@ -10,8 +10,6 @@ suspend fun main() {
 
     val argv = resubmit.loadArgs()
 
-    print(argv)
-
     LambdaClient {
         region = argv.region ?: System.getenv("AWS_REGION")
     }.use { lambda ->

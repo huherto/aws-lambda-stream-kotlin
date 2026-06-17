@@ -7,7 +7,9 @@ import aws.sdk.kotlin.services.s3.S3Client
 import aws.sdk.kotlin.services.s3.model.GetObjectRequest
 import aws.sdk.kotlin.services.s3.model.ListObjectsV2Request
 import aws.smithy.kotlin.runtime.content.toByteArray
-import kotlinx.coroutines.*
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.datetime.TimeZone
@@ -17,6 +19,7 @@ import kotlinx.serialization.json.*
 import kotlinx.serialization.serializer
 import java.io.File
 import kotlin.math.floor
+import kotlin.random.Random
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.ExperimentalTime
@@ -42,6 +45,9 @@ class ResubmitEvents {
         val batchTimeout: Long = 5_000,
         val rate: Int = 3,
         val window: Long = 500,
+        val retryAttempts: Int = 3,
+        val retryBaseDelay: Long = 250,
+        val retryMaxDelay: Long = 5_000,
     )
 
     data class Counters(
@@ -83,6 +89,8 @@ class ResubmitEvents {
     )
 
     private val start = System.currentTimeMillis()
+    private val counterLock = Any()
+
     val counters = Counters()
 
     fun runtimeMinutes(): Double {
@@ -95,13 +103,14 @@ class ResubmitEvents {
         }
     }
 
-    internal fun print(data: Any?) {
+    internal fun prettyPrint(data: Any?) {
         println(toPrettyString(data))
     }
 
     internal fun toPrettyString(data: Any?): String {
         return when (data) {
             null -> "null"
+
             is Args -> json.encodeToString(
                 serializer(),
                 mapOf(
@@ -118,22 +127,25 @@ class ResubmitEvents {
                     "batchTimeout" to data.batchTimeout.toString(),
                     "rate" to data.rate.toString(),
                     "window" to data.window.toString(),
+                    "retryAttempts" to data.retryAttempts.toString(),
+                    "retryBaseDelay" to data.retryBaseDelay.toString(),
+                    "retryMaxDelay" to data.retryMaxDelay.toString(),
                 )
             )
 
             is Counters -> """
-            {
-              "list": ${data.list},
-              "get": ${data.get},
-              "events": ${data.events},
-              "match": ${data.match},
-              "recordCount": ${data.recordCount},
-              "types": ${data.types},
-              "functions": ${data.functions},
-              "invoked": ${data.invoked},
-              "errors": ${data.errors}
-            }
-        """.trimIndent()
+                {
+                  "list": ${data.list},
+                  "get": ${data.get},
+                  "events": ${data.events},
+                  "match": ${data.match},
+                  "recordCount": ${data.recordCount},
+                  "types": ${data.types},
+                  "functions": ${data.functions},
+                  "invoked": ${data.invoked},
+                  "errors": ${data.errors}
+                }
+            """.trimIndent()
 
             else -> data.toString()
         }
@@ -155,11 +167,11 @@ class ResubmitEvents {
         return null
     }
 
-
     @OptIn(ExperimentalTime::class)
     fun loadArgs(): Args {
         val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
         val defaultPrefix = "%04d/%02d/%02d/".format(now.year, now.month.number, now.day)
+
         val config = findUpConfigFile()
             ?.readText()
             ?.takeIf { it.isNotBlank() }
@@ -183,35 +195,19 @@ class ResubmitEvents {
             rate = System.getenv("RATE")?.toIntOrNull()
                 ?: config.intValue("rate")
                 ?: 3,
-            window = config.intValue("window")?.toLong() ?: 500,
+            window = System.getenv("WINDOW")?.toLongOrNull()
+                ?: config.intValue("window")?.toLong()
+                ?: 500,
+            retryAttempts = System.getenv("RETRY_ATTEMPTS")?.toIntOrNull()
+                ?: config.intValue("retryAttempts")
+                ?: 3,
+            retryBaseDelay = System.getenv("RETRY_BASE_DELAY")?.toLongOrNull()
+                ?: config.intValue("retryBaseDelay")?.toLong()
+                ?: 250,
+            retryMaxDelay = System.getenv("RETRY_MAX_DELAY")?.toLongOrNull()
+                ?: config.intValue("retryMaxDelay")?.toLong()
+                ?: 5_000,
         )
-    }
-
-    suspend fun main() {
-        val argv = loadArgs()
-
-        print(argv)
-
-        LambdaClient {
-            region = argv.region ?: System.getenv("AWS_REGION")
-        }.use { lambda ->
-            S3Client {
-                region = argv.region ?: System.getenv("AWS_REGION")
-            }.use { s3 ->
-                runResubmitEvents(
-                    argv = argv,
-                    s3 = s3,
-                    lambda = lambda,
-                )
-            }
-        }
-
-        println("======================================")
-        println("Running time (minutes): ${runtimeMinutes()}")
-        println("Gap: ${counters.list - counters.get}")
-        println("Final Counters:")
-        print(counters)
-        println("======================================")
     }
 
     suspend fun runResubmitEvents(
@@ -219,24 +215,81 @@ class ResubmitEvents {
         s3: S3Client,
         lambda: LambdaClient,
     ): Counters {
-        val processed = head(argv, s3)
-            .asSequence()
-            .filter(filterByFunctionName(argv))
-            .filter(::hasRecord)
-            .map { withInvokeRequest(it, argv) }
-            .toList()
+        prettyPrint(argv)
 
-        val invoked = invokeLambdaRateLimited(
+        resubmitEventsFlow(argv, s3, lambda)
+            .collect { uow ->
+                count(counters, uow)
+            }
+
+        return counters
+    }
+
+    internal fun resubmitEventsFlow(
+        argv: Args,
+        s3: S3Client,
+        lambda: LambdaClient,
+    ): Flow<UnitOfWork> {
+        return preparedRequestsFlow(argv, s3)
+            .rateLimit(
+                rate = argv.rate,
+                windowMillis = argv.window,
+            )
+            .mapParallel(argv.parallel) { uow ->
+                invokeLambdaWithRetry(
+                    lambda = lambda,
+                    uow = uow,
+                    maxAttempts = argv.retryAttempts,
+                    baseDelayMillis = argv.retryBaseDelay,
+                    maxDelayMillis = argv.retryMaxDelay,
+                )
+            }
+            .onEach(::debug)
+    }
+
+    suspend fun invokeLambdas(
+        argv: Args,
+        processed: List<UnitOfWork>,
+        lambda: LambdaClient,
+    ) {
+        invokeLambdaRateLimited(
             lambda = lambda,
             uows = processed,
             rate = argv.rate,
             windowMillis = argv.window,
             parallel = argv.parallel,
-        )
+            retryAttempts = argv.retryAttempts,
+            retryBaseDelay = argv.retryBaseDelay,
+            retryMaxDelay = argv.retryMaxDelay,
+        ).forEach { uow ->
+            count(counters, uow)
+        }
+    }
 
-        invoked.forEach { count(counters, it) }
+    suspend fun filterAndPrepareRequests(
+        argv: Args,
+        s3: S3Client,
+    ): List<UnitOfWork> {
+        return preparedRequestsFlow(argv, s3).toList()
+    }
 
-        return counters
+    internal fun preparedRequestsFlow(
+        argv: Args,
+        s3: S3Client,
+    ): Flow<UnitOfWork> {
+        return headFlow(argv, s3)
+            .onEach {
+                incrementEvents()
+            }
+            .filter(filterByFunctionName(argv))
+            .filter(::hasRecord)
+            .map { uow ->
+                try {
+                    withInvokeRequest(uow, argv)
+                } catch (error: Throwable) {
+                    errors(error, uow)
+                }
+            }
     }
 
     internal fun filterByFunctionName(argv: Args): (UnitOfWork) -> Boolean {
@@ -316,49 +369,94 @@ class ResubmitEvents {
         )
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
     internal suspend fun invokeLambdaRateLimited(
         lambda: LambdaClient,
         uows: List<UnitOfWork>,
         rate: Int,
         windowMillis: Long,
         parallel: Int,
+        retryAttempts: Int = 1,
+        retryBaseDelay: Long = 250,
+        retryMaxDelay: Long = 5_000,
     ): List<UnitOfWork> {
-        val semaphore = Semaphore(parallel)
-        val chunks = uows.chunked(rate)
+        return uows
+            .asFlow()
+            .rateLimit(
+                rate = rate,
+                windowMillis = windowMillis,
+            )
+            .mapParallel(parallel) { uow ->
+                invokeLambdaWithRetry(
+                    lambda = lambda,
+                    uow = uow,
+                    maxAttempts = retryAttempts,
+                    baseDelayMillis = retryBaseDelay,
+                    maxDelayMillis = retryMaxDelay,
+                )
+            }
+            .toList()
+    }
 
-        val results = mutableListOf<UnitOfWork>()
+    internal suspend fun invokeLambdaWithRetry(
+        lambda: LambdaClient,
+        uow: UnitOfWork,
+        maxAttempts: Int,
+        baseDelayMillis: Long,
+        maxDelayMillis: Long,
+    ): UnitOfWork {
+        var attempt = 1
+        var currentDelay = baseDelayMillis.coerceAtLeast(1)
+        val safeMaxAttempts = maxAttempts.coerceAtLeast(1)
+        val safeMaxDelay = maxDelayMillis.coerceAtLeast(currentDelay)
 
-        for (chunk in chunks) {
-            val invoked = chunk.map { uow ->
-                GlobalScope.async(Dispatchers.IO) {
-                    semaphore.withPermit {
-                        try {
-                            val request = uow.invokeRequest
-                                ?: return@withPermit uow
-
-                            val response = lambda.invoke(request)
-
-                            val updated = uow.copy(
-                                invokeResponseStatusCode = response.statusCode
-                            )
-
-                            debug(updated)
-
-                            updated
-                        } catch (error: Throwable) {
-                            errors(error, uow)
-                        }
-                    }
+        while (true) {
+            try {
+                return invokeLambdaOnce(lambda, uow)
+            } catch (error: Throwable) {
+                if (isExpiredToken(error)) {
+                    throw error
                 }
-            }.awaitAll()
 
-            results += invoked
+                if (attempt >= safeMaxAttempts || !isRetryable(error)) {
+                    return errors(error, uow)
+                }
 
-            delay(windowMillis.milliseconds)
+                val jitter = Random.nextLong(0, currentDelay + 1)
+                delay((currentDelay + jitter).milliseconds)
+
+                currentDelay = (currentDelay * 2).coerceAtMost(safeMaxDelay)
+                attempt += 1
+            }
         }
+    }
 
-        return results
+    internal suspend fun invokeLambdaOnce(
+        lambda: LambdaClient,
+        uow: UnitOfWork,
+    ): UnitOfWork {
+        val request = uow.invokeRequest ?: return uow
+        val response = lambda.invoke(request)
+
+        return uow.copy(
+            invokeResponseStatusCode = response.statusCode,
+        )
+    }
+
+    internal fun isRetryable(error: Throwable): Boolean {
+        val message = error.message.orEmpty()
+
+        return message.contains("TooManyRequests", ignoreCase = true) ||
+                message.contains("throttl", ignoreCase = true) ||
+                message.contains("rate exceeded", ignoreCase = true) ||
+                message.contains("timeout", ignoreCase = true) ||
+                message.contains("temporarily unavailable", ignoreCase = true) ||
+                message.contains("connection reset", ignoreCase = true) ||
+                message.contains("service unavailable", ignoreCase = true) ||
+                message.contains("429", ignoreCase = true) ||
+                message.contains("500", ignoreCase = true) ||
+                message.contains("502", ignoreCase = true) ||
+                message.contains("503", ignoreCase = true) ||
+                message.contains("504", ignoreCase = true)
     }
 
     internal fun errors(
@@ -367,134 +465,148 @@ class ResubmitEvents {
     ): UnitOfWork {
         System.err.println(error.message)
 
-        if (error.message == "The provided token has expired.") {
+        if (isExpiredToken(error)) {
             throw error
         }
 
         return uow.copy(err = error)
     }
 
+    private fun isExpiredToken(error: Throwable): Boolean {
+        return error.message == "The provided token has expired."
+    }
+
     internal fun count(
         counters: Counters,
         uow: UnitOfWork,
     ): Counters {
-        val event = uow.event
+        synchronized(counterLock) {
+            val event = uow.event
 
-        if (event != null && event["type"] != null) {
-            val type = event.string("type") ?: "unknown"
-            val tags = event.jsonObject("tags")
-            val functionName = tags?.string("functionname") ?: "unknown"
-            val pipeline = "$functionName|${tags?.string("pipeline") ?: "unknown"}"
+            if (event != null && event["type"] != null) {
+                val type = event.string("type") ?: "unknown"
+                val tags = event.jsonObject("tags")
+                val functionName = tags?.string("functionname") ?: "unknown"
+                val pipeline = "$functionName|${tags?.string("pipeline") ?: "unknown"}"
 
-            counters.match += 1
+                counters.match += 1
 
-            counters.types[type] = (counters.types[type] ?: 0) + 1
-            counters.functions[pipeline] = (counters.functions[pipeline] ?: 0) + 1
-        }
-
-        if (uow.recordCount != null) {
-            counters.recordCount += uow.recordCount
-        }
-
-        if (uow.invokeRequest != null) {
-            if (counters.invoked == null) {
-                counters.invoked = InvokedCounters()
+                counters.types[type] = (counters.types[type] ?: 0) + 1
+                counters.functions[pipeline] = (counters.functions[pipeline] ?: 0) + 1
             }
 
-            val invoked = counters.invoked!!
-            invoked.total += 1
-
-            if (uow.invokeResponseStatusCode != null) {
-                val status = uow.invokeResponseStatusCode
-                invoked.statuses[status] = (invoked.statuses[status] ?: 0) + 1
+            if (uow.recordCount != null) {
+                counters.recordCount += uow.recordCount
             }
-        }
 
-        if (uow.err != null) {
-            counters.errors += 1
-            counters.errored += uow
-        }
+            if (uow.invokeRequest != null) {
+                if (counters.invoked == null) {
+                    counters.invoked = InvokedCounters()
+                }
 
-        return counters
+                val invoked = counters.invoked!!
+                invoked.total += 1
+
+                if (uow.invokeResponseStatusCode != null) {
+                    val status = uow.invokeResponseStatusCode
+                    invoked.statuses[status] = (invoked.statuses[status] ?: 0) + 1
+                }
+            }
+
+            if (uow.err != null) {
+                counters.errors += 1
+                counters.errored += uow
+            }
+
+            return counters
+        }
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
     internal suspend fun head(
         argv: Args,
         s3: S3Client,
     ): List<UnitOfWork> {
+        return headFlow(argv, s3).toList()
+    }
+
+    internal fun headFlow(
+        argv: Args,
+        s3: S3Client,
+    ): Flow<UnitOfWork> {
         val bucket = argv.bucket
             ?: error("Missing bucket. Set bucket in config or BUCKET_NAME environment variable.")
 
-        val prefixes = argv.prefix.split(",")
+        val initialUows = argv.prefix
+            .split(",")
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+            .map { prefix ->
+                val fullPrefix =
+                    if (argv.region != null) {
+                        "${argv.region}/$prefix"
+                    } else {
+                        prefix
+                    }
 
-        val initialUows = prefixes.map { prefix ->
-            val fullPrefix =
-                if (argv.region != null) {
-                    "${argv.region}/$prefix"
-                } else {
-                    prefix
-                }
+                UnitOfWork(
+                    argv = argv,
+                    listRequest = ListObjectsV2Request {
+                        this.bucket = bucket
+                        this.prefix = fullPrefix
+                        this.continuationToken = argv.continuationToken
+                            ?.takeUnless { it == "" || it == "undefined" || it == "true" }
+                    }
+                )
+            }
 
-            UnitOfWork(
-                argv = argv,
-                listRequest = ListObjectsV2Request {
-                    this.bucket = bucket
-                    this.prefix = fullPrefix
-                    this.continuationToken = argv.continuationToken
-                        ?.takeUnless { it == "" || it == "undefined" || it == "true" }
-                }
-            )
-        }
-
-        val listed = pageObjectsFromS3(
+        return pageObjectsFromS3Flow(
             s3 = s3,
             uows = initialUows,
             parallel = 1,
         )
-
-        val getSemaphore = Semaphore(argv.parallel)
-
-        return listed.map { uow ->
-            GlobalScope.async(Dispatchers.IO) {
-                getSemaphore.withPermit {
-                    val key = uow.listResponse?.key
-                        ?: error("Missing listed object key")
-
-                    val getRequest = GetObjectRequest {
-                        this.bucket = bucket
-                        this.key = key
-                    }
-
-                    getObjectFromS3(
-                        s3 = s3,
-                        uow = uow.copy(getRequest = getRequest),
-                        getRequest = getRequest,
-                    )
-                }
+            .filter { uow ->
+                uow.err == null
             }
-        }.awaitAll()
-            .flatMap(::splitLines)
-            .map { uow ->
-                counters.events += 1
+            .mapParallel(argv.parallel) { uow ->
+                val key = uow.listResponse?.key
+                    ?: error("Missing listed object key")
 
-                val line = uow.getResponseLine
-                    ?: error("Missing S3 object line")
+                val getRequest = GetObjectRequest {
+                    this.bucket = bucket
+                    this.key = key
+                }
 
-                val parsed = json.parseToJsonElement(line).jsonObject
-                val detail = parsed["detail"]?.jsonObject
-                    ?: error("Missing detail field")
-
-                val eb = JsonObject(parsed.filterKeys { it != "detail" })
-
-                uow.copy(
-                    record = JsonObject(
-                        mapOf(
-                            "eb" to eb
-                        )
-                    ),
-                    event = detail,
+                getObjectFromS3(
+                    s3 = s3,
+                    uow = uow.copy(getRequest = getRequest),
+                    getRequest = getRequest,
                 )
+            }
+            .flatMapConcat { uow ->
+                splitLines(uow).asFlow()
+            }
+            .map { uow ->
+                val line = uow.getResponseLine
+                    ?: return@map uow
+
+                try {
+                    val parsed = json.parseToJsonElement(line).jsonObject
+                    val detail = parsed["detail"]?.jsonObject
+                        ?: error("Missing detail field")
+
+                    val eb = JsonObject(parsed.filterKeys { it != "detail" })
+
+                    uow.copy(
+                        record = JsonObject(
+                            mapOf(
+                                "eb" to eb
+                            )
+                        ),
+                        event = detail,
+                    )
+                } catch (error: Throwable) {
+                    uow.copy(err = error)
+                }
             }
             .onEach(::debug)
     }
@@ -504,15 +616,26 @@ class ResubmitEvents {
         uows: List<UnitOfWork>,
         parallel: Int,
     ): List<UnitOfWork> {
-        val semaphore = Semaphore(parallel)
+        return pageObjectsFromS3Flow(
+            s3 = s3,
+            uows = uows,
+            parallel = parallel,
+        ).toList()
+    }
 
-        return uows.map { uow ->
-            GlobalScope.async(Dispatchers.IO) {
-                semaphore.withPermit {
-                    listAllObjectsForPrefix(s3, uow)
-                }
+    internal fun pageObjectsFromS3Flow(
+        s3: S3Client,
+        uows: List<UnitOfWork>,
+        parallel: Int,
+    ): Flow<UnitOfWork> {
+        return uows
+            .asFlow()
+            .mapParallel(parallel) { uow ->
+                listAllObjectsForPrefix(s3, uow)
             }
-        }.awaitAll().flatten()
+            .flatMapConcat { listed ->
+                listed.asFlow()
+            }
     }
 
     internal suspend fun listAllObjectsForPrefix(
@@ -520,18 +643,19 @@ class ResubmitEvents {
         initialUow: UnitOfWork,
     ): List<UnitOfWork> {
         val results = mutableListOf<UnitOfWork>()
-
         var continuationToken = initialUow.listRequest?.continuationToken
 
         do {
             val original = initialUow.listRequest
                 ?: error("Missing list request")
 
+            val configuredParallel = initialUow.argv?.parallel ?: 16
+
             val maxKeys =
                 if (floor(runtimeMinutes()).toInt() > 22) {
                     2
                 } else {
-                    (initialUow.argv?.parallel ?: 16) - 5
+                    (configuredParallel - 5).coerceAtLeast(1)
                 }
 
             val request = ListObjectsV2Request {
@@ -552,7 +676,9 @@ class ResubmitEvents {
                         null
                     }
 
-                counters.list += contents.size
+                synchronized(counterLock) {
+                    counters.list += contents.size
+                }
 
                 println("======================================")
                 println("Prefix: ${request.prefix}")
@@ -561,7 +687,7 @@ class ResubmitEvents {
                 println("Running time (minutes): ${runtimeMinutes()}")
                 println("Gap: ${counters.list - counters.get}")
                 println("Counters:")
-                print(counters)
+                prettyPrint(counters)
                 println("======================================")
 
                 contents.forEach { obj ->
@@ -590,7 +716,9 @@ class ResubmitEvents {
         uow: UnitOfWork,
         getRequest: GetObjectRequest,
     ): UnitOfWork {
-        counters.get += 1
+        synchronized(counterLock) {
+            counters.get += 1
+        }
 
         println("Get: ${getRequest.key}")
 
@@ -615,6 +743,47 @@ class ResubmitEvents {
                 uow.copy(getResponseLine = line)
             }
             .toList()
+    }
+
+    internal fun <T, R> Flow<T>.mapParallel(
+        parallelism: Int,
+        transform: suspend (T) -> R,
+    ): Flow<R> = channelFlow {
+        val safeParallelism = parallelism.coerceAtLeast(1)
+        val semaphore = Semaphore(safeParallelism)
+
+        collect { value ->
+            launch {
+                semaphore.withPermit {
+                    send(transform(value))
+                }
+            }
+        }
+    }.buffer(parallelism.coerceAtLeast(1))
+
+    internal fun <T> Flow<T>.rateLimit(
+        rate: Int,
+        windowMillis: Long,
+    ): Flow<T> = flow {
+        val safeRate = rate.coerceAtLeast(1)
+        val safeWindowMillis = windowMillis.coerceAtLeast(0)
+        var emittedInWindow = 0
+
+        collect { value ->
+            if (emittedInWindow == safeRate) {
+                delay(safeWindowMillis.milliseconds)
+                emittedInWindow = 0
+            }
+
+            emit(value)
+            emittedInWindow += 1
+        }
+    }
+
+    private fun incrementEvents() {
+        synchronized(counterLock) {
+            counters.events += 1
+        }
     }
 }
 
