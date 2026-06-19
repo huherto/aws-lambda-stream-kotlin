@@ -114,7 +114,7 @@ class KinesisAdapterTest {
         results[0].sequenceNumber shouldBe "sequence-valid"
 
         faultManager.getFaults().shouldHaveSize(1)
-        faultManager.getFaults()[0].failureException?.uow?.record shouldBe invalidRecord
+        faultManager.getFaults()[0].uow?.record shouldBe invalidRecord
     }
 
     @Test

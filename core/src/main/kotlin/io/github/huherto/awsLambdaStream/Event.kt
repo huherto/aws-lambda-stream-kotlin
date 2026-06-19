@@ -43,14 +43,18 @@ abstract class BaseEvent : Event {
     override var triggers: List<EventReference>? = null
 }
 
+@Serializable
 class FaultException : RuntimeException {
-    val uow: UnitOfWork
+
+    @kotlinx.serialization.Transient
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    var uow: UnitOfWork? = null
 
     constructor(uow: UnitOfWork, cause: Throwable?) : super(cause) {
         this.uow = uow
     }
 
-    constructor(uow: UnitOfWork, message: String, cause: Throwable?,enableSuppression: Boolean,
+    constructor(uow: UnitOfWork?, message: String?, cause: Throwable?,enableSuppression: Boolean,
                 writableStackTrace: Boolean) : super(message, cause, enableSuppression, writableStackTrace) {
         this.uow = uow
     }
@@ -61,15 +65,22 @@ const val FAULT_EVENT_TYPE : String = "fault"
 @Serializable
 class FaultEvent() : BaseEvent() {
 
+    @Serializable
+    data class Error(val name: String?, val message: String?)
+
+    var err: Error? = null
+
+    var faultException: FaultException? = null
+
     @Contextual
-    var failureException: FaultException? = null
+    var uow: UnitOfWork? = null
 
     override fun eventType(): String {
         return FAULT_EVENT_TYPE
     }
 
     override fun toString(): String {
-        return failureException?.cause?.message ?: "Unknown failure"
+        return  err?.message ?: "Unknown Error"
     }
 
     override fun encoded(): String {

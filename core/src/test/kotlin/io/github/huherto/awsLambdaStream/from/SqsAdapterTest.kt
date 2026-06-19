@@ -159,7 +159,7 @@ class SqsAdapterTest {
         results[0].event shouldBe validEvent
 
         faultManager.getFaults().shouldHaveSize(1)
-        faultManager.getFaults()[0].failureException?.uow?.record shouldBe invalidRecord
+        faultManager.getFaults()[0].uow?.record shouldBe invalidRecord
     }
 
     @Test
@@ -257,8 +257,8 @@ class SqsAdapterTest {
         results[1].event?.id shouldBe "message-3"
 
         faultManager.getFaults().shouldHaveSize(1)
-        faultManager.getFaults()[0].failureException?.uow?.record shouldBe faultyRecord
-        faultManager.getFaults()[0].failureException?.cause?.message shouldBe "decode failed"
+        faultManager.getFaults()[0].uow?.record shouldBe faultyRecord
+        faultManager.getFaults()[0].err?.message shouldBe "java.lang.IllegalStateException: decode failed"
     }
 
     private fun createSqsMessage(

@@ -30,6 +30,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines)
     implementation(libs.kotlinx.datetime)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.uuid.generator)
 
 
     testImplementation(kotlin("test"))

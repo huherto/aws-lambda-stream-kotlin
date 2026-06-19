@@ -7,6 +7,7 @@ import aws.sdk.kotlin.services.s3.S3Client
 import aws.sdk.kotlin.services.s3.model.GetObjectRequest
 import aws.sdk.kotlin.services.s3.model.ListObjectsV2Request
 import aws.smithy.kotlin.runtime.content.toByteArray
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -273,6 +274,113 @@ class ResubmitEvents {
         return preparedRequestsFlow(argv, s3).toList()
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
+    internal fun headFlow(
+        argv: Args,
+        s3: S3Client,
+    ): Flow<UnitOfWork> {
+        val bucket = argv.bucket
+            ?: error("Missing bucket. Set bucket in config or BUCKET_NAME environment variable.")
+
+        val initialUows = argv.prefix
+            .split(",")
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+            .map { prefix ->
+                val fullPrefix =
+                    if (argv.region != null) {
+                        "${argv.region}/$prefix"
+                    } else {
+                        prefix
+                    }
+
+                UnitOfWork(
+                    argv = argv,
+                    listRequest = ListObjectsV2Request {
+                        this.bucket = bucket
+                        this.prefix = fullPrefix
+                        this.continuationToken = argv.continuationToken
+                            ?.takeUnless { it == "" || it == "undefined" || it == "true" }
+                    }
+                )
+            }
+
+        return pageObjectsFromS3Flow(
+            s3 = s3,
+            uows = initialUows,
+            parallel = 1,
+        )
+            .filter(::successfulOnly)
+            .mapParallel(argv.parallel) { uow ->
+                fetchListedObject(
+                    s3 = s3,
+                    bucket = bucket,
+                    uow = uow,
+                )
+            }
+            .flatMapConcat(::splitObjectIntoLines)
+            .map(::parseEventBridgeLine)
+            .onEach(::debug)
+    }
+
+    private fun successfulOnly(uow: UnitOfWork): Boolean {
+        return uow.err == null
+    }
+
+    private suspend fun fetchListedObject(
+        s3: S3Client,
+        bucket: String,
+        uow: UnitOfWork,
+    ): UnitOfWork {
+        val key = uow.listResponse?.key
+            ?: error("Missing listed object key")
+
+        val getRequest = GetObjectRequest {
+            this.bucket = bucket
+            this.key = key
+        }
+
+        return getObjectFromS3(
+            s3 = s3,
+            uow = uow.copy(getRequest = getRequest),
+            getRequest = getRequest,
+        )
+    }
+
+    private fun splitObjectIntoLines(uow: UnitOfWork): Flow<UnitOfWork> {
+        return splitLines(uow).asFlow()
+    }
+
+    private fun parseEventBridgeLine(uow: UnitOfWork): UnitOfWork {
+        val line = uow.getResponseLine ?: return uow
+
+        return try {
+            val eventBridgeEvent = json.parseToJsonElement(line).jsonObject
+
+            uow.copy(
+                record = eventBridgeEnvelope(eventBridgeEvent),
+                event = eventBridgeDetail(eventBridgeEvent),
+            )
+        } catch (error: Throwable) {
+            uow.copy(err = error)
+        }
+    }
+
+    private fun eventBridgeEnvelope(eventBridgeEvent: JsonObject): JsonObject {
+        val metadata = JsonObject(eventBridgeEvent.filterKeys { it != "detail" })
+
+        return JsonObject(
+            mapOf(
+                "eb" to metadata
+            )
+        )
+    }
+
+    private fun eventBridgeDetail(eventBridgeEvent: JsonObject): JsonObject {
+        return eventBridgeEvent["detail"]?.jsonObject
+            ?: error("Missing detail field")
+    }
+
     internal fun preparedRequestsFlow(
         argv: Args,
         s3: S3Client,
@@ -522,107 +630,7 @@ class ResubmitEvents {
         }
     }
 
-    internal suspend fun head(
-        argv: Args,
-        s3: S3Client,
-    ): List<UnitOfWork> {
-        return headFlow(argv, s3).toList()
-    }
-
-    internal fun headFlow(
-        argv: Args,
-        s3: S3Client,
-    ): Flow<UnitOfWork> {
-        val bucket = argv.bucket
-            ?: error("Missing bucket. Set bucket in config or BUCKET_NAME environment variable.")
-
-        val initialUows = argv.prefix
-            .split(",")
-            .map { it.trim() }
-            .filter { it.isNotBlank() }
-            .map { prefix ->
-                val fullPrefix =
-                    if (argv.region != null) {
-                        "${argv.region}/$prefix"
-                    } else {
-                        prefix
-                    }
-
-                UnitOfWork(
-                    argv = argv,
-                    listRequest = ListObjectsV2Request {
-                        this.bucket = bucket
-                        this.prefix = fullPrefix
-                        this.continuationToken = argv.continuationToken
-                            ?.takeUnless { it == "" || it == "undefined" || it == "true" }
-                    }
-                )
-            }
-
-        return pageObjectsFromS3Flow(
-            s3 = s3,
-            uows = initialUows,
-            parallel = 1,
-        )
-            .filter { uow ->
-                uow.err == null
-            }
-            .mapParallel(argv.parallel) { uow ->
-                val key = uow.listResponse?.key
-                    ?: error("Missing listed object key")
-
-                val getRequest = GetObjectRequest {
-                    this.bucket = bucket
-                    this.key = key
-                }
-
-                getObjectFromS3(
-                    s3 = s3,
-                    uow = uow.copy(getRequest = getRequest),
-                    getRequest = getRequest,
-                )
-            }
-            .flatMapConcat { uow ->
-                splitLines(uow).asFlow()
-            }
-            .map { uow ->
-                val line = uow.getResponseLine
-                    ?: return@map uow
-
-                try {
-                    val parsed = json.parseToJsonElement(line).jsonObject
-                    val detail = parsed["detail"]?.jsonObject
-                        ?: error("Missing detail field")
-
-                    val eb = JsonObject(parsed.filterKeys { it != "detail" })
-
-                    uow.copy(
-                        record = JsonObject(
-                            mapOf(
-                                "eb" to eb
-                            )
-                        ),
-                        event = detail,
-                    )
-                } catch (error: Throwable) {
-                    uow.copy(err = error)
-                }
-            }
-            .onEach(::debug)
-    }
-
-    internal suspend fun pageObjectsFromS3(
-        s3: S3Client,
-        uows: List<UnitOfWork>,
-        parallel: Int,
-    ): List<UnitOfWork> {
-        return pageObjectsFromS3Flow(
-            s3 = s3,
-            uows = uows,
-            parallel = parallel,
-        ).toList()
-    }
-
+    @OptIn(ExperimentalCoroutinesApi::class)
     internal fun pageObjectsFromS3Flow(
         s3: S3Client,
         uows: List<UnitOfWork>,

@@ -1,6 +1,7 @@
 package io.github.huherto.awsLambdaStream
 
 import aws.smithy.kotlin.runtime.SdkBaseException
+import com.fasterxml.uuid.Generators
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import io.github.huherto.awsLambdaStream.sinks.EventPublisher
 import kotlinx.coroutines.flow.*
@@ -36,6 +37,8 @@ class FaultManager(
     private val logger = mu.KotlinLogging.logger { }
 
     private val theFaults = ConcurrentLinkedQueue<FaultEvent>()
+
+    private val uuidV1Generator = Generators.timeBasedGenerator()
 
     /**
      * Internal placeholder pipeline used when publishing fault events.
@@ -137,12 +140,18 @@ class FaultManager(
         logError(ex)
         if (!isRetriableException(ex)) {
             val functionName = awsLambdaFunctionName
+            val pipelineId = ex.uow?.pipeline?.id ?: "undefined"
             val failureEvent = FaultEvent().apply {
-                id = UUID.randomUUID().toString()
-                partitionKey = UUID.randomUUID().toString()
+                id = uuidV1Generator.generate().toString() // UUID v1. Time-based
+                partitionKey = UUID.randomUUID().toString() // UUID v4. Uniform distribution.
                 timestamp = System.currentTimeMillis()
-                tags = mutableMapOf("functionname" to functionName)
-                failureException = ex
+                tags = mutableMapOf(
+                    "functionname" to functionName,
+                    "pipeline" to pipelineId
+                )
+                err = FaultEvent.Error(ex.cause?.javaClass?.simpleName, ex.message)
+                uow = ex.uow
+                faultException = ex
             }
             theFaults.add(failureEvent)
         } else {

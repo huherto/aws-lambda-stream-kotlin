@@ -36,6 +36,7 @@ lambda-json-logger = { module = "io.github.vitalijr2.aws-lambda:aws-lambda-slf4j
 mockk = { module="io.mockk:mockk", version="1.14.6" }
 slf4j-api = { module="org.slf4j:slf4j-api", version.ref="slf4jVer" }
 slf4j-simple = { module="org.slf4j:slf4j-simple", version.ref="slf4jVer" }
+uuid-generator = { module="com.fasterxml.uuid:java-uuid-generator", version="5.2.0"}
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlinVersion" }

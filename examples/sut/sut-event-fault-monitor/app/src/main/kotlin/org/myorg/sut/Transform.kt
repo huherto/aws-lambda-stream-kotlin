@@ -43,10 +43,11 @@ class Transform : RequestHandler<KinesisFirehoseEvent, FirehoseTransformResponse
 
     private val envConfig = EnvironmentConfig()
 
-    override fun handleRequest(
+    fun handleRequest_new(
         input: KinesisFirehoseEvent,
         context: Context,
     ): FirehoseTransformResponse = runBlocking {
+
         val notifications = linkedMapOf<String, Notification>()
 
         val results = input.records.map { record ->
@@ -58,13 +59,47 @@ class Transform : RequestHandler<KinesisFirehoseEvent, FirehoseTransformResponse
             notification?.let { notifications[it.messageDeduplicationId] = it }
             val outputData = Base64.getEncoder()
                 .encodeToString(
-                    originalData.toByteArray()
+                    "originalData\n".toByteArray()
                 )
             FirehoseTransformRecord(
                 recordId = record.recordId,
                 result = "Ok",
                 data = outputData,
             )
+        }
+
+        sendNotifications(notifications)
+
+        FirehoseTransformResponse(records = results)
+    }
+
+    fun decodeBase64JsonIfNeeded(value: String): String {
+        val trimmed = value.trim()
+
+        return try {
+            val decodedBytes = Base64.getDecoder().decode(trimmed)
+            val decodedString = decodedBytes.toString(StandardCharsets.UTF_8).trimStart()
+
+            if (decodedString.startsWith("{") || decodedString.startsWith("[")) {
+                decodedString
+            } else {
+                value
+            }
+        } catch (_: IllegalArgumentException) {
+            value
+        }
+    }
+
+    override fun handleRequest(
+        input: KinesisFirehoseEvent,
+        context: Context,
+    ): FirehoseTransformResponse = runBlocking {
+        // This is shared by all the uows.
+        val notifications = linkedMapOf<String, Notification>()
+        val results = input.records.map { record ->
+            val originalData = StandardCharsets.UTF_8.decode(record.data).toString()
+            fixRecordId(record)
+            processAsPipeline(record, originalData, context, notifications)
         }
 
         sendNotifications(notifications)
@@ -104,6 +139,7 @@ class Transform : RequestHandler<KinesisFirehoseEvent, FirehoseTransformResponse
             System.getenv("AWS_SAM_LOCAL") == "true"
 
     private fun fixRecordId(record: KinesisFirehoseEvent.Record) {
+        // When running locally, the recordId is missing from the Kinesis Firehose event
         if (record.recordId == null) {
             if (isLocalStack()) {
                 // Look for an embedded EventBridge event ID within the record payload
@@ -135,10 +171,7 @@ class Transform : RequestHandler<KinesisFirehoseEvent, FirehoseTransformResponse
     }
 
     private fun unbase64Data(uow: TransformUnitOfWork): TransformUnitOfWork {
-        val decoded = Base64.getDecoder()
-            .decode(uow.originalData)
-            .toString(Charsets.UTF_8)
-
+        val decoded = decodeBase64JsonIfNeeded(uow.originalData)
         return uow.copy(eventAsString = decoded)
     }
 

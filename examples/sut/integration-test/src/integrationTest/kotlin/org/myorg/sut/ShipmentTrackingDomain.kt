@@ -57,7 +57,7 @@ object ShipmentTrackingDomain {
     fun createFaultEvent() = FaultEvent().apply {
         id = "fault-" + generateRandomNumber()
         timestamp = System.currentTimeMillis()
-        failureException = FaultException(UnitOfWork(), "",
+        faultException = FaultException(UnitOfWork(), "",
             TestException("Test exception"), enableSuppression = false, writableStackTrace = false
         )
     }

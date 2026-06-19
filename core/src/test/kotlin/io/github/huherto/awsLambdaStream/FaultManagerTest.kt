@@ -54,7 +54,7 @@ class FaultManagerTest {
         result shouldBe null
         val faults = faultManager.getFaults()
         faults shouldHaveSize 1
-        faults.first().failureException?.cause shouldBe exception
+        faults.first().err?.message shouldBe "java.lang.RuntimeException: test error"
     }
 
     @Test
@@ -76,7 +76,7 @@ class FaultManagerTest {
 
         // Assert
         faultManager.getFaults() shouldHaveSize 1
-        faultManager.getFaults()[0].failureException shouldBe nonRetriableEx
+        faultManager.getFaults()[0].err?.message shouldBe nonRetriableEx.message
     }
 
     @Test
@@ -123,7 +123,7 @@ class FaultManagerTest {
 
         // Assert
         faultManager.getFaults() shouldHaveSize 1
-        faultManager.getFaults()[0].failureException shouldBe nonRetriableSdkEx
+        faultManager.getFaults()[0].err?.message shouldBe nonRetriableSdkEx.message
     }
 
     @Test
@@ -154,7 +154,7 @@ class FaultManagerTest {
         resultList shouldBe listOf(uow1, uow3)
         val faults = faultManager.getFaults()
         faults shouldHaveSize 1
-        faults[0].failureException?.cause?.message shouldBe "error on uow2"
+        faults[0].err?.message shouldBe "java.lang.RuntimeException: error on uow2"
     }
 
     @Test
@@ -183,8 +183,8 @@ class FaultManagerTest {
         val emittedList = eventPublisher.events()
         emittedList shouldHaveSize 2
         (emittedList[0] is FaultEvent) shouldBe true
-        (emittedList[0] as FaultEvent).failureException?.cause?.message shouldBe "error 1"
-        (emittedList[1] as FaultEvent).failureException?.cause?.message shouldBe "error 2"
+        (emittedList[0] as FaultEvent).err?.message shouldBe "java.lang.RuntimeException: error 1"
+        (emittedList[1] as FaultEvent).err?.message shouldBe "java.lang.RuntimeException: error 2"
     }
 
     @Test

@@ -91,7 +91,7 @@ class ListenerTest {
         val event = publisher.events().first()
         event shouldNotBe null
         val fault = event.shouldBeInstanceOf<FaultEvent>()
-        val faultUow = fault.failureException?.uow shouldNotBe null
+        val faultUow = fault.uow shouldNotBe null
         val record = faultUow?.record.shouldBeInstanceOf<KinesisEvent.KinesisEventRecord>()
         record shouldNotBe null
         record.eventID shouldBe "shardId-000000000000:1"
@@ -118,9 +118,9 @@ class ListenerTest {
         faults.size shouldBe 1
         val fault = faults[0]
         fault shouldNotBe null
-        fault.failureException shouldNotBe null
+        fault.err shouldNotBe null
 
-        val faultUow = fault.failureException?.uow
+        val faultUow = fault.uow
         faultUow shouldNotBe null
         faultUow?.record shouldNotBe null
         val fm = container.faultManager

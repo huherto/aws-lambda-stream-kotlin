@@ -131,7 +131,7 @@ class MaterializePipelineTest {
         // assert
         result.map { it.key } shouldContainExactly listOf("pass")
         faultManager.getFaults() shouldHaveSize 1
-        faultManager.getFaults().single().failureException?.uow shouldBe failing
+        faultManager.getFaults().single().uow shouldBe failing
 
         coVerify(exactly = 1) { connector.update(updateRequest, any()) }
     }

@@ -137,9 +137,9 @@ class PipelineAssemblerTest {
         assertNotNull(failureEvent)
         assertEquals(FAULT_EVENT_TYPE, failureEvent?.eventType())
         
-        val exception = failureEvent?.failureException
-        assertNotNull(exception)
-        assertEquals(uow.record, exception?.uow?.record)
+        val error = failureEvent?.err
+        assertNotNull(error)
+        assertEquals(uow.record, failureEvent?.uow?.record)
     }
 
     @Test
