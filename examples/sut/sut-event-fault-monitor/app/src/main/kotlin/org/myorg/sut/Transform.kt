@@ -236,18 +236,20 @@ class Transform : RequestHandler<KinesisFirehoseEvent, FirehoseTransformResponse
         return uow
     }
 
+    private fun safeFifoIdPart(value: String): String =
+        value.replace(Regex("""[^A-Za-z0-9!"#$%&'()*+,\-./:;<=>?@\[\\\]^_`{|}~]"""), "-")
+
     private fun createNotification(event: JsonObject): Notification? {
         val detail = event["detail"] as? JsonObject ?: return null
         val tags = detail["tags"] as? JsonObject ?: JsonObject(emptyMap())
         val err = detail["err"] as? JsonObject ?: JsonObject(emptyMap())
 
-        val eventId = event.stringOrNull("id") ?: UUID.randomUUID().toString()
         val timestamp = detail.longOrNull("timestamp") ?: 0L
 
         val d = Instant.ofEpochMilli(timestamp)
             .atZone(ZoneId.systemDefault())
 
-        val t = "${d.year}${d.monthValue - 1}${d.dayOfMonth}${d.hour}"
+        val t = "%04d%02d%02d%02d".format(d.year, d.monthValue, d.dayOfMonth, d.hour)
 
         val account = tags.stringOrNull("account") ?: "account"
         val region = tags.stringOrNull("region") ?: "region"
@@ -255,13 +257,13 @@ class Transform : RequestHandler<KinesisFirehoseEvent, FirehoseTransformResponse
         val pipeline = tags.stringOrNull("pipeline") ?: "pipeline"
         val errorMessage = err.stringOrNull("message") ?: ""
 
-        val messageDeduplicationId = "$eventId-$functionName-$pipeline-$t-$errorMessage"
+        val messageDeduplicationId = safeFifoIdPart("$functionName-$pipeline-$t-$errorMessage")
             .take(128)
 
         val subject = "Fault: $account,$region,$functionName,$pipeline"
             .take(100)
 
-        val messageGroupId = "Fault:$account,$region,$functionName,$pipeline"
+        val messageGroupId = safeFifoIdPart("Fault:$account,$region,$functionName,$pipeline").take(100)
 
         val fault = prettyJson.encodeToString(JsonElement.serializer(), event)
         val error = prettyJson.encodeToString(JsonElement.serializer(), err)
@@ -297,6 +299,7 @@ class Transform : RequestHandler<KinesisFirehoseEvent, FirehoseTransformResponse
             // If an endpoint URL is provided (like http://localhost:4566), use it
             endpointUrl?.let { this.endpointUrl = Url.parse(it) }
         }.use { sns ->
+            var count = 0
             notifications.values.forEach { notification ->
                 try {
                     val request = PublishRequest {
@@ -312,11 +315,13 @@ class Transform : RequestHandler<KinesisFirehoseEvent, FirehoseTransformResponse
                     )
 
                     logger.info { "SNS publish response: $response" }
+                    count++
                 } catch (err: Throwable) {
                     logger.error(err) {
                         "Failed to publish SNS notification ${notification.messageDeduplicationId}"
                     }
                 }
+                logger.info { "Sent $count notifications" }
             }
         }
     }

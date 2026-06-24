@@ -232,9 +232,10 @@ class TransformTest {
             """.trimIndent(),
         )
         val uow = uow(event = event, notifications = notifications)
-        val expectedDate = Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault())
-        val expectedTimeBucket = "${expectedDate.year}${expectedDate.monthValue - 1}${expectedDate.dayOfMonth}${expectedDate.hour}"
-        val expectedDeduplicationId = "event-1-function-a-pipeline-a-${expectedTimeBucket}-boom"
+        val d = Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault())
+
+        val expectedTimeBucket = "%04d%02d%02d%02d".format(d.year, d.monthValue, d.dayOfMonth, d.hour)
+        val expectedDeduplicationId = "function-a-pipeline-a-${expectedTimeBucket}-boom"
 
         // Act
         val result = invokeUowFunction("addNotification", uow)
@@ -267,9 +268,10 @@ class TransformTest {
             """.trimIndent(),
         )
         val uow = uow(event = event, notifications = notifications)
-        val expectedDate = Instant.ofEpochMilli(0).atZone(ZoneId.systemDefault())
-        val expectedTimeBucket = "${expectedDate.year}${expectedDate.monthValue - 1}${expectedDate.dayOfMonth}${expectedDate.hour}"
-        val expectedDeduplicationId = "event-1-functionname-pipeline-$expectedTimeBucket-"
+        val d = Instant.ofEpochMilli(0).atZone(ZoneId.systemDefault())
+
+        val expectedTimeBucket = "%04d%02d%02d%02d".format(d.year, d.monthValue, d.dayOfMonth, d.hour)
+        val expectedDeduplicationId = "functionname-pipeline-$expectedTimeBucket-"
 
         // Act
         invokeUowFunction("addNotification", uow)

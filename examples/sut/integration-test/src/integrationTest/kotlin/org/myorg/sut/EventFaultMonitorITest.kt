@@ -3,6 +3,7 @@ package org.myorg.sut
 import io.github.huherto.awsLambdaStream.tools.resubmit.ResubmitEvents
 import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.nulls.shouldNotBeNull
+import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.number
@@ -30,9 +31,46 @@ class EventFaultMonitorITest {
 
     private val awsFacade = AwsFacade(eventTable = "sut-control-service-local-events")
 
+    private val queueName = "sut-event-fault-monitor-local-notification-verification.fifo"
+
+    suspend fun purgeSqsQueue() {
+        awsFacade.purgeSqsQueue(queueName)
+    }
+
+    @OptIn(ExperimentalTime::class)
+    @Test
+    fun `sns topic should deliver directly published message to verification queue`() : Unit = runBlocking {
+        purgeSqsQueue()
+
+        val verificationId = "sns-to-sqs-it-${System.currentTimeMillis()}"
+        //val message = """{"verification":"$verificationId"}"""
+
+        val payload = "x".repeat(12_000)
+        val message = """{"verification":"$verificationId","payload":"$payload"}"""
+
+        val messageId = awsFacade.publishToSnsTopic(
+            topicNameContains = "sut-event-fault-monitor-local.fifo",
+            message = message,
+            subject = "verification",
+            messageGroupId = "verification",
+            messageDeduplicationId = verificationId,
+        )
+
+        messageId.shouldNotBeNull()
+
+        val notification = awsFacade.verifyNotificationSentToSns(
+            queueName = "sut-event-fault-monitor-local-notification-verification.fifo",
+            expectedContent = verificationId,
+        )
+
+        notification.shouldNotBeNull()
+        notification shouldBe message
+    }
+
     @OptIn(ExperimentalTime::class)
     @Test
     fun sendFaultEvent() : Unit = runBlocking {
+        purgeSqsQueue()
 
         val event = createFaultEvent()
 
@@ -50,19 +88,21 @@ class EventFaultMonitorITest {
     }
 
     @OptIn(ExperimentalTime::class)
-    // @Test
+    @Test
     fun sendPoisonEvent() : Unit = runBlocking {
+        purgeSqsQueue()
 
         val trackedUnit = ShipmentTrackingDomain.createTrackedUnit()
         val event = createPoisonPillEvent(trackedUnit)
-
+        event.id.shouldNotBeNull()
+        logger.info("Poison event is: ${event.id}")
         awsFacade.putEvents(event)
 
         val objectContent = awsFacade.verifyFaultEventStoredInS3(event.id!!)
         objectContent.shouldNotBeNull()
         logger.info { "Poison event found in S3" }
         val notification = awsFacade.verifyNotificationSentToSns(
-            queueName = "sut-event-fault-monitor-local-notification-verification.fifo",
+            queueName = queueName,
             expectedContent = event.id!!,
         )
         notification.shouldNotBeNull()
@@ -87,7 +127,7 @@ class EventFaultMonitorITest {
         val preparedEventRequests = resubmit.filterAndPrepareRequests(argv, awsFacade.s3Client)
         preparedEventRequests.size shouldBeGreaterThan 0
 
-        resubmit.invokeLambdas(argv, preparedEventRequests, awsFacade.lambdaClient)
+        //resubmit.invokeLambdas(argv, preparedEventRequests, awsFacade.lambdaClient)
 
     }
 

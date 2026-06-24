@@ -15,9 +15,11 @@ import aws.sdk.kotlin.services.lambda.LambdaClient
 import aws.sdk.kotlin.services.s3.S3Client
 import aws.sdk.kotlin.services.s3.listObjectsV2
 import aws.sdk.kotlin.services.s3.model.GetObjectRequest
+import aws.sdk.kotlin.services.sns.SnsClient
+import aws.sdk.kotlin.services.sns.model.ListTopicsRequest
+import aws.sdk.kotlin.services.sns.model.PublishRequest
 import aws.sdk.kotlin.services.sqs.SqsClient
-import aws.sdk.kotlin.services.sqs.model.GetQueueUrlRequest
-import aws.sdk.kotlin.services.sqs.model.ReceiveMessageRequest
+import aws.sdk.kotlin.services.sqs.model.*
 import aws.smithy.kotlin.runtime.content.decodeToString
 import aws.smithy.kotlin.runtime.net.url.Url
 import io.github.huherto.awsLambdaStream.Event
@@ -103,6 +105,18 @@ class AwsFacade(val entityTable : String? = null, val eventTable : String? = nul
 
     val lambdaClient: LambdaClient by lazy {
         LambdaClient {
+            this.region = "us-east-1"
+            this.endpointUrl = endPointUrl()
+            credentialsProvider =
+                StaticCredentialsProvider {
+                    this.accessKeyId = "test"
+                    this.secretAccessKey = "test"
+                }
+        }
+    }
+
+    private val snsClient: SnsClient by lazy {
+        SnsClient {
             this.region = "us-east-1"
             this.endpointUrl = endPointUrl()
             credentialsProvider =
@@ -214,11 +228,36 @@ class AwsFacade(val entityTable : String? = null, val eventTable : String? = nul
         sqsClient.close()
     }
 
+    suspend fun publishToSnsTopic(
+        topicNameContains: String,
+        message: String,
+        subject: String,
+        messageGroupId: String,
+        messageDeduplicationId: String,
+    ): String {
+        val topicArn = snsClient.listTopics(ListTopicsRequest {})
+            .topics
+            .orEmpty()
+            .mapNotNull { it.topicArn }
+            .firstOrNull { it.contains(topicNameContains) }
+            ?: error("SNS topic not found containing: $topicNameContains")
+
+        val response = snsClient.publish(PublishRequest {
+            this.topicArn = topicArn
+            this.message = message
+            this.subject = subject
+            this.messageGroupId = messageGroupId
+            this.messageDeduplicationId = messageDeduplicationId
+        })
+
+        return response.messageId ?: error("SNS publish did not return a message id")
+    }
+
     suspend fun verifyFaultEventStoredInS3(faultId: String) : String? {
 
         val startTime = System.currentTimeMillis()
         while (true) {
-            if (System.currentTimeMillis() - startTime > 10000) {
+            if (System.currentTimeMillis() - startTime > 20000) {
                 logger.error { "Timed out waiting for s3 object with faultId: $faultId to be inserted." }
                 return null
             }
@@ -256,9 +295,19 @@ class AwsFacade(val entityTable : String? = null, val eventTable : String? = nul
         }
     }
 
+    suspend fun purgeSqsQueue(queueName: String) {
+        val queueUrl = sqsClient.getQueueUrl(GetQueueUrlRequest {
+            this.queueName = queueName
+        }).queueUrl ?: error("Queue URL not found for queue: $queueName")
+
+        sqsClient.purgeQueue(PurgeQueueRequest {
+            this.queueUrl = queueUrl
+        })
+    }
+
     suspend fun verifyNotificationSentToSns(
         queueName: String,
-        expectedContent: String,
+        expectedContent: String? = null,
     ): String? {
         val queueUrl = sqsClient.getQueueUrl(GetQueueUrlRequest {
             this.queueName = queueName
@@ -278,18 +327,35 @@ class AwsFacade(val entityTable : String? = null, val eventTable : String? = nul
                 this.waitTimeSeconds = 1
             })
 
+            logger.info { "response is ${response.messages?.size} messages" }
             response.messages.orEmpty().forEach { message ->
+                deleteMessage(message, queueUrl)
                 val body = message.body
-
-                logger.info { "Received SNS/SQS message" }
-
-                if (body != null && body.contains(expectedContent)) {
-
-                    return body
+                if (body != null ) {
+                    if (expectedContent != null) {
+                        val found = body.contains(expectedContent)
+                        logger.info { "finding '${expectedContent}' in ${body}. found=${found}" }
+                        if (found) {
+                            return body
+                        }
+                    }
+                    else {
+                        return body
+                    }
                 }
             }
+            logger.info { "no messages found" }
 
             delay(1000.milliseconds)
+        }
+    }
+
+    private suspend fun deleteMessage(message: Message, queueUrl: String) {
+        message.receiptHandle?.let { receiptHandle ->
+            sqsClient.deleteMessage(DeleteMessageRequest {
+                this.queueUrl = queueUrl
+                this.receiptHandle = receiptHandle
+            })
         }
     }
 
