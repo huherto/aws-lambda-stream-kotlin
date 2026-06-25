@@ -1,5 +1,6 @@
 package org.myorg.sut
 
+import software.amazon.awscdk.services.events.EventBus
 import software.amazon.awscdk.services.s3.Bucket
 import software.amazon.awscdk.services.sns.Topic
 import software.constructs.Construct
@@ -9,9 +10,11 @@ class RegionalHealthCheckStack(scope: Construct, serviceProps: ServiceProps) : B
     internal val topic: Topic = newTopic()
     internal val bucket: Bucket = newBucket(topic)
     internal val entitiesTable = newEntitiesTable()
+    internal val bus: EventBus = newBus()
 
     init {
         newBucketOutputs(bucket)
+        logBusEventsInCloudWatch(bus)
         createRegionalHealthCheck()
         createSyntheticsCanary(
             bucket = bucket,
@@ -22,6 +25,7 @@ class RegionalHealthCheckStack(scope: Construct, serviceProps: ServiceProps) : B
         // Example once a Lambda consuming/writing the table exists:
         // addEntitiesTablePermissions(myFunction)
         // addEntitiesTableStreamToLambda(myFunction, entitiesTable)
+        // addBusPutEventsPermissions(myFunction, bus)
     }
 
     fun newTopic(): Topic {
