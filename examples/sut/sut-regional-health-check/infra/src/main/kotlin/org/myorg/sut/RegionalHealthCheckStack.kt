@@ -8,6 +8,7 @@ class RegionalHealthCheckStack(scope: Construct, serviceProps: ServiceProps) : B
 
     internal val topic: Topic = newTopic()
     internal val bucket: Bucket = newBucket(topic)
+    internal val entitiesTable = newEntitiesTable()
 
     init {
         newBucketOutputs(bucket)
@@ -17,6 +18,10 @@ class RegionalHealthCheckStack(scope: Construct, serviceProps: ServiceProps) : B
             healthCheckEndpoint = node.tryGetContext("healthCheckEndpoint").toString(),
             apiKey = node.tryGetContext("apiKey").toString(),
         )
+
+        // Example once a Lambda consuming/writing the table exists:
+        // addEntitiesTablePermissions(myFunction)
+        // addEntitiesTableStreamToLambda(myFunction, entitiesTable)
     }
 
     fun newTopic(): Topic {

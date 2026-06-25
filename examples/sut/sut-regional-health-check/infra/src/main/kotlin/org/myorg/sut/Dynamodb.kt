@@ -1,0 +1,115 @@
+package org.myorg.sut
+
+import software.amazon.awscdk.Aws
+import software.amazon.awscdk.CfnCondition
+import software.amazon.awscdk.CfnResource
+import software.amazon.awscdk.Fn
+import software.amazon.awscdk.services.dynamodb.*
+import software.amazon.awscdk.services.iam.Effect
+import software.amazon.awscdk.services.iam.PolicyStatement
+import software.amazon.awscdk.services.lambda.Function
+import software.amazon.awscdk.services.lambda.StartingPosition
+import software.amazon.awscdk.services.lambda.eventsources.DynamoEventSource
+
+fun RegionalHealthCheckStack.entityTableName(): String =
+    "${service()}-${stage()}-entities"
+
+fun RegionalHealthCheckStack.isWestCondition(): CfnCondition =
+    CfnCondition.Builder.create(this, "IsWest")
+        .expression(Fn.conditionEquals(regionName(), "us-west-2"))
+        .build()
+
+fun RegionalHealthCheckStack.tableArn(): String =
+    "arn:aws:dynamodb:${regionName()}:${Aws.ACCOUNT_ID}:table/${entityTableName()}"
+
+fun RegionalHealthCheckStack.tableStreamArn(): String =
+    "arn:aws:dynamodb:${regionName()}:${Aws.ACCOUNT_ID}:table/${entityTableName()}/stream/*"
+
+fun RegionalHealthCheckStack.newEntitiesTable(): TableV2 {
+    val table = TableV2.Builder.create(this, "EntitiesTable")
+        .tableName(entityTableName())
+        .partitionKey(
+            Attribute.builder()
+                .name("pk")
+                .type(AttributeType.STRING)
+                .build()
+        )
+        .sortKey(
+            Attribute.builder()
+                .name("sk")
+                .type(AttributeType.STRING)
+                .build()
+        )
+        .replicas(
+            listOf(
+                ReplicaTableProps.builder()
+                    .region("us-east-1")
+                    .build()
+            )
+        )
+        .billing(Billing.onDemand())
+        .dynamoStream(StreamViewType.NEW_AND_OLD_IMAGES)
+        .timeToLiveAttribute("ttl")
+        .encryption(TableEncryptionV2.dynamoOwnedKey())
+        .build()
+
+    val cfnTable = table.node.defaultChild as CfnResource
+    cfnTable.cfnOptions.condition = isWestCondition()
+
+    return table
+}
+
+fun RegionalHealthCheckStack.addEntitiesTablePermissions(function: Function) {
+    function.addToRolePolicy(
+        PolicyStatement.Builder.create()
+            .effect(Effect.ALLOW)
+            .actions(
+                listOf(
+                    "dynamodb:Query",
+                    "dynamodb:UpdateItem",
+                )
+            )
+            .resources(
+                listOf(
+                    tableArn(),
+                )
+            )
+            .build()
+    )
+}
+
+fun RegionalHealthCheckStack.addEntitiesTableStreamToLambda(
+    function: Function,
+    table: TableV2,
+) {
+    function.addEventSource(
+        DynamoEventSource.Builder.create(table)
+            .startingPosition(StartingPosition.TRIM_HORIZON)
+            .filters(entitiesTableStreamFilterPatterns())
+            .build()
+    )
+}
+
+fun RegionalHealthCheckStack.entitiesTableStreamFilterPatterns(): List<Map<String, Any>> =
+    listOf(
+        mapOf(
+            "eventName" to listOf("INSERT", "MODIFY"),
+            "dynamodb" to mapOf(
+                "NewImage" to mapOf(
+                    "awsregion" to mapOf(
+                        "S" to listOf(regionName())
+                    )
+                )
+            )
+        ),
+        mapOf(
+            "eventName" to listOf("REMOVE"),
+            "dynamodb" to mapOf(
+                "OldImage" to mapOf(
+                    "awsregion" to mapOf(
+                        "S" to listOf(regionName())
+                    )
+                )
+            )
+        )
+    )
