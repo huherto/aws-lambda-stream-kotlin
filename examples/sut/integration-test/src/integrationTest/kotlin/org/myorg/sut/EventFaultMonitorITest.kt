@@ -127,8 +127,12 @@ class EventFaultMonitorITest {
         val preparedEventRequests = resubmit.filterAndPrepareRequests(argv, awsFacade.s3Client)
         preparedEventRequests.size shouldBeGreaterThan 0
 
-        //resubmit.invokeLambdas(argv, preparedEventRequests, awsFacade.lambdaClient)
+        resubmit.invokeLambdas(argv, preparedEventRequests, awsFacade.lambdaClient)
 
+        val counters = resubmit.counters
+        counters.shouldNotBeNull()
+        counters.errors shouldBe 0
+        counters.recordCount shouldBeGreaterThan 0
     }
 
 
