@@ -10,7 +10,7 @@ import software.amazon.awscdk.services.logs.LogGroup
 import software.amazon.awscdk.services.logs.ResourcePolicy
 import software.amazon.awscdk.services.logs.RetentionDays
 
-fun HubStack.logEventsInCloudWatch() {
+fun EventHubStack.logEventsInCloudWatch() {
 
     val logGroupEvents = LogGroup.Builder
         .create(this, "LogGroupEvents")

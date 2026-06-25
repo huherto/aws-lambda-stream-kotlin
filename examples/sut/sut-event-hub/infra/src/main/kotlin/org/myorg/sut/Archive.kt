@@ -5,7 +5,7 @@ import software.amazon.awscdk.services.events.Archive
 import software.amazon.awscdk.services.events.EventPattern
 import software.amazon.awscdk.services.events.Match
 
-fun HubStack.archiveEvents() {
+fun EventHubStack.archiveEvents() {
     val archive = Archive.Builder
         .create(this, "Archive")
         .archiveName("${service()}-${stage()}-archive")

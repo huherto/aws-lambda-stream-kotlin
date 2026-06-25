@@ -13,7 +13,7 @@ import software.amazon.awscdk.services.iam.ServicePrincipal
 import software.amazon.awscdk.services.kinesis.Stream
 import software.amazon.awscdk.services.kinesis.StreamEncryption
 
-fun HubStack.sendEventsToKinesis() {
+fun EventHubStack.sendEventsToKinesis() {
 
     val stream1 = Stream.Builder.create(this, "Stream1")
         .streamName("${service()}-${stage()}-s1")
