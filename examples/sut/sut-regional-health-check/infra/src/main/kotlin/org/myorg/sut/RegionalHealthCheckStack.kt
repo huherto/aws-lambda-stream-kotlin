@@ -1,5 +1,7 @@
 package org.myorg.sut
 
+import software.amazon.awscdk.CfnCondition
+import software.amazon.awscdk.Fn
 import software.amazon.awscdk.services.events.EventBus
 import software.amazon.awscdk.services.kinesis.CfnStream
 import software.amazon.awscdk.services.lambda.Function
@@ -55,5 +57,15 @@ class RegionalHealthCheckStack(scope: Construct, serviceProps: ServiceProps) : B
         addBusPutEventsPermissions(myFunction, bus)
         addKmsPermissions(myFunction)
     }
+
+    fun RegionalHealthCheckStack.isWestCondition(): CfnCondition =
+        CfnCondition.Builder.create(this, "IsWest")
+            .expression(Fn.conditionEquals(regionName(), "us-west-2"))
+            .build()
+
+    fun RegionalHealthCheckStack.isEastCondition(): CfnCondition =
+        CfnCondition.Builder.create(this, "IsEast")
+            .expression(Fn.conditionEquals(regionName(), "us-east-1"))
+            .build()
 
 }

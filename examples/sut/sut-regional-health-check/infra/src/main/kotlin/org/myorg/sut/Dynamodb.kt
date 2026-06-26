@@ -1,9 +1,7 @@
 package org.myorg.sut
 
 import software.amazon.awscdk.Aws
-import software.amazon.awscdk.CfnCondition
 import software.amazon.awscdk.CfnResource
-import software.amazon.awscdk.Fn
 import software.amazon.awscdk.services.dynamodb.*
 import software.amazon.awscdk.services.iam.Effect
 import software.amazon.awscdk.services.iam.PolicyStatement
@@ -13,11 +11,6 @@ import software.amazon.awscdk.services.lambda.eventsources.DynamoEventSource
 
 fun RegionalHealthCheckStack.entityTableName(): String =
     "${service()}-${stage()}-entities"
-
-fun RegionalHealthCheckStack.isWestCondition(): CfnCondition =
-    CfnCondition.Builder.create(this, "IsWest")
-        .expression(Fn.conditionEquals(regionName(), "us-west-2"))
-        .build()
 
 fun RegionalHealthCheckStack.tableArn(): String =
     "arn:aws:dynamodb:${regionName()}:${Aws.ACCOUNT_ID}:table/${entityTableName()}"
