@@ -31,13 +31,12 @@ dependencies {
     implementation(libs.aws.java.events)
     implementation(libs.aws.sdk.dynamodb)
     implementation(libs.aws.sdk.lambda)
+    implementation(libs.aws.sdk.s3)
     implementation(libs.kotlin.logging)
     implementation(libs.kotlin.stdlib)
     implementation(libs.kotlinx.coroutines)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.lambda.json.logger)
-    //implementation(libs.slf4j.api)
-
 
     testImplementation(kotlin("test"))
     testImplementation(libs.aws.lambda.java.tests)
