@@ -17,6 +17,8 @@ class RegionalHealthCheckStack(scope: Construct, serviceProps: ServiceProps) : B
     internal val stream1: CfnStream = newStream1()
 
     init {
+        addTopicPolicy(topic)
+        newTopicOutputs(topic)
         newBucketOutputs(bucket)
         addTriggerQueuePolicy(
             triggerQueue = triggerQueue,
@@ -48,11 +50,6 @@ class RegionalHealthCheckStack(scope: Construct, serviceProps: ServiceProps) : B
         // addEntitiesTablePermissions(myFunction)
         // addEntitiesTableStreamToLambda(myFunction, entitiesTable)
         // addBusPutEventsPermissions(myFunction, bus)
-    }
-
-    fun newTopic(): Topic {
-        // This is just a temporal placeholder.
-        return Topic(this, "topic")
     }
 
 }
