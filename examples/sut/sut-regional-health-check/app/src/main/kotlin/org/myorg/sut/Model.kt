@@ -15,16 +15,16 @@ class Model(
     private val debug: ((String) -> Unit)? = null,
     private val connector: Connector,
     private val unhealthyFlag: Boolean? = null,
+    private val awsRegion: String,
 ) {
     suspend fun check(): HealthCheckResponse {
         val timestamp = roundToNearestMinute(now())
-        val region = System.getenv("AWS_REGION")
 
         if (unhealthyFlag == true) {
             return HealthCheckResponse(
                 statusCode = 503,
                 timestamp = timestamp,
-                region = region,
+                region = awsRegion,
             )
         }
 
@@ -43,7 +43,7 @@ class Model(
         return HealthCheckResponse(
             statusCode = if (unhealthyCheck) 503 else 200,
             timestamp = timestamp,
-            region = region,
+            region = awsRegion,
             incomplete = incomplete,
             elapsed = elapsed,
             get = get,
@@ -52,12 +52,12 @@ class Model(
     }
 
     suspend fun get(): List<Map<String, AttributeValue>> =
-        connector.get(System.getenv("AWS_REGION"))
+        connector.get(awsRegion)
 
     suspend fun save() =
         connector.update(
             key = mapOf(
-                "pk" to AttributeValue.S(System.getenv("AWS_REGION")),
+                "pk" to AttributeValue.S(awsRegion),
                 "sk" to AttributeValue.S(roundToNearestMinute(now()).toString()),
             ),
             inputParams = mapOf(
@@ -66,7 +66,7 @@ class Model(
                 "discriminator" to DynamoDbUpdateValue.DbSet(AttributeValue.S(DISCRIMINATOR)),
                 "latched" to DynamoDbUpdateValue.DbRemove,
                 "ttl" to DynamoDbUpdateValue.DbSet(AttributeValue.N(ttl(now(), 92).toString())),
-                "awsregion" to DynamoDbUpdateValue.DbSet(AttributeValue.S(System.getenv("AWS_REGION"))),
+                "awsregion" to DynamoDbUpdateValue.DbSet(AttributeValue.S(awsRegion)),
             ),
         )
 }

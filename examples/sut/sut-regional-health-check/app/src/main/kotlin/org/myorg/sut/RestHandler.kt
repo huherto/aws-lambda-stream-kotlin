@@ -24,6 +24,7 @@ class RestHandler : RequestHandler<Map<String, Any?>, Any?> {
             debug = debug,
             connector = connector,
             unhealthyFlag = System.getenv("UNHEALTHY") == "true",
+            awsRegion = System.getenv("AWS_REGION"),
         )
 
         when (event.routeKey()) {
