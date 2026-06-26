@@ -28,9 +28,10 @@ class RegionalHealthCheckStack(scope: Construct, serviceProps: ServiceProps) : B
         createRegionalHealthCheck()
         createSyntheticsCanary(
             bucket = bucket,
-            healthCheckEndpoint = node.tryGetContext("healthCheckEndpoint").toString(),
-            apiKey = node.tryGetContext("apiKey").toString(),
+            healthCheckEndpoint = healthCheckEndpoint(),
+            apiKey = apiKey(),
         )
+
 
         // Example once a Lambda consuming/writing the table exists:
         // addEntitiesTablePermissions(myFunction)

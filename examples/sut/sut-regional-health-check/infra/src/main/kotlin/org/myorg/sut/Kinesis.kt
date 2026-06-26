@@ -6,15 +6,10 @@ import software.amazon.awscdk.services.iam.*
 import software.amazon.awscdk.services.kinesis.CfnStream
 
 fun RegionalHealthCheckStack.newStream1(): CfnStream {
-    val shardCount = node.tryGetContext("shardCount")
-        ?.toString()
-        ?.toInt()
-        ?: 1
-
     return CfnStream.Builder.create(this, "Stream1")
         .name("${service()}-${stage()}-s1")
         .retentionPeriodHours(24)
-        .shardCount(shardCount)
+        .shardCount(shardCount())
         .streamEncryption(
             CfnStream.StreamEncryptionProperty.builder()
                 .encryptionType("KMS")
