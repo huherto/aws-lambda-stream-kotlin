@@ -12,16 +12,15 @@ class Connector(
     timeout: Long = System.getenv("DYNAMODB_TIMEOUT")?.toLongOrNull()
         ?: System.getenv("TIMEOUT")?.toLongOrNull()
         ?: 1_000L,
-) {
-    private val debug: (Any?) -> Unit = { msg -> debug(msg.toString()) }
-    private val tableName: String = tableName ?: "undefined"
-
-    private val db: aws.sdk.kotlin.services.dynamodb.DynamoDbClient = DynamoDbClient {
+    private val db: DynamoDbClient = DynamoDbClient {
         this.clientName = "Connector"
         this.httpClient {
             this.socketReadTimeout = timeout.milliseconds
         }
-    }
+    },
+) {
+    private val debug: (Any?) -> Unit = { msg -> debug(msg.toString()) }
+    private val tableName: String = tableName ?: "undefined"
 
     suspend fun update(
         key: Map<String, AttributeValue>,
