@@ -32,6 +32,7 @@ will be added to demonstrate interoperability and usage from Java code.
 * [Benefits of Kotlin CoRoutines and the Flow Framework](docs/KotlinCoRoutinesAndFlow.md)
 * [How Claim Check works](docs/ClaimCheck.md)
 * [How the Events Microstore works](docs/EventsMicrostore.md)
+* [How the Regional Health Check works](docs/RegionalHealthCheck.md)
 
 ## High Level Project Structure
 
