@@ -12,7 +12,7 @@ import kotlin.math.roundToLong
 const val DISCRIMINATOR = "trace"
 
 class Model(
-    private val debug: ((Any?) -> Unit)? = null,
+    private val debug: ((String) -> Unit)? = null,
     private val connector: Connector,
     private val unhealthyFlag: Boolean? = null,
 ) {
