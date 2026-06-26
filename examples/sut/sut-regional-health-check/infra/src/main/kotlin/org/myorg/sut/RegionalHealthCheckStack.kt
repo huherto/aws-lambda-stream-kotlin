@@ -4,11 +4,13 @@ import software.amazon.awscdk.services.events.EventBus
 import software.amazon.awscdk.services.kinesis.CfnStream
 import software.amazon.awscdk.services.s3.Bucket
 import software.amazon.awscdk.services.sns.Topic
+import software.amazon.awscdk.services.sqs.Queue
 import software.constructs.Construct
 
 class RegionalHealthCheckStack(scope: Construct, serviceProps: ServiceProps) : BaseStack(scope, serviceProps) {
 
     internal val topic: Topic = newTopic()
+    internal val triggerQueue: Queue = newTriggerQueue()
     internal val bucket: Bucket = newBucket(topic)
     internal val entitiesTable = newEntitiesTable()
     internal val bus: EventBus = newBus()
@@ -16,6 +18,15 @@ class RegionalHealthCheckStack(scope: Construct, serviceProps: ServiceProps) : B
 
     init {
         newBucketOutputs(bucket)
+        addTriggerQueuePolicy(
+            triggerQueue = triggerQueue,
+            topic = topic,
+        )
+        addTriggerSubscription(
+            triggerQueue = triggerQueue,
+            topic = topic,
+        )
+        newTriggerQueueOutputs(triggerQueue)
         logBusEventsInCloudWatch(bus)
 
         val kinesisBusRole = newKinesisBusRole(stream1)
