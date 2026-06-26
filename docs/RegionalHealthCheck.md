@@ -86,3 +86,87 @@ This final calculated health check is the main regional health signal.
 ## Data Flow
 
 The data flow is metric-driven rather than request-driven.
+
+```text Client traffic | v API Gateway | v CloudWatch API Gateway metrics | v API Gateway 5XX alarm | v API Gateway Route 53 health check```
+
+```text Application reads/writes | v DynamoDB entities table | v CloudWatch DynamoDB metrics | v DynamoDB SystemErrors alarm | v DynamoDB Route 53 health check```
+
+The two health-check paths are then combined:
+
+
+The calculated health check becomes the regional health status for the stack.
+
+## Supporting Resource Flow
+
+The regional stack also includes supporting event and storage resources that participate in the broader service flow.
+
+```text S3 bucket | v SNS topic | v SQS trigger queue```
+
+
+This flow allows S3-originated notifications to be published to SNS and delivered to an SQS queue for downstream processing.
+
+The stack also contains eventing resources:
+
+```text Application or service event | v EventBridge event bus | v Kinesis stream```
+
+This allows events placed on the regional event bus to be forwarded to a Kinesis stream for downstream consumers.
+
+The DynamoDB entities table can also emit stream records:
+
+```text DynamoDB entities table | v DynamoDB stream | v Lambda consumer```
+
+
+This supports reactive processing when entity records are inserted, modified, or removed.
+
+## Health Evaluation Behavior
+
+The Regional Health Check is intentionally conservative.
+
+If either critical dependency reports server-side errors, the region is considered unhealthy:
+
+| Resource    | Metric         | Failure Signal                            |
+|-------------|----------------|-------------------------------------------|
+| API Gateway | `5XXError`     | API layer is returning server-side errors |
+| DynamoDB    | `SystemErrors` | DynamoDB is reporting service-side errors |
+
+Missing metric data is not automatically treated as a failure. The alarms are configured so that missing data does not cause a breach by itself. This helps avoid false positives during quiet traffic periods.
+
+## Outputs
+
+The stack exposes outputs for the regional health resources:
+
+- The regional CloudWatch health alarm
+- The calculated Route 53 health check ID
+
+These outputs allow other stacks, deployment systems, dashboards, or DNS routing configurations to reference the regional health signal.
+
+## Operational Use Cases
+
+The Regional Health Check can be used for:
+
+- Regional availability monitoring
+- Multi-region failover decisions
+- Route 53 routing policies
+- Deployment validation
+- Incident detection
+- Dashboards and operational visibility
+- Automated remediation workflows
+
+## Summary
+
+The Regional Health Check aggregates resource-level failure indicators into a single regional health signal.
+
+It monitors:
+
+- API Gateway server-side failures
+- DynamoDB service-side failures
+
+Those signals flow through:
+
+1. CloudWatch metrics
+2. CloudWatch alarms
+3. Route 53 child health checks
+4. A calculated Route 53 regional health check
+
+The result is a simple, reusable health signal that represents whether the regional deployment is healthy enough to serve traffic.
+
