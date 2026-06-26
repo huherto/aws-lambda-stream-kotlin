@@ -2,6 +2,7 @@ package org.myorg.sut
 
 import software.amazon.awscdk.CfnCondition
 import software.amazon.awscdk.Fn
+import software.amazon.awscdk.services.apigateway.CfnApiKey
 import software.amazon.awscdk.services.events.EventBus
 import software.amazon.awscdk.services.kinesis.CfnStream
 import software.amazon.awscdk.services.lambda.Function
@@ -41,6 +42,7 @@ class RegionalHealthCheckStack(scope: Construct, serviceProps: ServiceProps) : B
             busRole = kinesisBusRole,
         )
 
+        addApiGatewayApiKeys()
         createRegionalHealthCheck()
         createSyntheticsCanary(
             bucket = bucket,
@@ -68,4 +70,12 @@ class RegionalHealthCheckStack(scope: Construct, serviceProps: ServiceProps) : B
             .expression(Fn.conditionEquals(regionName(), "us-east-1"))
             .build()
 
+    fun RegionalHealthCheckStack.addApiGatewayApiKeys(): List<CfnApiKey> =
+        apiKeys().mapIndexed { index, apiKey ->
+            CfnApiKey.Builder.create(this, "ApiGatewayApiKey${index + 1}")
+                .name(apiKey.name)
+                .value(apiKey.value)
+                .enabled(true)
+                .build()
+        }
 }
