@@ -4,7 +4,11 @@ import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import kotlinx.coroutines.runBlocking
 
-class RestHandler : RequestHandler<Map<String, Any?>, Any?> {
+class RestHandler(
+    val entityTable : String = System.getenv("ENTITY_TABLE_NAME"),
+    val unhealthyFlag : Boolean = System.getenv("UNHEALTHY") == "true",
+    val awsRegion : String = System.getenv("AWS_REGION"),
+) : RequestHandler<Map<String, Any?>, Any?> {
     override fun handleRequest(
         event: Map<String, Any?>,
         context: Context,
@@ -17,14 +21,14 @@ class RestHandler : RequestHandler<Map<String, Any?>, Any?> {
 
         val connector = Connector(
             debug = debug,
-            tableName = System.getenv("ENTITY_TABLE_NAME"),
+            tableName = entityTable,
         )
 
         val model = Model(
             debug = debug,
             connector = connector,
-            unhealthyFlag = System.getenv("UNHEALTHY") == "true",
-            awsRegion = System.getenv("AWS_REGION"),
+            unhealthyFlag = unhealthyFlag,
+            awsRegion = awsRegion,
         )
 
         when (event.routeKey()) {
