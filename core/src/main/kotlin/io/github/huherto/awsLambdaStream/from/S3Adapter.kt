@@ -151,7 +151,6 @@ class S3Adapter(
 
     fun fromS3Event(
         event: SQSEvent,
-        getObjectFromS3: suspend (S3GetRequest, UnitOfWork) -> S3GetResponse,
     ): Flow<UnitOfWork> {
 
         return with(faultManager) {
