@@ -24,6 +24,8 @@ dependencies {
     implementation(libs.aws.sdk.kinesis)
     implementation(libs.aws.sdk.lambda)
     implementation(libs.aws.sdk.s3)
+    implementation(libs.aws.sdk.sns)
+    implementation(libs.aws.sdk.sqs)
     implementation(libs.jackson.kotlin)
     implementation(libs.kotlin.logging)
     implementation(libs.kotlin.stdlib)
