@@ -32,7 +32,17 @@ class RestHandler(
         )
 
         when (event.routeKey()) {
-            "GET /check", "/check", "GET:/check" -> model.check()
+            "GET /check", "/check", "GET:/check" -> {
+                val data = model.check()
+
+                mapOf(
+                    "statusCode" to data.statusCode,
+                    "headers" to mapOf(
+                        "Cache-Control" to "no-cache, no-store, must-revalidate",
+                    ),
+                    "body" to data,
+                )
+            }
             else -> mapOf(
                 "statusCode" to 404,
                 "body" to "Not Found",

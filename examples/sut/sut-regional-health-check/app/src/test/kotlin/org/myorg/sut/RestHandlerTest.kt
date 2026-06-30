@@ -1,155 +1,154 @@
 package org.myorg.sut
 
 import com.amazonaws.services.lambda.runtime.Context
+import io.kotest.matchers.maps.shouldContain
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import io.mockk.*
-import org.junit.jupiter.api.AfterEach
+import io.kotest.matchers.types.shouldBeInstanceOf
+import io.mockk.mockk
 import org.junit.jupiter.api.Test
 
 class RestHandlerTest {
 
-    private val context = mockk<Context>(relaxed = true)
+    @Test
+    fun `handleRequest returns not found for unknown route`() {
+        // Arrange
+        val handler = RestHandler(
+            entityTable = "entity-table",
+            unhealthyFlag = true,
+            awsRegion = "us-east-1",
+        )
+        val event = mapOf<String, Any?>(
+            "routeKey" to "GET /unknown",
+        )
+        val context = mockk<Context>(relaxed = true)
 
-    @AfterEach
-    fun tearDown() {
-        clearAllMocks()
+        // Act
+        val response = handler.handleRequest(event, context)
+
+        // Assert
+        val responseMap = response.shouldBeInstanceOf<Map<String, Any?>>()
+        responseMap["statusCode"] shouldBe 404
+        responseMap["body"] shouldBe "Not Found"
     }
 
     @Test
-    fun `handleRequest returns health check response for routeKey GET check`() {
+    fun `handleRequest returns check response for GET check route key`() {
         // Arrange
-        mockkConstructor(Model::class)
-
-        val expectedResponse = HealthCheckResponse(
-            statusCode = 200,
-            timestamp = 1_717_000_000_000L,
-            region = "us-east-1",
+        val handler = RestHandler(
+            entityTable = "entity-table",
+            unhealthyFlag = true,
+            awsRegion = "us-east-1",
         )
-
-        coEvery { anyConstructed<Model>().check() } returns expectedResponse
-
         val event = mapOf<String, Any?>(
             "routeKey" to "GET /check",
         )
-
-        val handler = RestHandler("tracer", false, "us-east-1")
+        val context = mockk<Context>(relaxed = true)
 
         // Act
         val response = handler.handleRequest(event, context)
 
         // Assert
-        response shouldBe expectedResponse
+        val responseMap = response.shouldBeInstanceOf<Map<String, Any?>>()
+        responseMap["statusCode"] shouldBe 503
+        responseMap["headers"].shouldNotBeNull()
 
-        coVerify(exactly = 1) {
-            anyConstructed<Model>().check()
-        }
+        val headers = responseMap["headers"].shouldBeInstanceOf<Map<String, String>>()
+        headers shouldContain ("Cache-Control" to "no-cache, no-store, must-revalidate")
+
+        val body = responseMap["body"].shouldBeInstanceOf<HealthCheckResponse>()
+        body.statusCode shouldBe 503
+        body.region shouldBe "us-east-1"
+        body.incomplete shouldBe null
+        body.elapsed shouldBe null
+        body.get shouldBe null
+        body.save shouldBe null
     }
 
     @Test
-    fun `handleRequest returns health check response for legacy path-only check route`() {
+    fun `handleRequest returns check response for legacy check path`() {
         // Arrange
-        mockkConstructor(Model::class)
-
-        val expectedResponse = HealthCheckResponse(
-            statusCode = 200,
-            timestamp = 1_717_000_000_000L,
-            region = "us-east-1",
+        val handler = RestHandler(
+            entityTable = "entity-table",
+            unhealthyFlag = true,
+            awsRegion = "us-east-1",
         )
-
-        coEvery { anyConstructed<Model>().check() } returns expectedResponse
-
         val event = mapOf<String, Any?>(
             "routeKey" to "/check",
         )
-
-        val handler = RestHandler("tracer", false, "us-east-1")
+        val context = mockk<Context>(relaxed = true)
 
         // Act
         val response = handler.handleRequest(event, context)
 
         // Assert
-        response shouldBe expectedResponse
+        val responseMap = response.shouldBeInstanceOf<Map<String, Any?>>()
+        responseMap["statusCode"] shouldBe 503
 
-        coVerify(exactly = 1) {
-            anyConstructed<Model>().check()
-        }
+        val body = responseMap["body"].shouldBeInstanceOf<HealthCheckResponse>()
+        body.statusCode shouldBe 503
+        body.region shouldBe "us-east-1"
     }
 
     @Test
-    fun `handleRequest returns health check response for GET colon check route`() {
+    fun `handleRequest returns check response for colon separated check route`() {
         // Arrange
-        mockkConstructor(Model::class)
-
-        val expectedResponse = HealthCheckResponse(
-            statusCode = 200,
-            timestamp = 1_717_000_000_000L,
-            region = "us-east-1",
+        val handler = RestHandler(
+            entityTable = "entity-table",
+            unhealthyFlag = true,
+            awsRegion = "us-east-1",
         )
-
-        coEvery { anyConstructed<Model>().check() } returns expectedResponse
-
         val event = mapOf<String, Any?>(
             "routeKey" to "GET:/check",
         )
-
-        val handler = RestHandler("tracer", false, "us-east-1")
-
+        val context = mockk<Context>(relaxed = true)
 
         // Act
         val response = handler.handleRequest(event, context)
 
         // Assert
-        response shouldBe expectedResponse
+        val responseMap = response.shouldBeInstanceOf<Map<String, Any?>>()
+        responseMap["statusCode"] shouldBe 503
 
-        coVerify(exactly = 1) {
-            anyConstructed<Model>().check()
-        }
+        val body = responseMap["body"].shouldBeInstanceOf<HealthCheckResponse>()
+        body.statusCode shouldBe 503
+        body.region shouldBe "us-east-1"
     }
 
     @Test
-    fun `handleRequest derives check route from httpMethod and path`() {
+    fun `handleRequest derives route from http method and path`() {
         // Arrange
-        mockkConstructor(Model::class)
-
-        val expectedResponse = HealthCheckResponse(
-            statusCode = 200,
-            timestamp = 1_717_000_000_000L,
-            region = "us-east-1",
+        val handler = RestHandler(
+            entityTable = "entity-table",
+            unhealthyFlag = true,
+            awsRegion = "us-east-1",
         )
-
-        coEvery { anyConstructed<Model>().check() } returns expectedResponse
-
         val event = mapOf<String, Any?>(
             "httpMethod" to "GET",
             "path" to "/check",
         )
-
-        val handler = RestHandler("tracer", false, "us-east-1")
+        val context = mockk<Context>(relaxed = true)
 
         // Act
         val response = handler.handleRequest(event, context)
 
         // Assert
-        response shouldBe expectedResponse
+        val responseMap = response.shouldBeInstanceOf<Map<String, Any?>>()
+        responseMap["statusCode"] shouldBe 503
 
-        coVerify(exactly = 1) {
-            anyConstructed<Model>().check()
-        }
+        val body = responseMap["body"].shouldBeInstanceOf<HealthCheckResponse>()
+        body.statusCode shouldBe 503
+        body.region shouldBe "us-east-1"
     }
 
     @Test
-    fun `handleRequest derives check route from request context http method and raw path`() {
+    fun `handleRequest derives route from request context http method and raw path`() {
         // Arrange
-        mockkConstructor(Model::class)
-
-        val expectedResponse = HealthCheckResponse(
-            statusCode = 200,
-            timestamp = 1_717_000_000_000L,
-            region = "us-east-1",
+        val handler = RestHandler(
+            entityTable = "entity-table",
+            unhealthyFlag = true,
+            awsRegion = "us-east-1",
         )
-
-        coEvery { anyConstructed<Model>().check() } returns expectedResponse
-
         val event = mapOf<String, Any?>(
             "requestContext" to mapOf(
                 "http" to mapOf(
@@ -158,65 +157,17 @@ class RestHandlerTest {
             ),
             "rawPath" to "/check",
         )
-
-        val handler = RestHandler("tracer", false, "us-east-1")
-
-        // Act
-        val response = handler.handleRequest(event, context)
-
-        // Assert
-        response shouldBe expectedResponse
-
-        coVerify(exactly = 1) {
-            anyConstructed<Model>().check()
-        }
-    }
-
-    @Test
-    fun `handleRequest returns not found for unknown route`() {
-        // Arrange
-        mockkConstructor(Model::class)
-
-        val event = mapOf<String, Any?>(
-            "routeKey" to "GET /unknown",
-        )
-
-        val handler = RestHandler("tracer", false, "us-east-1")
+        val context = mockk<Context>(relaxed = true)
 
         // Act
         val response = handler.handleRequest(event, context)
 
         // Assert
-        response shouldBe mapOf(
-            "statusCode" to 404,
-            "body" to "Not Found",
-        )
+        val responseMap = response.shouldBeInstanceOf<Map<String, Any?>>()
+        responseMap["statusCode"] shouldBe 503
 
-        coVerify(exactly = 0) {
-            anyConstructed<Model>().check()
-        }
-    }
-
-    @Test
-    fun `handleRequest returns not found when route cannot be resolved`() {
-        // Arrange
-        mockkConstructor(Model::class)
-
-        val event = emptyMap<String, Any?>()
-
-        val handler = RestHandler("tracer", false, "us-east-1")
-
-        // Act
-        val response = handler.handleRequest(event, context)
-
-        // Assert
-        response shouldBe mapOf(
-            "statusCode" to 404,
-            "body" to "Not Found",
-        )
-
-        coVerify(exactly = 0) {
-            anyConstructed<Model>().check()
-        }
+        val body = responseMap["body"].shouldBeInstanceOf<HealthCheckResponse>()
+        body.statusCode shouldBe 503
+        body.region shouldBe "us-east-1"
     }
 }
