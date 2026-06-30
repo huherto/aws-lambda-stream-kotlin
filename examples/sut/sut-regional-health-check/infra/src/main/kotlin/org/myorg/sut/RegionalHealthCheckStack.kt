@@ -13,6 +13,12 @@ import software.amazon.awscdk.services.s3.Bucket
 import software.amazon.awscdk.services.sns.Topic
 import software.amazon.awscdk.services.sqs.Queue
 import software.constructs.Construct
+/*
+Tracer flow diagram:
+
+S3 bucket -> SNS Topic -> triggerQueue -> S3 Trigger Lambda -> Event Bus -> Kinesis Stream 1
+
+*/
 
 class RegionalHealthCheckStack(scope: Construct, serviceProps: ServiceProps) : BaseStack(scope, serviceProps) {
 
@@ -30,20 +36,29 @@ class RegionalHealthCheckStack(scope: Construct, serviceProps: ServiceProps) : B
     internal val stream1: CfnStream = newStream1()
 
     init {
-        addTopicPolicy(topic)
         newTopicOutputs(topic)
         newBucketOutputs(bucket)
-        addTriggerQueuePolicy(
-            triggerQueue = triggerQueue,
-            topic = topic,
-        )
-        addTriggerSubscription(
-            triggerQueue = triggerQueue,
-            topic = topic,
-        )
         newTriggerQueueOutputs(triggerQueue)
-        logBusEventsInCloudWatch(bus)
 
+        // From S3 Bucket to SNS Topic
+        allowBucketPublishToTopic(topic, bucket)
+
+        // From SNS Topic to SQS Queue
+        allowTopicToSendMessagesToQueue(
+            triggerQueue = triggerQueue,
+            topic = topic,
+        )
+        subscribeToTopic(
+            triggerQueue = triggerQueue,
+            topic = topic,
+        )
+
+        // From SQS Queue to S3Trigger Lambda to Event Bus
+        val triggerLambda = newTriggerLambda()
+        addSqsEventSourceToTrigger(triggerLambda, triggerQueue)
+
+        // From Event Bus to Logs and Kinesis Stream 1
+        logBusEventsInCloudWatch(bus)
         val kinesisBusRole = newKinesisBusRole(stream1)
         addStream1EventRule(
             bus = bus,
@@ -61,9 +76,6 @@ class RegionalHealthCheckStack(scope: Construct, serviceProps: ServiceProps) : B
 
         // placeholder
         val myFunction = Function.Builder.create(this, "Function").build()
-
-        val triggerLambda = newTriggerLambda()
-        addSqsEventSourceToTrigger(triggerLambda, triggerQueue)
 
         // Example once a Lambda consuming/writing the table exists:
         addEntitiesTablePermissions(myFunction)

@@ -4,6 +4,7 @@ import software.amazon.awscdk.CfnOutput
 import software.amazon.awscdk.services.iam.Effect
 import software.amazon.awscdk.services.iam.PolicyStatement
 import software.amazon.awscdk.services.iam.ServicePrincipal
+import software.amazon.awscdk.services.s3.Bucket
 import software.amazon.awscdk.services.sns.Topic
 import software.amazon.awscdk.services.sns.TopicPolicy
 
@@ -14,7 +15,7 @@ fun RegionalHealthCheckStack.newTopic(): Topic =
         // KmsMasterKeyId: alias/aws/sns
         .build()
 
-fun RegionalHealthCheckStack.addTopicPolicy(topic: Topic) {
+fun RegionalHealthCheckStack.allowBucketPublishToTopic(topic: Topic, bucket: Bucket) {
     TopicPolicy.Builder.create(this, "TopicPolicy")
         .topics(listOf(topic))
         .build()
@@ -28,7 +29,8 @@ fun RegionalHealthCheckStack.addTopicPolicy(topic: Topic) {
                 .conditions(
                     mapOf(
                         "ArnLike" to mapOf(
-                            "aws:SourceArn" to "arn:${partition()}:s3:::${org()}-${service()}-${stage()}-${regionName()}",
+                            "aws:SourceArn" to bucket.bucketArn,
+                           // "aws:SourceArn" to "arn:${partition()}:s3:::${org()}-${service()}-${stage()}-${regionName()}",
                         )
                     )
                 )

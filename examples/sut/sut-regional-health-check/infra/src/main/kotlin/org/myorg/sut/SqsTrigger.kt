@@ -20,7 +20,7 @@ fun RegionalHealthCheckStack.newTriggerQueue(): Queue =
         // https://stackoverflow.com/questions/63808647/aws-forward-event-bridge-event-to-encrypted-sqs-amazon-managed-key
         .build()
 
-fun RegionalHealthCheckStack.addTriggerQueuePolicy(
+fun RegionalHealthCheckStack.allowTopicToSendMessagesToQueue(
     triggerQueue: Queue,
     topic: Topic,
 ) {
@@ -45,7 +45,7 @@ fun RegionalHealthCheckStack.addTriggerQueuePolicy(
         )
 }
 
-fun RegionalHealthCheckStack.addTriggerSubscription(
+fun RegionalHealthCheckStack.subscribeToTopic(
     triggerQueue: Queue,
     topic: Topic,
 ) {
