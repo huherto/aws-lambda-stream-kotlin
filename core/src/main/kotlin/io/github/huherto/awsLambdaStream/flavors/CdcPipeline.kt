@@ -57,7 +57,7 @@ import kotlinx.coroutines.flow.onEach
  */
 class CdcPipeline(
     id: String,
-    private val dynamoDbConnector: DynamoDbConnector,
+    private val dynamoDbConnector: DynamoDbConnector? = null,
     private val eventPublisher: EventPublisher,
     private val eventFilter: EventFilter = EventFilter.Any,
     private val onContentType: (UnitOfWork) -> Boolean = { true },
@@ -73,7 +73,6 @@ class CdcPipeline(
     /**
      * Builds the DynamoDB query request for the current unit of work.
      *
-     * This follows the TypeScript behavior:
      * - use a custom mapper when supplied;
      * - create the default primary-key query request when a query rule is supplied;
      * - otherwise return `null`.
@@ -110,9 +109,6 @@ class CdcPipeline(
     /**
      * Applies optional event encryption/transformation.
      *
-     * The original TypeScript version calls `encryptEvent(...)` immediately before publishing.
-     * In Kotlin this is injected as a suspending unit-of-work mapper so callers can provide the
-     * desired encryption implementation.
      */
     internal suspend fun encrypt(uow: UnitOfWork): UnitOfWork {
         return encryptEvent?.invoke(uow) ?: uow
@@ -136,16 +132,22 @@ class CdcPipeline(
         logger.info { "CdcPipeline.connect: id=$id" }
 
         with(fm) {
-            return fromFlow
+            val filteredFlow = fromFlow
                 .filterNotFaulty { uow -> outLatched(uow) }
                 .filterEvents(fm, eventFilter)
                 .onEach { uow -> printStartPipeline(uow) }
                 .filterNotFaulty { uow -> onContentType(uow) }
                 .compact(compactRule)
-                .mapNotFaulty { uow -> addQueryRequest(uow) }
-                .queryAllDynamoDB(dynamoDbConnector)
-                .mapNotFaulty { uow -> addBatchGetRequest(uow) }
-                .batchGetDynamoDB(dynamoDbConnector)
+
+            val enrichedFlow = dynamoDbConnector?.let { connector ->
+                filteredFlow
+                    .mapNotFaulty { uow -> addQueryRequest(uow) }
+                    .queryAllDynamoDB(connector)
+                    .mapNotFaulty { uow -> addBatchGetRequest(uow) }
+                    .batchGetDynamoDB(connector)
+            } ?: filteredFlow
+
+            return enrichedFlow
                 .mapNotFaulty { uow -> addEvent(uow) }
                 .buffer(parallel)
                 .mapNotFaulty { uow -> encrypt(uow) }
@@ -153,4 +155,5 @@ class CdcPipeline(
                 .onEach { uow -> printEndPipeline(uow) }
         }
     }
+
 }

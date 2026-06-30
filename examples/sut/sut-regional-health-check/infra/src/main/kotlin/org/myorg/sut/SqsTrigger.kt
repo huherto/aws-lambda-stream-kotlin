@@ -4,6 +4,8 @@ import software.amazon.awscdk.CfnOutput
 import software.amazon.awscdk.services.iam.Effect
 import software.amazon.awscdk.services.iam.PolicyStatement
 import software.amazon.awscdk.services.iam.ServicePrincipal
+import software.amazon.awscdk.services.lambda.Function
+import software.amazon.awscdk.services.lambda.eventsources.SqsEventSource
 import software.amazon.awscdk.services.sns.CfnSubscription
 import software.amazon.awscdk.services.sns.Topic
 import software.amazon.awscdk.services.sqs.Queue
@@ -59,4 +61,12 @@ fun RegionalHealthCheckStack.newTriggerQueueOutputs(triggerQueue: Queue) {
     CfnOutput.Builder.create(this, "TriggerQueue")
         .value(triggerQueue.queueUrl)
         .build()
+}
+
+fun RegionalHealthCheckStack.addSqsEventSourceToTrigger(function: Function, queue: Queue) {
+    function.addEventSource(
+        SqsEventSource.Builder.create(queue)
+            .batchSize(5)
+            .build()
+    )
 }

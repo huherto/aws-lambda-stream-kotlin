@@ -3,10 +3,9 @@ package org.myorg.sut
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.PipelineAssembler
-import io.github.huherto.awsLambdaStream.connectors.DefaultDynamoDbClientFactory
 import io.github.huherto.awsLambdaStream.connectors.DefaultS3ClientFactory
-import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
 import io.github.huherto.awsLambdaStream.connectors.S3Connector
+import io.github.huherto.awsLambdaStream.filters.EventFilter
 import io.github.huherto.awsLambdaStream.flavors.CdcPipeline
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import io.github.huherto.awsLambdaStream.from.S3Adapter
@@ -15,7 +14,6 @@ import io.github.huherto.awsLambdaStream.sinks.EventPublisher
 import mu.KotlinLogging.logger
 
 class S3TriggerContainer(
-    val dynamoDbConnector: DynamoDbConnector,
     val s3Connector: S3Connector,
     val eventPublisher: EventPublisher,
     val faultManager: FaultManager,
@@ -27,8 +25,6 @@ class S3TriggerContainer(
 
         fun build() : S3TriggerContainer {
             val envConfig = EnvironmentConfig()
-            val dynamoDbClientFactory = DefaultDynamoDbClientFactory(envConfig)
-            val dynamoDbConnector = DynamoDbConnector(clientFactory = dynamoDbClientFactory)
             val s3ClientFactory = DefaultS3ClientFactory(envConfig)
             val s3Connector = S3Connector(clientFactory = s3ClientFactory)
             val eventPublisher = EventBridgePublisher(envConfig)
@@ -36,7 +32,6 @@ class S3TriggerContainer(
 
             return S3TriggerContainer(
                 eventPublisher = eventPublisher,
-                dynamoDbConnector = dynamoDbConnector,
                 s3Connector = s3Connector,
                 faultManager = faultManager,
             )
@@ -45,10 +40,9 @@ class S3TriggerContainer(
 
     private val cdcPipeline: Pipeline by lazy {
         CdcPipeline(
-            id = "cdc1",
-            dynamoDbConnector = dynamoDbConnector,
+            id = "t1",
             eventPublisher = eventPublisher,
-            // toEvent = ::toEvent,
+            eventFilter = EventFilter.ByName("trace-created")
         )
     }
 
