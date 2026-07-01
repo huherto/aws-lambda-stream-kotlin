@@ -24,7 +24,7 @@ data class HealthCheckResponse(
     val incomplete: Boolean? = null,
     val elapsed: Double? = null,
     val tracers: List<Tracer>? = null,
-    val save: String? = null,
+    val saveResponse: String? = null,
 )
 
 class CheckHealthApiFacade {
