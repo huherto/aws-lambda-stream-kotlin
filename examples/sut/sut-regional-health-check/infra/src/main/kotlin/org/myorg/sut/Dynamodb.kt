@@ -10,7 +10,7 @@ import software.amazon.awscdk.services.lambda.StartingPosition
 import software.amazon.awscdk.services.lambda.eventsources.DynamoEventSource
 
 fun RegionalHealthCheckStack.entityTableName(): String =
-    "${service()}-${stage()}-entities"
+    "${service()}-${stage()}-tracer"
 
 fun RegionalHealthCheckStack.tableArn(): String =
     "arn:aws:dynamodb:${regionName()}:${Aws.ACCOUNT_ID}:table/${entityTableName()}"
@@ -33,26 +33,28 @@ fun RegionalHealthCheckStack.newEntitiesTable(): TableV2 {
                 .type(AttributeType.STRING)
                 .build()
         )
-        .replicas(
-            listOf(
-                ReplicaTableProps.builder()
-                    .region("us-east-1")
-                    .build()
-            )
-        )
+//        .replicas(
+//            listOf(
+//                ReplicaTableProps.builder()
+//                    .region("us-east-1")
+//                    .build()
+//            )
+//        )
         .billing(Billing.onDemand())
         .dynamoStream(StreamViewType.NEW_AND_OLD_IMAGES)
         .timeToLiveAttribute("ttl")
         .encryption(TableEncryptionV2.dynamoOwnedKey())
         .build()
 
-    val cfnTable = table.node.defaultChild as CfnResource
-    cfnTable.cfnOptions.condition = isWestCondition()
+    if (stage() != Stage.LOCAL) {
+        val cfnTable = table.node.defaultChild as CfnResource
+        cfnTable.cfnOptions.condition = isWestCondition()
+    }
 
     return table
 }
 
-fun RegionalHealthCheckStack.addEntitiesTablePermissions(function: Function) {
+fun RegionalHealthCheckStack.addEntitiesTablePermissions(function: Function, tracerTable: TableV2) {
     function.addToRolePolicy(
         PolicyStatement.Builder.create()
             .effect(Effect.ALLOW)
@@ -64,7 +66,7 @@ fun RegionalHealthCheckStack.addEntitiesTablePermissions(function: Function) {
             )
             .resources(
                 listOf(
-                    tableArn(),
+                    tracerTable.tableArn,
                 )
             )
             .build()

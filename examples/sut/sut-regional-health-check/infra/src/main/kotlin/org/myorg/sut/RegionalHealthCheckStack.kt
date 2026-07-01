@@ -13,6 +13,7 @@ import software.amazon.awscdk.services.s3.Bucket
 import software.amazon.awscdk.services.sns.Topic
 import software.amazon.awscdk.services.sqs.Queue
 import software.constructs.Construct
+
 /*
 Tracer flow diagram:
 
@@ -31,6 +32,12 @@ class RegionalHealthCheckStack(scope: Construct, serviceProps: ServiceProps) : B
     val runtimeEnvironment = mapOf(
         "JAVA_TOOL_OPTIONS" to "-Dslf4j.provider=io.github.vitalijr2.aws.lambda.slf4j.AWSLambdaServiceProvider",
         "LOG_DEFAULT_LEVEL" to "DEBUG",
+        "ENTITY_TABLE_NAME" to entityTableName(),
+//        "BUS_NAME" to "${service()}-${stage()}-bus",
+//        "BUS_SRC" to "regional-health-check-trigger",
+        "REGION" to regionName(),
+//        "ACCOUNT_ID" to Aws.ACCOUNT_ID,
+//        "BUCKET_NAME" to "${org()}-${service()}-${stage()}-${regionName()}"
     )
     internal val topic: Topic = newTopic()
     internal val triggerQueue: Queue = newTriggerQueue()
@@ -38,54 +45,61 @@ class RegionalHealthCheckStack(scope: Construct, serviceProps: ServiceProps) : B
     internal val entitiesTable = newEntitiesTable()
     internal val bus: EventBus = newBus()
     internal val stream1: CfnStream = newStream1()
+    internal val disabled = false
 
     init {
-        newTopicOutputs(topic)
-        newBucketOutputs(bucket)
-        newTriggerQueueOutputs(triggerQueue)
 
-        // From S3 Bucket to SNS Topic
-        allowBucketPublishToTopic(topic, bucket)
+        val restApiLambda = newRestApiLambda()
+        addEntitiesTablePermissions(restApiLambda, entitiesTable)
 
-        // From SNS Topic to SQS Queue
-        allowTopicToSendMessagesToQueue(
-            triggerQueue = triggerQueue,
-            topic = topic,
-        )
-        subscribeToTopic(
-            triggerQueue = triggerQueue,
-            topic = topic,
-        )
+        if (disabled) {
+            newTopicOutputs(topic)
+            newBucketOutputs(bucket)
+            newTriggerQueueOutputs(triggerQueue)
 
-        // From SQS Queue to S3Trigger Lambda to Event Bus
-        val triggerLambda = newTriggerLambda()
-        addSqsEventSourceToTrigger(triggerLambda, triggerQueue)
+            // From S3 Bucket to SNS Topic
+            allowBucketPublishToTopic(topic, bucket)
 
-        // From Event Bus to Logs and Kinesis Stream 1
-        logBusEventsInCloudWatch(bus)
-        val kinesisBusRole = newKinesisBusRole(stream1)
-        addStream1EventRule(
-            bus = bus,
-            stream1 = stream1,
-            busRole = kinesisBusRole,
-        )
+            // From SNS Topic to SQS Queue
+            allowTopicToSendMessagesToQueue(
+                triggerQueue = triggerQueue,
+                topic = topic,
+            )
+            subscribeToTopic(
+                triggerQueue = triggerQueue,
+                topic = topic,
+            )
 
-        addApiGatewayApiKeys()
-        createRegionalHealthCheck()
-        createSyntheticsCanary(
-            bucket = bucket,
-            healthCheckEndpoint = healthCheckEndpoint(),
-            apiKey = apiKey(),
-        )
+            // From SQS Queue to S3Trigger Lambda to Event Bus
+            val triggerLambda = newTriggerLambda()
+            addSqsEventSourceToTrigger(triggerLambda, triggerQueue)
 
-        // placeholder
-        val myFunction = Function.Builder.create(this, "Function").build()
+            // From Event Bus to Logs and Kinesis Stream 1
+            logBusEventsInCloudWatch(bus)
+            val kinesisBusRole = newKinesisBusRole(stream1)
+            addStream1EventRule(
+                bus = bus,
+                stream1 = stream1,
+                busRole = kinesisBusRole,
+            )
 
-        // Example once a Lambda consuming/writing the table exists:
-        addEntitiesTablePermissions(myFunction)
-        addEntitiesTableStreamToLambda(myFunction, entitiesTable)
-        addBusPutEventsPermissions(myFunction, bus)
-        addKmsPermissions(myFunction)
+            addApiGatewayApiKeys()
+            createRegionalHealthCheck()
+            createSyntheticsCanary(
+                bucket = bucket,
+                healthCheckEndpoint = healthCheckEndpoint(),
+                apiKey = apiKey(),
+            )
+
+            // placeholder
+            val myFunction = Function.Builder.create(this, "Function").build()
+
+            // Example once a Lambda consuming/writing the table exists:
+
+            addEntitiesTableStreamToLambda(myFunction, entitiesTable)
+            addBusPutEventsPermissions(myFunction, bus)
+            addKmsPermissions(myFunction)
+        }
     }
 
     private fun newTriggerLambda(): Function =
@@ -99,6 +113,16 @@ class RegionalHealthCheckStack(scope: Construct, serviceProps: ServiceProps) : B
             .environment(runtimeEnvironment)
             .build()
 
+    private fun newRestApiLambda(): Function =
+        Function.Builder.create(this, "checkHealthApi")
+            .functionName("${subsys()}-regional-health-check-${stage()}-checkHealthApi")
+            .code(JarFile)
+            .handler("org.myorg.sut.CheckHealthApi::handleRequest")
+            .timeout(Duration.seconds(50))
+            .memorySize(1024)
+            .runtime(runtime)
+            .environment(runtimeEnvironment)
+            .build()
 
     fun RegionalHealthCheckStack.isWestCondition(): CfnCondition =
         CfnCondition.Builder.create(this, "IsWest")

@@ -119,5 +119,9 @@ class EnvironmentConfig {
     fun skip() : Boolean {
         return System.getenv("SKIP")?.toBoolean() ?: false
     }
+    
+    fun unhealthy() : Boolean {
+        return System.getenv("UNHEALTHY")?.toBoolean() ?: false
+    }
 
 }

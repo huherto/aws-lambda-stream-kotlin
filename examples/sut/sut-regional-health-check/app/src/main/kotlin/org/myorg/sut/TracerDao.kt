@@ -2,73 +2,103 @@ package org.myorg.sut
 
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
 import aws.sdk.kotlin.services.dynamodb.model.UpdateItemRequest
+import aws.sdk.kotlin.services.dynamodb.model.UpdateItemResponse
 import aws.sdk.kotlin.services.s3.model.PutObjectRequest
 import aws.smithy.kotlin.runtime.content.ByteStream
 import io.github.huherto.awsLambdaStream.sinks.DynamoDbUpdateValue
 import io.github.huherto.awsLambdaStream.sinks.timestampCondition
 import io.github.huherto.awsLambdaStream.sinks.updateExpression
+import mu.KotlinLogging
 import kotlin.math.roundToLong
 
 const val DISCRIMINATOR = "trace"
 
-class Model(
-    private val debug: ((String) -> Unit)? = null,
+data class Tracer (
+    val awsRegion: String,
+    val roundedTimestamp: Long,
+    val timestamp: Long,
+    val ttl: Long,
+    val status: String,
+)
+
+class TracerDao(
     private val connector: Connector,
-    private val unhealthyFlag: Boolean? = null,
     private val awsRegion: String,
 ) {
-    suspend fun check(): HealthCheckResponse {
-        val timestamp = roundToNearestMinute(now())
+
+    private val logger = KotlinLogging.logger {  }
+
+    suspend fun check( unhealthyFlag: Boolean? = null): HealthCheckResponse {
+        val roundedTimestamp = roundToNearestMinute(now())
 
         if (unhealthyFlag == true) {
             return HealthCheckResponse(
                 statusCode = 503,
-                timestamp = timestamp,
+                timestamp = roundedTimestamp,
                 region = awsRegion,
             )
         }
 
-        val get = get()
-        val save = save()
+        val currentTracers = getTracers()
+        val toBeSaved = Tracer(
+            awsRegion = awsRegion,
+            roundedTimestamp = roundedTimestamp,
+            timestamp = now(),
+            ttl = ttl(now(), 92),
+            status = "STARTED")
+        val save = save(toBeSaved)
+        logger.info { "tracers=$currentTracers save=$toBeSaved" }
 
-        val mostRecent = get.firstOrNull()
-        val incomplete = mostRecent?.get("status")?.asStringOrNull() == "STARTED"
+        val mostRecent = currentTracers.firstOrNull()
+        val incomplete = mostRecent?.status == "STARTED"
 
-        val sk = mostRecent?.get("sk")?.asStringOrNull()?.toLongOrNull() ?: 0L
-        val elapsed = (timestamp - sk).toDouble() / 1000.0 / 60.0
+        val sk = mostRecent?.roundedTimestamp ?: 0L
+        val elapsed = (roundedTimestamp - sk).toDouble() / 1000.0 / 60.0
 
         // Is the most recent trace incomplete, or is it older than 1 minute?
         val unhealthyCheck = incomplete || elapsed > 1
 
+
         return HealthCheckResponse(
             statusCode = if (unhealthyCheck) 503 else 200,
-            timestamp = timestamp,
+            timestamp = roundedTimestamp,
             region = awsRegion,
             incomplete = incomplete,
             elapsed = elapsed,
-            get = get,
-            save = save,
+            tracers = currentTracers,
+            saveResponse = save.toString(),
         )
     }
 
-    suspend fun get(): List<Map<String, AttributeValue>> =
-        connector.get(awsRegion)
+    suspend fun getTracers(): List<Tracer> {
+        return connector.get(awsRegion).map {
+            Tracer(
+                awsRegion = awsRegion,
+                roundedTimestamp = it["sk"]?.asStringOrNull()?.toLongOrNull() ?: 0L,
+                timestamp = it["timestamp"]?.asStringOrNull()?.toLongOrNull() ?: 0L,
+                ttl = it["ttl"]?.asStringOrNull()?.toLongOrNull() ?: 0L,
+                status = it["status"]?.asStringOrNull() ?: "UNKNOWN",
+            )
+        }
+    }
 
-    suspend fun save() =
-        connector.update(
+
+    suspend fun save(tracer: Tracer) : UpdateItemResponse {
+        return connector.update(
             key = mapOf(
-                "pk" to AttributeValue.S(awsRegion),
-                "sk" to AttributeValue.S(roundToNearestMinute(now()).toString()),
+                "pk" to AttributeValue.S(tracer.awsRegion),
+                "sk" to AttributeValue.S(tracer.roundedTimestamp.toString()),
             ),
             inputParams = mapOf(
-                "timestamp" to DynamoDbUpdateValue.DbSet(AttributeValue.N(now().toString())),
-                "status" to DynamoDbUpdateValue.DbSet(AttributeValue.S("STARTED")),
+                "timestamp" to DynamoDbUpdateValue.DbSet(AttributeValue.N(tracer.timestamp.toString())),
+                "status" to DynamoDbUpdateValue.DbSet(AttributeValue.S(tracer.status)),
                 "discriminator" to DynamoDbUpdateValue.DbSet(AttributeValue.S(DISCRIMINATOR)),
                 "latched" to DynamoDbUpdateValue.DbRemove,
-                "ttl" to DynamoDbUpdateValue.DbSet(AttributeValue.N(ttl(now(), 92).toString())),
-                "awsregion" to DynamoDbUpdateValue.DbSet(AttributeValue.S(awsRegion)),
+                "ttl" to DynamoDbUpdateValue.DbSet(AttributeValue.N(tracer.ttl.toString())),
+                "awsregion" to DynamoDbUpdateValue.DbSet(AttributeValue.S(tracer.awsRegion)),
             ),
         )
+    }
 }
 
 data class HealthCheckResponse(
@@ -77,8 +107,8 @@ data class HealthCheckResponse(
     val region: String?,
     val incomplete: Boolean? = null,
     val elapsed: Double? = null,
-    val get: List<Map<String, AttributeValue>>? = null,
-    val save: Any? = null,
+    val tracers: List<Tracer>? = null,
+    val saveResponse: String? = null,
 )
 
 fun toUpdateRequest(uow: UnitOfWork): UpdateItemRequest {

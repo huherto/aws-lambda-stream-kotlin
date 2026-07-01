@@ -4,11 +4,10 @@ import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import kotlinx.coroutines.runBlocking
 
-class RestHandler(
-    val entityTable : String = System.getenv("ENTITY_TABLE_NAME"),
-    val unhealthyFlag : Boolean = System.getenv("UNHEALTHY") == "true",
-    val awsRegion : String = System.getenv("AWS_REGION"),
+class CheckHealthApi(
+    private val container: CheckHealthApiContainer = CheckHealthApiContainer.build(),
 ) : RequestHandler<Map<String, Any?>, Any?> {
+
     override fun handleRequest(
         event: Map<String, Any?>,
         context: Context,
@@ -16,31 +15,17 @@ class RestHandler(
         val debug : (String) -> Unit = debug("handler")
 
         debug("event: $event")
-        // debug("ctx: $context")
-        // debug("env: ${System.getenv()}")
-
-        val connector = Connector(
-            debug = debug,
-            tableName = entityTable,
-        )
-
-        val model = Model(
-            debug = debug,
-            connector = connector,
-            unhealthyFlag = unhealthyFlag,
-            awsRegion = awsRegion,
-        )
 
         when (event.routeKey()) {
             "GET /check", "/check", "GET:/check" -> {
-                val data = model.check()
+                val checkResponse = container.tracerDao.check(container.unhealthyFlag)
 
                 mapOf(
-                    "statusCode" to data.statusCode,
+                    "statusCode" to checkResponse.statusCode,
                     "headers" to mapOf(
                         "Cache-Control" to "no-cache, no-store, must-revalidate",
                     ),
-                    "body" to data,
+                    "body" to checkResponse,
                 )
             }
             else -> mapOf(
