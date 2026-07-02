@@ -5,11 +5,17 @@ import aws.sdk.kotlin.services.dynamodb.model.UpdateItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.UpdateItemResponse
 import aws.sdk.kotlin.services.s3.model.PutObjectRequest
 import aws.smithy.kotlin.runtime.content.ByteStream
+import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.asJson
+import io.github.huherto.awsLambdaStream.from.RecordPair
 import io.github.huherto.awsLambdaStream.sinks.DynamoDbUpdateValue
 import io.github.huherto.awsLambdaStream.sinks.timestampCondition
 import io.github.huherto.awsLambdaStream.sinks.updateExpression
+import io.github.huherto.awsLambdaStream.utils.ttl
 import mu.KotlinLogging
 import kotlin.math.roundToLong
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.milliseconds
 
 const val DISCRIMINATOR = "trace"
 
@@ -29,7 +35,8 @@ class TracerDao(
     private val logger = KotlinLogging.logger {  }
 
     suspend fun check( unhealthyFlag: Boolean? = null): HealthCheckResponse {
-        val roundedTimestamp = roundToNearestMinute(now())
+        val now = System.currentTimeMillis()
+        val roundedTimestamp = roundToNearestMinute(now)
 
         if (unhealthyFlag == true) {
             return HealthCheckResponse(
@@ -43,8 +50,8 @@ class TracerDao(
         val toBeSaved = Tracer(
             awsRegion = awsRegion,
             roundedTimestamp = roundedTimestamp,
-            timestamp = now(),
-            ttl = ttl(now(), 92),
+            timestamp = now,
+            ttl = ttl(now, 92.days),
             status = "STARTED")
         val save = save(toBeSaved)
         logger.info { "tracers=$currentTracers save=$toBeSaved" }
@@ -111,8 +118,16 @@ data class HealthCheckResponse(
     val saveResponse: String? = null,
 )
 
-fun toUpdateRequest(uow: UnitOfWork): UpdateItemRequest {
-    val timestamp = now()
+fun toUpdateRequest(uow: UnitOfWork): UpdateItemRequest? {
+
+    val raw = uow.event?.raw as? RecordPair ?: return null
+    val newRaw = raw.new ?: return null
+    val timestamp = System.currentTimeMillis()
+    val pk = newRaw.getS("pk") ?: return null
+    val sk = newRaw.getS("sk") ?: return null
+    val startTimestamp = newRaw.getS("timestamp")?.toLongOrNull() ?: return null
+    val latency = (timestamp - startTimestamp).milliseconds.inWholeSeconds
+    val ttl = ttl(timestamp, 92.days)
 
     val expression = updateExpression(
         mapOf(
@@ -120,10 +135,10 @@ fun toUpdateRequest(uow: UnitOfWork): UpdateItemRequest {
             "discriminator" to DynamoDbUpdateValue.DbSet(AttributeValue.S(DISCRIMINATOR)),
             "timestamp" to DynamoDbUpdateValue.DbSet(AttributeValue.N(timestamp.toString())),
             "latency" to DynamoDbUpdateValue.DbSet(
-                AttributeValue.N(((timestamp - uow.event.raw.new.timestamp).toDouble() / 1000.0).toString()),
+                AttributeValue.N(latency.toString()),
             ),
             "latched" to DynamoDbUpdateValue.DbSet(AttributeValue.Bool(true)),
-            "ttl" to DynamoDbUpdateValue.DbSet(AttributeValue.N(ttl(uow.event.timestamp, 92).toString())),
+            "ttl" to DynamoDbUpdateValue.DbSet(AttributeValue.N(ttl.toString())),
             "awsregion" to DynamoDbUpdateValue.DbSet(AttributeValue.S(System.getenv("AWS_REGION"))),
         ),
     )
@@ -132,8 +147,8 @@ fun toUpdateRequest(uow: UnitOfWork): UpdateItemRequest {
 
     return UpdateItemRequest {
         key = mapOf(
-            "pk" to AttributeValue.S(System.getenv("AWS_REGION")),
-            "sk" to AttributeValue.S(uow.event.raw.new.sk),
+            "pk" to AttributeValue.S(pk),
+            "sk" to AttributeValue.S(sk),
         )
         expressionAttributeNames = expression.expressionAttributeNames
         expressionAttributeValues = expression.expressionAttributeValues
@@ -142,22 +157,25 @@ fun toUpdateRequest(uow: UnitOfWork): UpdateItemRequest {
     }
 }
 
-fun toS3PutRequest(uow: UnitOfWork): PutObjectRequest =
-    PutObjectRequest {
-        key = "${uow.event.raw.new.pk}/${uow.event.raw.new.sk}"
-        body = ByteStream.fromString(uow.event.toJson())
-    }
+private val logger = KotlinLogging.logger {  }
 
-fun now(): Long =
-    System.currentTimeMillis()
+fun toS3PutRequest(uow: UnitOfWork): PutObjectRequest? {
+    val raw = uow.event?.raw as? RecordPair ?: return null
+    val newRaw = raw.new ?: return null
+    logger.info("before newRaw=$newRaw")
+    val pk = newRaw.getS("pk") ?: return null
+    val sk = newRaw.getS("sk") ?: return null
+    logger.info { "pk=$pk sk=$sk" }
+    return PutObjectRequest {
+        key = "${pk}/${sk}"
+        body = ByteStream.fromString(uow.event.asJson())
+    }
+}
 
 fun roundToNearestMinute(timestamp: Long): Long {
     val minute = 60_000L
     return (timestamp.toDouble() / minute).roundToLong() * minute
 }
-
-fun ttl(timestamp: Long, minutes: Long): Long =
-    (timestamp / 1000L) + (minutes * 60L)
 
 private fun AttributeValue.asStringOrNull(): String? =
     when (this) {
@@ -165,28 +183,3 @@ private fun AttributeValue.asStringOrNull(): String? =
         is AttributeValue.N -> value
         else -> null
     }
-
-/**
- * Replace these DTOs with your real stream/event model if one already exists.
- */
-data class UnitOfWork(
-    val event: StreamEvent,
-)
-
-data class StreamEvent(
-    val timestamp: Long,
-    val raw: RawEvent,
-) {
-    fun toJson(): String =
-        """{"timestamp":$timestamp,"raw":{"new":{"pk":"${raw.new.pk}","sk":"${raw.new.sk}","timestamp":${raw.new.timestamp}}}}"""
-}
-
-data class RawEvent(
-    val new: NewImage,
-)
-
-data class NewImage(
-    val pk: String,
-    val sk: String,
-    val timestamp: Long,
-)

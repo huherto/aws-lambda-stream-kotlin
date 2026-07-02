@@ -3,12 +3,14 @@ package org.myorg.sut
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
 import aws.sdk.kotlin.services.dynamodb.model.UpdateItemResponse
 import io.github.huherto.awsLambdaStream.sinks.DynamoDbUpdateValue
+import io.github.huherto.awsLambdaStream.utils.ttl
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.maps.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import io.mockk.*
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
+import kotlin.time.Duration.Companion.days
 
 class TracerDaoTest {
 
@@ -194,7 +196,7 @@ class TracerDaoTest {
         val connector = mockk<Connector>()
         val saveResponse = UpdateItemResponse {}
 
-        val recentRoundedTimestamp = roundToNearestMinute(now())
+        val recentRoundedTimestamp = roundToNearestMinute(System.currentTimeMillis())
 
         coEvery {
             connector.get(awsRegion)
@@ -202,7 +204,7 @@ class TracerDaoTest {
             mapOf(
                 "sk" to AttributeValue.S(recentRoundedTimestamp.toString()),
                 "timestamp" to AttributeValue.N(recentRoundedTimestamp.toString()),
-                "ttl" to AttributeValue.N(ttl(recentRoundedTimestamp, 92).toString()),
+                "ttl" to AttributeValue.N(ttl(recentRoundedTimestamp, 92.days).toString()),
                 "status" to AttributeValue.S("COMPLETED"),
             ),
         )
@@ -229,7 +231,7 @@ class TracerDaoTest {
                 awsRegion = awsRegion,
                 roundedTimestamp = recentRoundedTimestamp,
                 timestamp = recentRoundedTimestamp,
-                ttl = ttl(recentRoundedTimestamp, 92),
+                ttl = ttl(recentRoundedTimestamp, 92.days),
                 status = "COMPLETED",
             ),
         )
@@ -248,7 +250,7 @@ class TracerDaoTest {
         val connector = mockk<Connector>()
         val saveResponse = UpdateItemResponse {}
 
-        val recentRoundedTimestamp = roundToNearestMinute(now())
+        val recentRoundedTimestamp = roundToNearestMinute(System.currentTimeMillis())
 
         coEvery {
             connector.get(awsRegion)
@@ -256,7 +258,7 @@ class TracerDaoTest {
             mapOf(
                 "sk" to AttributeValue.S(recentRoundedTimestamp.toString()),
                 "timestamp" to AttributeValue.N(recentRoundedTimestamp.toString()),
-                "ttl" to AttributeValue.N(ttl(recentRoundedTimestamp, 92).toString()),
+                "ttl" to AttributeValue.N(ttl(recentRoundedTimestamp, 92.days).toString()),
                 "status" to AttributeValue.S("STARTED"),
             ),
         )

@@ -124,4 +124,8 @@ class EnvironmentConfig {
         return System.getenv("UNHEALTHY")?.toBoolean() ?: false
     }
 
+    fun bucketName() : String? {
+        return System.getenv("BUCKET_NAME")
+    }
+
 }

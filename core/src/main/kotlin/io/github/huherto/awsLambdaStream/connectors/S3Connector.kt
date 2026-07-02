@@ -27,8 +27,8 @@ class DefaultS3ClientFactory(
 }
 
 class S3Connector(
-    val debug: (Any?) -> Unit = {},
     private val clientFactory: S3ClientFactory,
+    val debug: (Any?) -> Unit = {},
 ) {
 
     fun getClient(uow: UnitOfWork): S3Client {
