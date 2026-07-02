@@ -11,6 +11,9 @@ import kotlinx.coroutines.flow.flatMapConcat
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 
+// S3Query will supersede this. It is here for reference mostly
+
+
 fun toGetObjectRequest(
     uow: UnitOfWork,
     bucketName: String,
@@ -95,7 +98,7 @@ fun Flow<UnitOfWork>.getObjectFromS3AsStream(
         }
     }
 
-fun Flow<UnitOfWork>.getObjectFromS3AsByteArray(
+fun Flow<UnitOfWork>.getObjectAsByteArray(
     s3Connector: S3Connector,
 ): Flow<UnitOfWork> =
     map { uow ->

@@ -17,11 +17,17 @@ import software.constructs.Construct
 /*
 Tracer flow diagram:
 
-Resp API -> Dynamo DB Table -> Dynamo DB Stream -> Dynamo DB Trigger Lambda ->  S3 Bucket ?
-
-S3 bucket -> SNS Topic -> SQS Trigger Queue -> S3 Trigger Lambda -> Event Bus -> Kinesis Stream 1
-
-Kinesis Stream 1 -> Dynamo DB Table.
+Resp API
+    -> Dynamo DB Table
+        -> Dynamo DB Stream
+            -> Dynamo DB Trigger Lambda
+                -> S3 bucket
+                    -> SNS Topic
+                        -> SQS Trigger Queue
+                            -> S3 Trigger Lambda
+                                -> Event Bus
+                                    -> Kinesis Stream 1
+                                        -> Dynamo DB Table.
 
 */
 

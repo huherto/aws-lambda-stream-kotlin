@@ -42,6 +42,10 @@ data class UnitOfWork(
 data class S3UnitOfWork(
     val getRequest: GetObjectRequest? = null,
     val getResponse: GetObjectResponse? = null,
+    val deleteRequest: DeleteObjectRequest? = null,
+    val deleteResponse: DeleteObjectResponse? = null,
+    val copyRequest: CopyObjectRequest? = null,
+    val copyResponse: CopyObjectResponse? = null,
     val getResponseText: String? = null,
     val getResponseBytes: ByteArray? = null,
     val putRequest: PutObjectRequest? = null,

@@ -17,12 +17,14 @@ data class ClaimCheck(
 )
 
 class ClaimCheckRedeemer(
-    private val s3Connector: S3Connector,
+    s3Connector: S3Connector,
     private val faultManager: FaultManager,
     private val eventCodec: EventCodec,
     private val claimCheck: (UnitOfWork) -> ClaimCheck? = { uow ->
         uow.event?.raw as? ClaimCheck
     }) {
+
+    private val s3Query = S3Query(s3Connector)
 
     fun Flow<UnitOfWork>.redeemClaimCheck(): Flow<UnitOfWork> {
         return with(faultManager) {
@@ -38,7 +40,7 @@ class ClaimCheckRedeemer(
                     copy(getRequest = request)
                 }
             }
-                .getObjectFromS3AsByteArray(s3Connector)
+                .let { s3Query.getObjectAsByteArray(it) }
                 .mapNotFaulty { uow ->
                     val body = uow.s3.getResponseBytes
 
