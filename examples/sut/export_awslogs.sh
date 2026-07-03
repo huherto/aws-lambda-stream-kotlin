@@ -24,3 +24,4 @@ awslocal logs filter-log-events --log-group-name "/aws/lambda/sut-shipment-bff-l
 awslocal logs filter-log-events --log-group-name "/aws/kinesisfirehose/sut-event-fault-monitor-local-DeliveryStream" | prefilter > $LOGS/event-fault-monitor.json
 awslocal logs filter-log-events --log-group-name "/aws/lambda/sut-event-fault-monitor-local-transform" | prefilter > $LOGS/event-fault-monitor-transform.json
 awslocal logs filter-log-events --log-group-name "/aws/lambda/sut-regional-health-check-local-checkHealthApi" | prefilter > $LOGS/regional-health-check-checkHealthApi.json
+awslocal logs filter-log-events --log-group-name "/aws/lambda/sut-regional-health-check-local-dynamoDbTrigger" | prefilter > $LOGS/regional-health-check-dynamoDbTrigger.json

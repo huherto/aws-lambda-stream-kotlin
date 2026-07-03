@@ -17,7 +17,7 @@ import software.constructs.Construct
 /*
 Tracer flow diagram:
 
-Resp API
+Check Health API
     -> Dynamo DB Table
         -> Dynamo DB Stream
             -> Dynamo DB Trigger Lambda
@@ -33,18 +33,8 @@ Resp API
 
 class RegionalHealthCheckStack(scope: Construct, serviceProps: ServiceProps) : BaseStack(scope, serviceProps) {
 
-    val JarFile = Code.fromAsset("../app/build/libs/sut-regional-health-check.jar")
-    val runtime: Runtime = Runtime.JAVA_21!!
-    val runtimeEnvironment = mapOf(
-        "JAVA_TOOL_OPTIONS" to "-Dslf4j.provider=io.github.vitalijr2.aws.lambda.slf4j.AWSLambdaServiceProvider",
-        "LOG_DEFAULT_LEVEL" to "DEBUG",
-        "ENTITY_TABLE_NAME" to entityTableName(),
-//        "BUS_NAME" to "${service()}-${stage()}-bus",
-//        "BUS_SRC" to "regional-health-check-trigger",
-        "REGION" to regionName(),
-//        "ACCOUNT_ID" to Aws.ACCOUNT_ID,
-//        "BUCKET_NAME" to "${org()}-${service()}-${stage()}-${regionName()}"
-    )
+
+
     internal val topic: Topic = newTopic()
     internal val triggerQueue: Queue = newTriggerQueue()
     internal val bucket: Bucket = newBucket(topic)
@@ -53,10 +43,30 @@ class RegionalHealthCheckStack(scope: Construct, serviceProps: ServiceProps) : B
     internal val stream1: CfnStream = newStream1()
     internal val disabled = false
 
+    val JarFile = Code.fromAsset("../app/build/libs/sut-regional-health-check.jar")
+    val runtime: Runtime = Runtime.JAVA_21!!
+    val runtimeEnvironment = mapOf(
+        "JAVA_TOOL_OPTIONS" to "-Dslf4j.provider=io.github.vitalijr2.aws.lambda.slf4j.AWSLambdaServiceProvider",
+        "LOG_DEFAULT_LEVEL" to "DEBUG",
+        "ENTITY_TABLE_NAME" to entitiesTable.tableName,
+//        "BUS_NAME" to "${service()}-${stage()}-bus",
+//        "BUS_SRC" to "regional-health-check-trigger",
+        "REGION" to regionName(),
+//        "ACCOUNT_ID" to Aws.ACCOUNT_ID,
+        "BUCKET_NAME" to bucket.bucketName,
+    )
+
     init {
 
-        val restApiLambda = newRestApiLambda()
-        addEntitiesTablePermissions(restApiLambda, entitiesTable)
+        bucket.bucketName
+        // Check Health API  -> Dynamo DB Table
+        val restApiLambda = newCheckHealthApi()
+        grantDynamoDBPermissions(restApiLambda, entitiesTable)
+
+        // Dynamo DB Table -> Dynamo DB Stream -> Dynamo DB Trigger Lambda -> S3 bucket
+        val dynamoDbTriggerLambda = newDynamoDbTriggerLambda()
+        addEntitiesTableStreamToLambda(dynamoDbTriggerLambda, entitiesTable)
+        grantBucketObjectAccess(bucket, dynamoDbTriggerLambda)
 
         if (disabled) {
             newTopicOutputs(topic)
@@ -77,7 +87,7 @@ class RegionalHealthCheckStack(scope: Construct, serviceProps: ServiceProps) : B
             )
 
             // From SQS Queue to S3Trigger Lambda to Event Bus
-            val triggerLambda = newTriggerLambda()
+            val triggerLambda = newS3TriggerLambda()
             addSqsEventSourceToTrigger(triggerLambda, triggerQueue)
 
             // From Event Bus to Logs and Kinesis Stream 1
@@ -101,29 +111,38 @@ class RegionalHealthCheckStack(scope: Construct, serviceProps: ServiceProps) : B
             val myFunction = Function.Builder.create(this, "Function").build()
 
             // Example once a Lambda consuming/writing the table exists:
-
-            addEntitiesTableStreamToLambda(myFunction, entitiesTable)
             addBusPutEventsPermissions(myFunction, bus)
             addKmsPermissions(myFunction)
         }
     }
 
-    private fun newTriggerLambda(): Function =
-        Function.Builder.create(this, "trigger")
-            .functionName("${subsys()}-regional-health-check-${stage()}-trigger")
+    private fun newCheckHealthApi(): Function =
+        Function.Builder.create(this, "checkHealthApi")
+            .functionName("${subsys()}-regional-health-check-${stage()}-checkHealthApi")
             .code(JarFile)
-            .handler("org.myorg.sut.S3Trigger::handleRequest")
+            .handler("org.myorg.sut.CheckHealthApi::handleRequest")
             .timeout(Duration.seconds(50))
             .memorySize(1024)
             .runtime(runtime)
             .environment(runtimeEnvironment)
             .build()
 
-    private fun newRestApiLambda(): Function =
-        Function.Builder.create(this, "checkHealthApi")
-            .functionName("${subsys()}-regional-health-check-${stage()}-checkHealthApi")
+    private fun newDynamoDbTriggerLambda(): Function =
+        Function.Builder.create(this, "dynamoDbTrigger")
+            .functionName("${subsys()}-regional-health-check-${stage()}-dynamoDbTrigger")
             .code(JarFile)
-            .handler("org.myorg.sut.CheckHealthApi::handleRequest")
+            .handler("org.myorg.sut.DynamoDbTrigger::handleRequest")
+            .timeout(Duration.seconds(50))
+            .memorySize(1024)
+            .runtime(runtime)
+            .environment(runtimeEnvironment)
+            .build()
+
+    private fun newS3TriggerLambda(): Function =
+        Function.Builder.create(this, "s3Trigger")
+            .functionName("${subsys()}-regional-health-check-${stage()}-s3trigger")
+            .code(JarFile)
+            .handler("org.myorg.sut.S3Trigger::handleRequest")
             .timeout(Duration.seconds(50))
             .memorySize(1024)
             .runtime(runtime)

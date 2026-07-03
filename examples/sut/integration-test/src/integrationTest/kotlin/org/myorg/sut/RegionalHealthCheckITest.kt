@@ -31,7 +31,7 @@ class RegionalHealthCheckITest {
         // Assert
         verifyTracerReachesDynamoDbTable(response)
 
-        //verifyTracerReachesS3(response)
+        verifyTracerReachesS3(response)
 
     }
 

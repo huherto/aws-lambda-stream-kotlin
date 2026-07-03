@@ -54,7 +54,7 @@ fun RegionalHealthCheckStack.newEntitiesTable(): TableV2 {
     return table
 }
 
-fun RegionalHealthCheckStack.addEntitiesTablePermissions(function: Function, tracerTable: TableV2) {
+fun RegionalHealthCheckStack.grantDynamoDBPermissions(function: Function, tracerTable: TableV2) {
     function.addToRolePolicy(
         PolicyStatement.Builder.create()
             .effect(Effect.ALLOW)
@@ -80,7 +80,11 @@ fun RegionalHealthCheckStack.addEntitiesTableStreamToLambda(
     function.addEventSource(
         DynamoEventSource.Builder.create(table)
             .startingPosition(StartingPosition.TRIM_HORIZON)
-            .filters(entitiesTableStreamFilterPatterns())
+            .let {
+                // This is failing in local dev. We need to check if it works in other envs.
+                if (stage() != Stage.LOCAL) it.filters(entitiesTableStreamFilterPatterns())
+                it
+            }
             .build()
     )
 }
@@ -88,19 +92,8 @@ fun RegionalHealthCheckStack.addEntitiesTableStreamToLambda(
 fun RegionalHealthCheckStack.entitiesTableStreamFilterPatterns(): List<Map<String, Any>> =
     listOf(
         mapOf(
-            "eventName" to listOf("INSERT", "MODIFY"),
             "dynamodb" to mapOf(
                 "NewImage" to mapOf(
-                    "awsregion" to mapOf(
-                        "S" to listOf(regionName())
-                    )
-                )
-            )
-        ),
-        mapOf(
-            "eventName" to listOf("REMOVE"),
-            "dynamodb" to mapOf(
-                "OldImage" to mapOf(
                     "awsregion" to mapOf(
                         "S" to listOf(regionName())
                     )
