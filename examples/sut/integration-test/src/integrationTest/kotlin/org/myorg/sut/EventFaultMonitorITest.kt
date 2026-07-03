@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.myorg.sut.ShipmentTrackingDomain.createFaultEvent
 import org.myorg.sut.ShipmentTrackingDomain.createPoisonPillEvent
+import org.myorg.sut.facades.AwsFacade
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 

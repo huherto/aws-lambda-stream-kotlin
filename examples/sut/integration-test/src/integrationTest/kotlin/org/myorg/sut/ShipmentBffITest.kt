@@ -9,6 +9,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import org.myorg.sut.facades.AwsFacade
 
 // Components tested.
 //   - Send event to event bridge. sut-event-hub-local-bus.

@@ -18,6 +18,7 @@ import org.myorg.sut.ShipmentTrackingDomain.createDeliveryAttemptedEvent
 import org.myorg.sut.ShipmentTrackingDomain.createPoisonPillEvent
 import org.myorg.sut.ShipmentTrackingDomain.createShipmentCreatedEvent
 import org.myorg.sut.ShipmentTrackingDomain.createTrackedUnit
+import org.myorg.sut.facades.AwsFacade
 import java.lang.System.currentTimeMillis
 import kotlin.math.abs
 import kotlin.time.ExperimentalTime
