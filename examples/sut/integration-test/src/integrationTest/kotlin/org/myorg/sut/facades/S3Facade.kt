@@ -6,6 +6,7 @@ import aws.sdk.kotlin.services.s3.model.GetObjectRequest
 import aws.smithy.kotlin.runtime.content.decodeToString
 import kotlinx.coroutines.delay
 import mu.KotlinLogging
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
 class S3Facade(
@@ -22,17 +23,39 @@ class S3Facade(
         }
     }
 
-    suspend fun verifyFaultEventStoredInS3(faultId: String): String? {
+    suspend fun <T> waitForResult(
+        timeout: Duration = 20_000.milliseconds,
+        delayBetweenAttempts: Duration = 1_000.milliseconds,
+        onTimeout: () -> T?,
+        block: suspend S3Client.() -> T?,
+    ): T? {
         val startTime = System.currentTimeMillis()
 
         while (true) {
-            if (System.currentTimeMillis() - startTime > 20000) {
-                logger.error { "Timed out waiting for s3 object with faultId: $faultId to be inserted." }
-                return null
+            val result = client.block()
+            if (result != null) {
+                return result
             }
 
+            if (System.currentTimeMillis() - startTime > timeout.inWholeMilliseconds) {
+                return onTimeout()
+            }
+
+            delay(delayBetweenAttempts)
+        }
+    }
+
+    suspend fun verifyFaultEventStoredInS3(faultId: String): String? =
+        waitForResult(
+            timeout = 20_000.milliseconds,
+            delayBetweenAttempts = 1_000.milliseconds,
+            onTimeout = {
+                logger.error { "Timed out waiting for s3 object with faultId: $faultId to be inserted." }
+                null
+            },
+        ) {
             val bucketName = "myorg-sut-event-fault-monitor-local-us-east-1"
-            val response = client.listObjectsV2 {
+            val response = listObjectsV2 {
                 bucket = bucketName
             }
 
@@ -46,10 +69,10 @@ class S3Facade(
 
             val keys = contents.sortedBy { it.key }.map { it.key }.reversed()
 
-            keys.take(5).forEach { key ->
+            keys.take(5).firstNotNullOfOrNull { key ->
                 logger.info { "S3 object key: $key" }
 
-                val content = client.getObject(GetObjectRequest {
+                val content = getObject(GetObjectRequest {
                     bucket = bucketName
                     this.key = key
                 }) { s3Response ->
@@ -60,13 +83,12 @@ class S3Facade(
 
                 if (content != null && content.contains(faultId)) {
                     logger.info { "Fault found in S3 object: $key" }
-                    return content
+                    content
+                } else {
+                    null
                 }
             }
-
-            delay(1000.milliseconds)
         }
-    }
 
     fun close() {
         client.close()

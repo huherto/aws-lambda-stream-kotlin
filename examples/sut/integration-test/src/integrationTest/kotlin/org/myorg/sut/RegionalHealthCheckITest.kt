@@ -5,13 +5,11 @@ import aws.sdk.kotlin.services.s3.model.GetObjectRequest
 import aws.smithy.kotlin.runtime.content.decodeToString
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.myorg.sut.facades.AwsFacade
-import kotlin.time.Duration.Companion.milliseconds
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RegionalHealthCheckITest {
@@ -56,10 +54,13 @@ class RegionalHealthCheckITest {
     private suspend fun verifyTracerReachesS3(response: HealthCheckResponse) {
         val bucketName = "myorg-sut-regional-health-check-local-us-east-1"
         val expectedKey = "$awsRegion/${response.timestamp}"
-        val startTime = System.currentTimeMillis()
 
-        while (true) {
-            val listResponse = awsFacade.s3Client.listObjectsV2 {
+        val content = awsFacade.s3.waitForResult(
+            onTimeout = {
+                error("Timed out waiting for tracer S3 object: s3://$bucketName/$expectedKey")
+            },
+        ) {
+            val listResponse = listObjectsV2 {
                 bucket = bucketName
                 prefix = expectedKey
             }
@@ -69,28 +70,20 @@ class RegionalHealthCheckITest {
                 .mapNotNull { it.key }
                 .firstOrNull { it == expectedKey }
 
-            if (foundKey != null) {
-                val content = awsFacade.s3Client.getObject(GetObjectRequest {
+            foundKey?.let { key ->
+                getObject(GetObjectRequest {
                     bucket = bucketName
-                    key = foundKey
+                    this.key = key
                 }) { s3Response ->
                     s3Response.body?.decodeToString()
                 }
-
-                content.shouldNotBeNull()
-                content.contains(awsRegion) shouldBe true
-                content.contains(response.timestamp.toString()) shouldBe true
-                content.contains("STARTED") shouldBe true
-
-                return
             }
-
-            if (System.currentTimeMillis() - startTime > 20000) {
-                error("Timed out waiting for tracer S3 object: s3://$bucketName/$expectedKey")
-            }
-
-            delay(1000.milliseconds)
         }
+
+        content.shouldNotBeNull()
+        content.contains(awsRegion) shouldBe true
+        content.contains(response.timestamp.toString()) shouldBe true
+        content.contains("STARTED") shouldBe true
     }
 
     @AfterAll
