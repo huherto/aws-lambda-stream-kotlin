@@ -10,6 +10,7 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.myorg.sut.facades.AwsFacade
+import org.myorg.sut.facades.RestApiFacade
 
 // Components tested.
 //   - Send event to event bridge. sut-event-hub-local-bus.

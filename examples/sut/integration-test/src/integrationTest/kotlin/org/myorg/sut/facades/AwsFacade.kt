@@ -75,9 +75,6 @@ class AwsFacade(
             messageDeduplicationId = messageDeduplicationId,
         )
 
-    suspend fun verifyFaultEventStoredInS3(faultId: String): String? =
-        s3.verifyFaultEventStoredInS3(faultId)
-
     suspend fun purgeSqsQueue(queueName: String) =
         sqs.purgeQueue(queueName)
 

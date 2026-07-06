@@ -1,4 +1,4 @@
-package org.myorg.sut
+package org.myorg.sut.facades
 
 import aws.sdk.kotlin.runtime.auth.credentials.StaticCredentialsProvider
 import aws.sdk.kotlin.services.lambda.LambdaClient

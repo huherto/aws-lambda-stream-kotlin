@@ -45,16 +45,43 @@ class S3Facade(
         }
     }
 
-    suspend fun verifyFaultEventStoredInS3(faultId: String): String? =
+    suspend fun getObjectWithKey(bucketName: String, expectedKey: String): String? {
+        val content = waitForResult(
+            onTimeout = {
+                error("Timed out waiting for tracer S3 object: s3://$bucketName/$expectedKey")
+            },
+        ) {
+            val listResponse = listObjectsV2 {
+                bucket = bucketName
+                prefix = expectedKey
+            }
+
+            val foundKey = listResponse.contents
+                .orEmpty()
+                .mapNotNull { it.key }
+                .firstOrNull { it == expectedKey }
+
+            foundKey?.let { key ->
+                getObject(GetObjectRequest {
+                    bucket = bucketName
+                    this.key = key
+                }) { s3Response ->
+                    s3Response.body?.decodeToString()
+                }
+            }
+        }
+        return content
+    }
+
+    suspend fun findObjectWithSubstring(bucketName: String, substring: String): String? =
         waitForResult(
             timeout = 20_000.milliseconds,
             delayBetweenAttempts = 1_000.milliseconds,
             onTimeout = {
-                logger.error { "Timed out waiting for s3 object with faultId: $faultId to be inserted." }
+                logger.error { "Timed out waiting for s3 object with: $substring to be inserted." }
                 null
             },
         ) {
-            val bucketName = "myorg-sut-event-fault-monitor-local-us-east-1"
             val response = listObjectsV2 {
                 bucket = bucketName
             }
@@ -81,8 +108,8 @@ class S3Facade(
                     content
                 }
 
-                if (content != null && content.contains(faultId)) {
-                    logger.info { "Fault found in S3 object: $key" }
+                if (content != null && content.contains(substring, ignoreCase = true)) {
+                    logger.info { "Substring:$substring found in S3 object: $key" }
                     content
                 } else {
                     null

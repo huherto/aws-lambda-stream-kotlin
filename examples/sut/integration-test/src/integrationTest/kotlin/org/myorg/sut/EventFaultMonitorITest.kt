@@ -13,6 +13,7 @@ import org.junit.jupiter.api.TestInstance
 import org.myorg.sut.ShipmentTrackingDomain.createFaultEvent
 import org.myorg.sut.ShipmentTrackingDomain.createPoisonPillEvent
 import org.myorg.sut.facades.AwsFacade
+import org.myorg.sut.facades.S3Facade
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
@@ -31,6 +32,10 @@ class EventFaultMonitorITest {
     private val logger = mu.KotlinLogging.logger {}
 
     private val awsFacade = AwsFacade(eventTable = "sut-control-service-local-events")
+
+    private val s3Facade = S3Facade()
+
+    private val bucketName = "myorg-sut-event-fault-monitor-local-us-east-1"
 
     private val queueName = "sut-event-fault-monitor-local-notification-verification.fifo"
 
@@ -77,7 +82,7 @@ class EventFaultMonitorITest {
 
         awsFacade.putEvents(event)
 
-        val objectContent = awsFacade.verifyFaultEventStoredInS3(event.id!!)
+        val objectContent = s3Facade.findObjectWithSubstring(bucketName = bucketName , event.id!!)
         objectContent.shouldNotBeNull()
         logger.info { "Fault event found in S3" }
         val notification = awsFacade.verifyNotificationSentToSns(
@@ -99,7 +104,7 @@ class EventFaultMonitorITest {
         logger.info("Poison event is: ${event.id}")
         awsFacade.putEvents(event)
 
-        val objectContent = awsFacade.verifyFaultEventStoredInS3(event.id!!)
+        val objectContent = s3Facade.findObjectWithSubstring(bucketName = bucketName, event.id!!)
         objectContent.shouldNotBeNull()
         logger.info { "Poison event found in S3" }
         val notification = awsFacade.verifyNotificationSentToSns(

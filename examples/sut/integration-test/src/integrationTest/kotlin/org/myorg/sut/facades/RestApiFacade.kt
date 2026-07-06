@@ -1,4 +1,4 @@
-package org.myorg.sut
+package org.myorg.sut.facades
 
 import aws.sdk.kotlin.runtime.auth.credentials.StaticCredentialsProvider
 import aws.sdk.kotlin.services.lambda.LambdaClient
@@ -11,16 +11,17 @@ import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.github.huherto.awsLambdaStream.asJson
 import kotlinx.coroutines.runBlocking
+import org.myorg.sut.TrackedUnit
 
 class RestApiFacade {
     private val objectMapper = jacksonObjectMapper()
         .disable(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES)
 
     private val lambdaClient: LambdaClient by lazy {
-        LambdaClient {
+        LambdaClient.Companion {
             region = "us-east-1"
             endpointUrl = Url.parse("http://localhost:4566")
-            credentialsProvider = StaticCredentialsProvider {
+            credentialsProvider = StaticCredentialsProvider.Companion {
                 accessKeyId = "test"
                 secretAccessKey = "test"
             }
@@ -37,7 +38,7 @@ class RestApiFacade {
             .withBody(shipment.asJson())
             .withIsBase64Encoded(false)
 
-        val response = lambdaClient.invoke(InvokeRequest {
+        val response = lambdaClient.invoke(InvokeRequest.Companion {
             functionName = lambdaFunctionName
             invocationType = InvocationType.RequestResponse
             payload = objectMapper.writeValueAsBytes(request)
@@ -62,7 +63,7 @@ class RestApiFacade {
             .withPathParameters(mapOf("id" to shipmentId))
             .withIsBase64Encoded(false)
 
-        val response = lambdaClient.invoke(InvokeRequest {
+        val response = lambdaClient.invoke(InvokeRequest.Companion {
             functionName = lambdaFunctionName
             invocationType = InvocationType.RequestResponse
             payload = objectMapper.writeValueAsBytes(request)
