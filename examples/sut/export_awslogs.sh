@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 
-
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 GW=$(realpath $SCRIPT_DIR/../../gradlew)
 
@@ -14,14 +13,17 @@ prefilter() {
 	jq -c '.events[]'
 }
 
-awslocal logs filter-log-events --log-group-name "/aws/lambda/sut-control-service-local-listener" | prefilter > $LOGS/control-service-listener.json
-awslocal logs filter-log-events --log-group-name "/aws/lambda/sut-control-service-local-trigger"  | prefilter > $LOGS/control-service-trigger.json
-awslocal logs filter-log-events --log-group-name "/aws/events/sut-event-hub-local-events"  | prefilter > $LOGS/event-hub-local-events.json
-awslocal logs filter-log-events --log-group-name "/aws/events/sut-event-hub-local-faults"  | prefilter > $LOGS/event-hub-local-faults.json
-awslocal logs filter-log-events --log-group-name "/aws/lambda/sut-shipment-bff-local-listener" | prefilter > $LOGS/shipment-bff-listener.json
-awslocal logs filter-log-events --log-group-name "/aws/lambda/sut-shipment-bff-local-restapi" | prefilter > $LOGS/shipment-bff-restapi.json
-awslocal logs filter-log-events --log-group-name "/aws/lambda/sut-shipment-bff-local-trigger" | prefilter > $LOGS/shipment-bff-trigger.json
-awslocal logs filter-log-events --log-group-name "/aws/kinesisfirehose/sut-event-fault-monitor-local-DeliveryStream" | prefilter > $LOGS/event-fault-monitor.json
-awslocal logs filter-log-events --log-group-name "/aws/lambda/sut-event-fault-monitor-local-transform" | prefilter > $LOGS/event-fault-monitor-transform.json
-awslocal logs filter-log-events --log-group-name "/aws/lambda/sut-regional-health-check-local-checkHealthApi" | prefilter > $LOGS/regional-health-check-checkHealthApi.json
-awslocal logs filter-log-events --log-group-name "/aws/lambda/sut-regional-health-check-local-dynamoDbTrigger" | prefilter > $LOGS/regional-health-check-dynamoDbTrigger.json
+function parsevalue() {
+  perl -ne 'print "$1\n" if /\s*=\s*"([^\"]*)"/';
+}
+
+# We don't need this log created by CDK.
+rm $LOGS/sut-regional-health-check-loc-BucketNotificationsHandl-*.json
+
+awslocal logs describe-log-groups | gron | grep logGroupName | while read LINE
+do
+  LOG_GROUP_NAME=$(echo $LINE | parsevalue)
+  LOG_FILE=$(echo $LOG_GROUP_NAME |  perl -pe 's/-local-/-/g' )
+  LOG_FILE=$(basename $LOG_FILE)
+  awslocal logs filter-log-events --log-group-name "$LOG_GROUP_NAME" | prefilter > $LOGS/$LOG_FILE.json
+done

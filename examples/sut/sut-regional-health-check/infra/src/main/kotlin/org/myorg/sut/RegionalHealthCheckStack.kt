@@ -27,13 +27,12 @@ Check Health API
                             -> S3 Trigger Lambda
                                 -> Event Bus
                                     -> Kinesis Stream 1
-                                        -> Dynamo DB Table.
+                                        -> Kinesis Trigger Lambda
+                                            -> Dynamo DB Table.
 
 */
 
 class RegionalHealthCheckStack(scope: Construct, serviceProps: ServiceProps) : BaseStack(scope, serviceProps) {
-
-
 
     internal val topic: Topic = newTopic()
     internal val triggerQueue: Queue = newTriggerQueue()
@@ -58,46 +57,44 @@ class RegionalHealthCheckStack(scope: Construct, serviceProps: ServiceProps) : B
 
     init {
 
-        bucket.bucketName
         // Check Health API  -> Dynamo DB Table
         val restApiLambda = newCheckHealthApi()
-        grantDynamoDBPermissions(restApiLambda, entitiesTable)
+        allowWriteAccessToTable(restApiLambda, entitiesTable)
 
         // Dynamo DB Table -> Dynamo DB Stream -> Dynamo DB Trigger Lambda -> S3 bucket
         val dynamoDbTriggerLambda = newDynamoDbTriggerLambda()
-        addEntitiesTableStreamToLambda(dynamoDbTriggerLambda, entitiesTable)
-        grantBucketObjectAccess(bucket, dynamoDbTriggerLambda)
+        configureLambdaEventSource(dynamoDbTriggerLambda, entitiesTable)
+        allowWriteAccessToBucket(dynamoDbTriggerLambda, bucket)
+
+        // S3 Bucket -> SNS Topic
+        allowBucketPublishToTopic(topic, bucket)
+
+        // SNS Topic -> SQS Trigger Queue
+        subscribeToTopic(
+            triggerQueue = triggerQueue,
+            topic = topic,
+        )
+
+        // SQS Trigger Queue -> S3Trigger Lambda -> Event Bus
+        val triggerLambda = newS3TriggerLambda()
+        addSqsEventSourceToTrigger(triggerLambda, triggerQueue)
+        addBusPutEventsPermissions(triggerLambda, bus)
+
+        // Event Bus -> Kinesis Stream 1
+        val kinesisBusRole = newKinesisBusRole(stream1)
+        addStream1EventRule(
+            bus = bus,
+            stream1 = stream1,
+            busRole = kinesisBusRole,
+        )
+
+        // Event Bus -> CloudWatch Log Groups
+        logBusEventsInCloudWatch(bus)
 
         if (disabled) {
             newTopicOutputs(topic)
             newBucketOutputs(bucket)
             newTriggerQueueOutputs(triggerQueue)
-
-            // From S3 Bucket to SNS Topic
-            allowBucketPublishToTopic(topic, bucket)
-
-            // From SNS Topic to SQS Queue
-            allowTopicToSendMessagesToQueue(
-                triggerQueue = triggerQueue,
-                topic = topic,
-            )
-            subscribeToTopic(
-                triggerQueue = triggerQueue,
-                topic = topic,
-            )
-
-            // From SQS Queue to S3Trigger Lambda to Event Bus
-            val triggerLambda = newS3TriggerLambda()
-            addSqsEventSourceToTrigger(triggerLambda, triggerQueue)
-
-            // From Event Bus to Logs and Kinesis Stream 1
-            logBusEventsInCloudWatch(bus)
-            val kinesisBusRole = newKinesisBusRole(stream1)
-            addStream1EventRule(
-                bus = bus,
-                stream1 = stream1,
-                busRole = kinesisBusRole,
-            )
 
             addApiGatewayApiKeys()
             createRegionalHealthCheck()
@@ -107,12 +104,7 @@ class RegionalHealthCheckStack(scope: Construct, serviceProps: ServiceProps) : B
                 apiKey = apiKey(),
             )
 
-            // placeholder
-            val myFunction = Function.Builder.create(this, "Function").build()
-
-            // Example once a Lambda consuming/writing the table exists:
-            addBusPutEventsPermissions(myFunction, bus)
-            addKmsPermissions(myFunction)
+            addKmsPermissions(triggerLambda)
         }
     }
 

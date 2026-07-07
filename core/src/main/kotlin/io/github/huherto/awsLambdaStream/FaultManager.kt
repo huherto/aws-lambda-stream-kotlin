@@ -164,8 +164,8 @@ class FaultManager(
      */
     fun logError(exception: Throwable) {
         if (!skipErrorLogging) { // Use it to keep logs clean on unit tests.
-            logger.error {
-                "Exception in pipeline flow: ${exception.message}"
+            logger.error(exception) {
+                "Exception in pipeline flow"
             }
         }
     }

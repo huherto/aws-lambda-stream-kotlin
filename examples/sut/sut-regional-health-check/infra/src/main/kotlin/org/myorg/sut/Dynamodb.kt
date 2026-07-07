@@ -54,7 +54,7 @@ fun RegionalHealthCheckStack.newEntitiesTable(): TableV2 {
     return table
 }
 
-fun RegionalHealthCheckStack.grantDynamoDBPermissions(function: Function, tracerTable: TableV2) {
+fun RegionalHealthCheckStack.allowWriteAccessToTable(function: Function, tracerTable: TableV2) {
     function.addToRolePolicy(
         PolicyStatement.Builder.create()
             .effect(Effect.ALLOW)
@@ -73,7 +73,7 @@ fun RegionalHealthCheckStack.grantDynamoDBPermissions(function: Function, tracer
     )
 }
 
-fun RegionalHealthCheckStack.addEntitiesTableStreamToLambda(
+fun RegionalHealthCheckStack.configureLambdaEventSource(
     function: Function,
     table: TableV2,
 ) {

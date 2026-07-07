@@ -49,6 +49,10 @@ fun RegionalHealthCheckStack.subscribeToTopic(
     triggerQueue: Queue,
     topic: Topic,
 ) {
+    allowTopicToSendMessagesToQueue(
+        triggerQueue = triggerQueue,
+        topic = topic,
+    )
     CfnSubscription.Builder.create(this, "TriggerSubscription")
         .protocol("sqs")
         // RawMessageDelivery intentionally omitted because it breaks fromSqsEvent.

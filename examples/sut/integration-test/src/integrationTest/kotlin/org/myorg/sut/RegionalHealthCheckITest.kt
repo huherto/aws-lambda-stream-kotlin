@@ -7,10 +7,7 @@ import mu.KotlinLogging
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
-import org.myorg.sut.facades.CheckHealthApiFacade
-import org.myorg.sut.facades.DynamoDbFacade
-import org.myorg.sut.facades.HealthCheckResponse
-import org.myorg.sut.facades.S3Facade
+import org.myorg.sut.facades.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RegionalHealthCheckITest {
@@ -19,9 +16,11 @@ class RegionalHealthCheckITest {
     private val awsRegion = "us-east-1"
     private val tracerTableName = "sut-regional-health-check-local-tracer"
     private val bucketName = "myorg-sut-regional-health-check-local-us-east-1"
+    private val streamName = "sut-regional-health-check-local-s1"
     private val checkHealthApiFacade = CheckHealthApiFacade()
     private val s3Facade = S3Facade()
     private val dynamoDbFacade = DynamoDbFacade(tracerTableName)
+    private val kinesisFacade = KinesisFacade(streamName = streamName)
 
     @Test
     fun verifyCheckHealthTriggersTraceActions(): Unit = runBlocking {
@@ -34,6 +33,8 @@ class RegionalHealthCheckITest {
         verifyTracerReachesDynamoDbTable(response)
 
         verifyTracerReachesS3(response)
+
+        verifyTracerReachesKinesisStream(response)
 
     }
 
@@ -67,9 +68,34 @@ class RegionalHealthCheckITest {
         content.contains("STARTED") shouldBe true
     }
 
+    private suspend fun verifyTracerReachesKinesisStream(response: HealthCheckResponse) {
+        val matchingRecord: String? = kinesisFacade.waitForResult(
+            onTimeout = {
+                logger.error { "Timed out waiting for kinesis record." }
+                null
+            },
+            block = {
+                val records = kinesisFacade.readAllEvents()
+                records
+                    .onEach { record -> logger.info { "Kinesis record: $record" } }
+                    .firstOrNull { record ->
+                    record.contains(awsRegion) &&
+                            record.contains(response.timestamp.toString()) &&
+                            record.contains("STARTED")
+                }
+            },
+        )
+
+        matchingRecord.shouldNotBeNull()
+        matchingRecord.contains(awsRegion) shouldBe true
+        matchingRecord.contains(response.timestamp.toString()) shouldBe true
+        matchingRecord.contains("STARTED") shouldBe true
+    }
+
     @AfterAll
     fun tearDownAll() {
         s3Facade.close()
         dynamoDbFacade.close()
+        kinesisFacade.close()
     }
 }

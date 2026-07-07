@@ -4,6 +4,9 @@ import aws.sdk.kotlin.services.kinesis.KinesisClient
 import aws.sdk.kotlin.services.kinesis.model.GetRecordsRequest
 import aws.sdk.kotlin.services.kinesis.model.GetShardIteratorRequest
 import aws.sdk.kotlin.services.kinesis.model.ShardIteratorType
+import kotlinx.coroutines.delay
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 
 class KinesisFacade(
     private val config: AwsLocalConfig = AwsLocalConfig(),
@@ -14,6 +17,28 @@ class KinesisFacade(
             region = config.region
             endpointUrl = config.endpointUrl
             credentialsProvider = config.credentialsProvider()
+        }
+    }
+
+    suspend fun <T> waitForResult(
+        timeout: Duration = 20_000.milliseconds,
+        delayBetweenAttempts: Duration = 1_000.milliseconds,
+        onTimeout: () -> T?,
+        block: suspend KinesisClient.() -> T?,
+    ): T? {
+        val startTime = System.currentTimeMillis()
+
+        while (true) {
+            val result = client.block()
+            if (result != null) {
+                return result
+            }
+
+            if (System.currentTimeMillis() - startTime > timeout.inWholeMilliseconds) {
+                return onTimeout()
+            }
+
+            delay(delayBetweenAttempts)
         }
     }
 

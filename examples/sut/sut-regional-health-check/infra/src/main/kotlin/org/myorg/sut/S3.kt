@@ -39,9 +39,9 @@ fun RegionalHealthCheckStack.newBucket(topic: Topic): Bucket {
     return bucket
 }
 
-fun RegionalHealthCheckStack.grantBucketObjectAccess(
-    bucket: Bucket,
+fun RegionalHealthCheckStack.allowWriteAccessToBucket(
     grantable: IGrantable,
+    bucket: Bucket,
 ) {
     grantable.grantPrincipal.addToPrincipalPolicy(
         PolicyStatement.Builder.create()
