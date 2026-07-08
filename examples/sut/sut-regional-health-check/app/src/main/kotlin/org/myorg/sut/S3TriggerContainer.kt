@@ -2,6 +2,7 @@ package org.myorg.sut
 
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.FaultManager
+import io.github.huherto.awsLambdaStream.JsonEventCodec
 import io.github.huherto.awsLambdaStream.PipelineAssembler
 import io.github.huherto.awsLambdaStream.connectors.DefaultS3ClientFactory
 import io.github.huherto.awsLambdaStream.connectors.S3Connector
@@ -57,7 +58,7 @@ class S3TriggerContainer(
     val s3Adapter = S3Adapter(
         faultManager = faultManager,
         s3Connector = s3Connector,
-        eventCodec = TrackedUnitEventCodec,
+        eventCodec = JsonEventCodec,
     )
 
 }

@@ -32,8 +32,8 @@ fun outSourceIsSelf(envConfig: EnvironmentConfig, uow: UnitOfWork) : Boolean {
 }
 
 fun outLatched(uow: UnitOfWork): Boolean {
-    val raw = uow.event?.raw as? RecordPair ?: return false
-
-    val record = raw.new ?: raw.old
-    return record?.let { !it.latched() } ?: false
+    val event = uow.event ?: return true
+    val raw = event.raw as? RecordPair ?: return true
+    val record = raw.new ?: raw.old ?: return true
+    return !record.latched()
 }

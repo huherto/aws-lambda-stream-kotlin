@@ -11,6 +11,7 @@ import io.github.huherto.awsLambdaStream.connectors.RetryConfig
 import io.github.huherto.awsLambdaStream.utils.adornStandardTags
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
+import mu.KotlinLogging
 import kotlin.time.Duration.Companion.milliseconds
 
 interface EventPublisher {
@@ -71,6 +72,8 @@ class EventBridgePublisher(
     internal fun toPublishRequestEntry(uow: UnitOfWork): UnitOfWork {
         val event = uow.event
         if (event != null) {
+            val logger = KotlinLogging.logger { }
+            logger.info{"Busname: $busName, Source: $source"}
             val entry = PutEventsRequestEntry.Companion {
                 eventBusName = busName
                 source = this@EventBridgePublisher.source

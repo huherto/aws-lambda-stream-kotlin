@@ -123,9 +123,9 @@ class RecordImage(val map: Map<String, EventAV?>) : Map<String, EventAV?> by map
 
     fun getSuffix(): String? = map["suffix"]?.s
 
-    fun isDeleted(): Boolean = map.containsKey("deleted") && map["deleted"]?.isBOOL == true
+    fun isDeleted(): Boolean = map["deleted"]?.bool == true
 
-    fun latched(): Boolean = map.containsKey("latched") && map["latched"]?.isBOOL == true
+    fun latched(): Boolean = map["latched"]?.bool == true
 
     fun getS(fieldName: String): String? = map[fieldName]?.s
 

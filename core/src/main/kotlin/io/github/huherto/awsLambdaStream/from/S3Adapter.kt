@@ -1,7 +1,6 @@
 package io.github.huherto.awsLambdaStream.from
 
 import aws.sdk.kotlin.services.s3.model.GetObjectRequest
-import aws.smithy.kotlin.runtime.content.decodeToString
 import com.amazonaws.services.lambda.runtime.events.SQSEvent
 import io.github.huherto.awsLambdaStream.EventCodec
 import io.github.huherto.awsLambdaStream.FaultManager
@@ -168,11 +167,13 @@ class S3Adapter(
                 }
                 .mapNotFaulty { uow ->
                     val request = uow.s3.getRequest ?: return@mapNotFaulty uow
-                    val response = s3Connector.getObject(request, uow)
-                    uow.copyS3{ copy(getResponse = response) }}
+                    val responseText = s3Connector.getObjectAsText(request, uow)
+                    uow.copyS3 {
+                        copy(getResponseText = responseText)
+                    }
+                }
                 .mapNotFaulty { uow ->
-                    val response = uow.s3.getResponse ?: return@mapNotFaulty uow
-                    val eventAsString = response.body?.decodeToString() ?: return@mapNotFaulty uow
+                    val eventAsString = uow.s3.getResponseText ?: return@mapNotFaulty uow
                     val event = eventCodec.decode(eventAsString)
                     uow.copy(
                         event = event,
