@@ -36,6 +36,7 @@ class RegionalHealthCheckITest {
 
         verifyTracerReachesKinesisStream(response)
 
+        verifyTracerIsComplete(response)
     }
 
     private suspend fun verifyTracerReachesDynamoDbTable(response: HealthCheckResponse) {
@@ -90,6 +91,20 @@ class RegionalHealthCheckITest {
         matchingRecord.contains(awsRegion) shouldBe true
         matchingRecord.contains(response.timestamp.toString()) shouldBe true
         matchingRecord.contains("STARTED") shouldBe true
+    }
+
+    private suspend fun verifyTracerIsComplete(response: HealthCheckResponse) {
+        // Verify DynamoDB has COMPLETE status
+        val completedRecord = dynamoDbFacade.findEntityByPK(awsRegion) { items ->
+            items?.firstOrNull { item ->
+                val sk = item["sk"]?.asS()
+                val status = item["status"]?.asS()
+                sk == response.timestamp.toString() && status == "COMPLETED"
+            }
+        }
+        completedRecord.shouldNotBeNull()
+        completedRecord["status"]?.asS() shouldBe "COMPLETED"
+
     }
 
     @AfterAll
