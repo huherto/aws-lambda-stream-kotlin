@@ -15,15 +15,15 @@ fun getJsonPrimitiveByPath(jsonObject: JsonObject, path: String): JsonPrimitive?
     return getJsonElementByPath(jsonObject, path) as? JsonPrimitive
 }
 
-private fun JsonObject.stringOrNull(name: String): String? {
+fun JsonObject.stringOrNull(name: String): String? {
     return (this[name] as? JsonPrimitive)?.contentOrNull
 }
 
-private fun JsonObject.longOrNull(name: String): Long? {
+fun JsonObject.longOrNull(name: String): Long? {
     return (this[name] as? JsonPrimitive)?.longOrNull
 }
 
-private fun JsonObject.stringMapOrNull(name: String): Map<String, String>? {
+fun JsonObject.stringMapOrNull(name: String): Map<String, String>? {
     return (this[name] as? JsonObject)
         ?.mapValues { (_, value) -> (value as? JsonPrimitive)?.contentOrNull ?: return null }
 }
@@ -69,6 +69,10 @@ class JsonEvent(jsonString: String) : Event {
     }
 
     override fun encoded(): String {
+        return jsonObject.toString()
+    }
+
+    override fun toString(): String {
         return jsonObject.toString()
     }
 }

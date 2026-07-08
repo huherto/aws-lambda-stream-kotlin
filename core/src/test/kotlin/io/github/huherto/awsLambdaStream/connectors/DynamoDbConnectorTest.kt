@@ -41,7 +41,7 @@ class DynamoDbConnectorTest {
         every { clientFactory.getClient("pipeline-1") } returns pipelineClient
         every { clientFactory.getClient("unknown") } returns unknownClient
 
-        val connector = DynamoDbConnector(clientFactory = clientFactory)
+        val connector = DynamoDbConnector(dynamoDbClientFactory = clientFactory)
 
         // Act
         val resultForPipeline = connector.getClient(UnitOfWork(pipeline = pipeline))
@@ -69,7 +69,7 @@ class DynamoDbConnectorTest {
 
         val connector = DynamoDbConnector(
             debug = { debugValues += it },
-            clientFactory = clientFactory,
+            dynamoDbClientFactory = clientFactory,
         )
 
         // Act
@@ -95,7 +95,7 @@ class DynamoDbConnectorTest {
 
         val connector = DynamoDbConnector(
             debug = { debugValues += it },
-            clientFactory = clientFactory,
+            dynamoDbClientFactory = clientFactory,
         )
 
         // Act
@@ -132,11 +132,11 @@ class DynamoDbConnectorTest {
         coEvery { swallowingClient.updateItem(request) } throws conditionalFailure
         coEvery { throwingClient.updateItem(request) } throws conditionalFailure
 
-        val successfulConnector = DynamoDbConnector(clientFactory = successfulFactory)
-        val swallowingConnector = DynamoDbConnector(clientFactory = swallowingFactory)
+        val successfulConnector = DynamoDbConnector(dynamoDbClientFactory = successfulFactory)
+        val swallowingConnector = DynamoDbConnector(dynamoDbClientFactory = swallowingFactory)
         val throwingConnector = DynamoDbConnector(
             throwConditionFailure = true,
-            clientFactory = throwingFactory,
+            dynamoDbClientFactory = throwingFactory,
         )
 
         // Act
@@ -189,7 +189,7 @@ class DynamoDbConnectorTest {
             lastEvaluatedKey = emptyMap()
         }
 
-        val connector = DynamoDbConnector(clientFactory = clientFactory)
+        val connector = DynamoDbConnector(dynamoDbClientFactory = clientFactory)
 
         // Act
         val result = connector.queryAll(request, UnitOfWork())
@@ -228,7 +228,7 @@ class DynamoDbConnectorTest {
             lastEvaluatedKey = nextCursor
         }
 
-        val connector = DynamoDbConnector(clientFactory = clientFactory)
+        val connector = DynamoDbConnector(dynamoDbClientFactory = clientFactory)
 
         // Act
         val result = connector.queryAll(request, UnitOfWork())
@@ -287,7 +287,7 @@ class DynamoDbConnectorTest {
         }
 
         val connector = DynamoDbConnector(
-            clientFactory = clientFactory,
+            dynamoDbClientFactory = clientFactory,
             retryConfig = RetryConfig(maxRetries = 1, retryWait = 1.milliseconds),
         )
 

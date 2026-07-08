@@ -41,7 +41,7 @@ class S3TriggerContainer(
 
     private val cdcPipeline: Pipeline by lazy {
         CdcPipeline(
-            id = "t1",
+            id = "ms3",
             eventPublisher = eventPublisher,
             eventFilter = EventFilter.ByName("trace-created")
         )

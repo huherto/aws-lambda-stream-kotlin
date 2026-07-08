@@ -5,13 +5,13 @@ import aws.sdk.kotlin.services.dynamodb.model.UpdateItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.UpdateItemResponse
 import aws.sdk.kotlin.services.s3.model.PutObjectRequest
 import aws.smithy.kotlin.runtime.content.ByteStream
-import io.github.huherto.awsLambdaStream.UnitOfWork
-import io.github.huherto.awsLambdaStream.asJson
+import io.github.huherto.awsLambdaStream.*
 import io.github.huherto.awsLambdaStream.from.RecordPair
 import io.github.huherto.awsLambdaStream.sinks.DynamoDbUpdateValue
 import io.github.huherto.awsLambdaStream.sinks.timestampCondition
 import io.github.huherto.awsLambdaStream.sinks.updateExpression
 import io.github.huherto.awsLambdaStream.utils.ttl
+import kotlinx.serialization.json.JsonObject
 import mu.KotlinLogging
 import kotlin.math.roundToLong
 import kotlin.time.Duration.Companion.days
@@ -120,12 +120,12 @@ data class HealthCheckResponse(
 
 fun toUpdateRequest(uow: UnitOfWork): UpdateItemRequest? {
 
-    val raw = uow.event?.raw as? RecordPair ?: return null
-    val newRaw = raw.new ?: return null
+    val event = uow.event as? JsonEvent?: return null
     val timestamp = System.currentTimeMillis()
-    val pk = newRaw.getS("pk") ?: return null
-    val sk = newRaw.getS("sk") ?: return null
-    val startTimestamp = newRaw.getS("timestamp")?.toLongOrNull() ?: return null
+    val newRaw : JsonObject = event.jsonObject("raw.new") ?: return null
+    val pk = newRaw.stringOrNull("pk") ?: return null
+    val sk = newRaw.stringOrNull("sk") ?: return null
+    val startTimestamp = newRaw.longOrNull("timestamp") ?: return null
     val latency = (timestamp - startTimestamp).milliseconds.inWholeSeconds
     val ttl = ttl(timestamp, 92.days)
 
@@ -150,6 +150,7 @@ fun toUpdateRequest(uow: UnitOfWork): UpdateItemRequest? {
             "pk" to AttributeValue.S(pk),
             "sk" to AttributeValue.S(sk),
         )
+        tableName = System.getenv("ENTITY_TABLE_NAME")
         expressionAttributeNames = expression.expressionAttributeNames
         expressionAttributeValues = expression.expressionAttributeValues
         updateExpression = expression.updateExpression
@@ -162,10 +163,8 @@ private val logger = KotlinLogging.logger {  }
 fun toS3PutRequest(uow: UnitOfWork): PutObjectRequest? {
     val raw = uow.event?.raw as? RecordPair ?: return null
     val newRaw = raw.new ?: return null
-    logger.info("before newRaw=$newRaw")
     val pk = newRaw.getS("pk") ?: return null
     val sk = newRaw.getS("sk") ?: return null
-    logger.info { "pk=$pk sk=$sk" }
     return PutObjectRequest {
         key = "${pk}/${sk}"
         body = ByteStream.fromString(uow.event.asJson())

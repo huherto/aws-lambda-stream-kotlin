@@ -27,13 +27,13 @@ class DefaultDynamoDbClientFactory(private val envConfig: EnvironmentConfig) : D
 class DynamoDbConnector(
     val debug: (Any?) -> Unit = {},
     val throwConditionFailure: Boolean = false,
-    private val clientFactory: DynamoDbClientFactory,
+    private val dynamoDbClientFactory: DynamoDbClientFactory,
     private val retryConfig: RetryConfig = RetryConfig(),
 ) {
 
     fun getClient(uow: UnitOfWork): DynamoDbClient {
         val pipelineId = uow.pipeline?.id ?: "unknown"
-        return clientFactory.getClient(pipelineId)
+        return dynamoDbClientFactory.getClient(pipelineId)
     }
 
     suspend fun queryAll(

@@ -1,11 +1,17 @@
 package org.myorg.sut
 
+import software.amazon.awscdk.Duration
 import software.amazon.awscdk.services.events.CfnRule
 import software.amazon.awscdk.services.events.EventBus
 import software.amazon.awscdk.services.iam.*
 import software.amazon.awscdk.services.kinesis.CfnStream
+import software.amazon.awscdk.services.kinesis.Stream
+import software.amazon.awscdk.services.kinesis.StreamEncryption
+import software.amazon.awscdk.services.lambda.Function
+import software.amazon.awscdk.services.lambda.StartingPosition
+import software.amazon.awscdk.services.lambda.eventsources.KinesisEventSource
 
-fun RegionalHealthCheckStack.newStream1(): CfnStream {
+fun RegionalHealthCheckStack.newStream1_old(): CfnStream {
     return CfnStream.Builder.create(this, "Stream1")
         .name("${service()}-${stage()}-s1")
         .retentionPeriodHours(24)
@@ -19,7 +25,16 @@ fun RegionalHealthCheckStack.newStream1(): CfnStream {
         .build()
 }
 
-fun RegionalHealthCheckStack.newKinesisBusRole(stream1: CfnStream): Role =
+fun RegionalHealthCheckStack.newStream1(): Stream {
+    return Stream.Builder.create(this, "Stream1")
+        .streamName("${service()}-${stage()}-s1")
+        .retentionPeriod(Duration.hours(24))
+        .shardCount(shardCount())
+        .encryption(StreamEncryption.MANAGED)
+        .build()
+}
+
+fun RegionalHealthCheckStack.newKinesisBusRole(stream1: Stream): Role =
     Role.Builder.create(this, "BusRole")
         .roleName("${service()}-${stage()}-${regionName()}-kinesis-role")
         .assumedBy(ServicePrincipal("events.amazonaws.com"))
@@ -36,7 +51,7 @@ fun RegionalHealthCheckStack.newKinesisBusRole(stream1: CfnStream): Role =
                                         "kinesis:PutRecords",
                                     )
                                 )
-                                .resources(listOf(stream1.attrArn))
+                                .resources(listOf(stream1.streamArn))
                                 .build()
                         )
                     )
@@ -47,7 +62,7 @@ fun RegionalHealthCheckStack.newKinesisBusRole(stream1: CfnStream): Role =
 
 fun RegionalHealthCheckStack.addStream1EventRule(
     bus: EventBus,
-    stream1: CfnStream,
+    stream1: Stream,
     busRole: Role,
 ) {
     CfnRule.Builder.create(this, "Stream1EventRule")
@@ -66,7 +81,7 @@ fun RegionalHealthCheckStack.addStream1EventRule(
             listOf(
                 CfnRule.TargetProperty.builder()
                     .id("Stream1")
-                    .arn(stream1.attrArn)
+                    .arn(stream1.streamArn)
                     .roleArn(busRole.roleArn)
                     .kinesisParameters(
                         CfnRule.KinesisParametersProperty.builder()
@@ -90,3 +105,21 @@ fun RegionalHealthCheckStack.kinesisTraceFilterPatterns(): List<Map<String, Any>
             )
         )
     )
+
+fun RegionalHealthCheckStack.addKinesisEventSourceToFunction(stream: Stream, listener: Function) {
+
+    listener.addEventSource(
+        KinesisEventSource.Builder.create(stream1)
+            .startingPosition(StartingPosition.LATEST)
+            .batchSize(100) // up to 10,000; default is 100
+            .maxBatchingWindow(Duration.seconds(1)) // up to 5 min
+            .bisectBatchOnError(true)
+            .retryAttempts(3)
+            .parallelizationFactor(1) // up to 10 per shard
+            // .onFailure(SqsDlq(dlq))
+            // .consumer(consumer) // uncomment if using enhanced fan-out
+            // .reportBatchItemFailures(true) // requires special response object in handler
+            .build()
+    )
+
+}

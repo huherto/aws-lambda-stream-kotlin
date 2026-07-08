@@ -23,7 +23,7 @@ class ListenerContainer(
         fun build() : ListenerContainer {
             val envConfig = EnvironmentConfig()
             val dynamoDbClientFactory = DefaultDynamoDbClientFactory(envConfig)
-            val dynamoDbConnector = DynamoDbConnector(clientFactory = dynamoDbClientFactory)
+            val dynamoDbConnector = DynamoDbConnector(dynamoDbClientFactory = dynamoDbClientFactory)
             val eventPublisher = EventBridgePublisher(envConfig)
             val faultManager = FaultManager(envConfig, eventPublisher)
             return ListenerContainer(

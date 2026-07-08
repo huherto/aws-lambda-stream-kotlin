@@ -5,7 +5,7 @@ import software.amazon.awscdk.Duration
 import software.amazon.awscdk.Fn
 import software.amazon.awscdk.services.apigateway.CfnApiKey
 import software.amazon.awscdk.services.events.EventBus
-import software.amazon.awscdk.services.kinesis.CfnStream
+import software.amazon.awscdk.services.kinesis.Stream
 import software.amazon.awscdk.services.lambda.Code
 import software.amazon.awscdk.services.lambda.Function
 import software.amazon.awscdk.services.lambda.Runtime
@@ -39,7 +39,7 @@ class RegionalHealthCheckStack(scope: Construct, serviceProps: ServiceProps) : B
     internal val bucket: Bucket = newBucket(topic)
     internal val entitiesTable = newEntitiesTable()
     internal val bus: EventBus = newBus()
-    internal val stream1: CfnStream = newStream1()
+    internal val stream1: Stream = newStream1()
     internal val disabled = false
 
     val JarFile = Code.fromAsset("../app/build/libs/sut-regional-health-check.jar")
@@ -76,9 +76,9 @@ class RegionalHealthCheckStack(scope: Construct, serviceProps: ServiceProps) : B
         )
 
         // SQS Trigger Queue -> S3Trigger Lambda -> Event Bus
-        val triggerLambda = newS3TriggerLambda()
-        addSqsEventSourceToTrigger(triggerLambda, triggerQueue)
-        addBusPutEventsPermissions(triggerLambda, bus)
+        val s3TriggerLambda = newS3TriggerLambda()
+        addSqsEventSourceToTrigger(s3TriggerLambda, triggerQueue)
+        addBusPutEventsPermissions(s3TriggerLambda, bus)
 
         // Event Bus -> Kinesis Stream 1
         val kinesisBusRole = newKinesisBusRole(stream1)
@@ -90,6 +90,10 @@ class RegionalHealthCheckStack(scope: Construct, serviceProps: ServiceProps) : B
 
         // Event Bus -> CloudWatch Log Groups
         logBusEventsInCloudWatch(bus)
+
+        // Kinesis Stream 1 -> Kinesis Trigger Lambda -> Dynamo DB Table
+        val kinesisTriggerLambda = newKinesisTriggerLambda()
+        addKinesisEventSourceToFunction(stream1, kinesisTriggerLambda)
 
         if (disabled) {
             newTopicOutputs(topic)
@@ -104,7 +108,7 @@ class RegionalHealthCheckStack(scope: Construct, serviceProps: ServiceProps) : B
                 apiKey = apiKey(),
             )
 
-            addKmsPermissions(triggerLambda)
+            addKmsPermissions(s3TriggerLambda)
         }
     }
 
@@ -140,6 +144,18 @@ class RegionalHealthCheckStack(scope: Construct, serviceProps: ServiceProps) : B
             .runtime(runtime)
             .environment(runtimeEnvironment)
             .build()
+
+    private fun newKinesisTriggerLambda(): Function =
+        Function.Builder.create(this, "kinesisTrigger")
+            .functionName("${subsys()}-regional-health-check-${stage()}-kinesisTrigger")
+            .code(JarFile)
+            .handler("org.myorg.sut.KinesisTrigger::handleRequest")
+            .timeout(Duration.seconds(50))
+            .memorySize(1024)
+            .runtime(runtime)
+            .environment(runtimeEnvironment)
+            .build()
+
 
     fun RegionalHealthCheckStack.isWestCondition(): CfnCondition =
         CfnCondition.Builder.create(this, "IsWest")

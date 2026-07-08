@@ -9,6 +9,8 @@ import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.RequestStreamHandler
 import com.amazonaws.services.lambda.runtime.events.KinesisFirehoseEvent
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
+import io.github.huherto.awsLambdaStream.longOrNull
+import io.github.huherto.awsLambdaStream.stringOrNull
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
@@ -363,19 +365,6 @@ class Transform : RequestHandler<KinesisFirehoseEvent, FirehoseTransformResponse
         return GZIPInputStream(ByteArrayInputStream(compressed)).use { gzip ->
             gzip.readBytes().toString(Charsets.UTF_8)
         }
-    }
-
-    private fun JsonObject.stringOrNull(name: String): String? {
-        return this[name]
-            ?.jsonPrimitive
-            ?.content
-    }
-
-    private fun JsonObject.longOrNull(name: String): Long? {
-        return this[name]
-            ?.jsonPrimitive
-            ?.content
-            ?.toLongOrNull()
     }
 
     private data class TransformUnitOfWork(
