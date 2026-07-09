@@ -5,6 +5,9 @@ import software.amazon.awscdk.services.iam.Effect
 import software.amazon.awscdk.services.iam.PolicyStatement
 import software.amazon.awscdk.services.iam.ServicePrincipal
 import software.amazon.awscdk.services.s3.Bucket
+import software.amazon.awscdk.services.s3.EventType
+import software.amazon.awscdk.services.s3.NotificationKeyFilter
+import software.amazon.awscdk.services.s3.notifications.SnsDestination
 import software.amazon.awscdk.services.sns.Topic
 import software.amazon.awscdk.services.sns.TopicPolicy
 
@@ -15,7 +18,14 @@ fun RegionalHealthCheckStack.newTopic(): Topic =
         // KmsMasterKeyId: alias/aws/sns
         .build()
 
-fun RegionalHealthCheckStack.grantPublishAccessToTopic(topic: Topic, bucket: Bucket) {
+fun RegionalHealthCheckStack.publishToTopic(bucket: Bucket, topic: Topic) {
+    bucket.addEventNotification(
+        EventType.OBJECT_CREATED_PUT,
+        SnsDestination(topic),
+        NotificationKeyFilter.builder()
+            .prefix(regionName())
+            .build()
+    )
     TopicPolicy.Builder.create(this, "TopicPolicy")
         .topics(listOf(topic))
         .build()
@@ -30,7 +40,6 @@ fun RegionalHealthCheckStack.grantPublishAccessToTopic(topic: Topic, bucket: Buc
                     mapOf(
                         "ArnLike" to mapOf(
                             "aws:SourceArn" to bucket.bucketArn,
-                           // "aws:SourceArn" to "arn:${partition()}:s3:::${org()}-${service()}-${stage()}-${regionName()}",
                         )
                     )
                 )

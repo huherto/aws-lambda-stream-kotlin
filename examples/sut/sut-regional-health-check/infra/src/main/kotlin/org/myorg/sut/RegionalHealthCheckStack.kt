@@ -36,11 +36,10 @@ class RegionalHealthCheckStack(scope: Construct, serviceProps: ServiceProps) : B
 
     internal val topic: Topic = newTopic()
     internal val triggerQueue: Queue = newTriggerQueue()
-    internal val bucket: Bucket = newBucket(topic)
+    internal val bucket: Bucket = newBucket()
     internal val entitiesTable = newEntitiesTable()
     internal val bus: EventBus = newBus()
     internal val stream1: Stream = newStream1()
-    internal val disabled = false
 
     val JarFile = Code.fromAsset("../app/build/libs/sut-regional-health-check.jar")
     val runtime: Runtime = Runtime.JAVA_21!!
@@ -56,48 +55,38 @@ class RegionalHealthCheckStack(scope: Construct, serviceProps: ServiceProps) : B
     )
 
     init {
-
         // Check Health API  -> Dynamo DB Table
         val restApiLambda = newCheckHealthApi()
-        grantWriteAccessToTable(restApiLambda, entitiesTable)
+        grantAccessToTable(restApiLambda, entitiesTable)
 
         // Dynamo DB Table -> Dynamo DB Stream -> Dynamo DB Trigger Lambda -> S3 bucket
         val dynamoDbTriggerLambda = newDynamoDbTriggerLambda()
-        configureLambdaEventSource(dynamoDbTriggerLambda, entitiesTable)
-        grantWriteAccessToBucket(dynamoDbTriggerLambda, bucket)
+        consumeFromTable(dynamoDbTriggerLambda, entitiesTable)
+        grantAccessToBucket(dynamoDbTriggerLambda, bucket)
 
         // S3 Bucket -> SNS Topic
-        grantPublishAccessToTopic(topic, bucket)
+        publishToTopic(bucket, topic)
 
         // SNS Topic -> SQS Trigger Queue
-        subscribeToTopic(
-            triggerQueue = triggerQueue,
+        publishToQueue(
             topic = topic,
+            triggerQueue = triggerQueue,
         )
 
         // SQS Trigger Queue -> S3Trigger Lambda -> Event Bus
         val s3TriggerLambda = newS3TriggerLambda()
-        configureSqsEventSource(s3TriggerLambda, triggerQueue)
-        grantPutEventsAccessToBus(s3TriggerLambda, bus)
+        consumeFromQueue(s3TriggerLambda, triggerQueue)
+        grantAccessToBus(s3TriggerLambda, bus)
 
         // Event Bus -> Kinesis Stream 1
-        val kinesisBusRole = newKinesisBusRole(stream1)
-        configureStream1EventRule(
-            bus = bus,
-            stream1 = stream1,
-            busRole = kinesisBusRole,
-        )
+        publishToKinesis(bus, stream1)
 
         // Event Bus -> CloudWatch Log Groups
-        logBusEventsInCloudWatch(bus)
+        logToCloudWatch(bus)
 
         // Kinesis Stream 1 -> Kinesis Trigger Lambda -> Dynamo DB Table
         val kinesisTriggerLambda = newKinesisTriggerLambda()
-        addKinesisEventSourceToFunction(stream1, kinesisTriggerLambda)
-
-//        newTopicOutputs(topic)
-//        newBucketOutputs(bucket)
-//        newTriggerQueueOutputs(triggerQueue)
+        consumeFromKinesis(kinesisTriggerLambda, stream1)
 
         addApiGatewayApiKeys()
         createRegionalHealthCheck()

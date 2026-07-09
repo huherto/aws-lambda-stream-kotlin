@@ -4,26 +4,11 @@ import software.amazon.awscdk.Duration
 import software.amazon.awscdk.services.events.CfnRule
 import software.amazon.awscdk.services.events.EventBus
 import software.amazon.awscdk.services.iam.*
-import software.amazon.awscdk.services.kinesis.CfnStream
 import software.amazon.awscdk.services.kinesis.Stream
 import software.amazon.awscdk.services.kinesis.StreamEncryption
 import software.amazon.awscdk.services.lambda.Function
 import software.amazon.awscdk.services.lambda.StartingPosition
 import software.amazon.awscdk.services.lambda.eventsources.KinesisEventSource
-
-fun RegionalHealthCheckStack.newStream1_old(): CfnStream {
-    return CfnStream.Builder.create(this, "Stream1")
-        .name("${service()}-${stage()}-s1")
-        .retentionPeriodHours(24)
-        .shardCount(shardCount())
-        .streamEncryption(
-            CfnStream.StreamEncryptionProperty.builder()
-                .encryptionType("KMS")
-                .keyId("alias/aws/kinesis")
-                .build()
-        )
-        .build()
-}
 
 fun RegionalHealthCheckStack.newStream1(): Stream {
     return Stream.Builder.create(this, "Stream1")
@@ -60,11 +45,11 @@ fun RegionalHealthCheckStack.newKinesisBusRole(stream1: Stream): Role =
         )
         .build()
 
-fun RegionalHealthCheckStack.configureStream1EventRule(
+fun RegionalHealthCheckStack.publishToKinesis(
     bus: EventBus,
     stream1: Stream,
-    busRole: Role,
 ) {
+    val busRole = newKinesisBusRole(stream1)
     CfnRule.Builder.create(this, "Stream1EventRule")
         .eventBusName(bus.eventBusName)
         .eventPattern(
@@ -106,10 +91,10 @@ fun RegionalHealthCheckStack.kinesisTraceFilterPatterns(): List<Map<String, Any>
         )
     )
 
-fun RegionalHealthCheckStack.addKinesisEventSourceToFunction(stream: Stream, listener: Function) {
+fun RegionalHealthCheckStack.consumeFromKinesis(listener: Function, stream: Stream) {
 
     listener.addEventSource(
-        KinesisEventSource.Builder.create(stream1)
+        KinesisEventSource.Builder.create(stream)
             .startingPosition(StartingPosition.LATEST)
             .batchSize(100) // up to 10,000; default is 100
             .maxBatchingWindow(Duration.seconds(1)) // up to 5 min

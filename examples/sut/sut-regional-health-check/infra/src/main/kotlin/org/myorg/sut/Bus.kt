@@ -12,14 +12,14 @@ fun RegionalHealthCheckStack.newBus(): EventBus =
         .eventBusName("${service()}-${stage()}-bus")
         .build()
 
-fun RegionalHealthCheckStack.grantPutEventsAccessToBus(
+fun RegionalHealthCheckStack.grantAccessToBus(
     grantee: IGrantable,
     bus: EventBus,
 ) {
     bus.grantPutEventsTo(grantee)
 }
 
-fun RegionalHealthCheckStack.logBusEventsInCloudWatch(bus: EventBus) {
+fun RegionalHealthCheckStack.logToCloudWatch(bus: EventBus) {
     val logGroupEvents = LogGroup.Builder.create(this, "LogGroupEvents")
         .retention(RetentionDays.ONE_MONTH)
         .logGroupName("/aws/events/${service()}-${stage()}-events")

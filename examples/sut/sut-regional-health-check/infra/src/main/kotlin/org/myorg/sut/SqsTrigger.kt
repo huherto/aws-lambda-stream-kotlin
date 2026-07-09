@@ -45,9 +45,9 @@ fun RegionalHealthCheckStack.allowTopicToSendMessagesToQueue(
         )
 }
 
-fun RegionalHealthCheckStack.subscribeToTopic(
-    triggerQueue: Queue,
+fun RegionalHealthCheckStack.publishToQueue(
     topic: Topic,
+    triggerQueue: Queue,
 ) {
     allowTopicToSendMessagesToQueue(
         triggerQueue = triggerQueue,
@@ -67,7 +67,7 @@ fun RegionalHealthCheckStack.newTriggerQueueOutputs(triggerQueue: Queue) {
         .build()
 }
 
-fun RegionalHealthCheckStack.configureSqsEventSource(function: Function, queue: Queue) {
+fun RegionalHealthCheckStack.consumeFromQueue(function: Function, queue: Queue) {
     function.addEventSource(
         SqsEventSource.Builder.create(queue)
             .batchSize(5)

@@ -54,7 +54,7 @@ fun RegionalHealthCheckStack.newEntitiesTable(): TableV2 {
     return table
 }
 
-fun RegionalHealthCheckStack.grantWriteAccessToTable(function: Function, tracerTable: TableV2) {
+fun RegionalHealthCheckStack.grantAccessToTable(function: Function, tracerTable: TableV2) {
     function.addToRolePolicy(
         PolicyStatement.Builder.create()
             .effect(Effect.ALLOW)
@@ -73,7 +73,7 @@ fun RegionalHealthCheckStack.grantWriteAccessToTable(function: Function, tracerT
     )
 }
 
-fun RegionalHealthCheckStack.configureLambdaEventSource(
+fun RegionalHealthCheckStack.consumeFromTable(
     function: Function,
     table: TableV2,
 ) {

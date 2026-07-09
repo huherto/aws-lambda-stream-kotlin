@@ -6,11 +6,12 @@ import software.amazon.awscdk.RemovalPolicy
 import software.amazon.awscdk.services.iam.Effect
 import software.amazon.awscdk.services.iam.IGrantable
 import software.amazon.awscdk.services.iam.PolicyStatement
-import software.amazon.awscdk.services.s3.*
-import software.amazon.awscdk.services.s3.notifications.SnsDestination
-import software.amazon.awscdk.services.sns.Topic
+import software.amazon.awscdk.services.s3.Bucket
+import software.amazon.awscdk.services.s3.BucketAccessControl
+import software.amazon.awscdk.services.s3.BucketEncryption
+import software.amazon.awscdk.services.s3.LifecycleRule
 
-fun RegionalHealthCheckStack.newBucket(topic: Topic): Bucket {
+fun RegionalHealthCheckStack.newBucket(): Bucket {
     val bucket = Bucket.Builder.create(this, "Bucket")
         .bucketName("${org()}-${service()}-${stage()}-${regionName()}")
         .accessControl(BucketAccessControl.PRIVATE)
@@ -28,18 +29,10 @@ fun RegionalHealthCheckStack.newBucket(topic: Topic): Bucket {
         .removalPolicy(RemovalPolicy.RETAIN)
         .build()
 
-    bucket.addEventNotification(
-        EventType.OBJECT_CREATED_PUT,
-        SnsDestination(topic),
-        NotificationKeyFilter.builder()
-            .prefix(regionName())
-            .build()
-    )
-
     return bucket
 }
 
-fun RegionalHealthCheckStack.grantWriteAccessToBucket(
+fun RegionalHealthCheckStack.grantAccessToBucket(
     grantable: IGrantable,
     bucket: Bucket,
 ) {
