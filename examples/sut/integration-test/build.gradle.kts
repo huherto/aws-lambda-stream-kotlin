@@ -42,13 +42,15 @@ testing {
 
                 // Please keep these sorted alphabetically.
                 implementation(libs.aws.java.events)
+                implementation(libs.aws.sdk.cloudwatch)
                 implementation(libs.aws.sdk.dynamodb)
                 implementation(libs.aws.sdk.eventbridge)
                 implementation(libs.aws.sdk.kinesis)
                 implementation(libs.aws.sdk.lambda)
+                implementation(libs.aws.sdk.route53)
                 implementation(libs.aws.sdk.s3)
-                implementation(libs.aws.sdk.sqs)
                 implementation(libs.aws.sdk.sns)
+                implementation(libs.aws.sdk.sqs)
                 implementation(libs.jackson.kotlin)
                 implementation(libs.kotest.assertions)
                 implementation(libs.kotlin.logging)
