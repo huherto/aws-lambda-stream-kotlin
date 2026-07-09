@@ -54,7 +54,7 @@ fun RegionalHealthCheckStack.newEntitiesTable(): TableV2 {
     return table
 }
 
-fun RegionalHealthCheckStack.allowWriteAccessToTable(function: Function, tracerTable: TableV2) {
+fun RegionalHealthCheckStack.grantWriteAccessToTable(function: Function, tracerTable: TableV2) {
     function.addToRolePolicy(
         PolicyStatement.Builder.create()
             .effect(Effect.ALLOW)

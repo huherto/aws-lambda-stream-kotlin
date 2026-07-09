@@ -60,7 +60,7 @@ fun RegionalHealthCheckStack.newKinesisBusRole(stream1: Stream): Role =
         )
         .build()
 
-fun RegionalHealthCheckStack.addStream1EventRule(
+fun RegionalHealthCheckStack.configureStream1EventRule(
     bus: EventBus,
     stream1: Stream,
     busRole: Role,

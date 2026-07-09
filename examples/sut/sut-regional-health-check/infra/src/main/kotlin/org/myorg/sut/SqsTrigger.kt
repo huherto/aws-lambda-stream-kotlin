@@ -67,7 +67,7 @@ fun RegionalHealthCheckStack.newTriggerQueueOutputs(triggerQueue: Queue) {
         .build()
 }
 
-fun RegionalHealthCheckStack.addSqsEventSourceToTrigger(function: Function, queue: Queue) {
+fun RegionalHealthCheckStack.configureSqsEventSource(function: Function, queue: Queue) {
     function.addEventSource(
         SqsEventSource.Builder.create(queue)
             .batchSize(5)

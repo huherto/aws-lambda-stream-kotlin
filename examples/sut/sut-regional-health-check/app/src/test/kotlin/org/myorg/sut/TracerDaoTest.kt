@@ -196,7 +196,7 @@ class TracerDaoTest {
         val connector = mockk<Connector>()
         val saveResponse = UpdateItemResponse {}
 
-        val recentRoundedTimestamp = roundToNearestMinute(System.currentTimeMillis())
+        val recentRoundedTimestamp = truncateToMinute(System.currentTimeMillis())
 
         coEvery {
             connector.get(awsRegion)
@@ -250,7 +250,7 @@ class TracerDaoTest {
         val connector = mockk<Connector>()
         val saveResponse = UpdateItemResponse {}
 
-        val recentRoundedTimestamp = roundToNearestMinute(System.currentTimeMillis())
+        val recentRoundedTimestamp = truncateToMinute(System.currentTimeMillis())
 
         coEvery {
             connector.get(awsRegion)

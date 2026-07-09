@@ -15,7 +15,7 @@ fun RegionalHealthCheckStack.newTopic(): Topic =
         // KmsMasterKeyId: alias/aws/sns
         .build()
 
-fun RegionalHealthCheckStack.allowBucketPublishToTopic(topic: Topic, bucket: Bucket) {
+fun RegionalHealthCheckStack.grantPublishAccessToTopic(topic: Topic, bucket: Bucket) {
     TopicPolicy.Builder.create(this, "TopicPolicy")
         .topics(listOf(topic))
         .build()

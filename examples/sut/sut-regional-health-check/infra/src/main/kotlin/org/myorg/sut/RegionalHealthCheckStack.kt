@@ -59,15 +59,15 @@ class RegionalHealthCheckStack(scope: Construct, serviceProps: ServiceProps) : B
 
         // Check Health API  -> Dynamo DB Table
         val restApiLambda = newCheckHealthApi()
-        allowWriteAccessToTable(restApiLambda, entitiesTable)
+        grantWriteAccessToTable(restApiLambda, entitiesTable)
 
         // Dynamo DB Table -> Dynamo DB Stream -> Dynamo DB Trigger Lambda -> S3 bucket
         val dynamoDbTriggerLambda = newDynamoDbTriggerLambda()
         configureLambdaEventSource(dynamoDbTriggerLambda, entitiesTable)
-        allowWriteAccessToBucket(dynamoDbTriggerLambda, bucket)
+        grantWriteAccessToBucket(dynamoDbTriggerLambda, bucket)
 
         // S3 Bucket -> SNS Topic
-        allowBucketPublishToTopic(topic, bucket)
+        grantPublishAccessToTopic(topic, bucket)
 
         // SNS Topic -> SQS Trigger Queue
         subscribeToTopic(
@@ -77,12 +77,12 @@ class RegionalHealthCheckStack(scope: Construct, serviceProps: ServiceProps) : B
 
         // SQS Trigger Queue -> S3Trigger Lambda -> Event Bus
         val s3TriggerLambda = newS3TriggerLambda()
-        addSqsEventSourceToTrigger(s3TriggerLambda, triggerQueue)
-        addBusPutEventsPermissions(s3TriggerLambda, bus)
+        configureSqsEventSource(s3TriggerLambda, triggerQueue)
+        grantPutEventsAccessToBus(s3TriggerLambda, bus)
 
         // Event Bus -> Kinesis Stream 1
         val kinesisBusRole = newKinesisBusRole(stream1)
-        addStream1EventRule(
+        configureStream1EventRule(
             bus = bus,
             stream1 = stream1,
             busRole = kinesisBusRole,
@@ -95,21 +95,20 @@ class RegionalHealthCheckStack(scope: Construct, serviceProps: ServiceProps) : B
         val kinesisTriggerLambda = newKinesisTriggerLambda()
         addKinesisEventSourceToFunction(stream1, kinesisTriggerLambda)
 
-        if (disabled) {
-            newTopicOutputs(topic)
-            newBucketOutputs(bucket)
-            newTriggerQueueOutputs(triggerQueue)
+//        newTopicOutputs(topic)
+//        newBucketOutputs(bucket)
+//        newTriggerQueueOutputs(triggerQueue)
 
-            addApiGatewayApiKeys()
-            createRegionalHealthCheck()
-            createSyntheticsCanary(
-                bucket = bucket,
-                healthCheckEndpoint = healthCheckEndpoint(),
-                apiKey = apiKey(),
-            )
+        addApiGatewayApiKeys()
+        createRegionalHealthCheck()
+        createSyntheticsCanary(
+            bucket = bucket,
+            healthCheckEndpoint = healthCheckEndpoint(),
+            apiKey = apiKey(),
+        )
 
-            addKmsPermissions(s3TriggerLambda)
-        }
+        // addKmsPermissions(s3TriggerLambda)
+
     }
 
     private fun newCheckHealthApi(): Function =

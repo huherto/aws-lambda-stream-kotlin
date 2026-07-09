@@ -12,7 +12,7 @@ fun RegionalHealthCheckStack.newBus(): EventBus =
         .eventBusName("${service()}-${stage()}-bus")
         .build()
 
-fun RegionalHealthCheckStack.addBusPutEventsPermissions(
+fun RegionalHealthCheckStack.grantPutEventsAccessToBus(
     grantee: IGrantable,
     bus: EventBus,
 ) {

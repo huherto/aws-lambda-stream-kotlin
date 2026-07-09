@@ -39,7 +39,7 @@ fun RegionalHealthCheckStack.newBucket(topic: Topic): Bucket {
     return bucket
 }
 
-fun RegionalHealthCheckStack.allowWriteAccessToBucket(
+fun RegionalHealthCheckStack.grantWriteAccessToBucket(
     grantable: IGrantable,
     bucket: Bucket,
 ) {
