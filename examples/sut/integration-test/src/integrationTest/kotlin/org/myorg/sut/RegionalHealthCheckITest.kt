@@ -37,6 +37,19 @@ class RegionalHealthCheckITest {
         verifyTracerReachesKinesisStream(response)
 
         verifyTracerIsComplete(response)
+
+        val startTime = System.currentTimeMillis()
+        while(true) {
+            val latestResponse = checkHealthApiFacade.check()
+            if (latestResponse.statusCode == 200) {
+                break
+            }
+            val elapsedTime = System.currentTimeMillis() - startTime
+            if (elapsedTime > 10_000) {
+                throw RuntimeException("Timed out waiting for checkHealth to return 200.")
+            }
+        }
+
     }
 
     private suspend fun verifyTracerReachesDynamoDbTable(response: HealthCheckResponse) {
