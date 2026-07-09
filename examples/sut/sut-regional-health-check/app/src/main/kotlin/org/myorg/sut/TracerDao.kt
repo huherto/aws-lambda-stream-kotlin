@@ -13,7 +13,6 @@ import io.github.huherto.awsLambdaStream.sinks.updateExpression
 import io.github.huherto.awsLambdaStream.utils.ttl
 import kotlinx.serialization.json.JsonObject
 import mu.KotlinLogging
-import kotlin.math.roundToLong
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -36,12 +35,12 @@ class TracerDao(
 
     suspend fun check( unhealthyFlag: Boolean? = null): HealthCheckResponse {
         val now = System.currentTimeMillis()
-        val roundedTimestamp = roundToNearestMinute(now)
+        val truncatedTimestamp = truncateToMinute(now)
 
         if (unhealthyFlag == true) {
             return HealthCheckResponse(
                 statusCode = 503,
-                timestamp = roundedTimestamp,
+                timestamp = truncatedTimestamp,
                 region = awsRegion,
             )
         }
@@ -49,7 +48,7 @@ class TracerDao(
         val currentTracers = getTracers()
         val toBeSaved = Tracer(
             awsRegion = awsRegion,
-            roundedTimestamp = roundedTimestamp,
+            roundedTimestamp = truncatedTimestamp,
             timestamp = now,
             ttl = ttl(now, 92.days),
             status = "STARTED")
@@ -60,15 +59,14 @@ class TracerDao(
         val incomplete = mostRecent?.status == "STARTED"
 
         val sk = mostRecent?.roundedTimestamp ?: 0L
-        val elapsed = (roundedTimestamp - sk).toDouble() / 1000.0 / 60.0
+        val elapsed = (truncatedTimestamp - sk).toDouble() / 1000.0 / 60.0
 
         // Is the most recent trace incomplete, or is it older than 1 minute?
         val unhealthyCheck = incomplete || elapsed > 1
 
-
         return HealthCheckResponse(
             statusCode = if (unhealthyCheck) 503 else 200,
-            timestamp = roundedTimestamp,
+            timestamp = truncatedTimestamp,
             region = awsRegion,
             incomplete = incomplete,
             elapsed = elapsed,
@@ -171,9 +169,9 @@ fun toS3PutRequest(uow: UnitOfWork): PutObjectRequest? {
     }
 }
 
-fun roundToNearestMinute(timestamp: Long): Long {
+fun truncateToMinute(timestamp: Long): Long {
     val minute = 60_000L
-    return (timestamp.toDouble() / minute).roundToLong() * minute
+    return timestamp / minute * minute
 }
 
 private fun AttributeValue.asStringOrNull(): String? =
