@@ -32,15 +32,15 @@ class ShipmentBffStack(scope: Construct, serviceProps: ServiceProps) : BaseStack
     val restapi = newRestApiLambda()
 
     init {
-        addDynamoDBStreamToLambda(trigger, entityTable)
+        consumeFromTable(trigger, entityTable)
         addGSI(entityTable)
         // addReplicas(eventsTable)
-        addKinesisEventSourceToListener(listener)
+        consumeFromKinesis(listener)
     }
 
     private fun newTriggerLambda(): Function =
         Function.Builder.create(this, "trigger")
-            .functionName("${subsys()}-shipment-bff-${stage()}-trigger")
+            .functionName("${service()}-${stage()}-trigger")
             .code(JarFile)
             .handler("org.myorg.sut.Trigger::handleRequest")
             .timeout(Duration.seconds(50))
@@ -69,7 +69,7 @@ class ShipmentBffStack(scope: Construct, serviceProps: ServiceProps) : BaseStack
         .dynamoStream(StreamViewType.NEW_AND_OLD_IMAGES)
         .build()
 
-    private fun addDynamoDBStreamToLambda(function: Function, table: TableV2) {
+    private fun consumeFromTable(function: Function, table: TableV2) {
         function.addEventSource(
             DynamoEventSource.Builder.create(table)
                 .startingPosition(StartingPosition.TRIM_HORIZON)
@@ -110,7 +110,7 @@ class ShipmentBffStack(scope: Construct, serviceProps: ServiceProps) : BaseStack
 
     private fun newListenerLambda(): Function =
         Function.Builder.create(this, "listener")
-            .functionName("${subsys()}-shipment-bff-${stage()}-listener")
+            .functionName("${service()}-${stage()}-listener")
             .code(JarFile)
             .handler("org.myorg.sut.Listener::handleRequest")
             .timeout(Duration.seconds(50))
@@ -121,7 +121,7 @@ class ShipmentBffStack(scope: Construct, serviceProps: ServiceProps) : BaseStack
 
     private fun newRestApiLambda(): Function =
         Function.Builder.create(this, "restapi")
-            .functionName("${subsys()}-shipment-bff-${stage()}-restapi")
+            .functionName("${service()}-${stage()}-restapi")
             .code(JarFile)
             .handler("org.myorg.sut.RestApi::handleRequest")
             .timeout(Duration.seconds(50))
@@ -130,7 +130,7 @@ class ShipmentBffStack(scope: Construct, serviceProps: ServiceProps) : BaseStack
             .environment(runtimeEnvironment)
             .build()
 
-    private fun addKinesisEventSourceToListener(listener: Function) {
+    private fun consumeFromKinesis(listener: Function) {
         val streamName = "${subsys()}-event-hub-${stage()}-s1"
         val accountId = Aws.ACCOUNT_ID
         val regionName = Aws.REGION
@@ -150,7 +150,6 @@ class ShipmentBffStack(scope: Construct, serviceProps: ServiceProps) : BaseStack
                 // .reportBatchItemFailures(true) // requires special response object in handler
                 .build()
         )
-
     }
 
 }
