@@ -1,6 +1,5 @@
 package org.myorg.sut
 
-import software.amazon.awscdk.CfnOutput
 import software.amazon.awscdk.Duration
 import software.amazon.awscdk.RemovalPolicy
 import software.amazon.awscdk.services.iam.AnyPrincipal
@@ -74,22 +73,3 @@ fun EventFaultMonitorStack.grantTopicPublish(
     )
 }
 
-fun EventFaultMonitorStack.newTopicOutputs(topic: Topic) {
-    CfnOutput.Builder.create(this, "TopicArn")
-        .value(topic.topicArn)
-        .build()
-}
-
-fun EventFaultMonitorStack.newNotificationVerificationQueueOutputs(queue: Queue) {
-    CfnOutput.Builder.create(this, "NotificationVerificationQueueName")
-        .value(queue.queueName)
-        .build()
-
-    CfnOutput.Builder.create(this, "NotificationVerificationQueueUrl")
-        .value(queue.queueUrl)
-        .build()
-
-    CfnOutput.Builder.create(this, "NotificationVerificationQueueArn")
-        .value(queue.queueArn)
-        .build()
-}

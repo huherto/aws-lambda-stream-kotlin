@@ -26,9 +26,6 @@ class EventFaultMonitorStack(scope: Construct, serviceProps: ServiceProps) : Bas
         newEventRule(deliveryStream, eventBridgeRole)
         subscribeNotificationVerificationQueue(topic, notificationVerificationQueue)
         grantTopicPublish(topic, transformLambda)
-        newNotificationVerificationQueueOutputs(notificationVerificationQueue)
-        newBucketOutputs(bucket)
-        newTopicOutputs(topic)
 
         // Enable these after the destination bucket exists in the mirror region.
         // val bucketReplicationRole = newBucketReplicationRole(bucket)

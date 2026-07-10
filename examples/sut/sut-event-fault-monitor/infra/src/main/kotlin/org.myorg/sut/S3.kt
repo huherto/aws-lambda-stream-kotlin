@@ -1,7 +1,6 @@
 package org.myorg.sut
 
 import software.amazon.awscdk.Aws
-import software.amazon.awscdk.CfnOutput
 import software.amazon.awscdk.RemovalPolicy
 import software.amazon.awscdk.services.iam.*
 import software.amazon.awscdk.services.s3.Bucket
@@ -117,16 +116,6 @@ fun EventFaultMonitorStack.newBucketReplicationPolicy(bucket: Bucket) {
             )
             .build()
     )
-}
-
-fun EventFaultMonitorStack.newBucketOutputs(bucket: Bucket) {
-    CfnOutput.Builder.create(this, "BucketName")
-        .value(bucket.bucketName)
-        .build()
-
-    CfnOutput.Builder.create(this, "BucketArn")
-        .value(bucket.bucketArn)
-        .build()
 }
 
 fun EventFaultMonitorStack.configureBucketReplication(
