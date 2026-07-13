@@ -119,11 +119,9 @@ class FaultManager(
     /**
      * Returns whether [exception] should be rethrown to allow stream retry handling.
      *
-     * Only AWS SDK exceptions marked retryable are considered retriable, and only when stream retry
-     * support is enabled.
+     * Only AWS SDK exceptions marked retryable are considered retriable.
      */
     private fun isRetriableException(exception: FaultException): Boolean {
-        if (!isStreamRetryEnabled) return false
         if (exception.cause is SdkBaseException) {
             return (exception.cause as SdkBaseException).sdkErrorMetadata.isRetryable
         }
@@ -138,25 +136,29 @@ class FaultManager(
      */
     fun redirectFailure(ex: FaultException) {
         logError(ex)
-        if (!isRetriableException(ex)) {
-            val functionName = awsLambdaFunctionName
-            val pipelineId = ex.uow?.pipeline?.id ?: "undefined"
-            val failureEvent = FaultEvent().apply {
-                id = uuidV1Generator.generate().toString() // UUID v1. Time-based
-                partitionKey = UUID.randomUUID().toString() // UUID v4. Uniform distribution.
-                timestamp = System.currentTimeMillis()
-                tags = mutableMapOf(
-                    "functionname" to functionName,
-                    "pipeline" to pipelineId
-                )
-                err = FaultEvent.Error(ex.cause?.javaClass?.simpleName, ex.message)
-                uow = ex.uow
-                faultException = ex
-            }
-            theFaults.add(failureEvent)
-        } else {
+
+        if (isStreamRetryEnabled && isRetriableException(ex)) {
+            // rethrow to allow stream retry handling.
+            //
+            // (i.e., kinesis will submit the batch again)
             throw ex
         }
+
+        val functionName = awsLambdaFunctionName
+        val pipelineId = ex.uow?.pipeline?.id ?: "undefined"
+        val failureEvent = FaultEvent().apply {
+            id = uuidV1Generator.generate().toString() // UUID v1. Time-based
+            partitionKey = UUID.randomUUID().toString() // UUID v4. Uniform distribution.
+            timestamp = System.currentTimeMillis()
+            tags = mutableMapOf(
+                "functionname" to functionName,
+                "pipeline" to pipelineId
+            )
+            err = FaultEvent.Error(ex.cause?.javaClass?.simpleName, ex.message)
+            uow = ex.uow
+            faultException = ex
+        }
+        theFaults.add(failureEvent)
     }
 
     /**
