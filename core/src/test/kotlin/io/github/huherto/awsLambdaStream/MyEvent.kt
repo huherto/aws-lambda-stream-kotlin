@@ -48,7 +48,11 @@ class MyEventCodec : EventCodec {
     }
 
     override fun encode(event: Event): String {
-        return sutJson.encodeToString(event)
+        require(event is MyEvent) {
+            "MyEventCodec can only encode MyEvent instances, but received ${event::class.qualifiedName}"
+        }
+
+        return sutJson.encodeToString(MyEvent.serializer(), event)
     }
 }
 

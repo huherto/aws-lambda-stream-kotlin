@@ -111,6 +111,9 @@ class FaultManager(
             block(uow)
         } catch (e: Throwable) {
             val faultException = FaultException(uow, e)
+
+            // redirecFailure() will rethrow if the exception is retryable.
+            // causing the pipeline to fail in the lambda handler.
             redirectFailure(faultException)
             null
         }
@@ -139,7 +142,6 @@ class FaultManager(
 
         if (isStreamRetryEnabled && isRetriableException(ex)) {
             // rethrow to allow stream retry handling.
-            //
             // (i.e., kinesis will submit the batch again)
             throw ex
         }

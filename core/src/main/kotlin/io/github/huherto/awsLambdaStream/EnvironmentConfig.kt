@@ -54,6 +54,11 @@ class EnvironmentConfig {
         return System.getenv("TTL")?.toInt()
     }
 
+    /*
+     * If set to true, the stream will retry on failure. The pipeline will fail and will throw
+     * an exception. The lambda handler will typically fail, which will cause kinesis to retry
+     * the whole batch.
+     */
     fun streamRetryEnabled() : Boolean {
         val enabled = System.getenv("STREAM_RETRY_ENABLED")
         return enabled != null && enabled.isNotEmpty() && enabled == "true"
