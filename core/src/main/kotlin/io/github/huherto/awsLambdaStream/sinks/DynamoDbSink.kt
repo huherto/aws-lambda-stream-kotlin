@@ -3,6 +3,7 @@ package io.github.huherto.awsLambdaStream.sinks
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.connectors.DefaultDynamoDbClientFactory
 import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.buffer
@@ -23,9 +24,17 @@ import kotlinx.coroutines.sync.withPermit
  */
 class DynamoDbSink(
     private val envConfig: EnvironmentConfig,
-    private val connector: DynamoDbConnector,
+    private val connector: DynamoDbConnector? = null,
     private val parallel: Int = envConfig.parallel() ?: 4,
 ) {
+
+    fun getConnector()  : DynamoDbConnector {
+        if (connector != null) {
+            return connector
+        }
+        return DynamoDbConnector(dynamoDbClientFactory = DefaultDynamoDbClientFactory(envConfig))
+    }
+
     /**
      * Executes DynamoDB update requests for each [UnitOfWork] in [source].
      *
@@ -41,7 +50,7 @@ class DynamoDbSink(
             .mapParallel(parallel) { uow ->
                 val request = uow.updateRequest ?: return@mapParallel uow
                 fm.faulty(uow) {
-                    val updateResponse = connector.update(request, uow)
+                    val updateResponse = getConnector().update(request, uow)
                     uow.copy(updateResponse = updateResponse)
                 }
             }
@@ -61,7 +70,7 @@ class DynamoDbSink(
             .mapParallel(parallel) { uow ->
                 val request = uow.putRequest ?: return@mapParallel uow
                 fm.faulty(uow) {
-                    val putResponse = connector.put(request, uow)
+                    val putResponse = getConnector().put(request, uow)
                     uow.copy(putResponse = putResponse)
                 }
             }

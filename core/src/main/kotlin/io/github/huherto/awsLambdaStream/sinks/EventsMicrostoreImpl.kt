@@ -54,7 +54,7 @@ import kotlinx.coroutines.flow.buffer
  *
  * ## Fault handling and buffering
  *
- * All transformations are executed through [FaultManager.mapNotFaulty], so faulty units of work are
+ * All transformations are executed through [FaultManager.mapNotFaultyFrom], so faulty units of work are
  * skipped or handled according to the configured fault manager behavior. DynamoDB operations are
  * buffered using [bufferCapacity], which defaults to [Channel.BUFFERED].
  *

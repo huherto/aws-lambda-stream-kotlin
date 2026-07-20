@@ -91,6 +91,13 @@ class FaultManager(
             }
     }
 
+    inline fun <R> mapNotFaultyFrom(
+        source: Flow<UnitOfWork>,
+        crossinline block: suspend (UnitOfWork) -> R?)
+    : Flow<R> {
+        return source.mapNotFaulty(block)
+    }
+
     /**
      * Filters a flow while converting predicate failures into fault events.
      *
@@ -157,6 +164,7 @@ class FaultManager(
 
         if (isStreamRetryEnabled && isRetriableException(ex)) {
             if (isItemLevelRetryEnabled) {
+                // Save it so we can report failures at the item level.
                 retryableItems.add(ex.uow)
                 return
             }

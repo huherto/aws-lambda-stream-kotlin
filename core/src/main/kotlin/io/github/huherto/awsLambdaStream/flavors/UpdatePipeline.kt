@@ -4,17 +4,13 @@ import aws.sdk.kotlin.services.dynamodb.model.BatchGetItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.QueryRequest
 import aws.sdk.kotlin.services.dynamodb.model.UpdateItemRequest
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
-import io.github.huherto.awsLambdaStream.Event
-import io.github.huherto.awsLambdaStream.EventCodec
-import io.github.huherto.awsLambdaStream.FaultManager
-import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.*
 import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
 import io.github.huherto.awsLambdaStream.filters.EventFilter
 import io.github.huherto.awsLambdaStream.filters.filterEvents
 import io.github.huherto.awsLambdaStream.from.RecordImage
 import io.github.huherto.awsLambdaStream.from.RecordPair
-import io.github.huherto.awsLambdaStream.queries.batchGetDynamoDB
-import io.github.huherto.awsLambdaStream.queries.queryAllDynamoDB
+import io.github.huherto.awsLambdaStream.queries.DynamoDbQuery
 import io.github.huherto.awsLambdaStream.sinks.DynamoDbSink
 import io.github.huherto.awsLambdaStream.utils.CompactRule
 import io.github.huherto.awsLambdaStream.utils.compact
@@ -29,8 +25,10 @@ import kotlinx.coroutines.flow.onEach
  */
 class UpdatePipeline(
     id: String,
-    private val dynamoDbConnector: DynamoDbConnector,
-    private val dynamoDbSink: DynamoDbSink,
+    private val envConfig: EnvironmentConfig,
+    private val dynamoDbConnector: DynamoDbConnector? = null,
+    private val dynamoDbSink: DynamoDbSink = DynamoDbSink(envConfig, dynamoDbConnector),
+    private val dynamoDbQuery: DynamoDbQuery = DynamoDbQuery(envConfig, dynamoDbConnector),
     private val eventCodec: EventCodec,
     private val eventFilter: EventFilter = EventFilter.Any,
     private val onContentType: (UnitOfWork) -> Boolean = { true },
@@ -149,6 +147,14 @@ class UpdatePipeline(
         return dynamoDbSink.update(fm, this)
     }
 
+    internal fun Flow<UnitOfWork>.queryAllDynamoDB(fm: FaultManager) : Flow<UnitOfWork> {
+        return dynamoDbQuery.queryAllDynamoDB(fm, this)
+    }
+
+    internal fun Flow<UnitOfWork>.batchGetDynamoDB(fm: FaultManager) : Flow<UnitOfWork> {
+        return dynamoDbQuery.batchGetDynamoDB(fm, this)
+    }
+
     /**
      * Connects this update pipeline to an upstream [Flow].
      *
@@ -177,10 +183,10 @@ class UpdatePipeline(
                 .filterNotFaulty { uow -> onContentType(uow) }
                 .compact(compactRule)
                 .mapNotFaulty { uow -> toQuery(uow) }
-                .queryAllDynamoDB(dynamoDbConnector)
+                .queryAllDynamoDB(fm)
                 .flatMapConcat { uow -> splitQueryResponse(uow).asFlow() }
                 .mapNotFaulty { uow -> toGetRequest(uow) }
-                .batchGetDynamoDB(dynamoDbConnector)
+                .batchGetDynamoDB(fm)
                 .mapNotFaulty { uow -> toUpdateRequest(uow) }
                 .updateDynamoDB(fm)
                 .onEach { uow -> printEndPipeline(uow) }

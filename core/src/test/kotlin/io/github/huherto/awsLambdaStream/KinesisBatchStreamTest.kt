@@ -45,8 +45,8 @@ import kotlin.random.Random
  * DynamoDB and EventBridge connectors have their own retry logic with jitter and exponential backoff. This should
  * ameliorate the retries at the batch level problem.
  *
- * PostData .- I added a flag to the FaultManager to enable item-level retries. With this
- * can be set to true.
+ * P.S. I added ITEM_LEVEL_RETRY_ENABLED environment variable to the FaultManager to enable item-level retries.
+ * With this enabled reportBatchItemFailures can be set to true. The pipeline will report individual failures
  */
 class KinesisBatchStreamTest {
 

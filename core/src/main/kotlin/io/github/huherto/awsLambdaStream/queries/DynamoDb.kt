@@ -13,6 +13,10 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.transform
 import java.util.concurrent.ConcurrentHashMap
 
+/*
+ * These extension functions will be superseded by the new DynamoDbQuery class.
+ */
+
 // In-memory cache placeholder (replacing memory-cache)
 val memoryCache = ConcurrentHashMap<String, Any>()
 
