@@ -54,13 +54,22 @@ class EnvironmentConfig {
         return System.getenv("TTL")?.toInt()
     }
 
-    /*
+    /**
      * If set to true, the stream will retry on failure. The pipeline will fail and will throw
      * an exception. The lambda handler will typically fail, which will cause kinesis to retry
-     * the whole batch.
+     * the whole batch or bisect the batch.
      */
     fun streamRetryEnabled() : Boolean {
         val enabled = System.getenv("STREAM_RETRY_ENABLED")
+        return enabled != null && enabled.isNotEmpty() && enabled == "true"
+    }
+
+    /**
+     * If set to true, the fault manager will save the retryable failures so they can be retried each. Use it along
+     * with reportBatchItemFailures and the STREAM_RETRY_ENABLED flag.
+     */
+    fun itemLevelRetryEnabled() : Boolean {
+        val enabled = System.getenv("ITEM_LEVEL_RETRY_ENABLED")
         return enabled != null && enabled.isNotEmpty() && enabled == "true"
     }
 

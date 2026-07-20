@@ -1,6 +1,7 @@
 package io.github.huherto.awsLambdaStream
 
 import aws.smithy.kotlin.runtime.SdkBaseException
+import com.amazonaws.services.lambda.runtime.events.StreamsEventResponse.BatchItemFailure
 import com.fasterxml.uuid.Generators
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import io.github.huherto.awsLambdaStream.sinks.EventPublisher
@@ -31,12 +32,15 @@ class FaultManager(
     private val eventPublisher: EventPublisher,
     private val skipErrorLogging: Boolean = false,
     private val isStreamRetryEnabled: Boolean = envConfig.streamRetryEnabled(),
+    private val isItemLevelRetryEnabled: Boolean = envConfig.itemLevelRetryEnabled(),
     private val awsLambdaFunctionName: String = envConfig.awsLambdaFunctionName()?:"undefined"
 ) {
 
     private val logger = mu.KotlinLogging.logger { }
 
     private val theFaults = ConcurrentLinkedQueue<FaultEvent>()
+
+    private val retryableItems = ConcurrentLinkedQueue<UnitOfWork>()
 
     private val uuidV1Generator = Generators.timeBasedGenerator()
 
@@ -131,6 +135,17 @@ class FaultManager(
         return false
     }
 
+    fun kinesisRetryableFailures(): List<BatchItemFailure> {
+        val retryableBatchFailures = mutableListOf<BatchItemFailure>()
+
+        while (true) {
+            val uow = retryableItems.poll() ?: break
+            retryableBatchFailures.add(BatchItemFailure(uow.sequenceNumber))
+        }
+
+        return retryableBatchFailures
+    }
+
     /**
      * Handles a pipeline failure.
      *
@@ -141,6 +156,10 @@ class FaultManager(
         logError(ex)
 
         if (isStreamRetryEnabled && isRetriableException(ex)) {
+            if (isItemLevelRetryEnabled) {
+                retryableItems.add(ex.uow)
+                return
+            }
             // rethrow to allow stream retry handling.
             // (i.e., kinesis will submit the batch again)
             throw ex

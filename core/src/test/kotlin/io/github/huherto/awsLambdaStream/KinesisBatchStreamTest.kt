@@ -1,5 +1,9 @@
 package io.github.huherto.awsLambdaStream
 
+import aws.smithy.kotlin.runtime.ErrorMetadata
+import aws.smithy.kotlin.runtime.InternalApi
+import aws.smithy.kotlin.runtime.SdkBaseException
+import aws.smithy.kotlin.runtime.ServiceErrorMetadata
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
@@ -11,6 +15,7 @@ import io.github.huherto.awsLambdaStream.testsupport.TestContext
 import io.kotest.matchers.ints.shouldBeLessThan
 import io.mockk.every
 import io.mockk.spyk
+import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging.logger
 import org.junit.jupiter.api.Test
 import java.nio.ByteBuffer
@@ -40,9 +45,8 @@ import kotlin.random.Random
  * DynamoDB and EventBridge connectors have their own retry logic with jitter and exponential backoff. This should
  * ameliorate the retries at the batch level problem.
  *
- * I thought about changing the pipeline to support reporting individual failures, but I didn't see a big gain since
- * the batch is retried anyway.  They just re-submit from the earliest failed sequence number. The idempotency
- * requirement remains.
+ * PostData .- I added a flag to the FaultManager to enable item-level retries. With this
+ * can be set to true.
  */
 class KinesisBatchStreamTest {
 
@@ -94,7 +98,9 @@ class KinesisBatchStreamTest {
 
         val faultManager = FaultManager(
             envConfig = envConfig,
-            eventPublisher = EventPublisherInMemory()
+            eventPublisher = EventPublisherInMemory(),
+            skipErrorLogging = true,
+            isItemLevelRetryEnabled = true,
         )
 
         val kinesisAdapter: KinesisAdapter by lazy {
@@ -104,35 +110,36 @@ class KinesisBatchStreamTest {
             )
         }
 
-        override fun handleRequest(event: KinesisEvent, context: Context): StreamsEventResponse {
-            val failures = mutableListOf<BatchItemFailure>()
+        override fun handleRequest(event: KinesisEvent, context: Context): StreamsEventResponse = runBlocking {
             val headFlow = kinesisAdapter.fromKinesis(event)
             with(faultManager) {
-                // This is not really how a batch would be processed. There is no support
-                // for reporting individual failures with pipelines.
                 headFlow.mapNotFaulty { uow ->
-                    try {
-                        processRecord()
-                    } catch (e: Exception) {
-                        failures.add(StreamsEventResponse.BatchItemFailure(uow.sequenceNumber!!))
-                    }
+                    processRecord()
                 }
+                .collect() {}
             }
 
-            // Return the response object to Lambda
-            return StreamsEventResponse(failures)
+            return@runBlocking StreamsEventResponse(faultManager.kinesisRetryableFailures())
+        }
+
+        class DummyRetryableException(message: String) : SdkBaseException(message) {
+            @OptIn(InternalApi::class)
+            override val sdkErrorMetadata: ErrorMetadata = ServiceErrorMetadata().apply {
+                attributes[ErrorMetadata.Retryable] = true
+            }
         }
 
         private fun processRecord() {
-            if (Random.nextInt(100) < 20) {
-                throw RuntimeException("Error in processing record")
+            if (Random.nextInt(100) < 50) {
+                throw DummyRetryableException("Error in processing record")
             }
         }
     }
 
     @Test
     fun `Kinesis batch stream with pipeline`() {
-        retryBatchUntilAllEventsSucceed(KinesisBatchHandlerWithPipeline())
+        val numAttempts = retryBatchUntilAllEventsSucceed(KinesisBatchHandlerWithPipeline())
+        numAttempts shouldBeLessThan 50
     }
 
     @Test
