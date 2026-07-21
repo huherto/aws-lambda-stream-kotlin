@@ -53,7 +53,7 @@ class MaterializeS3Pipeline(
                     else
                         uow
                 }
-                .let { flow -> s3Query.getObject(flow) }
+                .let { flow -> s3Query.getObject(fm, flow) }
                 .mapNotFaulty { uow ->
                     if (toPutRequest != null) {
                         uow.copyS3 {

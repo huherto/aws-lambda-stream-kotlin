@@ -40,7 +40,7 @@ class ClaimCheckRedeemer(
                     copy(getRequest = request)
                 }
             }
-                .let { s3Query.getObjectAsByteArray(it) }
+                .let { s3Query.getObjectAsByteArray(faultManager, it) }
                 .mapNotFaulty { uow ->
                     val body = uow.s3.getResponseBytes
 
