@@ -34,6 +34,8 @@ An Event Hub is typically composed of:
 - AWS EventBridge
 - One or more Kinesis Streams
 
+![Event Hub](images/EventHub.svg)
+
 Event Hubs provide a central point for event routing and distribution within a subsystem.
 
 ## External Service Gateways
