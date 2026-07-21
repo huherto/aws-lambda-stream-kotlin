@@ -15,6 +15,7 @@ import io.github.huherto.awsLambdaStream.sinks.EventPublisher
 import mu.KotlinLogging.logger
 
 class S3TriggerContainer(
+    val envConfig: EnvironmentConfig,
     val s3Connector: S3Connector,
     val eventPublisher: EventPublisher,
     val faultManager: FaultManager,
@@ -32,6 +33,7 @@ class S3TriggerContainer(
             val faultManager = FaultManager(envConfig, eventPublisher)
 
             return S3TriggerContainer(
+                envConfig = envConfig,
                 eventPublisher = eventPublisher,
                 s3Connector = s3Connector,
                 faultManager = faultManager,
@@ -42,6 +44,7 @@ class S3TriggerContainer(
     private val cdcPipeline: Pipeline by lazy {
         CdcPipeline(
             id = "ms3",
+            envConfig = envConfig,
             eventPublisher = eventPublisher,
             eventFilter = EventFilter.ByName("trace-created")
         )

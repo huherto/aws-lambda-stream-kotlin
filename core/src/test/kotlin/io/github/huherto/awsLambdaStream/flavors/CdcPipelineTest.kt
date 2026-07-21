@@ -5,6 +5,7 @@ import aws.sdk.kotlin.services.dynamodb.model.BatchGetItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.KeysAndAttributes
 import aws.sdk.kotlin.services.dynamodb.model.QueryRequest
 import io.github.huherto.awsLambdaStream.BaseEvent
+import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.Event
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
@@ -16,6 +17,7 @@ import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.spyk
 import io.mockk.verify
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
@@ -26,6 +28,7 @@ class CdcPipelineTest {
 
     private val dynamoDbConnector = mockk<DynamoDbConnector>(relaxed = true)
     private val eventPublisher = mockk<EventPublisher>()
+    private val envConfig = spyk<EnvironmentConfig>()
 
     private fun createPipeline(
         toQueryRequest: (suspend (UnitOfWork) -> QueryRequest?)? = null,
@@ -36,6 +39,7 @@ class CdcPipelineTest {
     ): CdcPipeline {
         return CdcPipeline(
             id = "cdc-pipeline",
+            envConfig = envConfig,
             dynamoDbConnector = dynamoDbConnector,
             eventPublisher = eventPublisher,
             toQueryRequest = toQueryRequest,

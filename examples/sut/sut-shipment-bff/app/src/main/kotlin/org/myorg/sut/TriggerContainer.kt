@@ -13,6 +13,7 @@ import io.github.huherto.awsLambdaStream.sinks.EventPublisher
 import mu.KotlinLogging.logger
 
 class TriggerContainer(
+    val envConfig: EnvironmentConfig,
     val dynamoDbConnector: DynamoDbConnector,
     val eventPublisher: EventPublisher,
     val faultManager: FaultManager,
@@ -30,6 +31,7 @@ class TriggerContainer(
             val faultManager = FaultManager(envConfig, eventPublisher)
 
             return TriggerContainer(
+                envConfig = envConfig,
                 eventPublisher = eventPublisher,
                 dynamoDbConnector = dynamoDbConnector,
                 faultManager = faultManager,
@@ -40,6 +42,7 @@ class TriggerContainer(
     private val cdcPipeline: Pipeline by lazy {
         CdcPipeline(
             id = "cdc1",
+            envConfig = envConfig,
             dynamoDbConnector = dynamoDbConnector,
             eventPublisher = eventPublisher,
             toEvent = ::toEvent,

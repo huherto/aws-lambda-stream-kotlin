@@ -27,8 +27,6 @@ class UpdatePipeline(
     id: String,
     private val envConfig: EnvironmentConfig,
     private val dynamoDbConnector: DynamoDbConnector? = null,
-    private val dynamoDbSink: DynamoDbSink = DynamoDbSink(envConfig, dynamoDbConnector),
-    private val dynamoDbQuery: DynamoDbQuery = DynamoDbQuery(envConfig, dynamoDbConnector),
     private val eventCodec: EventCodec,
     private val eventFilter: EventFilter = EventFilter.Any,
     private val onContentType: (UnitOfWork) -> Boolean = { true },
@@ -37,6 +35,9 @@ class UpdatePipeline(
     private val toGetRequest: ((UnitOfWork) -> BatchGetItemRequest?)? = null,
     private val toUpdateRequest: suspend (UnitOfWork) -> UpdateItemRequest?,
 ) : Pipeline(id) {
+
+    val dynamoDbSink by lazy { DynamoDbSink(envConfig, dynamoDbConnector) }
+    val dynamoDbQuery by lazy { DynamoDbQuery(envConfig, dynamoDbConnector) }
 
     /**
      * Returns `true` when the unit of work represents a collected event record that should be
