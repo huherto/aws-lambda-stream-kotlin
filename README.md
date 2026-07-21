@@ -28,7 +28,7 @@ will be added to demonstrate interoperability and usage from Java code.
 
 * [Architectural Approach](docs/ArchitecturalApproach.md)
 * [Understanding Events and Event Types](docs/Events.md)
-* [What types of Services are there](docs/AutonomousServiceTypes.md)
+* [Autonomous Service Patterns](docs/AutonomousServicePatterns.md)
 * [Benefits of Kotlin CoRoutines and the Flow Framework](docs/KotlinCoRoutinesAndFlow.md)
 * [How Claim Check works](docs/ClaimCheck.md)
 * [How the Events Microstore works](docs/EventsMicrostore.md)

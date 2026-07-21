@@ -5,6 +5,8 @@ Follow a structured approach to application architecture.
 
 ## Architectural Structure
 
+![Autonomous System(images/AutonomousSystem.svg)
+
  An *Autonomous System* is composed of one or more *Autonomous Subsystems*, each Autonomous Subsystem is in turn composed of one or more *Autonomous Services*.
 
 Autonomous Services communicate with each other through (internal) domain events. The event format defines the contract between Autonomous Services.

@@ -1,4 +1,4 @@
-# Autonomous Service Types
+# Autonomous Service Patterns
 
 ## Table of Contents
 
@@ -60,3 +60,5 @@ These services are used to publish events to external systems. They convert the 
 BFFs provide APIs to the outside world.  They expose client-specific interfaces and adapt internal system capabilities to the needs of external consumers such as web applications, mobile applications, or third-party clients.
 
 ## Fault Monitoring Services
+
+## Regional Health Check
