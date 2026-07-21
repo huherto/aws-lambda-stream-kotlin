@@ -12,7 +12,6 @@ import io.github.huherto.awsLambdaStream.filters.filterEvents
 import io.github.huherto.awsLambdaStream.filters.outLatched
 import io.github.huherto.awsLambdaStream.queries.DynamoDbQuery
 import io.github.huherto.awsLambdaStream.queries.QueryRule
-import io.github.huherto.awsLambdaStream.queries.toPkQueryRequest
 import io.github.huherto.awsLambdaStream.sinks.EventPublisher
 import io.github.huherto.awsLambdaStream.utils.CompactRule
 import io.github.huherto.awsLambdaStream.utils.compact
@@ -84,7 +83,7 @@ class CdcPipeline(
     internal suspend fun addQueryRequest(uow: UnitOfWork): UnitOfWork {
         val queryRequest = when {
             toQueryRequest != null -> toQueryRequest.invoke(uow)
-            queryRule != null -> toPkQueryRequest(uow, queryRule)
+            queryRule != null -> dynamoDbQuery.toPkQueryRequest(uow, queryRule)
             else -> null
         }
 

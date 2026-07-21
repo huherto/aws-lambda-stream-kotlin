@@ -1,10 +1,11 @@
 package io.github.huherto.awsLambdaStream.queries
 
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
-import aws.sdk.kotlin.services.dynamodb.model.*
+import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
+import aws.sdk.kotlin.services.dynamodb.model.BatchGetItemResponse
+import aws.sdk.kotlin.services.dynamodb.model.QueryResponse
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
-import io.github.huherto.awsLambdaStream.from.RecordPair
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -168,61 +169,3 @@ fun Flow<UnitOfWork>.querySplitDynamoDB(
 // Request Generators
 // ------------------------------------------------------------------------
 
-data class QueryRule(
-    val pkFn: String? = null,
-    val indexNm: String? = null,
-    val indexFn: String? = null,
-    val fks: List<String> = emptyList(),
-    val tableName: String = ""
-)
-
-fun toPkQueryRequest(uow: UnitOfWork, queryRule: QueryRule): QueryRequest {
-    return QueryRequest {
-        keyConditionExpression = "#pk = :pk"
-        expressionAttributeNames = mapOf("#pk" to (queryRule.pkFn ?: "pk"))
-        // Assuming your event class has partitionKey property or you extract it safely
-        expressionAttributeValues = mapOf(":pk" to AttributeValue.S(uow.event?.partitionKey ?: ""))
-        consistentRead = true
-    }
-}
-
-fun toIndexQueryRequest(uow: UnitOfWork, queryRule: QueryRule): QueryRequest {
-    return QueryRequest {
-        indexName = queryRule.indexNm
-        keyConditionExpression = "#pk = :pk"
-        expressionAttributeNames = mapOf("#pk" to (queryRule.indexFn ?: "pk"))
-        expressionAttributeValues = mapOf(":pk" to AttributeValue.S(uow.event?.partitionKey ?: ""))
-        consistentRead = false
-    }
-}
-
-fun toGetRequest(uow: UnitOfWork, queryRule: QueryRule): BatchGetItemRequest {
-    val raw = uow.event?.raw as? RecordPair
-    val rawNew = raw?.new
-    val rawOld = raw?.old
-
-    val data = rawNew ?: rawOld ?: return BatchGetItemRequest { }
-
-    val keysList = queryRule.fks.mapNotNull { fk ->
-        val value = data[fk]?.s
-        if (value != null) {
-            val parts = value.split("|")
-            if (parts.size == 2) {
-                mapOf(
-                    "sk" to AttributeValue.S(parts[0]), // discriminator
-                    "pk" to AttributeValue.S(parts[1])
-                )
-            } else null
-        } else {
-            null
-        }
-    }
-
-    return BatchGetItemRequest {
-        requestItems = mapOf(
-            queryRule.tableName to KeysAndAttributes {
-                keys = keysList
-            }
-        )
-    }
-}
