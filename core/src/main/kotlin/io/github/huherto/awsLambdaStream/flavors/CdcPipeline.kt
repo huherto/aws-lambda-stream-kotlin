@@ -56,7 +56,7 @@ import kotlinx.coroutines.flow.onEach
  */
 class CdcPipeline(
     id: String,
-    private val envConfig: EnvironmentConfig,
+    envConfig: EnvironmentConfig,
     private val dynamoDbConnector: DynamoDbConnector? = null,
     private val eventPublisher: EventPublisher,
     private val eventFilter: EventFilter = EventFilter.Any,
@@ -68,7 +68,7 @@ class CdcPipeline(
     private val toEvent: (suspend (UnitOfWork) -> Event?)? = null,
     private val encryptEvent: (suspend (UnitOfWork) -> UnitOfWork)? = null,
     private val parallel: Int = System.getenv("PARALLEL")?.toIntOrNull() ?: 4,
-) : Pipeline(id) {
+) : Pipeline(id, envConfig) {
 
 
     val dynamoDbQuery by lazy { DynamoDbQuery(envConfig, dynamoDbConnector) }

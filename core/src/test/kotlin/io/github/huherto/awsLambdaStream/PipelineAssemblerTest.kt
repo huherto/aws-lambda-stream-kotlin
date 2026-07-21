@@ -11,15 +11,22 @@ import org.junit.jupiter.api.Test
 
 class PipelineAssemblerTest {
 
+    private val envConfig : EnvironmentConfig by lazy {
+        val spy = spyk<EnvironmentConfig>()
+        coEvery { spy.awsRegion() } returns "us-east-1"
+        //coEvery { spy.tableName() } returns "test-table"
+        spy
+    }
+
     // A mock pipeline to test how the assembler routes flows
-    class MockPipeline(id: String) : Pipeline(id) {
+    class MockPipeline(id: String, envConfig: EnvironmentConfig) : Pipeline(id, envConfig = envConfig) {
         override fun connect(fm: FaultManager, fromFlow: Flow<UnitOfWork>): Flow<UnitOfWork> {
             return fromFlow.map { it.copy(key = "processed_by_$id") }
         }
     }
 
     // A mock pipeline that intentionally throws a FailureException to test error handling
-    class FailingPipeline(id: String) : Pipeline(id) {
+    class FailingPipeline(id: String, envConfig: EnvironmentConfig) : Pipeline(id, envConfig = envConfig) {
         override fun connect(fm: FaultManager, fromFlow: Flow<UnitOfWork>): Flow<UnitOfWork> {
             with(fm) {
                 return fromFlow.mapNotNull {
@@ -31,17 +38,12 @@ class PipelineAssemblerTest {
         }
     }
 
-    private val envConfig : EnvironmentConfig by lazy {
-        val spy = spyk<EnvironmentConfig>()
-        coEvery { spy.awsRegion() } returns "us-east-1"
-        //coEvery { spy.tableName() } returns "test-table"
-        spy
-    }
+
 
     @Test
     fun `test builder creates assembler with added pipelines`() {
-        val pipeline1 = MockPipeline("p1")
-        val pipeline2 = MockPipeline("p2")
+        val pipeline1 = MockPipeline("p1", envConfig)
+        val pipeline2 = MockPipeline("p2", envConfig)
 
         val assembler = PipelineAssembler.builder()
             .faultManager(FaultManager(envConfig = envConfig, eventPublisher = EventPublisherInMemory()))
@@ -54,8 +56,8 @@ class PipelineAssemblerTest {
 
     @Test
     fun `test assemble routes UnitOfWork through all pipelines`() = runBlocking {
-        val pipeline1 = MockPipeline("p1")
-        val pipeline2 = MockPipeline("p2")
+        val pipeline1 = MockPipeline("p1", envConfig)
+        val pipeline2 = MockPipeline("p2", envConfig)
 
         val assembler = PipelineAssembler.builder()
             .faultManager(FaultManager(envConfig = envConfig, eventPublisher = EventPublisherInMemory()))
@@ -87,7 +89,7 @@ class PipelineAssemblerTest {
 
     @Test
     fun `test assemble with includeFaultHandler set to true`() = runBlocking {
-        val pipeline1 = MockPipeline("p1")
+        val pipeline1 = MockPipeline("p1", envConfig)
 
         val assembler = PipelineAssembler.builder()
             .faultManager(FaultManager(envConfig = envConfig, eventPublisher = EventPublisherInMemory()))
@@ -107,7 +109,7 @@ class PipelineAssemblerTest {
 
     @Test
     fun `test assemble handles FailureException and publishes FailureEvent`() = runBlocking {
-        val failingPipeline = FailingPipeline("fail1")
+        val failingPipeline = FailingPipeline("fail1", envConfig)
 
         val eventPublisher = EventPublisherInMemory()
         val fm = FaultManager(

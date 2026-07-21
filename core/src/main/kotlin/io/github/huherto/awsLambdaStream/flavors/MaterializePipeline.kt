@@ -14,13 +14,13 @@ import kotlinx.coroutines.flow.onEach
 
 class MaterializePipeline(
     pipelineId: String,
-    private val envConfig: EnvironmentConfig,
+    envConfig: EnvironmentConfig,
     private val eventFilter: EventFilter = EventFilter.Any,
     private val onContentType: (UnitOfWork) -> Boolean = { true },
     private val compact: (Flow<UnitOfWork>) -> Flow<UnitOfWork> = { it },
     private val toUpdateRequest: suspend (UnitOfWork) -> UpdateItemRequest?,
     private val dynamoDbConnector: DynamoDbConnector,
-) : Pipeline(pipelineId) {
+) : Pipeline(pipelineId, envConfig) {
 
     private val dynamoDbSink: DynamoDbSink by lazy { DynamoDbSink(envConfig, dynamoDbConnector) }
 

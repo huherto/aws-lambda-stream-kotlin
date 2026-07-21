@@ -2,6 +2,7 @@ package io.github.huherto.awsLambdaStream.connectors
 
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.*
+import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
@@ -36,7 +37,8 @@ class DynamoDbConnectorTest {
         val pipelineClient = mockk<DynamoDbClient>()
         val unknownClient = mockk<DynamoDbClient>()
         val clientFactory = mockk<DynamoDbClientFactory>()
-        val pipeline = testPipeline("pipeline-1")
+        val envConfig = spyk<EnvironmentConfig>()
+        val pipeline = testPipeline("pipeline-1", envConfig)
 
         every { clientFactory.getClient("pipeline-1") } returns pipelineClient
         every { clientFactory.getClient("unknown") } returns unknownClient
@@ -308,8 +310,8 @@ class DynamoDbConnectorTest {
         }
     }
 
-    private fun testPipeline(id: String): Pipeline {
-        return object : Pipeline(id) {
+    private fun testPipeline(id: String, envConfig: EnvironmentConfig): Pipeline {
+        return object : Pipeline(id, envConfig) {
             override fun connect(
                 fm: FaultManager,
                 fromFlow: Flow<UnitOfWork>,

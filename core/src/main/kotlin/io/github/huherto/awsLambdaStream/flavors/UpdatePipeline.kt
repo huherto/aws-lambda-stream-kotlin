@@ -25,7 +25,7 @@ import kotlinx.coroutines.flow.onEach
  */
 class UpdatePipeline(
     id: String,
-    private val envConfig: EnvironmentConfig,
+    envConfig: EnvironmentConfig,
     private val dynamoDbConnector: DynamoDbConnector? = null,
     private val eventCodec: EventCodec,
     private val eventFilter: EventFilter = EventFilter.Any,
@@ -34,7 +34,7 @@ class UpdatePipeline(
     private val toQueryRequest: ((UnitOfWork) -> QueryRequest?)? = null,
     private val toGetRequest: ((UnitOfWork) -> BatchGetItemRequest?)? = null,
     private val toUpdateRequest: suspend (UnitOfWork) -> UpdateItemRequest?,
-) : Pipeline(id) {
+) : Pipeline(id, envConfig) {
 
     val dynamoDbSink by lazy { DynamoDbSink(envConfig, dynamoDbConnector) }
     val dynamoDbQuery by lazy { DynamoDbQuery(envConfig, dynamoDbConnector) }

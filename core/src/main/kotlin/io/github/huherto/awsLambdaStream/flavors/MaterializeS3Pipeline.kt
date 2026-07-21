@@ -25,7 +25,7 @@ class MaterializeS3Pipeline(
     private val toGetRequest: ((UnitOfWork) -> GetObjectRequest?)? = null,
     private val toPutRequest: ((UnitOfWork) -> PutObjectRequest?)? = null,
     private val toDeleteRequest: ((UnitOfWork) -> DeleteObjectRequest?)? = null,
-) : Pipeline(pipelineId) {
+) : Pipeline(pipelineId, envConfig) {
 
     private val s3Query: S3Query = S3Query(s3Connector)
     private val s3Sink: S3Sink = S3Sink(envConfig, s3Connector)

@@ -58,7 +58,7 @@ sealed interface EmitOption {
  */
 class EvaluatePipeline (
     id: String,
-    val envConfig: EnvironmentConfig,
+    envConfig: EnvironmentConfig,
     val eventPublisher: EventPublisher,
     val eventsMicrostore: EventsMicrostore,
     val onContentType: (UnitOfWork) -> Boolean = { true },
@@ -69,7 +69,7 @@ class EvaluatePipeline (
     val eventCodec: EventCodec,
     val expression: ((UnitOfWork) -> Boolean)? = null,
     val higherOrderEmit: EmitOption? = null,
-) : Pipeline(id) {
+) : Pipeline(id, envConfig) {
 
     /**
      * Returns `true` when the unit of work represents a DynamoDB stream record this pipeline can

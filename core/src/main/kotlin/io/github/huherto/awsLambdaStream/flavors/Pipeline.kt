@@ -1,5 +1,6 @@
 package io.github.huherto.awsLambdaStream.flavors
 
+import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import kotlinx.coroutines.flow.Flow
@@ -19,7 +20,7 @@ import mu.KotlinLogging
  * @param id Unique identifier for this pipeline instance. The id is included in logs and propagated
  * by concrete pipeline implementations where needed.
  */
-abstract class Pipeline(val id : String) {
+abstract class Pipeline(val id : String, val envConfig: EnvironmentConfig) {
 
     /**
      * Logger shared by pipeline implementations.

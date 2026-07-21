@@ -2,6 +2,7 @@ package io.github.huherto.awsLambdaStream
 
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import io.kotest.matchers.shouldBe
+import io.mockk.spyk
 import kotlinx.coroutines.flow.Flow
 import org.junit.jupiter.api.Test
 
@@ -12,7 +13,8 @@ class JsonUtilsTest  {
     @Test
     fun testPipelineSerializer() {
 
-        class SomePipeline : Pipeline("pipe1") {
+        val envConfig = spyk<EnvironmentConfig>()
+        class SomePipeline : Pipeline("pipe1", envConfig) {
             override fun connect(
                 fm: FaultManager,
                 fromFlow: Flow<UnitOfWork>

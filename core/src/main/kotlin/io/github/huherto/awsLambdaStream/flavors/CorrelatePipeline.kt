@@ -46,15 +46,15 @@ const val CORREL = "CORREL"
  */
 class CorrelatePipeline(
     id: String,
+    envConfig: EnvironmentConfig,
     val onContentType: (UnitOfWork) -> Boolean = { true },
     val eventFilter: EventFilter = EventFilter.Any,
     val correlationKeySupplier: ((UnitOfWork) -> String),
     val correlationKeySuffix: String = "",
-    val envConfig: EnvironmentConfig,
     var eventsMicrostore: EventsMicrostore,
     val eventCodec: EventCodec,
     val expire: Boolean = false,
-) : Pipeline(id) {
+) : Pipeline(id, envConfig) {
 
     /**
      * Returns `true` when the unit of work represents a collected event record that can be correlated.

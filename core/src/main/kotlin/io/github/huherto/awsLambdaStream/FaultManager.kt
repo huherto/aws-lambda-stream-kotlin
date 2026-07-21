@@ -50,7 +50,7 @@ class FaultManager(
      * Fault events are emitted as [UnitOfWork] instances and therefore need an associated [Pipeline].
      * This pipeline is not intended to process regular application events.
      */
-    class FaultManagerPipeline(id: String) : Pipeline(id) {
+    class FaultManagerPipeline(id: String, envConfig: EnvironmentConfig) : Pipeline(id, envConfig) {
         override fun connect(
             fm: FaultManager,
             fromFlow: Flow<UnitOfWork>
@@ -60,7 +60,7 @@ class FaultManager(
         }
     }
 
-    private val faultManagerPipeline = FaultManagerPipeline("fault1")
+    private val faultManagerPipeline = FaultManagerPipeline("fault1", envConfig)
 
     /**
      * Returns a snapshot of currently queued fault events.

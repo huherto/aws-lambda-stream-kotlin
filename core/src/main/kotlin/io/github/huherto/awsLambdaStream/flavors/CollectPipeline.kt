@@ -38,7 +38,7 @@ import kotlinx.coroutines.flow.onEach
  */
 class CollectPipeline(
     pipelineId: String,
-    private val envConfig: EnvironmentConfig,
+    envConfig: EnvironmentConfig,
     private val onContentType: (UnitOfWork) -> Boolean = {  true },
     private val eventFilter: EventFilter = EventFilter.Any,
     private val correlationKey: (UnitOfWork) -> String? = { uow -> uow.event?.partitionKey },
@@ -46,7 +46,7 @@ class CollectPipeline(
     private val includeRaw: Boolean = true,
     private val expire: Boolean = false,
     private val eventsMicrostore: EventsMicrostore,
-) : Pipeline(pipelineId) {
+) : Pipeline(pipelineId, envConfig) {
 
     /**
      * Builds save options for each valid event and delegates persistence to [eventsMicrostore].

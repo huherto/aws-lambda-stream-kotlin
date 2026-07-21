@@ -59,7 +59,7 @@ class TagsTest {
     @Test
     fun `adornStandardTags should add environment skip and pipeline tags to event`() {
         val envConfig = mockk<EnvironmentConfig>()
-        val pipeline = object : Pipeline("test-pipeline") {
+        val pipeline = object : Pipeline("test-pipeline", envConfig) {
             override fun connect(fm: FaultManager, fromFlow: Flow<UnitOfWork>): Flow<UnitOfWork> = fromFlow
         }
         val event = FaultEvent().apply {
