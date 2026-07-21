@@ -13,7 +13,7 @@ Autonomous Services communicate with each other through (internal) domain events
 
 Similarly, Autonomous Subsystems communicate with each other through (external) domain events or APIs. These communication mechanisms must have stable, well-defined contracts.
 
-![Autonomous Susystem](images/AutonomousSubystem.svg)
+![Autonomous Susystem](images/AutonomousSubsystem.svg)
 
 It is the responsibility of the solution architect to define the boundaries between subsystems and services, ensuring that each subsystem and service has a clear and well-defined purpose, interface and scope.
 
