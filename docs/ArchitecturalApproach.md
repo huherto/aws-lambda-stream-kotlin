@@ -5,7 +5,7 @@ Follow a structured approach to application architecture.
 
 ## Architectural Structure
 
-![Autonomous System(images/AutonomousSystem.svg)
+![Autonomous System](images/AutonomousSystem.svg)
 
  An *Autonomous System* is composed of one or more *Autonomous Subsystems*, each Autonomous Subsystem is in turn composed of one or more *Autonomous Services*.
 
