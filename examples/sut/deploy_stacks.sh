@@ -20,6 +20,7 @@ export CDK_DISABLE_LEGACY_EXPORT_WARNING=1 # Disable annoying warning.
 STACKS=(
 	"sut-event-hub"
 	"sut-event-fault-monitor"
+	"sut-event-lake-s3"
 	"sut-regional-health-check"
 	"sut-control-service"
 	"sut-shipment-bff"
