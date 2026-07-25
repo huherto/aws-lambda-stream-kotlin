@@ -9,7 +9,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
-import org.myorg.sut.facades.AwsFacade
+import org.myorg.sut.facades.DynamoDbFacade
 import org.myorg.sut.facades.RestApiFacade
 
 // Components tested.
@@ -21,7 +21,7 @@ import org.myorg.sut.facades.RestApiFacade
 class ShipmentBffITest {
     private val logger = mu.KotlinLogging.logger {}
 
-    private val awsFacade = AwsFacade(
+    private val dynamoDbFacade = DynamoDbFacade(
         entityTable = "sut-shipment-bff-local-shipments",
         eventTable = "sut-control-service-local-events"
     )
@@ -44,7 +44,7 @@ class ShipmentBffITest {
     }
 
     private suspend fun verifyShipmentCreatedEventWasPublished(shipmentId: String) {
-        val shipmentCreatedEvent = awsFacade.findEventByPK(shipmentId) { events ->
+        val shipmentCreatedEvent = dynamoDbFacade.findEventByPK(shipmentId) { events ->
             events?.firstOrNull {
                 val eventAsString = it.get("event")?.asSOrNull()
                 logger.info { "Event: $eventAsString" }
@@ -71,7 +71,7 @@ class ShipmentBffITest {
     }
 
     private suspend fun verifyShipmentWasSaved(shipmentId: String) {
-        val savedEntity = awsFacade.findEntityByPK(shipmentId) { it?.firstOrNull() }
+        val savedEntity = dynamoDbFacade.findEntityByPK(shipmentId) { it?.firstOrNull() }
         savedEntity.shouldNotBeNull()
         with(savedEntity) {
             this["pk"]?.asS() shouldBe shipmentId
@@ -89,6 +89,6 @@ class ShipmentBffITest {
 
     @AfterAll
     fun tearDownAll() {
-        awsFacade.closeAll()
+        dynamoDbFacade.close()
     }
 }
