@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.myorg.sut.ShipmentTrackingDomain.createShipmentCreatedEvent
 import org.myorg.sut.ShipmentTrackingDomain.createTrackedUnit
-import org.myorg.sut.facades.AwsFacade
+import org.myorg.sut.facades.EventBridgeFacade
 import org.myorg.sut.facades.S3Facade
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -17,7 +17,7 @@ class EventLakeS3ITest {
 
     private val logger = KotlinLogging.logger {}
 
-    private val awsFacade = AwsFacade()
+    private val eventBridgeFacade = EventBridgeFacade()
 
     private val s3Facade = S3Facade()
 
@@ -31,7 +31,7 @@ class EventLakeS3ITest {
         event.id.shouldNotBeNull()
         logger.info { "Sending event to event bus: ${event.id}" }
 
-        awsFacade.putEvents(event)
+        eventBridgeFacade.putEvents(event)
 
         val objectContent = s3Facade.findObjectWithSubstring(
             bucketName = bucketName,
@@ -47,7 +47,7 @@ class EventLakeS3ITest {
 
     @AfterAll
     fun tearDownAll() {
-        awsFacade.closeAll()
+        eventBridgeFacade.close()
         s3Facade.close()
     }
 }
