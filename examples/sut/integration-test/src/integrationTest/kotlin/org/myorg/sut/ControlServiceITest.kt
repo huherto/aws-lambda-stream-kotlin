@@ -18,7 +18,9 @@ import org.myorg.sut.ShipmentTrackingDomain.createDeliveryAttemptedEvent
 import org.myorg.sut.ShipmentTrackingDomain.createPoisonPillEvent
 import org.myorg.sut.ShipmentTrackingDomain.createShipmentCreatedEvent
 import org.myorg.sut.ShipmentTrackingDomain.createTrackedUnit
-import org.myorg.sut.facades.AwsFacade
+import org.myorg.sut.facades.DynamoDbFacade
+import org.myorg.sut.facades.EventBridgeFacade
+import org.myorg.sut.facades.KinesisFacade
 import java.lang.System.currentTimeMillis
 import kotlin.math.abs
 import kotlin.time.ExperimentalTime
@@ -37,7 +39,9 @@ class ControlServiceITest {
 
     private val logger = mu.KotlinLogging.logger {}
 
-    private val awsFacade = AwsFacade(eventTable = "sut-control-service-local-events")
+    private val eventBridgeFacade = EventBridgeFacade()
+    private val dynamoDbFacade = DynamoDbFacade(eventTable = "sut-control-service-local-events")
+    private val kinesisFacade = KinesisFacade()
 
     @OptIn(ExperimentalTime::class)
     @Test
@@ -49,10 +53,10 @@ class ControlServiceITest {
         event.entity?.id.shouldNotBeNull()
 
         logger.info { "Sending event ${event.id}" }
-        awsFacade.putEvents(event)
+        eventBridgeFacade.putEvents(event)
 
         // Find collected event in DynamoDB.
-        val collectedEvent = awsFacade.findEventByPK(event.id!!) { items ->
+        val collectedEvent = dynamoDbFacade.findEventByPK(event.id!!) { items ->
             items?.firstOrNull() ?: return@findEventByPK null
         }
         with(collectedEvent) {
@@ -68,7 +72,7 @@ class ControlServiceITest {
         }
 
         // Find correlated event in DynamoDB.
-        val correlEvent = awsFacade.findEventByPK(event.entity?.id!!) { items ->
+        val correlEvent = dynamoDbFacade.findEventByPK(event.entity?.id!!) { items ->
             items?.firstOrNull { rec -> rec["sk"]?.asS() == event.id }
         }
         with(correlEvent) {
@@ -85,7 +89,7 @@ class ControlServiceITest {
         }
 
         // Finding VERIFY_TARGET_ADDRESS among the correlated events.
-        val vtaCorrelEvent = awsFacade.findEventByPK(event.entity?.id!!) { items ->
+        val vtaCorrelEvent = dynamoDbFacade.findEventByPK(event.entity?.id!!) { items ->
             items?.firstOrNull { rec -> rec["event"]?.asS()?.contains("VERIFY_TARGET_ADDRESS") == true }
         }
         vtaCorrelEvent.shouldNotBeNull()
@@ -110,7 +114,7 @@ class ControlServiceITest {
         }
 
         // Finding VERIFY_TARGET_ADDRESS by its event id.
-        val vtaEvent = awsFacade.findEventByPK(vtaEventId) { items ->
+        val vtaEvent = dynamoDbFacade.findEventByPK(vtaEventId) { items ->
             items?.firstOrNull()
         }
         with(vtaEvent) {
@@ -136,8 +140,8 @@ class ControlServiceITest {
         // Make two failed attempts to deliver the package.
         val e1 = createDeliveryAttemptedEvent(event.entity!!)
         val e2 = createDeliveryAttemptedEvent(event.entity!!)
-        awsFacade.putEvents(e1, e2)
-        val ccEvent = awsFacade.findEventByPK(event.entity?.id!!) { items ->
+        eventBridgeFacade.putEvents(e1, e2)
+        val ccEvent = dynamoDbFacade.findEventByPK(event.entity?.id!!) { items ->
             items?.firstOrNull { rec -> rec["event"]?.asS()?.contains("CONTACT_CUSTOMER") == true }
         }
         with(ccEvent) {
@@ -153,7 +157,7 @@ class ControlServiceITest {
             ccEventAsObject.eventType().shouldBe("CONTACT_CUSTOMER")
         }
 
-        val kinesisEvents = awsFacade.readAllKinesisEvents()
+        val kinesisEvents = kinesisFacade.readAllEvents()
         kinesisEvents shouldNotBe null
         logger.info { "Read ${kinesisEvents.size} events from Kinesis" }
         println("Read ${kinesisEvents.size} events from Kinesis")
@@ -223,12 +227,14 @@ class ControlServiceITest {
 
         val event = createPoisonPillEvent(createTrackedUnit())
 
-        awsFacade.putEvents(event)
+        eventBridgeFacade.putEvents(event)
     }
 
     @AfterAll
     fun tearDownAll() {
-        awsFacade.closeAll()
+        eventBridgeFacade.close()
+        dynamoDbFacade.close()
+        kinesisFacade.close()
     }
 
 }
