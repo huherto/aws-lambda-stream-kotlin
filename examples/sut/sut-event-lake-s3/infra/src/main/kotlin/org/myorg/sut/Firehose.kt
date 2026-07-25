@@ -175,11 +175,6 @@ fun EventLakeS3Stack.newEventRule(
                     .id("EventLake")
                     .arn(deliveryStream.attrArn)
                     .roleArn(eventBridgeRole.roleArn)
-                    .inputTransformer(
-                        CfnRule.InputTransformerProperty.builder()
-                            .inputTemplate("<aws.events.event>\n")
-                            .build()
-                    )
                     .build()
             )
         )
