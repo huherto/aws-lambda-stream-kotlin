@@ -8,12 +8,12 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.number
 import kotlinx.datetime.toLocalDateTime
+import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.myorg.sut.ShipmentTrackingDomain.createFaultEvent
 import org.myorg.sut.ShipmentTrackingDomain.createPoisonPillEvent
-import org.myorg.sut.facades.AwsFacade
-import org.myorg.sut.facades.S3Facade
+import org.myorg.sut.facades.*
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
@@ -31,16 +31,18 @@ class EventFaultMonitorITest {
 
     private val logger = mu.KotlinLogging.logger {}
 
-    private val awsFacade = AwsFacade(eventTable = "sut-control-service-local-events")
-
+    private val eventBridgeFacade = EventBridgeFacade()
+    private val lambdaFacade = LambdaFacade()
     private val s3Facade = S3Facade()
+    private val snsFacade = SnsFacade()
+    private val sqsFacade = SqsFacade()
 
     private val bucketName = "myorg-sut-event-fault-monitor-local-us-east-1"
 
     private val queueName = "sut-event-fault-monitor-local-notification-verification.fifo"
 
     suspend fun purgeSqsQueue() {
-        awsFacade.purgeSqsQueue(queueName)
+        sqsFacade.purgeQueue(queueName)
     }
 
     @OptIn(ExperimentalTime::class)
@@ -54,7 +56,7 @@ class EventFaultMonitorITest {
         val payload = "x".repeat(12_000)
         val message = """{"verification":"$verificationId","payload":"$payload"}"""
 
-        val messageId = awsFacade.publishToSnsTopic(
+        val messageId = snsFacade.publishToTopic(
             topicNameContains = "sut-event-fault-monitor-local.fifo",
             message = message,
             subject = "verification",
@@ -64,7 +66,7 @@ class EventFaultMonitorITest {
 
         messageId.shouldNotBeNull()
 
-        val notification = awsFacade.verifyNotificationSentToSns(
+        val notification = sqsFacade.verifyNotificationSentToSns(
             queueName = "sut-event-fault-monitor-local-notification-verification.fifo",
             expectedContent = verificationId,
         )
@@ -80,12 +82,12 @@ class EventFaultMonitorITest {
 
         val event = createFaultEvent()
 
-        awsFacade.putEvents(event)
+        eventBridgeFacade.putEvents(event)
 
         val objectContent = s3Facade.findObjectWithSubstring(bucketName = bucketName , event.id!!)
         objectContent.shouldNotBeNull()
         logger.info { "Fault event found in S3" }
-        val notification = awsFacade.verifyNotificationSentToSns(
+        val notification = sqsFacade.verifyNotificationSentToSns(
             queueName = "sut-event-fault-monitor-local-notification-verification.fifo",
             expectedContent = event.id!!,
         )
@@ -102,12 +104,12 @@ class EventFaultMonitorITest {
         val event = createPoisonPillEvent(trackedUnit)
         event.id.shouldNotBeNull()
         logger.info("Poison event is: ${event.id}")
-        awsFacade.putEvents(event)
+        eventBridgeFacade.putEvents(event)
 
         val objectContent = s3Facade.findObjectWithSubstring(bucketName = bucketName, event.id!!)
         objectContent.shouldNotBeNull()
         logger.info { "Poison event found in S3" }
-        val notification = awsFacade.verifyNotificationSentToSns(
+        val notification = sqsFacade.verifyNotificationSentToSns(
             queueName = queueName,
             expectedContent = event.id!!,
         )
@@ -130,10 +132,10 @@ class EventFaultMonitorITest {
             window = 500,
         )
 
-        val preparedEventRequests = resubmit.filterAndPrepareRequests(argv, awsFacade.s3Client)
+        val preparedEventRequests = resubmit.filterAndPrepareRequests(argv, s3Facade.client)
         preparedEventRequests.size shouldBeGreaterThan 0
 
-        resubmit.invokeLambdas(argv, preparedEventRequests, awsFacade.lambdaClient)
+        resubmit.invokeLambdas(argv, preparedEventRequests, lambdaFacade.client)
 
         val counters = resubmit.counters
         counters.shouldNotBeNull()
@@ -141,6 +143,12 @@ class EventFaultMonitorITest {
         counters.recordCount shouldBeGreaterThan 0
     }
 
-
-
+    @AfterAll
+    fun tearDownAll() {
+        eventBridgeFacade.close()
+        lambdaFacade.close()
+        s3Facade.close()
+        snsFacade.close()
+        sqsFacade.close()
+    }
 }
