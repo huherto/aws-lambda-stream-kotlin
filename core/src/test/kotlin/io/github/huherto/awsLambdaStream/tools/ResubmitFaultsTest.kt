@@ -1,4 +1,4 @@
-package io.github.huherto.awsLambdaStream.tools.resubmit
+package io.github.huherto.awsLambdaStream.tools
 
 import aws.sdk.kotlin.services.lambda.model.InvocationType
 import aws.sdk.kotlin.services.lambda.model.InvokeRequest
@@ -11,9 +11,9 @@ import io.kotest.matchers.shouldBe
 import kotlinx.serialization.json.*
 import org.junit.jupiter.api.Test
 
-class ResubmitEventsTest {
+class ResubmitFaultsTest {
 
-    private val subject = ResubmitEvents()
+    private val subject = ResubmitFaults()
     private val json = Json { ignoreUnknownKeys = true }
 
     @Test
@@ -23,13 +23,13 @@ class ResubmitEventsTest {
         val beta = unitOfWork(functionName = "beta")
 
         val wildcardFilter = subject.filterByFunctionName(
-            ResubmitEvents.Args(prefix = "prefix", functionname = "*")
+            ResubmitFaults.Args(prefix = "prefix", functionname = "*")
         )
         val alphaFilter = subject.filterByFunctionName(
-            ResubmitEvents.Args(prefix = "prefix", functionname = "alpha")
+            ResubmitFaults.Args(prefix = "prefix", functionname = "alpha")
         )
         val missingFilter = subject.filterByFunctionName(
-            ResubmitEvents.Args(prefix = "prefix", functionname = null)
+            ResubmitFaults.Args(prefix = "prefix", functionname = null)
         )
 
         // Act
@@ -99,7 +99,7 @@ class ResubmitEventsTest {
                 """.trimIndent()
             )
         )
-        val missingUow = ResubmitEvents.UnitOfWork(event = jsonObject("""{"type":"fault"}"""))
+        val missingUow = ResubmitFaults.UnitOfWork(event = jsonObject("""{"type":"fault"}"""))
 
         // Act
         val results = listOf(
@@ -137,7 +137,7 @@ class ResubmitEventsTest {
                 """.trimIndent()
             )
         )
-        val argv = ResubmitEvents.Args(
+        val argv = ResubmitFaults.Args(
             prefix = "prefix",
             qualifier = "live",
         )
@@ -187,7 +187,7 @@ class ResubmitEventsTest {
                 """.trimIndent()
             )
         )
-        val argv = ResubmitEvents.Args(prefix = "prefix")
+        val argv = ResubmitFaults.Args(prefix = "prefix")
 
         // Act
         val result = subject.withInvokeRequest(uow, argv)
@@ -224,9 +224,9 @@ class ResubmitEventsTest {
                 """.trimIndent()
             )
         )
-        val dryArgs = ResubmitEvents.Args(prefix = "prefix", dry = true, async = true)
-        val asyncArgs = ResubmitEvents.Args(prefix = "prefix", async = true)
-        val syncArgs = ResubmitEvents.Args(prefix = "prefix")
+        val dryArgs = ResubmitFaults.Args(prefix = "prefix", dry = true, async = true)
+        val asyncArgs = ResubmitFaults.Args(prefix = "prefix", async = true)
+        val syncArgs = ResubmitFaults.Args(prefix = "prefix")
 
         // Act
         val dryResult = subject.withInvokeRequest(uow, dryArgs)
@@ -257,7 +257,7 @@ class ResubmitEventsTest {
                 """.trimIndent()
             )
         )
-        val argv = ResubmitEvents.Args(prefix = "prefix", async = true)
+        val argv = ResubmitFaults.Args(prefix = "prefix", async = true)
 
         // Act
         val result = subject.withInvokeRequest(uow, argv)
@@ -269,7 +269,7 @@ class ResubmitEventsTest {
     @Test
     fun `withInvokeRequest should fail when required event fields are missing`() {
         // Arrange
-        val missingUow = ResubmitEvents.UnitOfWork(
+        val missingUow = ResubmitFaults.UnitOfWork(
             event = jsonObject(
                 """
                     {
@@ -281,7 +281,7 @@ class ResubmitEventsTest {
                 """.trimIndent()
             )
         )
-        val missingFunctionName = ResubmitEvents.UnitOfWork(
+        val missingFunctionName = ResubmitFaults.UnitOfWork(
             event = jsonObject(
                 """
                     {
@@ -296,7 +296,7 @@ class ResubmitEventsTest {
                 """.trimIndent()
             )
         )
-        val argv = ResubmitEvents.Args(prefix = "prefix")
+        val argv = ResubmitFaults.Args(prefix = "prefix")
 
         // Act
         val missingUowError = shouldThrow<IllegalStateException> {
@@ -332,7 +332,7 @@ class ResubmitEventsTest {
     @Test
     fun `count should accumulate event type function invocation record and error counters`() {
         // Arrange
-        val counters = ResubmitEvents.Counters()
+        val counters = ResubmitFaults.Counters()
         val first = unitOfWork(
             functionName = "lambda-a",
             pipeline = "pipeline-a",
@@ -399,8 +399,8 @@ class ResubmitEventsTest {
     @Test
     fun `count should use unknown values when event tags are missing`() {
         // Arrange
-        val counters = ResubmitEvents.Counters()
-        val uow = ResubmitEvents.UnitOfWork(
+        val counters = ResubmitFaults.Counters()
+        val uow = ResubmitFaults.UnitOfWork(
             event = jsonObject(
                 """
                     {
@@ -424,7 +424,7 @@ class ResubmitEventsTest {
     @Test
     fun `splitLines should split non-blank lines and keep uow unchanged when text is missing`() {
         // Arrange
-        val multiline = ResubmitEvents.UnitOfWork(
+        val multiline = ResubmitFaults.UnitOfWork(
             getResponseLine = """
                 first
                 
@@ -433,7 +433,7 @@ class ResubmitEventsTest {
                 third
             """.trimIndent()
         )
-        val missingText = ResubmitEvents.UnitOfWork()
+        val missingText = ResubmitFaults.UnitOfWork()
 
         // Act
         val split = subject.splitLines(multiline)
@@ -487,8 +487,8 @@ class ResubmitEventsTest {
             pipeline = pipeline,
             type = type,
         ),
-    ): ResubmitEvents.UnitOfWork {
-        return ResubmitEvents.UnitOfWork(event = event)
+    ): ResubmitFaults.UnitOfWork {
+        return ResubmitFaults.UnitOfWork(event = event)
     }
 
     private fun eventJson(

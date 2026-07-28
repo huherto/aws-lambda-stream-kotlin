@@ -2,11 +2,11 @@ package io.github.huherto.awsLambdaStream
 
 import aws.sdk.kotlin.services.lambda.LambdaClient
 import aws.sdk.kotlin.services.s3.S3Client
-import io.github.huherto.awsLambdaStream.tools.resubmit.ResubmitEvents
+import io.github.huherto.awsLambdaStream.tools.ResubmitFaults
 
 suspend fun main() {
 
-    val resubmit = ResubmitEvents()
+    val resubmit = ResubmitFaults()
 
     val argv = resubmit.loadArgs()
 
@@ -16,7 +16,7 @@ suspend fun main() {
         S3Client {
             region = argv.region ?: System.getenv("AWS_REGION")
         }.use { s3 ->
-            resubmit.runResubmitEvents(
+            resubmit.runResubmitFaults(
                 argv = argv,
                 s3 = s3,
                 lambda = lambda,

@@ -1,4 +1,4 @@
-package io.github.huherto.awsLambdaStream.tools.resubmit
+package io.github.huherto.awsLambdaStream.tools
 
 import aws.sdk.kotlin.services.lambda.LambdaClient
 import aws.sdk.kotlin.services.lambda.model.InvocationType
@@ -25,7 +25,7 @@ import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.ExperimentalTime
 
-class ResubmitEvents {
+class ResubmitFaults {
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -211,14 +211,14 @@ class ResubmitEvents {
         )
     }
 
-    suspend fun runResubmitEvents(
+    suspend fun runResubmitFaults(
         argv: Args,
         s3: S3Client,
         lambda: LambdaClient,
     ): Counters {
         prettyPrint(argv)
 
-        resubmitEventsFlow(argv, s3, lambda)
+        resubmitFaultsFlow(argv, s3, lambda)
             .collect { uow ->
                 count(counters, uow)
             }
@@ -226,7 +226,7 @@ class ResubmitEvents {
         return counters
     }
 
-    internal fun resubmitEventsFlow(
+    internal fun resubmitFaultsFlow(
         argv: Args,
         s3: S3Client,
         lambda: LambdaClient,

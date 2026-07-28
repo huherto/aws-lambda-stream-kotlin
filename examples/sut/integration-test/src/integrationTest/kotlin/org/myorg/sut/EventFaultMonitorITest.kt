@@ -1,6 +1,6 @@
 package org.myorg.sut
 
-import io.github.huherto.awsLambdaStream.tools.resubmit.ResubmitEvents
+import io.github.huherto.awsLambdaStream.tools.ResubmitFaults
 import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
@@ -118,8 +118,8 @@ class EventFaultMonitorITest {
         val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
         val datePart = "%04d/%02d/%02d/%02d".format(now.year, now.month.number, now.day, now.hour)
 
-        val resubmit = ResubmitEvents()
-        val argv = ResubmitEvents.Args(
+        val resubmit = ResubmitFaults()
+        val argv = ResubmitFaults.Args(
             prefix = "us-east-1/${datePart}/sut-event-fault-monitor-local",
             bucket = "myorg-sut-event-fault-monitor-local-us-east-1",
             functionname = "*",
