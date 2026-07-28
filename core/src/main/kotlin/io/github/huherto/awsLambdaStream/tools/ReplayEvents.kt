@@ -108,6 +108,18 @@ class ReplayEvents {
     ) {
         val argv = loadArgs()
 
+        runReplayEvents(
+            argv = argv,
+            s3 = s3,
+            lambda = lambda,
+        )
+    }
+
+    suspend fun runReplayEvents(
+        argv: Args,
+        s3: S3Client,
+        lambda: LambdaClient,
+    ): Counters {
         printJson(argv)
 
         head(argv, s3)
@@ -135,6 +147,8 @@ class ReplayEvents {
         println("Final Counters:")
         printJson(counters)
         println("======================================")
+
+        return counters
     }
 
     @OptIn(ExperimentalTime::class)
