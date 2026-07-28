@@ -1,4 +1,4 @@
-package io.github.huherto.awsLambdaStream.tools.resubmit
+package io.github.huherto.awsLambdaStream.tools
 
 import aws.sdk.kotlin.services.lambda.LambdaClient
 import aws.sdk.kotlin.services.lambda.model.InvocationType
@@ -7,11 +7,9 @@ import aws.sdk.kotlin.services.s3.S3Client
 import aws.sdk.kotlin.services.s3.model.GetObjectRequest
 import aws.sdk.kotlin.services.s3.model.ListObjectsV2Request
 import aws.smithy.kotlin.runtime.content.toByteArray
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.datetime.TimeZone
@@ -573,7 +571,7 @@ class ReplayEvents {
         val output = Channel<List<UnitOfWork>>(Channel.UNLIMITED)
 
         val batched = mutableListOf<UnitOfWork>()
-        var timeoutJob: kotlinx.coroutines.Job? = null
+        var timeoutJob: Job? = null
 
         suspend fun flush() {
             if (batched.isNotEmpty()) {
@@ -585,7 +583,7 @@ class ReplayEvents {
             timeoutJob = null
         }
 
-        kotlinx.coroutines.coroutineScope {
+        coroutineScope {
             launch {
                 input.collect { item ->
                     val candidate = batched + item
