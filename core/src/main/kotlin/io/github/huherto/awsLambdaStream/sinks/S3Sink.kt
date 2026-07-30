@@ -16,7 +16,7 @@ class S3Sink(
     fun Flow<UnitOfWork>.rateLimit(): Flow<UnitOfWork> = this
 
     fun ensurePutRequestBucket(uow: UnitOfWork): UnitOfWork  {
-        if (uow.s3.putRequest != null) {
+        if (uow.s3?.putRequest != null) {
             if (uow.s3.putRequest.bucket == null) {
                 return uow.copyS3 { copy(putRequest = putRequest?.copy { bucket = bucketName }) }
             }
@@ -25,7 +25,7 @@ class S3Sink(
     }
 
     fun ensureDeleteRequestBucket(uow: UnitOfWork): UnitOfWork  {
-        if (uow.s3.deleteRequest != null) {
+        if (uow.s3?.deleteRequest != null) {
             if (uow.s3.deleteRequest.bucket == null) {
                 return uow.copyS3 { copy(deleteRequest = deleteRequest?.copy { bucket = bucketName }) }
             }
@@ -34,7 +34,7 @@ class S3Sink(
     }
 
     fun ensureCopyRequestBucket(uow: UnitOfWork): UnitOfWork  {
-        if (uow.s3.copyRequest != null) {
+        if (uow.s3?.copyRequest != null) {
             if (uow.s3.copyRequest.bucket == null) {
                 return uow.copyS3 { copy(copyRequest = copyRequest?.copy { bucket = bucketName }) }
             }
@@ -46,7 +46,7 @@ class S3Sink(
         return fromFlow.rateLimit()
             .map { uow -> ensurePutRequestBucket(uow) }
             .map { uow ->
-            val request = uow.s3.putRequest ?: return@map uow
+            val request = uow.s3?.putRequest ?: return@map uow
             val response = s3Connector.putObject(request, uow)
 
             uow.copyS3 {
@@ -59,7 +59,7 @@ class S3Sink(
         return fromFlow.rateLimit()
             .map { uow -> ensureDeleteRequestBucket(uow) }
             .map { uow ->
-                val request = uow.s3.deleteRequest ?: return@map uow
+                val request = uow.s3?.deleteRequest ?: return@map uow
                 val response = s3Connector.deleteObject(request, uow)
 
                 uow.copyS3 {
@@ -72,7 +72,7 @@ class S3Sink(
         return fromFlow.rateLimit()
             .map { uow -> ensureCopyRequestBucket(uow) }
             .map { uow ->
-            val request = uow.s3.copyRequest ?: return@map uow
+            val request = uow.s3?.copyRequest ?: return@map uow
             val response = s3Connector.copyObject(request, uow)
 
             uow.copyS3 {

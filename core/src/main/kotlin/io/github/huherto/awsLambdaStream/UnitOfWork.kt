@@ -36,7 +36,7 @@ data class UnitOfWork(
     val updateRequest: UpdateItemRequest? = null,
     val updateResponse: UpdateItemResponse? = null,
 
-    val s3: S3UnitOfWork = S3UnitOfWork(),
+    val s3: S3UnitOfWork? = null,
 )
 
 data class S3UnitOfWork(
@@ -56,6 +56,23 @@ data class S3UnitOfWork(
     val headRequest: HeadObjectRequest? = null,
     val headResponse: HeadObjectResponse? = null,
 ) {
+    fun isEmpty(): Boolean =
+        getRequest == null &&
+            getResponse == null &&
+            deleteRequest == null &&
+            deleteResponse == null &&
+            copyRequest == null &&
+            copyResponse == null &&
+            getResponseText == null &&
+            getResponseBytes == null &&
+            putRequest == null &&
+            putResponse == null &&
+            listRequest == null &&
+            listResponse == null &&
+            listResponseObject == null &&
+            headRequest == null &&
+            headResponse == null
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -64,6 +81,10 @@ data class S3UnitOfWork(
 
         if (getRequest != other.getRequest) return false
         if (getResponse != other.getResponse) return false
+        if (deleteRequest != other.deleteRequest) return false
+        if (deleteResponse != other.deleteRequest) return false
+        if (copyRequest != other.copyRequest) return false
+        if (copyResponse != other.copyResponse) return false
         if (getResponseText != other.getResponseText) return false
         if (!getResponseBytes.contentEquals(other.getResponseBytes)) return false
         if (putRequest != other.putRequest) return false
@@ -95,5 +116,8 @@ data class S3UnitOfWork(
 
 fun UnitOfWork.copyS3(
     transform: S3UnitOfWork.() -> S3UnitOfWork,
-): UnitOfWork = copy(s3 = s3.transform())
+): UnitOfWork {
+    val updated = (s3 ?: S3UnitOfWork()).transform()
+    return copy(s3 = updated)
+}
 

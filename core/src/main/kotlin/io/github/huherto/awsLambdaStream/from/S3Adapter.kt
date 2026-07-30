@@ -166,14 +166,14 @@ class S3Adapter(
                     }
                 }
                 .mapNotFaulty { uow ->
-                    val request = uow.s3.getRequest ?: return@mapNotFaulty uow
+                    val request = uow.s3?.getRequest ?: return@mapNotFaulty uow
                     val responseText = s3Connector.getObjectAsText(request, uow)
                     uow.copyS3 {
                         copy(getResponseText = responseText)
                     }
                 }
                 .mapNotFaulty { uow ->
-                    val eventAsString = uow.s3.getResponseText ?: return@mapNotFaulty uow
+                    val eventAsString = uow.s3?.getResponseText ?: return@mapNotFaulty uow
                     val event = eventCodec.decode(eventAsString)
                     uow.copy(
                         event = event,

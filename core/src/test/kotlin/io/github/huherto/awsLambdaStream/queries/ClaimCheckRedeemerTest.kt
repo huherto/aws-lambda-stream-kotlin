@@ -76,9 +76,9 @@ class ClaimCheckRedeemerTest {
         // Assert
         results.shouldHaveSize(1)
         results[0].event shouldBe claimedEvent
-        results[0].s3.getRequest?.bucket shouldBe "claim-bucket"
-        results[0].s3.getRequest?.key shouldBe "events/claimed-event.json"
-        results[0].s3.getResponseBytes?.decodeToString() shouldBe claimedEvent.encoded()
+        results[0].s3?.getRequest?.bucket shouldBe "claim-bucket"
+        results[0].s3?.getRequest?.key shouldBe "events/claimed-event.json"
+        results[0].s3?.getResponseBytes?.decodeToString() shouldBe claimedEvent.encoded()
 
         coVerify(exactly = 1) {
             s3Client.getObject(
@@ -115,10 +115,10 @@ class ClaimCheckRedeemerTest {
         // Assert
         results.shouldHaveSize(1)
         results[0].event shouldBe originalEvent
-        results[0].s3.getRequest shouldBe null
-        results[0].s3.getResponse shouldBe null
-        results[0].s3.getResponseText shouldBe null
-        results[0].s3.getResponseBytes shouldBe null
+        results[0].s3?.getRequest shouldBe null
+        results[0].s3?.getResponse shouldBe null
+        results[0].s3?.getResponseText shouldBe null
+        results[0].s3?.getResponseBytes shouldBe null
 
         coVerify(exactly = 0) {
             s3Client.getObject(any<GetObjectRequest>(), any<suspend (GetObjectResponse) -> ByteArray>())

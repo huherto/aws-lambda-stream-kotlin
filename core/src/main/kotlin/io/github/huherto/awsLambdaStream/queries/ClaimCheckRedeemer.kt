@@ -42,7 +42,7 @@ class ClaimCheckRedeemer(
             }
                 .let { s3Query.getObjectAsByteArray(faultManager, it) }
                 .mapNotFaulty { uow ->
-                    val body = uow.s3.getResponseBytes
+                    val body = uow.s3?.getResponseBytes
 
                     if (body == null) {
                         clearClaimCheck(uow)
@@ -55,7 +55,7 @@ class ClaimCheckRedeemer(
     }
 
     private fun clearClaimCheck(uow: UnitOfWork): UnitOfWork {
-        if (uow.s3.getRequest == null) {
+        if (uow.s3?.getRequest == null) {
             // when no claim-check request was created, remove transient S3 response state too.
             return uow.copyS3 {
                 copy(

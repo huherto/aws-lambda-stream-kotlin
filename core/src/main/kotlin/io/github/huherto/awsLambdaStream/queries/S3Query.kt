@@ -10,7 +10,7 @@ class S3Query(val s3Connector: S3Connector) {
 
     fun getObjectAsByteArray(fm: FaultManager, source: Flow<UnitOfWork>) : Flow<UnitOfWork> {
         return fm.mapNotFaultyFrom(source) { uow ->
-            val request = uow.s3.getRequest ?: return@mapNotFaultyFrom uow
+            val request = uow.s3?.getRequest ?: return@mapNotFaultyFrom uow
             val response = s3Connector.getObjectAsByteArray(request, uow)
 
             uow.copyS3 {
@@ -21,7 +21,7 @@ class S3Query(val s3Connector: S3Connector) {
 
     fun getObject(fm: FaultManager, source:  Flow<UnitOfWork>): Flow<UnitOfWork> {
         return fm.mapNotFaultyFrom(source) { uow ->
-            val request = uow.s3.getRequest ?: return@mapNotFaultyFrom uow
+            val request = uow.s3?.getRequest ?: return@mapNotFaultyFrom uow
             val response = s3Connector.getObject(request, uow)
 
             uow.copyS3 {

@@ -60,7 +60,7 @@ fun Flow<UnitOfWork>.getObjectFromS3(
     s3Connector: S3Connector,
 ): Flow<UnitOfWork> =
     map { uow ->
-        val request = uow.s3.getRequest ?: return@map uow
+        val request = uow.s3?.getRequest ?: return@map uow
         val response = s3Connector.getObject(request, uow)
 
         uow.copyS3 {
@@ -76,7 +76,7 @@ fun Flow<UnitOfWork>.getObjectFromS3AsStream(
 ): Flow<UnitOfWork> =
     flatMapConcat { uow ->
         flow {
-            val request = uow.s3.getRequest
+            val request = uow.s3?.getRequest
 
             if (request == null) {
                 emit(uow)
@@ -102,7 +102,7 @@ fun Flow<UnitOfWork>.getObjectAsByteArray(
     s3Connector: S3Connector,
 ): Flow<UnitOfWork> =
     map { uow ->
-        val request = uow.s3.getRequest ?: return@map uow
+        val request = uow.s3?.getRequest ?: return@map uow
         val response = s3Connector.getObjectAsByteArray(request, uow)
 
         uow.copyS3 {
@@ -116,7 +116,7 @@ fun Flow<UnitOfWork>.splitS3Object(
 ): Flow<UnitOfWork> =
     flatMapConcat { uow ->
         flow {
-            val body = uow.s3.getResponseBytes
+            val body = uow.s3?.getResponseBytes
 
             if (body == null) {
                 emit(uow)
@@ -141,7 +141,7 @@ fun Flow<UnitOfWork>.listObjectsFromS3(
     s3Connector: S3Connector,
 ): Flow<UnitOfWork> =
     map { uow ->
-        val request = uow.s3.listRequest ?: return@map uow
+        val request = uow.s3?.listRequest ?: return@map uow
         val response = s3Connector.listObjects(request, uow)
 
         uow.copyS3 {
@@ -156,7 +156,7 @@ fun Flow<UnitOfWork>.pageObjectsFromS3(
 ): Flow<UnitOfWork> =
     flatMapConcat { uow ->
         flow {
-            val baseRequest = uow.s3.listRequest
+            val baseRequest = uow.s3?.listRequest
 
             if (baseRequest == null) {
                 emit(uow)
@@ -208,7 +208,7 @@ fun Flow<UnitOfWork>.headS3Object(
     s3Connector: S3Connector,
 ): Flow<UnitOfWork> =
     map { uow ->
-        val request = uow.s3.headRequest ?: return@map uow
+        val request = uow.s3?.headRequest ?: return@map uow
         val response = s3Connector.headObject(request, uow)
 
         uow.copyS3 {

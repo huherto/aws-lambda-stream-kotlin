@@ -156,9 +156,9 @@ class ClaimCheckStoreTest {
         claimCheckEvent.eventType() shouldBe "MY_EVENT_A"
         claimCheckEvent.s3.bucket shouldBe "claim-check-bucket"
         claimCheckEvent.s3.key shouldBe "us-east-1/claimchecks/2024/03/05/06/event-123"
-        storedUow.s3.putRequest?.bucket shouldBe "claim-check-bucket"
-        storedUow.s3.putRequest?.key shouldBe "us-east-1/claimchecks/2024/03/05/06/event-123"
-        storedUow.s3.putResponse shouldBe response
+        storedUow.s3?.putRequest?.bucket shouldBe "claim-check-bucket"
+        storedUow.s3?.putRequest?.key shouldBe "us-east-1/claimchecks/2024/03/05/06/event-123"
+        storedUow.s3?.putResponse shouldBe response
 
         result[1] shouldBe eventlessUow
         s3ClientFactory.requestedPipelineIds shouldBe listOf("unknown")
@@ -208,14 +208,14 @@ class ClaimCheckStoreTest {
         val firstItem = result[0].batch!![0]
         val firstClaimCheckEvent = firstItem.event as ClaimCheckStore.ClaimCheckEvent
         firstClaimCheckEvent.s3.key shouldBe "us-east-1/claimchecks/2024/03/05/06/event-1"
-        firstItem.s3.putRequest?.key shouldBe "us-east-1/claimchecks/2024/03/05/06/event-1"
-        firstItem.s3.putResponse shouldBe response1
+        firstItem.s3?.putRequest?.key shouldBe "us-east-1/claimchecks/2024/03/05/06/event-1"
+        firstItem.s3?.putResponse shouldBe response1
 
         val secondItem = result[0].batch!![1]
         val secondClaimCheckEvent = secondItem.event as ClaimCheckStore.ClaimCheckEvent
         secondClaimCheckEvent.s3.key shouldBe "us-east-1/claimchecks/2024/03/05/06/event-2"
-        secondItem.s3.putRequest?.key shouldBe "us-east-1/claimchecks/2024/03/05/06/event-2"
-        secondItem.s3.putResponse shouldBe response2
+        secondItem.s3?.putRequest?.key shouldBe "us-east-1/claimchecks/2024/03/05/06/event-2"
+        secondItem.s3?.putResponse shouldBe response2
 
         s3ClientFactory.requestedPipelineIds shouldBe listOf("unknown", "unknown")
         coVerify(exactly = 1) {
