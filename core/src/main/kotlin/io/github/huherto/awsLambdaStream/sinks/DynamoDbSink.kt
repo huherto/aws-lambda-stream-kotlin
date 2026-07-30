@@ -5,12 +5,8 @@ import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.DefaultDynamoDbClientFactory
 import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
+import io.github.huherto.awsLambdaStream.utils.mapParallel
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.buffer
-import kotlinx.coroutines.flow.channelFlow
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
 
 /**
  * Sink responsible for applying DynamoDB write operations produced by a stream of [UnitOfWork] items.
@@ -76,31 +72,3 @@ class DynamoDbSink(
             }
 }
 
-
-/**
- * Applies [transform] to values from this flow using bounded parallelism.
- *
- * At most [parallelism] transformations are active at the same time. Results are emitted as soon as
- * individual transformations complete, so output ordering is not guaranteed to match input ordering.
- *
- * @param parallelism maximum number of concurrently running transformations.
- * @param transform suspending transformation to apply to each value.
- * @return a flow containing transformed values.
- */
-internal fun <T, R> Flow<T>.mapParallel(
-    parallelism: Int,
-    transform: suspend (T) -> R?,
-): Flow<R> = channelFlow {
-    val semaphore = Semaphore(parallelism)
-
-    collect { value ->
-        launch {
-            semaphore.withPermit {
-                val element = transform(value)
-                if (element != null) {
-                    send(element)
-                }
-            }
-        }
-    }
-}.buffer(parallelism)

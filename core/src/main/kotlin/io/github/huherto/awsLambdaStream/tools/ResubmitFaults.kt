@@ -7,12 +7,11 @@ import aws.sdk.kotlin.services.s3.S3Client
 import aws.sdk.kotlin.services.s3.model.GetObjectRequest
 import aws.sdk.kotlin.services.s3.model.ListObjectsV2Request
 import aws.smithy.kotlin.runtime.content.toByteArray
+import io.github.huherto.awsLambdaStream.utils.mapParallel
+import io.github.huherto.awsLambdaStream.utils.rateLimit
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.number
 import kotlinx.datetime.toLocalDateTime
@@ -751,41 +750,6 @@ class ResubmitFaults {
                 uow.copy(getResponseLine = line)
             }
             .toList()
-    }
-
-    internal fun <T, R> Flow<T>.mapParallel(
-        parallelism: Int,
-        transform: suspend (T) -> R,
-    ): Flow<R> = channelFlow {
-        val safeParallelism = parallelism.coerceAtLeast(1)
-        val semaphore = Semaphore(safeParallelism)
-
-        collect { value ->
-            launch {
-                semaphore.withPermit {
-                    send(transform(value))
-                }
-            }
-        }
-    }.buffer(parallelism.coerceAtLeast(1))
-
-    internal fun <T> Flow<T>.rateLimit(
-        rate: Int,
-        windowMillis: Long,
-    ): Flow<T> = flow {
-        val safeRate = rate.coerceAtLeast(1)
-        val safeWindowMillis = windowMillis.coerceAtLeast(0)
-        var emittedInWindow = 0
-
-        collect { value ->
-            if (emittedInWindow == safeRate) {
-                delay(safeWindowMillis.milliseconds)
-                emittedInWindow = 0
-            }
-
-            emit(value)
-            emittedInWindow += 1
-        }
     }
 
     private fun incrementEvents() {
