@@ -10,6 +10,7 @@ import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.utils.nullableBool
 import io.github.huherto.awsLambdaStream.utils.nullableN
 import io.github.huherto.awsLambdaStream.utils.nullableS
+import io.github.huherto.awsLambdaStream.utils.omit
 import kotlinx.coroutines.channels.Channel
 import mu.KotlinLogging
 
@@ -22,7 +23,8 @@ abstract class BaseEventsMicrostore(
     private val logger = KotlinLogging.logger {  }
 
     private fun omitRaw(event: Event?): String {
-        throw RuntimeException("Not implemented yet")
+        if (event == null) return ""
+        return omit(event, "raw")
     }
 
     internal fun toQueryRequest(uow: UnitOfWork) : UnitOfWork {

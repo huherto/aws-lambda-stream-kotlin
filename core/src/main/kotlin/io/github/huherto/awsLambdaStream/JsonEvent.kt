@@ -29,7 +29,6 @@ fun JsonObject.stringMapOrNull(name: String): Map<String, String>? {
 }
 
 class JsonEvent(jsonString: String) : Event {
-
     private val jsonObject = Json.parseToJsonElement(jsonString).jsonObject
     override var id: String?
         get() = jsonObject.stringOrNull("id")
@@ -74,6 +73,15 @@ class JsonEvent(jsonString: String) : Event {
 
     override fun toString(): String {
         return jsonObject.toString()
+    }
+
+    fun encodeWithOmit(vararg keys: String): String {
+        val map = jsonObject.toMutableMap()
+        keys.forEach { key ->
+            map.remove(key)
+        }
+        val filteredJsonObject = JsonObject(map)
+        return Json.encodeToString(filteredJsonObject)
     }
 }
 
