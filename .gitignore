@@ -56,3 +56,4 @@ volume/
 .volume/
 
 .awslocal_logs/
+/framework_reference/
