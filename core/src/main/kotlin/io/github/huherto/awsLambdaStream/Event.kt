@@ -2,6 +2,8 @@ package io.github.huherto.awsLambdaStream
 
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
+import kotlinx.serialization.json.Json
 
 interface Event {
     var id: String?
@@ -36,9 +38,11 @@ abstract class BaseEvent : Event {
     override var tags: Map<String, String>? = mutableMapOf()
 
     @Contextual
+    @Transient
     override var raw: Any? = null
 
     @Contextual
+    @Transient
     override var eem: Any? = null
     override var triggers: List<EventReference>? = null
 }
@@ -46,8 +50,8 @@ abstract class BaseEvent : Event {
 @Serializable
 class FaultException : RuntimeException {
 
-    @kotlinx.serialization.Transient
-    @com.fasterxml.jackson.annotation.JsonIgnore
+    //@Serializable(with = UnitOfWorkAsSerializableUnitOfWorkSerializer::class)
+    @Transient
     var uow: UnitOfWork? = null
 
     constructor(uow: UnitOfWork, cause: Throwable?) : super(cause) {
@@ -72,7 +76,8 @@ class FaultEvent() : BaseEvent() {
 
     var faultException: FaultException? = null
 
-    @Contextual
+    //@Serializable(with = UnitOfWorkAsSerializableUnitOfWorkSerializer::class)
+    @Transient
     var uow: UnitOfWork? = null
 
     override fun eventType(): String {
@@ -84,6 +89,6 @@ class FaultEvent() : BaseEvent() {
     }
 
     override fun encoded(): String {
-        return this.asJson()
+        return Json.encodeToString(this)
     }
 }

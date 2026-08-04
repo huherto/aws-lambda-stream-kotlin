@@ -19,6 +19,7 @@ import io.mockk.spyk
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Test
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue as StreamAV
 
@@ -35,7 +36,7 @@ class EvaluatePipelineTest {
         }
 
         override fun encode(event: Event): String {
-            return event.asJson()
+            return Json.encodeToString(event)
         }
     }
 

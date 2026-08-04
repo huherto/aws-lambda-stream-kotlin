@@ -14,6 +14,7 @@ import io.github.huherto.awsLambdaStream.queries.DynamoDbQuery
 import io.github.huherto.awsLambdaStream.sinks.DynamoDbSink
 import io.github.huherto.awsLambdaStream.utils.CompactRule
 import io.github.huherto.awsLambdaStream.utils.compact
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.flatMapConcat
@@ -173,6 +174,7 @@ class UpdatePipeline(
      * 12. Update DynamoDB.
      * 13. Log end.
      */
+    @OptIn(ExperimentalCoroutinesApi::class)
     override fun connect(fm: FaultManager, fromFlow: Flow<UnitOfWork>): Flow<UnitOfWork> {
         logger.info { "UpdatePipeline.connect: id=$id" }
 

@@ -5,11 +5,14 @@ import aws.sdk.kotlin.services.dynamodb.model.UpdateItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.UpdateItemResponse
 import aws.sdk.kotlin.services.s3.model.PutObjectRequest
 import aws.smithy.kotlin.runtime.content.ByteStream
-import io.github.huherto.awsLambdaStream.*
+import io.github.huherto.awsLambdaStream.JsonEvent
+import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.from.RecordPair
+import io.github.huherto.awsLambdaStream.longOrNull
 import io.github.huherto.awsLambdaStream.sinks.DynamoDbUpdateValue
 import io.github.huherto.awsLambdaStream.sinks.timestampCondition
 import io.github.huherto.awsLambdaStream.sinks.updateExpression
+import io.github.huherto.awsLambdaStream.stringOrNull
 import io.github.huherto.awsLambdaStream.utils.ttl
 import kotlinx.serialization.json.JsonObject
 import mu.KotlinLogging
@@ -163,9 +166,10 @@ fun toS3PutRequest(uow: UnitOfWork): PutObjectRequest? {
     val newRaw = raw.new ?: return null
     val pk = newRaw.getS("pk") ?: return null
     val sk = newRaw.getS("sk") ?: return null
+    val eventAsString = uow.event?.encoded() ?: return null
     return PutObjectRequest {
         key = "${pk}/${sk}"
-        body = ByteStream.fromString(uow.event.asJson())
+        body = ByteStream.fromString(eventAsString)
     }
 }
 

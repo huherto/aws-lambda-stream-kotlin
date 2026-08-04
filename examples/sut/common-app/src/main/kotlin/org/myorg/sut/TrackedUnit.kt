@@ -16,12 +16,18 @@ class TrackedUnit {
     var dimensions: PackageDimensions? = null
 
     @Serializable
-    class Address(val street : String, val city : String, val state : String, val zip : String)
+    class Address(val street : String, val city : String, val state : String, val zip : String) {
+        fun toJson() : String {
+            return Json.encodeToString(this)
+        }
+    }
 
     @Serializable
     class PackageDimensions(val length : Double, val width : Double, val height : Double)
 
-    override fun toString() : String {
-        return Json.Default.encodeToString(this)
+    fun toJson() : String {
+        return Json.encodeToString(this)
     }
+
+    override fun toString() : String = toJson()
 }

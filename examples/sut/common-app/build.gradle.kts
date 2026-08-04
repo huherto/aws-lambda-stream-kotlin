@@ -23,7 +23,6 @@ dependencies {
     implementation(libs.aws.sdk.eventbridge)
     implementation(libs.aws.sdk.kinesis)
     implementation(libs.aws.sdk.lambda)
-    implementation(libs.jackson.kotlin)
     implementation(libs.kotlin.logging)
     implementation(libs.kotlin.stdlib)
     implementation(libs.kotlinx.coroutines)

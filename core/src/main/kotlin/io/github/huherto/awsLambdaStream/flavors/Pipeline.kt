@@ -100,7 +100,7 @@ abstract class Pipeline(val id : String, val envConfig: EnvironmentConfig) {
      * Returns a concise string representation containing the pipeline id.
      */
     override fun toString(): String {
-        return "Pipeline(id=$id)"
+        return "{\"id\":\"$id\"}"
     }
 
 }

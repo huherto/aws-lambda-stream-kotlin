@@ -4,7 +4,6 @@ import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
 import aws.sdk.kotlin.services.dynamodb.model.GetItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.UpdateItemRequest
-import io.github.huherto.awsLambdaStream.asJson
 import io.github.huherto.awsLambdaStream.sinks.DynamoDbUpdateValue.DbSet
 import io.github.huherto.awsLambdaStream.sinks.updateExpression
 import io.github.huherto.awsLambdaStream.utils.nullableN
@@ -51,8 +50,8 @@ class ShipmentDao(
             val map = mutableMapOf(
                 "senderFullName" to DbSet(nullableS(entity.senderFullName)),
                 "trackingNumber" to DbSet(nullableS(entity.trackingNumber)),
-                "returnAddress" to DbSet(nullableS(entity.returnAddress?.asJson())),
-                "destinationAddress" to DbSet(nullableS(entity.destinationAddress?.asJson())),
+                "returnAddress" to DbSet(nullableS(entity.returnAddress?.toJson())),
+                "destinationAddress" to DbSet(nullableS(entity.destinationAddress?.toJson())),
                 "weight" to DbSet(nullableN(entity.weight)),
             )
             entity.dimensions?.let {
