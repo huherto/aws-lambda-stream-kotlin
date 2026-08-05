@@ -56,6 +56,7 @@ class CollectionPipelineTest {
         override var timestamp: Long? = timestamp
         override var partitionKey: String? = partitionKey
         override fun eventType() = "TestEvent"
+        @Deprecated("Legacy")
         override fun encoded() = """{"id":"$id"}"""
     }
 

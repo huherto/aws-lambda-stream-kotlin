@@ -6,6 +6,7 @@ import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
+import io.mockk.every
 import io.mockk.spyk
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
@@ -13,7 +14,9 @@ import org.junit.jupiter.api.Test
 
 class SqsAdapterTest {
 
-    private val envConfig = spyk(EnvironmentConfig())
+    private val envConfig = spyk(EnvironmentConfig()).apply {
+        every { serializationStrategy() } returns "jackson"
+    }
 
     private fun faultManager(): FaultManager {
         return FaultManager(
@@ -159,7 +162,7 @@ class SqsAdapterTest {
         results[0].event shouldBe validEvent
 
         faultManager.getFaults().shouldHaveSize(1)
-        faultManager.getFaults()[0].uow?.record shouldBe invalidRecord
+        faultManager.getFaults()[0].runtimeUow?.record shouldBe invalidRecord
     }
 
     @Test
@@ -257,7 +260,7 @@ class SqsAdapterTest {
         results[1].event?.id shouldBe "message-3"
 
         faultManager.getFaults().shouldHaveSize(1)
-        faultManager.getFaults()[0].uow?.record shouldBe faultyRecord
+        faultManager.getFaults()[0].runtimeUow?.record shouldBe faultyRecord
         faultManager.getFaults()[0].err?.message shouldBe "java.lang.IllegalStateException: decode failed"
     }
 

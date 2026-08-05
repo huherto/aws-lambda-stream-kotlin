@@ -131,17 +131,20 @@ class MaterializePipelineTest {
         // assert
         result.map { it.key } shouldContainExactly listOf("pass")
         faultManager.getFaults() shouldHaveSize 1
-        faultManager.getFaults().single().uow shouldBe failing
+        faultManager.getFaults().single().runtimeUow shouldBe failing
 
         coVerify(exactly = 1) { connector.update(updateRequest, any()) }
     }
 
-    private fun faultManager(envConfig: EnvironmentConfig): FaultManager =
-        FaultManager(
-            envConfig = envConfig,
+    private fun faultManager(envConfig: EnvironmentConfig): FaultManager {
+        val spy = spyk(envConfig)
+        every { spy.serializationStrategy() } returns "jackson"
+        return FaultManager(
+            envConfig = spy,
             eventPublisher = mockk<EventPublisher>(relaxed = true),
             skipErrorLogging = true,
         )
+    }
 
     private fun event(type: String): Event {
         val event = spyk<MyEventA>()

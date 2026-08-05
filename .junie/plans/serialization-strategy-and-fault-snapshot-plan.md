@@ -1,7 +1,3 @@
----
-sessionId: session-260805-143655-1ejw
----
-
 # Requirements
 
 ### Overview & Goals
@@ -26,7 +22,6 @@ The key outcome is moving away from serializing live runtime objects (like AWS S
 - Kinesis and DynamoDB records must be stored in their original Lambda trigger shape.
 - Sensitive data redaction must be supported for snapshots.
 - The resubmit tool must be able to recreate Lambda invocation payloads from the new snapshot format.
-
 
 # Technical Design
 
@@ -105,7 +100,6 @@ graph TD
 - `core/src/main/kotlin/.../faults/`: `FaultEvent.kt`, `UnitOfWorkSnapshot.kt`, `RecordSnapshotter.kt`, etc.
 - `core/src/test/kotlin/.../`: Corresponding unit tests and golden JSON fixtures.
 
-
 # Testing
 
 ### Validation Approach
@@ -123,10 +117,9 @@ We will add "Golden JSON" files to the test resources to ensure the persisted co
 - `dynamodb-fault-event.json`
 - `batched-fault-event.json`
 
-
 # Delivery Steps
 
-###   Step 1: Foundation: Serialization Strategy and Resolver
+### ✓ Step 1: Foundation: Serialization Strategy and Resolver
 Establish the new serialization framework while maintaining a path away from legacy methods.
 
 - Create `SerializationStrategy` interface and `SerializationConfig`.
@@ -134,7 +127,7 @@ Establish the new serialization framework while maintaining a path away from leg
 - Add `JacksonSerializationStrategy` and `KotlinxSerializationStrategy`.
 - Deprecate `Event.encoded()` to signal the move to the new architecture.
 
-###   Step 2: Snapshot Architecture: DTOs and Snapshotters
+### ✓ Step 2: Snapshot Architecture: DTOs and Snapshotters
 Define the data contracts for snapshots and implement the logic to capture them from runtime objects.
 
 - Define typed DTOs for Kinesis and DynamoDB replay records.
@@ -143,7 +136,7 @@ Define the data contracts for snapshots and implement the logic to capture them 
 - Implement `DefaultUnitOfWorkSnapshotter` to convert runtime `UnitOfWork` to `UnitOfWorkSnapshot`.
 - Add `FaultSnapshotOptions` and `SnapshotRedactor`.
 
-###   Step 3: Fault Management Refactor: DTOs and Publishing
+### ✓ Step 3: Fault Management Refactor: DTOs and Publishing
 Transition FaultEvent to a diagnostic-only DTO and update the framework to use it.
 
 - Refactor `FaultEvent` to remove `BaseEvent` inheritance and use `UnitOfWorkSnapshot`.
@@ -151,7 +144,7 @@ Transition FaultEvent to a diagnostic-only DTO and update the framework to use i
 - Update `FaultManager` to use `FaultEventFactory` for creating faults.
 - Refactor `EventBridgePublisher` to use `SerializationStrategy` for framework DTOs.
 
-###   Step 4: Tools Integration and Final Cleanup
+### ✓ Step 4: Tools Integration and Final Cleanup
 Ensure the resubmit tool works with the new format and finalize the domain event serialization.
 
 - Update `ResubmitFaults` to extract replay payloads from the new snapshot structure (`uow.record.payload`).

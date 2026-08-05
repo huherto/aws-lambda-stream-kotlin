@@ -180,11 +180,10 @@ class FaultManagerTest {
         // Assert
         faultManager.getFaults().shouldBeEmpty()
 
-        val emittedList = eventPublisher.events()
+        val emittedList = eventPublisher.faults()
         emittedList shouldHaveSize 2
-        (emittedList[0] is FaultEvent) shouldBe true
-        (emittedList[0] as FaultEvent).err?.message shouldBe "java.lang.RuntimeException: error 1"
-        (emittedList[1] as FaultEvent).err?.message shouldBe "java.lang.RuntimeException: error 2"
+        emittedList[0]?.err?.message shouldBe "java.lang.RuntimeException: error 1"
+        emittedList[1]?.err?.message shouldBe "java.lang.RuntimeException: error 2"
     }
 
     @Test

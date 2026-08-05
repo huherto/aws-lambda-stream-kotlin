@@ -60,6 +60,7 @@ class CdcPipelineTest {
 
         override fun eventType(): String = type
 
+        @Deprecated("Legacy")
         override fun encoded(): String = """{"id":"$id","type":"$type"}"""
     }
 

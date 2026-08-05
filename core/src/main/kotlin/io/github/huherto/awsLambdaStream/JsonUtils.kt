@@ -109,6 +109,7 @@ private val jacksonMapper = jacksonObjectMapper().apply {
     registerModule(module)
 }
 
+@Deprecated("Use SerializationStrategy or EventCodec instead.")
 fun Any?.asJson() : String {
     if (this == null) return "null"
     return try {

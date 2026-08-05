@@ -51,7 +51,10 @@ class ResubmitFaultsTest {
                 uowJson = """
                     {
                       "record": {
-                        "eventID": "single"
+                        "kind": "kinesis",
+                        "payload": {
+                          "eventID": "single"
+                        }
                       }
                     }
                 """.trimIndent()
@@ -64,12 +67,18 @@ class ResubmitFaultsTest {
                       "batch": [
                         {
                           "record": {
-                            "eventID": "batch-1"
+                            "kind": "kinesis",
+                            "payload": {
+                              "eventID": "batch-1"
+                            }
                           }
                         },
                         {
                           "record": {
-                            "eventID": "batch-2"
+                            "kind": "kinesis",
+                            "payload": {
+                              "eventID": "batch-2"
+                            }
                           }
                         }
                       ]
@@ -124,11 +133,14 @@ class ResubmitFaultsTest {
                 uowJson = """
                     {
                       "record": {
-                        "eventID": "single",
-                        "dynamodb": {
-                          "Keys": {
-                            "id": {
-                              "S": "1"
+                        "kind": "dynamodb",
+                        "payload": {
+                          "eventID": "single",
+                          "dynamodb": {
+                            "Keys": {
+                              "id": {
+                                "S": "1"
+                              }
                             }
                           }
                         }
@@ -174,12 +186,18 @@ class ResubmitFaultsTest {
                       "batch": [
                         {
                           "record": {
-                            "eventID": "batch-1"
+                            "kind": "kinesis",
+                            "payload": {
+                              "eventID": "batch-1"
+                            }
                           }
                         },
                         {
                           "record": {
-                            "eventID": "batch-2"
+                            "kind": "kinesis",
+                            "payload": {
+                              "eventID": "batch-2"
+                            }
                           }
                         }
                       ]
@@ -218,7 +236,10 @@ class ResubmitFaultsTest {
                 uowJson = """
                     {
                       "record": {
-                        "eventID": "single"
+                        "kind": "kinesis",
+                        "payload": {
+                          "eventID": "single"
+                        }
                       }
                     }
                 """.trimIndent()
@@ -250,8 +271,11 @@ class ResubmitFaultsTest {
                 uowJson = """
                     {
                       "record": {
-                        "eventID": "large",
-                        "value": "$largeValue"
+                        "kind": "kinesis",
+                        "payload": {
+                          "eventID": "large",
+                          "value": "$largeValue"
+                        }
                       }
                     }
                 """.trimIndent()
@@ -289,7 +313,10 @@ class ResubmitFaultsTest {
                       "tags": {},
                       "uow": {
                         "record": {
-                          "eventID": "single"
+                          "kind": "kinesis",
+                          "payload": {
+                            "eventID": "single"
+                          }
                         }
                       }
                     }
@@ -498,7 +525,10 @@ class ResubmitFaultsTest {
         uowJson: String = """
             {
               "record": {
-                "eventID": "single"
+                "kind": "kinesis",
+                "payload": {
+                  "eventID": "single"
+                }
               }
             }
         """.trimIndent(),

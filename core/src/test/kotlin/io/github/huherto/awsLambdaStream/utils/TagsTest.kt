@@ -1,9 +1,9 @@
 package io.github.huherto.awsLambdaStream.utils
 
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
-import io.github.huherto.awsLambdaStream.FaultEvent
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.faults.FaultEvent
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import io.kotest.matchers.shouldBe
 import io.mockk.every
@@ -67,7 +67,7 @@ class TagsTest {
         }
         val uow = UnitOfWork(
             pipeline = pipeline,
-            event = event,
+            fault = event,
         )
 
         every { envConfig.accountName() } returns "test-account"

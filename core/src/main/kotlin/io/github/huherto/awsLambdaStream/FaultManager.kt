@@ -2,11 +2,11 @@ package io.github.huherto.awsLambdaStream
 
 import aws.smithy.kotlin.runtime.SdkBaseException
 import com.amazonaws.services.lambda.runtime.events.StreamsEventResponse.BatchItemFailure
-import com.fasterxml.uuid.Generators
+import io.github.huherto.awsLambdaStream.faults.FaultEvent
+import io.github.huherto.awsLambdaStream.faults.FaultEventFactory
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import io.github.huherto.awsLambdaStream.sinks.EventPublisher
 import kotlinx.coroutines.flow.*
-import java.util.*
 import java.util.concurrent.ConcurrentLinkedQueue
 
 /**
@@ -33,7 +33,8 @@ class FaultManager(
     private val skipErrorLogging: Boolean = false,
     private val isStreamRetryEnabled: Boolean = envConfig.streamRetryEnabled(),
     private val isItemLevelRetryEnabled: Boolean = envConfig.itemLevelRetryEnabled(),
-    private val awsLambdaFunctionName: String = envConfig.awsLambdaFunctionName()?:"undefined"
+    private val awsLambdaFunctionName: String = envConfig.awsLambdaFunctionName()?:"undefined",
+    private val faultEventFactory: FaultEventFactory = FaultEventFactory(awsLambdaFunctionName = awsLambdaFunctionName)
 ) {
 
     private val logger = mu.KotlinLogging.logger { }
@@ -41,8 +42,6 @@ class FaultManager(
     private val theFaults = ConcurrentLinkedQueue<FaultEvent>()
 
     private val retryableItems = ConcurrentLinkedQueue<UnitOfWork>()
-
-    private val uuidV1Generator = Generators.timeBasedGenerator()
 
     /**
      * Internal placeholder pipeline used when publishing fault events.
@@ -173,20 +172,7 @@ class FaultManager(
             throw ex
         }
 
-        val functionName = awsLambdaFunctionName
-        val pipelineId = ex.uow?.pipeline?.id ?: "undefined"
-        val failureEvent = FaultEvent().apply {
-            id = uuidV1Generator.generate().toString() // UUID v1. Time-based
-            partitionKey = UUID.randomUUID().toString() // UUID v4. Uniform distribution.
-            timestamp = System.currentTimeMillis()
-            tags = mutableMapOf(
-                "functionname" to functionName,
-                "pipeline" to pipelineId
-            )
-            err = FaultEvent.Error(ex.cause?.javaClass?.simpleName, ex.message)
-            uow = ex.uow
-            faultException = ex
-        }
+        val failureEvent = faultEventFactory.createFaultEvent(ex.uow, ex)
         theFaults.add(failureEvent)
     }
 
@@ -213,7 +199,7 @@ class FaultManager(
         val flow = flow {
             while (true) {
                 val fault = theFaults.poll() ?: break
-                val uow = UnitOfWork(pipeline = faultManagerPipeline, event = fault)
+                val uow = UnitOfWork(pipeline = faultManagerPipeline, fault = fault)
                 emit(uow)
             }
         }

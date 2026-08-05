@@ -142,4 +142,9 @@ class EnvironmentConfig {
         return System.getenv("BUCKET_NAME")
     }
 
+    fun serializationStrategy() : String? {
+        return System.getenv("AWS_LAMBDA_STREAM_SERIALIZATION")
+            ?: System.getenv("SERIALIZATION_STRATEGY")
+    }
+
 }

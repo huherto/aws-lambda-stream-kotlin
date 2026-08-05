@@ -9,7 +9,6 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import io.github.huherto.awsLambdaStream.asJson
 import kotlinx.coroutines.runBlocking
 import org.myorg.sut.TrackedUnit
 
@@ -35,7 +34,7 @@ class RestApiFacade {
             .withHttpMethod("POST")
             .withResource("/shipment")
             .withPath("/shipment")
-            .withBody(shipment.asJson())
+            .withBody(objectMapper.writeValueAsString(shipment))
             .withIsBase64Encoded(false)
 
         val response = lambdaClient.invoke(InvokeRequest.Companion {

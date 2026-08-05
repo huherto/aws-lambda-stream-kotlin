@@ -18,6 +18,9 @@ interface Event {
 
     fun eventType(): String
 
+    @Deprecated(
+        message = "Use EventCodec or the configured framework publisher instead.",
+    )
     fun encoded()  : String
 }
 
@@ -50,7 +53,7 @@ class FaultException : RuntimeException {
     @com.fasterxml.jackson.annotation.JsonIgnore
     var uow: UnitOfWork? = null
 
-    constructor(uow: UnitOfWork, cause: Throwable?) : super(cause) {
+    constructor(uow: UnitOfWork?, cause: Throwable?) : super(cause) {
         this.uow = uow
     }
 
@@ -61,29 +64,3 @@ class FaultException : RuntimeException {
 }
 
 const val FAULT_EVENT_TYPE : String = "fault"
-
-@Serializable
-class FaultEvent() : BaseEvent() {
-
-    @Serializable
-    data class Error(val name: String?, val message: String?)
-
-    var err: Error? = null
-
-    var faultException: FaultException? = null
-
-    @Contextual
-    var uow: UnitOfWork? = null
-
-    override fun eventType(): String {
-        return FAULT_EVENT_TYPE
-    }
-
-    override fun toString(): String {
-        return  err?.message ?: "Unknown Error"
-    }
-
-    override fun encoded(): String {
-        return this.asJson()
-    }
-}

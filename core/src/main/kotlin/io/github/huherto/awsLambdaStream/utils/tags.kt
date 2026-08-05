@@ -8,11 +8,18 @@ fun adornStandardTags(
     envConfig: EnvironmentConfig,
     uow: UnitOfWork,
 ): UnitOfWork {
-    val event = uow.event ?: return uow
+    val event = uow.event
+    val fault = uow.fault
 
-    event.tags = envTags(envConfig, uow.pipeline?.id) +
-        skipTag(envConfig).mapValues { it.value.toString() } +
-        event.tags.orEmpty()
+    if (event != null) {
+        event.tags = envTags(envConfig, uow.pipeline?.id) +
+            skipTag(envConfig).mapValues { it.value.toString() } +
+            event.tags.orEmpty()
+    } else if (fault != null) {
+        fault.tags = envTags(envConfig, uow.pipeline?.id) +
+            skipTag(envConfig).mapValues { it.value.toString() } +
+            fault.tags.orEmpty()
+    }
 
     return uow
 }

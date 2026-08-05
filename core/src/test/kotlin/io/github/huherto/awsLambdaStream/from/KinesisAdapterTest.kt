@@ -20,7 +20,9 @@ import java.nio.charset.StandardCharsets
 
 class KinesisAdapterTest {
 
-    private val envConfig = spyk(EnvironmentConfig())
+    private val envConfig = spyk(EnvironmentConfig()).apply {
+        every { serializationStrategy() } returns "jackson"
+    }
     private val faultManager = FaultManager(
         envConfig = envConfig,
         eventPublisher = EventPublisherInMemory(),
@@ -114,7 +116,7 @@ class KinesisAdapterTest {
         results[0].sequenceNumber shouldBe "sequence-valid"
 
         faultManager.getFaults().shouldHaveSize(1)
-        faultManager.getFaults()[0].uow?.record shouldBe invalidRecord
+        faultManager.getFaults()[0].runtimeUow?.record shouldBe invalidRecord
     }
 
     @Test

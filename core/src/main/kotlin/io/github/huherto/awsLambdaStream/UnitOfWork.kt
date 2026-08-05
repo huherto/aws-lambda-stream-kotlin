@@ -12,6 +12,7 @@ data class UnitOfWork(
     val pipeline: Pipeline? = null,
     val record: Any? = null,
     val event: Event? = null,
+    val fault: io.github.huherto.awsLambdaStream.faults.FaultEvent? = null,
     val key: String? = null,
     val sequenceNumber: String? = null,
     val shardId: String? = null,

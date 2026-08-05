@@ -48,6 +48,7 @@ class CorrelatePipelineTest {
         val encodedStr: String = "{}"
     ) : BaseEvent() {
         override fun eventType() = "TestEvent"
+        @Deprecated("Legacy")
         override fun encoded() = encodedStr
     }
 

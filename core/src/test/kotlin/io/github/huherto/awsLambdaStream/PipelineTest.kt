@@ -73,6 +73,7 @@ class PipelineTest {
         every { envConfig.stage() } returns "test"
         every { envConfig.service() } returns "pipeline-test"
         every { envConfig.streamRetryEnabled() } returns false
+        every { envConfig.serializationStrategy() } returns "jackson"
 
         every { dynamoDbClientFactory.getClient(any()) } returns dynamoDbClient
         every { eventBridgeClientFactory.getClient(any()) } returns eventBridgeClient

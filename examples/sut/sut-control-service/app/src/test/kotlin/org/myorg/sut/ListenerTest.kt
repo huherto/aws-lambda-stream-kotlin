@@ -2,7 +2,6 @@ package org.myorg.sut
 
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
-import io.github.huherto.awsLambdaStream.FaultEvent
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
 import io.github.huherto.awsLambdaStream.sinks.EventsMicrostoreInMemory
@@ -12,7 +11,6 @@ import io.kotest.matchers.maps.shouldNotBeEmpty
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.every
 import io.mockk.spyk
 import kotlinx.coroutines.flow.toList
@@ -87,14 +85,15 @@ class ListenerTest {
 
         val publisher = container.faultManager.publisher() as EventPublisherInMemory
         publisher shouldNotBe null
-        publisher.events().size shouldBe 1
-        val event = publisher.events().first()
-        event shouldNotBe null
-        val fault = event.shouldBeInstanceOf<FaultEvent>()
-        val faultUow = fault.uow shouldNotBe null
-        val record = faultUow?.record.shouldBeInstanceOf<KinesisEvent.KinesisEventRecord>()
+        publisher.uows().size shouldBe 1
+        val fault = publisher.faults().first()
+        fault shouldNotBe null
+        val faultUow = fault?.uow shouldNotBe null
+        val record = faultUow?.record
         record shouldNotBe null
-        record.eventID shouldBe "shardId-000000000000:1"
+        record?.kind shouldBe "kinesis"
+        val payload = record?.payload
+        payload?.get("eventID")?.toString()?.removeSurrounding("\"") shouldBe "shardId-000000000000:1"
     }
 
     @ParameterizedTest

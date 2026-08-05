@@ -1,0 +1,40 @@
+{
+  "id" : "fault-456",
+  "type" : "fault",
+  "timestamp" : 123456789,
+  "tags" : {
+    "functionname" : "target-lambda",
+    "pipeline" : "target-pipeline"
+  },
+  "err" : {
+    "name" : "IllegalStateException",
+    "message" : "Something failed"
+  },
+  "uow" : {
+    "record" : {
+      "kind" : "dynamodb",
+      "payload" : {
+        "eventID" : "1",
+        "eventName" : "INSERT",
+        "eventVersion" : "1.1",
+        "eventSource" : "aws:dynamodb",
+        "awsRegion" : "us-east-1",
+        "dynamodb" : {
+          "keys" : {
+            "id" : {
+              "S" : "abc"
+            }
+          },
+          "newImage" : {
+            "id" : {
+              "S" : "abc"
+            }
+          },
+          "sequenceNumber" : "123",
+          "sizeBytes" : 42,
+          "streamViewType" : "NEW_AND_OLD_IMAGES"
+        }
+      }
+    }
+  }
+}
