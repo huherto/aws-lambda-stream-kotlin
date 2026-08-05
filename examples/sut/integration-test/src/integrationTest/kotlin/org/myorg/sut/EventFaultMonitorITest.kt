@@ -8,6 +8,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.number
 import kotlinx.datetime.toLocalDateTime
+import kotlinx.serialization.json.*
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
@@ -30,7 +31,9 @@ import kotlin.time.ExperimentalTime
 class EventFaultMonitorITest {
 
     private val logger = mu.KotlinLogging.logger {}
-
+    private val json = Json {
+        ignoreUnknownKeys = true
+    }
     private val eventBridgeFacade = EventBridgeFacade()
     private val lambdaFacade = LambdaFacade()
     private val s3Facade = S3Facade()
@@ -86,6 +89,13 @@ class EventFaultMonitorITest {
 
         val objectContent = s3Facade.findObjectWithSubstring(bucketName = bucketName , event.id!!)
         objectContent.shouldNotBeNull()
+
+        val storedEvent = parseStoredEventBridgeEvent(objectContent, event.id!!)
+        val detail = storedEvent["detail"].shouldNotBeNull().jsonObject
+
+        detail["id"].shouldNotBeNull().jsonPrimitive.content shouldBe event.id
+        detail["type"].shouldNotBeNull().jsonPrimitive.content shouldBe "fault"
+
         logger.info { "Fault event found in S3" }
         val notification = sqsFacade.verifyNotificationSentToSns(
             queueName = "sut-event-fault-monitor-local-notification-verification.fifo",
@@ -108,6 +118,9 @@ class EventFaultMonitorITest {
 
         val objectContent = s3Facade.findObjectWithSubstring(bucketName = bucketName, event.id!!)
         objectContent.shouldNotBeNull()
+
+        val storedEvent = parseStoredEventBridgeEvent(objectContent, event.id!!)
+        assertStoredFaultEventIsResubmittable(storedEvent)
         logger.info { "Poison event found in S3" }
         val notification = sqsFacade.verifyNotificationSentToSns(
             queueName = queueName,
@@ -141,6 +154,54 @@ class EventFaultMonitorITest {
         counters.shouldNotBeNull()
         counters.errors shouldBe 0
         counters.recordCount shouldBeGreaterThan 0
+    }
+    
+    private fun parseStoredEventBridgeEvent(
+        objectContent: String,
+        expectedEventId: String,
+    ): JsonObject {
+        return objectContent
+            .lineSequence()
+            .filter { it.isNotBlank() }
+            .map { line -> json.parseToJsonElement(line).jsonObject }
+            .first { eventBridgeEvent ->
+                eventBridgeEvent.toString().contains(expectedEventId)
+            }
+    }
+
+    private fun assertStoredFaultEventIsResubmittable(storedEvent: JsonObject) {
+        val detail = storedEvent["detail"]?.jsonObject
+            ?: error("Stored EventBridge event is missing required 'detail' object: $storedEvent")
+
+        val type = detail["type"]?.jsonPrimitive?.content
+            ?: error("Stored fault event detail is missing required 'type': $detail")
+        type shouldBe "fault"
+
+        val tags = detail["tags"]?.jsonObject
+            ?: error("Stored fault event detail is missing required 'tags' object: $detail")
+
+        val functionName = listOf("functionname", "functionName", "function_name")
+            .firstNotNullOfOrNull { key -> tags[key]?.jsonPrimitive?.content }
+
+        functionName.shouldNotBeNull()
+
+        val uow = detail["uow"]?.jsonObject
+            ?: error("Stored fault event detail is missing required 'uow' object: $detail")
+
+        val record = uow["record"]?.jsonObject
+        val batch = uow["batch"] as? JsonArray
+
+        if (record == null) {
+            batch.shouldNotBeNull()
+            batch.size shouldBeGreaterThan 0
+
+            val firstBatchRecord = batch[0].jsonObject["record"]
+                ?: error("Stored fault event uow.batch[0] is missing required 'record': ${batch[0]}")
+
+            firstBatchRecord.shouldNotBeNull()
+        } else {
+            record.shouldNotBeNull()
+        }
     }
 
     @AfterAll

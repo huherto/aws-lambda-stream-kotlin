@@ -57,8 +57,23 @@ object ShipmentTrackingDomain {
     fun createFaultEvent() = FaultEvent().apply {
         id = "fault-" + generateRandomNumber()
         timestamp = System.currentTimeMillis()
-        faultException = FaultException(UnitOfWork(), "",
-            TestException("Test exception"), enableSuppression = false, writableStackTrace = false
+
+        val exception = TestException("Test exception")
+        val unitOfWork = UnitOfWork()
+
+        err = FaultEvent.Error(
+            name = exception::class.java.simpleName,
+            message = exception.message
+        )
+
+        uow = unitOfWork
+
+        faultException = FaultException(
+            unitOfWork,
+            "",
+            exception,
+            enableSuppression = false,
+            writableStackTrace = false
         )
     }
 }
