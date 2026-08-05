@@ -51,6 +51,7 @@ testing {
                 implementation(libs.aws.sdk.s3)
                 implementation(libs.aws.sdk.sns)
                 implementation(libs.aws.sdk.sqs)
+                implementation(libs.jackson.kotlin)
                 implementation(libs.kotest.assertions)
                 implementation(libs.kotlin.logging)
                 implementation(libs.kotlinx.datetime)
