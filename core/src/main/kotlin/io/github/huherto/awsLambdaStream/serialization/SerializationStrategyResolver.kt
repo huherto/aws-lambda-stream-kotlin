@@ -51,7 +51,7 @@ class SerializationStrategyResolver(
                 "No serialization strategy detected. Please add Jackson or kotlinx-serialization to your classpath, or configure it explicitly."
             )
             available.size > 1 -> throw IllegalStateException(
-                "Multiple serialization strategies detected ($available). Please configure one explicitly using AWS_LAMBDA_STREAM_SERIALIZATION or SerializationConfig."
+                "Multiple serialization strategies detected ($available). Please configure one explicitly using SERIALIZATION_STRATEGY or SerializationConfig."
             )
             else -> when (available.first()) {
                 SerializationStrategyKind.JACKSON -> createJacksonStrategy()

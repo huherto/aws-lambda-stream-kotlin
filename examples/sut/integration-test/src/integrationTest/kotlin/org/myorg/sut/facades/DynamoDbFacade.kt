@@ -31,12 +31,13 @@ class DynamoDbFacade(
 
     suspend fun findEventByPK(
         pk: String,
+        debug: Boolean = false,
         checkResponse: (List<DBRecord>?) -> DBRecord?,
     ): DBRecord? {
         val startTime = System.currentTimeMillis()
 
         while (true) {
-            if (System.currentTimeMillis() - startTime > 10000) {
+            if (System.currentTimeMillis() - startTime > 30000) {
                 logger.error { "Timed out waiting for event $pk to be inserted." }
                 return null
             }
@@ -48,6 +49,12 @@ class DynamoDbFacade(
                 keyConditionExpression = "pk = :pk"
                 expressionAttributeValues = mapOf(":pk" to AttributeValue.S(pk))
             })
+
+            if (debug) {
+                logger.debug {
+                    "Query event table ${eventTableName()} by pk=$pk returned ${response.items?.size ?: 0} item(s): ${response.items}"
+                }
+            }
 
             val found = checkResponse(response.items)
             if (found != null) {

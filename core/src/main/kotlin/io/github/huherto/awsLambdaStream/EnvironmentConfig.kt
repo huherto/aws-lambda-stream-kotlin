@@ -143,8 +143,7 @@ class EnvironmentConfig {
     }
 
     fun serializationStrategy() : String? {
-        return System.getenv("AWS_LAMBDA_STREAM_SERIALIZATION")
-            ?: System.getenv("SERIALIZATION_STRATEGY")
+        return System.getenv("SERIALIZATION_STRATEGY")
     }
 
 }
