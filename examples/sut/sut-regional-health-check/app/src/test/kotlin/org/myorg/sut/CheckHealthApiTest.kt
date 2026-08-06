@@ -26,7 +26,7 @@ class CheckHealthApiTest {
     @Test
     fun `handleRequest returns not found for unknown route`() {
         // Arrange
-        val handler = CheckHealthApi(createContainer(false))
+        val handler = CheckHealthApi({ createContainer(false) })
 
         val event = mapOf<String, Any?>(
             "routeKey" to "GET /unknown",
@@ -45,7 +45,7 @@ class CheckHealthApiTest {
     @Test
     fun `handleRequest returns check response for GET check route key`() {
         // Arrange
-        val handler = CheckHealthApi(createContainer(true))
+        val handler = CheckHealthApi({ createContainer(true) })
         val event = mapOf<String, Any?>(
             "routeKey" to "GET /check",
         )
@@ -74,7 +74,7 @@ class CheckHealthApiTest {
     @Test
     fun `handleRequest returns check response for legacy check path`() {
         // Arrange
-        val handler = CheckHealthApi(createContainer(true))
+        val handler = CheckHealthApi({ createContainer(true) })
         val event = mapOf<String, Any?>(
             "routeKey" to "/check",
         )
@@ -95,7 +95,7 @@ class CheckHealthApiTest {
     @Test
     fun `handleRequest returns check response for colon separated check route`() {
         // Arrange
-        val handler = CheckHealthApi(createContainer(true))
+        val handler = CheckHealthApi({ createContainer(true) })
         val event = mapOf<String, Any?>(
             "routeKey" to "GET:/check",
         )
@@ -116,7 +116,7 @@ class CheckHealthApiTest {
     @Test
     fun `handleRequest derives route from http method and path`() {
         // Arrange
-        val handler = CheckHealthApi(createContainer(true))
+        val handler = CheckHealthApi({ createContainer(true) })
         val event = mapOf<String, Any?>(
             "httpMethod" to "GET",
             "path" to "/check",
@@ -138,7 +138,7 @@ class CheckHealthApiTest {
     @Test
     fun `handleRequest derives route from request context http method and raw path`() {
         // Arrange
-        val handler = CheckHealthApi(createContainer(true))
+        val handler = CheckHealthApi({ createContainer(true) })
         val event = mapOf<String, Any?>(
             "requestContext" to mapOf(
                 "http" to mapOf(

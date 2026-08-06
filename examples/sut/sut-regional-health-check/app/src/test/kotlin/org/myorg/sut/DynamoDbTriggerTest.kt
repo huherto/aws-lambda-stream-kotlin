@@ -45,7 +45,7 @@ class DynamoDbTriggerTest {
             envConfig = envConfig
         )
 
-        val trigger = DynamoDbTrigger(container)
+        val trigger = DynamoDbTrigger({ container })
         val context: Context = mockk(relaxed = true)
         val ddbEvent = dynamoDbEvent(
             dynamoDbRecord(
@@ -94,7 +94,7 @@ class DynamoDbTriggerTest {
             envConfig = envConfig
         )
 
-        val trigger = DynamoDbTrigger(container)
+        val trigger = DynamoDbTrigger({ container})
         val context: Context = mockk(relaxed = true)
         val ddbEvent = dynamoDbEvent()
 

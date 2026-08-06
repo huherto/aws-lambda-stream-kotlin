@@ -43,7 +43,7 @@ class ListenerTest {
             faultManager = faultManager,
         )
         
-        listener = Listener(container)
+        listener = Listener({ container })
     }
 
     @Test

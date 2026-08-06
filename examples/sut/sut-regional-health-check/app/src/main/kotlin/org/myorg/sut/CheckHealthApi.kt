@@ -2,11 +2,21 @@ package org.myorg.sut
 
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
+import io.github.huherto.awsLambdaStream.utils.loggedLazy
 import kotlinx.coroutines.runBlocking
+import mu.KotlinLogging
 
 class CheckHealthApi(
-    private val container: CheckHealthApiContainer = CheckHealthApiContainer.build(),
+    containerFactory: () -> CheckHealthApiContainer = { CheckHealthApiContainer.build() },
 ) : RequestHandler<Map<String, Any?>, Any?> {
+
+    private val logger = KotlinLogging.logger {  }
+
+    private val container: CheckHealthApiContainer by loggedLazy(
+        name = "CheckHealthApiContainer",
+        logger = logger,
+        initializer = containerFactory,
+    )
 
     override fun handleRequest(
         event: Map<String, Any?>,
