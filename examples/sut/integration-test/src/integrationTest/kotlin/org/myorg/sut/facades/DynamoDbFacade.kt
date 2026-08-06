@@ -41,7 +41,7 @@ class DynamoDbFacade(
                 return null
             }
 
-            logger.debug { "find event $pk in ${System.currentTimeMillis() - startTime}" }
+            logger.debug { "find event $pk in ${System.currentTimeMillis() - startTime}ms" }
 
             val response = client.query(QueryRequest {
                 tableName = eventTableName()
