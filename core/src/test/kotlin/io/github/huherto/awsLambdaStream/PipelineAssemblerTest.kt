@@ -157,4 +157,26 @@ class PipelineAssemblerTest {
         val endedUow = assembler.endPipeline(uow)
         assertEquals(uow, endedUow)
     }
+
+    @Test
+    fun `test build uses GlobalRegistry defaults`() {
+        GlobalRegistry.reset()
+        val customFm = FaultManager(envConfig = envConfig, eventPublisher = EventPublisherInMemory())
+        GlobalRegistry.setFaultManager(customFm)
+        
+        val assembler = PipelineAssembler.builder().build()
+        
+        assertEquals(customFm, assembler.getFaultManager())
+    }
+
+    @Test
+    fun `test builder defaults envConfig from GlobalRegistry`() {
+        GlobalRegistry.reset()
+        val customConfig = object : EnvironmentConfig() {}
+        GlobalRegistry.setEnvConfig(customConfig)
+        
+        val builder = PipelineAssembler.builder()
+        // Accessing internal property is allowed in the same package
+        assertEquals(customConfig, builder.envConfig)
+    }
 }
