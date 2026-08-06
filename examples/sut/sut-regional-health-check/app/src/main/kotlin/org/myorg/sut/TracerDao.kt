@@ -159,10 +159,31 @@ fun toUpdateRequest(uow: UnitOfWork): UpdateItemRequest? {
 private val logger = KotlinLogging.logger {  }
 
 fun toS3PutRequest(uow: UnitOfWork): PutObjectRequest? {
-    val raw = uow.event?.raw as? RecordPair ?: return null
-    val newRaw = raw.new ?: return null
-    val pk = newRaw.getS("pk") ?: return null
-    val sk = newRaw.getS("sk") ?: return null
+    val raw = uow.event?.raw as? RecordPair
+    if (raw == null) {
+        logger.error { "Cannot build S3 put request: event raw is not RecordPair. event=${uow.event}" }
+        return null
+    }
+
+    val newRaw = raw.new
+    if (newRaw == null) {
+        logger.error { "Cannot build S3 put request: raw.new is null. event=${uow.event?.asJson()}" }
+        return null
+    }
+
+    val pk = newRaw.getS("pk")
+    val sk = newRaw.getS("sk")
+
+    if (pk == null || sk == null) {
+        logger.error {
+            "Cannot build S3 put request: pk or sk missing. pk=$pk, sk=$sk, event=${uow.event?.asJson()}"
+        }
+        return null
+    }
+
+    val s3Key = "${pk}/${sk}"
+    logger.info { "Writing tracer event to S3. s3Key=$s3Key" }
+
     return PutObjectRequest {
         key = "${pk}/${sk}"
         body = ByteStream.fromString(uow.event.asJson())

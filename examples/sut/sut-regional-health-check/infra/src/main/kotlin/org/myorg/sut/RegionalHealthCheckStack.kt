@@ -52,6 +52,7 @@ class RegionalHealthCheckStack(scope: Construct, serviceProps: ServiceProps) : B
         "REGION" to regionName(),
 //        "ACCOUNT_ID" to Aws.ACCOUNT_ID,
         "BUCKET_NAME" to bucket.bucketName,
+        "SERIALIZATION_STRATEGY" to "KOTLINX"
     )
 
     init {

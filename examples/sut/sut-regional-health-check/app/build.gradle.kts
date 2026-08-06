@@ -32,6 +32,7 @@ dependencies {
     implementation(libs.aws.sdk.dynamodb)
     implementation(libs.aws.sdk.lambda)
     implementation(libs.aws.sdk.s3)
+    implementation(libs.jackson.kotlin)
     implementation(libs.kotlin.logging)
     implementation(libs.kotlinx.coroutines)
     implementation(libs.kotlinx.serialization.json)
@@ -39,7 +40,6 @@ dependencies {
 
     testImplementation(kotlin("test"))
     testImplementation(libs.aws.lambda.java.tests)
-    testImplementation(libs.jackson.kotlin)
     testImplementation(libs.kotest.assertions)
     testImplementation(libs.kotest.property)
     testImplementation(libs.kotest.runner)
