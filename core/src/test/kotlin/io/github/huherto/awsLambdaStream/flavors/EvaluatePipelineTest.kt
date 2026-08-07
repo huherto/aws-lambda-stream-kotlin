@@ -82,6 +82,7 @@ class EvaluatePipelineTest {
         override var raw: Any? = raw
         override var eem: Any? = eem
         override fun eventType() = type
+        @Deprecated("Legacy")
         override fun encoded() = """{"id":"$id","type":"$type"}"""
     }
 
@@ -248,6 +249,7 @@ class EvaluatePipelineTest {
             return "HigherType"
         }
 
+        @Deprecated("Legacy")
         override fun encoded(): String {
             TODO("Not yet implemented")
         }

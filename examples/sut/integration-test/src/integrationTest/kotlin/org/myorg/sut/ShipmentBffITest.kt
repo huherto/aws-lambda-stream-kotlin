@@ -35,16 +35,24 @@ class ShipmentBffITest {
 
         postShipment(shipment)
 
+        // lambda sut-shipment-bff-local-listener should save the entity in sut-shipment-bff-local-shipments
         verifyShipmentWasSaved(shipmentId)
 
+        // sut-shipment-bff-local-restapi can access entity from sut-shipment-bff-local-shipments
         verifyGetShipmentReturned(shipmentId, shipment)
 
+        // When the shipment is saved in table sut-shipment-bff-local-shipments
+        // sut-shipment-bff-local-trigger is called creating a
+        // SHIPMENT_CREATED event which should be sent to sut-event-hub-local-bus
+        // SHIPMENT_CREATED event should be received by sut-control-service-local-listener
+        // and collected into sut-control-service-local-events.
         verifyShipmentCreatedEventWasPublished(shipmentId)
 
     }
 
     private suspend fun verifyShipmentCreatedEventWasPublished(shipmentId: String) {
-        val shipmentCreatedEvent = dynamoDbFacade.findEventByPK(shipmentId) { events ->
+
+        val shipmentCreatedEvent = dynamoDbFacade.findEventByPK(shipmentId, true) { events ->
             events?.firstOrNull {
                 val eventAsString = it.get("event")?.asSOrNull()
                 logger.info { "Event: $eventAsString" }

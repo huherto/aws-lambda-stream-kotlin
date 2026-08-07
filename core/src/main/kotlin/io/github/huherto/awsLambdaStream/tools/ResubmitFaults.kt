@@ -433,14 +433,29 @@ class ResubmitFaults {
 
         val batch = eventUow["batch"] as? JsonArray
 
-        val records: List<JsonElement> =
-            if (batch != null) {
-                batch.mapNotNull { item ->
-                    item.jsonObject["record"]
-                }
-            } else {
-                listOfNotNull(eventUow["record"])
-            }
+        val recordObjects = if (batch != null) {
+            batch.mapNotNull { it.jsonObject["record"]?.jsonObject }
+        } else {
+            listOfNotNull(eventUow["record"]?.jsonObject)
+        }
+
+        if (recordObjects.isEmpty()) {
+            error("No records found in fault event")
+        }
+
+        val kinds = recordObjects.mapNotNull { it["kind"]?.jsonPrimitive?.contentOrNull }.toSet()
+        if (kinds.size > 1) {
+            error("Mixed record kinds found in fault event: $kinds")
+        }
+        if ("unknown" in kinds) {
+            error("Unknown record kind found in fault event")
+        }
+
+        val records: List<JsonElement> = recordObjects.mapNotNull { it["payload"] }
+
+        if (records.isEmpty()) {
+            error("No payloads found in records")
+        }
 
         val payloadJson = JsonObject(
             mapOf(
@@ -570,7 +585,7 @@ class ResubmitFaults {
         error: Throwable,
         uow: UnitOfWork,
     ): UnitOfWork {
-        System.err.println(error.message)
+        error.printStackTrace()
 
         if (isExpiredToken(error)) {
             throw error

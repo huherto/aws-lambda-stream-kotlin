@@ -82,7 +82,9 @@ class ControlServiceITest {
                 pk = event.entity?.id!!,
                 sk = event.id,
                 discriminator = "CORREL",
-                pipelineId = "corre1")
+                pipelineId = "corre1",
+                expectedTimestamp = event.timestamp,
+            )
             val eventAsObject = getEventAsObject(this)
             eventAsObject.eventType().shouldBe("SHIPMENT_CREATED")
             eventAsObject.partitionKey shouldBe event.entity?.id
@@ -96,14 +98,16 @@ class ControlServiceITest {
         val vtaEventId = with(vtaCorrelEvent) {
             logger.debug { "vtaEvent: $vtaCorrelEvent" }
             this.shouldNotBeNull()
+            val vtaEventAsObject = getEventAsObject(this)
+            vtaEventAsObject.shouldNotBeNull()
             checkDbRecord(
                 dbrecord = this,
                 pk = event.entity?.id!!,
                 sk = null,
                 discriminator = "CORREL",
-                pipelineId = "corre1")
-            val vtaEventAsObject = getEventAsObject(this)
-            vtaEventAsObject.shouldNotBeNull()
+                pipelineId = "corre1",
+                expectedTimestamp = vtaEventAsObject.timestamp,
+            )
             val vtaEventId = vtaEventAsObject.id
             vtaEventId.shouldNotBeNull()
             vtaEventId.endsWith(".eval_vta") shouldBe true
@@ -182,23 +186,24 @@ class ControlServiceITest {
         return eventAsObject
     }
 
-    private fun checkDbRecord(
-        dbrecord: DBRecord?,
-        pk: String,
-        sk: String?,
-        discriminator: String,
-        pipelineId: String?,
-    ) {
-        dbrecord.shouldNotBeNull()
-        dbrecord["pk"]?.asS() shouldBe pk
-        dbrecord["sk"]?.asSOrNull().shouldNotBeNull()
-        dbrecord["sk"]?.asSOrNull().shouldNotBeEmpty()
-        sk?.let { dbrecord["sk"]?.asS() shouldBe sk }
-        dbrecord["discriminator"]?.asS() shouldBe discriminator
-        dbrecord["expire"]?.asBoolOrNull() shouldBe false
-        dbrecord["awsregion"]?.asS() shouldBe "us-east-1"
-        dbrecord["suffix"]?.asS() shouldBe ""
-        pipelineId?.let { dbrecord["pipelineId"]?.asS() shouldBe pipelineId }
+        private fun checkDbRecord(
+            dbrecord: DBRecord?,
+            pk: String,
+            sk: String?,
+            discriminator: String,
+            pipelineId: String?,
+            expectedTimestamp: Long? = null,
+        ) {
+            dbrecord.shouldNotBeNull()
+            dbrecord["pk"]?.asS() shouldBe pk
+            dbrecord["sk"]?.asSOrNull().shouldNotBeNull()
+            dbrecord["sk"]?.asSOrNull().shouldNotBeEmpty()
+            sk?.let { dbrecord["sk"]?.asS() shouldBe sk }
+            dbrecord["discriminator"]?.asS() shouldBe discriminator
+            dbrecord["expire"]?.asBoolOrNull() shouldBe false
+            dbrecord["awsregion"]?.asS() shouldBe "us-east-1"
+            dbrecord["suffix"]?.asS() shouldBe ""
+            pipelineId?.let { dbrecord["pipelineId"]?.asS() shouldBe pipelineId }
 
         val sequenceNumber = dbrecord["sequenceNumber"]?.asS()
         sequenceNumber.shouldNotBeNull()
@@ -212,7 +217,7 @@ class ControlServiceITest {
         ttl shouldBeLessThan 1900093311L // A date in 2030
 
         val timeStamp = dbrecord["timestamp"]?.asN()?.toLong()
-        checkTimestampDiff(currentTimeMillis(), timeStamp)
+        checkTimestampDiff(expectedTimestamp ?: currentTimeMillis(), timeStamp)
     }
 
     private fun checkTimestampDiff(t1: Long?, t2: Long?) {

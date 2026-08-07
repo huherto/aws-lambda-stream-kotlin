@@ -24,6 +24,9 @@ sealed class MyEvent : BaseEvent() {
         return this::class.serializerOrNull()?.descriptor?.serialName ?: "unknown"
     }
 
+    @Deprecated(
+        message = "Use EventCodec or the configured framework publisher instead.",
+    )
     override fun encoded(): String {
         return sutJson.encodeToString(serializer(), this)
     }

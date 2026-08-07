@@ -52,7 +52,7 @@ class TriggerTest {
     fun `should process DynamodbEvent successfully and return 'Done' for various record scenarios`() {
         // Arrange
         val container = createContainer()
-        val trigger = Trigger(container)
+        val trigger = Trigger({ container })
         val testContext = TestContext()
 
         val emptyEvent = DynamodbEvent().apply {

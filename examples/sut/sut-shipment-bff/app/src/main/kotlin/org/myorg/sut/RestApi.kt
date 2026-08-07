@@ -4,16 +4,24 @@ import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
+import io.github.huherto.awsLambdaStream.asJson
+import io.github.huherto.awsLambdaStream.utils.loggedLazy
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json.Default.decodeFromString
 import mu.KotlinLogging
 
-class RestApi(private val container: RestApiContainer = RestApiContainer.build()) : RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+class RestApi(
+    containerFactory: () -> RestApiContainer = { RestApiContainer.build() }
+) : RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private val logger = KotlinLogging.logger {  }
 
-    private val shipmentDao: ShipmentDao = container.shipmentDao
+    private val container: RestApiContainer by loggedLazy(
+        name = "RestApiContainer",
+        logger = logger,
+        initializer = containerFactory,
+    )
 
     override fun handleRequest(
         input: APIGatewayProxyRequestEvent,
@@ -44,11 +52,11 @@ class RestApi(private val container: RestApiContainer = RestApiContainer.build()
             )
         }
 
-        val shipment = shipmentDao.getShipmentById(shipmentId) ?: return shipmentNotFound()
+        val shipment = container.shipmentDao.getShipmentById(shipmentId) ?: return shipmentNotFound()
 
         return jsonResponse(
             statusCode = 200,
-            body = shipment.toJson()
+            body = shipment.asJson()
         )
 
     }
@@ -84,11 +92,11 @@ class RestApi(private val container: RestApiContainer = RestApiContainer.build()
             )
         }
 
-        shipmentDao.saveShipment(shipment)
+        container.shipmentDao.saveShipment(shipment)
 
         return jsonResponse(
             statusCode = 201,
-            body = shipment.toJson()
+            body = shipment.asJson()
         )
     }
 

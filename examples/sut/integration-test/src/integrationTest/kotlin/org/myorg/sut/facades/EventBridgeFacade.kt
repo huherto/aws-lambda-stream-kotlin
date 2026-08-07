@@ -4,7 +4,9 @@ import aws.sdk.kotlin.services.eventbridge.EventBridgeClient
 import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequest
 import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequestEntry
 import io.github.huherto.awsLambdaStream.Event
+import io.github.huherto.awsLambdaStream.faults.FaultEvent
 import io.kotest.matchers.shouldBe
+import kotlinx.serialization.json.Json
 
 class EventBridgeFacade(
     private val config: AwsLocalConfig = AwsLocalConfig(),
@@ -18,13 +20,22 @@ class EventBridgeFacade(
         }
     }
 
-    suspend fun putEvents(vararg events: Event) {
+    suspend fun putEvents(vararg events: Any) {
         val entries = events.map { event ->
             PutEventsRequestEntry {
                 eventBusName = this@EventBridgeFacade.eventBusName
-                detail = event.encoded()
-                detailType = event.eventType()
                 source = "integration-test"
+                when (event) {
+                    is Event -> {
+                        detail = event.encoded()
+                        detailType = event.eventType()
+                    }
+                    is FaultEvent -> {
+                        detail = Json.encodeToString(event)
+                        detailType = event.type
+                    }
+                    else -> error("Unsupported event type: ${event::class}")
+                }
             }
         }
 

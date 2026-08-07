@@ -17,8 +17,8 @@ function parsevalue() {
   perl -ne 'print "$1\n" if /\s*=\s*"([^\"]*)"/';
 }
 
-# We don't need this log created by CDK.
-rm $LOGS/sut-regional-health-check-loc-BucketNotificationsHandl-*.json
+# Clean up older files.
+rm $LOGS/sut-*.json
 
 awslocal logs describe-log-groups | gron | grep logGroupName | while read LINE
 do

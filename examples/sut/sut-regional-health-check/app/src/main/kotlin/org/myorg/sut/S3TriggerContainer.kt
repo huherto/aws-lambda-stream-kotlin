@@ -1,16 +1,12 @@
 package org.myorg.sut
 
-import io.github.huherto.awsLambdaStream.EnvironmentConfig
-import io.github.huherto.awsLambdaStream.FaultManager
-import io.github.huherto.awsLambdaStream.JsonEventCodec
-import io.github.huherto.awsLambdaStream.PipelineAssembler
+import io.github.huherto.awsLambdaStream.*
 import io.github.huherto.awsLambdaStream.connectors.DefaultS3ClientFactory
 import io.github.huherto.awsLambdaStream.connectors.S3Connector
 import io.github.huherto.awsLambdaStream.filters.EventFilter
 import io.github.huherto.awsLambdaStream.flavors.CdcPipeline
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import io.github.huherto.awsLambdaStream.from.S3Adapter
-import io.github.huherto.awsLambdaStream.sinks.EventBridgePublisher
 import io.github.huherto.awsLambdaStream.sinks.EventPublisher
 import mu.KotlinLogging.logger
 
@@ -26,15 +22,14 @@ class S3TriggerContainer(
         private val logger = logger {}
 
         fun build() : S3TriggerContainer {
-            val envConfig = EnvironmentConfig()
+            val envConfig = GlobalRegistry.envConfig()
             val s3ClientFactory = DefaultS3ClientFactory(envConfig)
             val s3Connector = S3Connector(clientFactory = s3ClientFactory)
-            val eventPublisher = EventBridgePublisher(envConfig)
-            val faultManager = FaultManager(envConfig, eventPublisher)
+            val faultManager = GlobalRegistry.faultManager()
 
             return S3TriggerContainer(
                 envConfig = envConfig,
-                eventPublisher = eventPublisher,
+                eventPublisher = GlobalRegistry.eventPublisher(),
                 s3Connector = s3Connector,
                 faultManager = faultManager,
             )

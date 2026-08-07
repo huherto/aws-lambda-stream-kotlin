@@ -2,6 +2,7 @@ package org.myorg.sut
 
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.FaultManager
+import io.github.huherto.awsLambdaStream.GlobalRegistry
 import io.github.huherto.awsLambdaStream.PipelineAssembler
 import io.github.huherto.awsLambdaStream.connectors.S3Connector
 import io.github.huherto.awsLambdaStream.flavors.MaterializeS3Pipeline
@@ -86,6 +87,22 @@ class DynamoDbTriggerContainerTest {
         // Assert
         pipeline.shouldBeInstanceOf<MaterializeS3Pipeline>()
         pipeline.id shouldBe "t1"
+    }
+    
+    @Test
+    fun `build() should use GlobalRegistry defaults`() {
+        GlobalRegistry.reset()
+        val customConfig = object : EnvironmentConfig() {
+            override fun awsRegion(): String = "us-east-1"
+            override fun bucketName(): String = "custom-bucket"
+            override fun serializationStrategy(): String = "jackson"
+        }
+        GlobalRegistry.setEnvConfig(customConfig)
+
+        val container = DynamoDbTriggerContainer.build()
+
+        container.envConfig shouldBe customConfig
+        container.faultManager.envConfig shouldBe customConfig
     }
 
     private fun DynamoDbTriggerContainer.materializeS3Pipeline(): Pipeline {

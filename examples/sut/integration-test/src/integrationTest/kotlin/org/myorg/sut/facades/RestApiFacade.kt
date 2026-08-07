@@ -10,7 +10,6 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import kotlinx.coroutines.runBlocking
-import kotlinx.serialization.json.Json
 import org.myorg.sut.TrackedUnit
 
 class RestApiFacade {
@@ -30,16 +29,12 @@ class RestApiFacade {
 
     private val lambdaFunctionName = "sut-shipment-bff-local-restapi"
 
-    fun toJson(shipment: TrackedUnit) : String {
-        return Json.encodeToString(shipment)
-    }
-
     suspend fun post(shipment: TrackedUnit): APIGatewayProxyResponseEvent {
         val request = APIGatewayProxyRequestEvent()
             .withHttpMethod("POST")
             .withResource("/shipment")
             .withPath("/shipment")
-            .withBody(toJson(shipment))
+            .withBody(objectMapper.writeValueAsString(shipment))
             .withIsBase64Encoded(false)
 
         val response = lambdaClient.invoke(InvokeRequest.Companion {

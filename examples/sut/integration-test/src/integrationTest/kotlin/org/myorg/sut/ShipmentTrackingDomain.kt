@@ -1,8 +1,13 @@
 package org.myorg.sut
 
-import io.github.huherto.awsLambdaStream.FaultEvent
 import io.github.huherto.awsLambdaStream.FaultException
 import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.faults.ErrorSnapshot
+import io.github.huherto.awsLambdaStream.faults.FaultEvent
+import io.github.huherto.awsLambdaStream.faults.ReplayRecordSnapshot
+import io.github.huherto.awsLambdaStream.faults.UnitOfWorkSnapshot
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlin.math.pow
 import kotlin.random.Random
 
@@ -57,8 +62,31 @@ object ShipmentTrackingDomain {
     fun createFaultEvent() = FaultEvent().apply {
         id = "fault-" + generateRandomNumber()
         timestamp = System.currentTimeMillis()
-        faultException = FaultException(UnitOfWork(), "",
-            TestException("Test exception"), enableSuppression = false, writableStackTrace = false
+        tags = mapOf(
+            "functionname" to "integration-test",
+            "pipeline" to "integration-test"
+        )
+        val exception = TestException("Test exception")
+        val unitOfWork = UnitOfWork()
+
+        err = ErrorSnapshot(
+            name = exception::class.java.simpleName,
+            message = exception.message
+        )
+
+        uow = UnitOfWorkSnapshot(
+            record = ReplayRecordSnapshot(
+                kind = "kinesis",
+                payload = JsonObject(mapOf("eventID" to JsonPrimitive("dummy")))
+            )
+        )
+
+        faultException = FaultException(
+            unitOfWork,
+            "",
+            exception,
+            enableSuppression = false,
+            writableStackTrace = false
         )
     }
 }

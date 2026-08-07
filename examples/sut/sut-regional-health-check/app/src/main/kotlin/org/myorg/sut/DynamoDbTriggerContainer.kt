@@ -2,13 +2,13 @@ package org.myorg.sut
 
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.FaultManager
+import io.github.huherto.awsLambdaStream.GlobalRegistry
 import io.github.huherto.awsLambdaStream.PipelineAssembler
 import io.github.huherto.awsLambdaStream.connectors.DefaultS3ClientFactory
 import io.github.huherto.awsLambdaStream.connectors.S3Connector
 import io.github.huherto.awsLambdaStream.flavors.MaterializeS3Pipeline
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import io.github.huherto.awsLambdaStream.from.DynamodbAdapter
-import io.github.huherto.awsLambdaStream.sinks.EventBridgePublisher
 import mu.KotlinLogging.logger
 
 class DynamoDbTriggerContainer (
@@ -22,9 +22,8 @@ class DynamoDbTriggerContainer (
         private val logger = logger {}
 
         fun build() : DynamoDbTriggerContainer {
-            val envConfig = EnvironmentConfig()
-            val eventPublisher = EventBridgePublisher(envConfig)
-            val faultManager = FaultManager(envConfig, eventPublisher)
+            val envConfig = GlobalRegistry.envConfig()
+            val faultManager = GlobalRegistry.faultManager()
             val defaultS3ClientFactory = DefaultS3ClientFactory(envConfig)
             val s3Connector = S3Connector(defaultS3ClientFactory)
 

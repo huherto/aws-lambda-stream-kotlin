@@ -53,6 +53,9 @@ class ClaimCheckStore(
 
         override fun eventType(): String = type
 
+        @Deprecated(
+            message = "Use EventCodec or the configured framework publisher instead.",
+        )
         override fun encoded(): String {
             return """
             {

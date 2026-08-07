@@ -5,14 +5,11 @@ import aws.sdk.kotlin.services.dynamodb.model.UpdateItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.UpdateItemResponse
 import aws.sdk.kotlin.services.s3.model.PutObjectRequest
 import aws.smithy.kotlin.runtime.content.ByteStream
-import io.github.huherto.awsLambdaStream.JsonEvent
-import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.*
 import io.github.huherto.awsLambdaStream.from.RecordPair
-import io.github.huherto.awsLambdaStream.longOrNull
 import io.github.huherto.awsLambdaStream.sinks.DynamoDbUpdateValue
 import io.github.huherto.awsLambdaStream.sinks.timestampCondition
 import io.github.huherto.awsLambdaStream.sinks.updateExpression
-import io.github.huherto.awsLambdaStream.stringOrNull
 import io.github.huherto.awsLambdaStream.utils.ttl
 import kotlinx.serialization.json.JsonObject
 import mu.KotlinLogging
@@ -162,14 +159,34 @@ fun toUpdateRequest(uow: UnitOfWork): UpdateItemRequest? {
 private val logger = KotlinLogging.logger {  }
 
 fun toS3PutRequest(uow: UnitOfWork): PutObjectRequest? {
-    val raw = uow.event?.raw as? RecordPair ?: return null
-    val newRaw = raw.new ?: return null
-    val pk = newRaw.getS("pk") ?: return null
-    val sk = newRaw.getS("sk") ?: return null
-    val eventAsString = uow.event?.encoded() ?: return null
+    val raw = uow.event?.raw as? RecordPair
+    if (raw == null) {
+        logger.error { "Cannot build S3 put request: event raw is not RecordPair. event=${uow.event}" }
+        return null
+    }
+
+    val newRaw = raw.new
+    if (newRaw == null) {
+        logger.error { "Cannot build S3 put request: raw.new is null. event=${uow.event?.asJson()}" }
+        return null
+    }
+
+    val pk = newRaw.getS("pk")
+    val sk = newRaw.getS("sk")
+
+    if (pk == null || sk == null) {
+        logger.error {
+            "Cannot build S3 put request: pk or sk missing. pk=$pk, sk=$sk, event=${uow.event?.asJson()}"
+        }
+        return null
+    }
+
+    val s3Key = "${pk}/${sk}"
+    logger.info { "Writing tracer event to S3. s3Key=$s3Key" }
+
     return PutObjectRequest {
         key = "${pk}/${sk}"
-        body = ByteStream.fromString(eventAsString)
+        body = ByteStream.fromString(uow.event.asJson())
     }
 }
 

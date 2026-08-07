@@ -1,0 +1,41 @@
+{
+  "id" : "fault-123",
+  "type" : "fault",
+  "timestamp" : 123456789,
+  "partitionKey" : "pk-1",
+  "tags" : {
+    "functionname" : "target-lambda",
+    "pipeline" : "target-pipeline"
+  },
+  "err" : {
+    "name" : "IllegalStateException",
+    "message" : "Something failed"
+  },
+  "uow" : {
+    "pipeline" : {
+      "id" : "target-pipeline"
+    },
+    "record" : {
+      "kind" : "kinesis",
+      "payload" : {
+        "eventID" : "shardId-000000000000:1",
+        "eventName" : "aws:kinesis:record",
+        "eventSource" : "aws:kinesis",
+        "awsRegion" : "us-east-1",
+        "kinesis" : {
+          "partitionKey" : "pk-1",
+          "sequenceNumber" : "123456",
+          "data" : "base64-payload"
+        }
+      }
+    },
+    "event" : {
+      "id" : "original-event-id",
+      "type" : "shipment-created",
+      "partitionKey" : "pk-1"
+    },
+    "key" : "pk-1",
+    "sequenceNumber" : "123456",
+    "shardId" : "shardId-000000000000"
+  }
+}

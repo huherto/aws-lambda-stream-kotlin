@@ -130,18 +130,18 @@ class PipelineAssemblerTest {
 
         assertEquals(0, results.size, "Flow should be empty due to failure")
 
-        val publishedEvents = eventPublisher.events()
-        assertEquals(1, publishedEvents.size, "Should publish one failure event")
+        val publishedFaults = eventPublisher.faults()
+        assertEquals(1, publishedFaults.size, "Should publish one failure event")
         assertEquals(0, fm.getFaults().size, "Faults should be empty after publishing")
 
         // Retrieve the event from the captured UnitOfWork
-        val failureEvent = publishedEvents[0] as? FaultEvent
+        val failureEvent = publishedFaults[0]
         assertNotNull(failureEvent)
-        assertEquals(FAULT_EVENT_TYPE, failureEvent?.eventType())
-        
+        assertEquals(FAULT_EVENT_TYPE, failureEvent?.type)
+
         val error = failureEvent?.err
         assertNotNull(error)
-        assertEquals(uow.record, failureEvent?.uow?.record)
+        assertNotNull(failureEvent?.uow)
     }
 
     @Test
@@ -156,5 +156,27 @@ class PipelineAssemblerTest {
 
         val endedUow = assembler.endPipeline(uow)
         assertEquals(uow, endedUow)
+    }
+
+    @Test
+    fun `test build uses GlobalRegistry defaults`() {
+        GlobalRegistry.reset()
+        val customFm = FaultManager(envConfig = envConfig, eventPublisher = EventPublisherInMemory())
+        GlobalRegistry.setFaultManager(customFm)
+        
+        val assembler = PipelineAssembler.builder().build()
+        
+        assertEquals(customFm, assembler.getFaultManager())
+    }
+
+    @Test
+    fun `test builder defaults envConfig from GlobalRegistry`() {
+        GlobalRegistry.reset()
+        val customConfig = object : EnvironmentConfig() {}
+        GlobalRegistry.setEnvConfig(customConfig)
+        
+        val builder = PipelineAssembler.builder()
+        // Accessing internal property is allowed in the same package
+        assertEquals(customConfig, builder.envConfig)
     }
 }

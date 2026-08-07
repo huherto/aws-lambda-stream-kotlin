@@ -29,7 +29,6 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(project(":core"))
 
-
     testImplementation(kotlin("test"))
     testImplementation(libs.aws.lambda.java.tests)
     testImplementation(libs.kotest.assertions)

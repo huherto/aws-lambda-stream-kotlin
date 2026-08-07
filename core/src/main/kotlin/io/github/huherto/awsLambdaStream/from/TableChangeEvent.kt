@@ -17,6 +17,9 @@ class TableChangeEvent : BaseEvent() {
         return encodeToString(this)
     }
 
+    @Deprecated(
+        message = "Use EventCodec or the configured framework publisher instead.",
+    )
     override fun encoded(): String {
         return encodeToString(this)
     }

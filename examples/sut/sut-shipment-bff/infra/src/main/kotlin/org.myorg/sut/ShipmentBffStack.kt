@@ -25,6 +25,7 @@ class ShipmentBffStack(scope: Construct, serviceProps: ServiceProps) : BaseStack
         "BUS_NAME" to busName,
         "BUS_SRC" to "shipment-bff",
         "LOG_DEFAULT_LEVEL" to "DEBUG",
+        "SERIALIZATION_STRATEGY" to "KOTLINX"
     )
     val trigger = newTriggerLambda()
     val entityTable = newDynamoDbTable()

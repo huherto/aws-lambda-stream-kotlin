@@ -10,6 +10,9 @@ data class HigherOrderEventTemplate (
     var baseEvent: Event // Base event to copy from
 ) : BaseEvent() {
     override fun eventType(): String = "Not used"
+    @Deprecated(
+        message = "Use EventCodec or the configured framework publisher instead.",
+    )
     override fun encoded(): String = "Not used"
 
     fun createEvent(clazz: KClass<out Event>): Event {

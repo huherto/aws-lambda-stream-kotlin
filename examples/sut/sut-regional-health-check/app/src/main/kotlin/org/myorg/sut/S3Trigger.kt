@@ -3,12 +3,21 @@ package org.myorg.sut
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.SQSEvent
+import io.github.huherto.awsLambdaStream.utils.loggedLazy
 import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging
 
-class S3Trigger (private val container: S3TriggerContainer = S3TriggerContainer.build()): RequestHandler<SQSEvent, String> {
+class S3Trigger (
+    containerFactory: () -> S3TriggerContainer = { S3TriggerContainer.build() }
+): RequestHandler<SQSEvent, String> {
 
     private val logger = KotlinLogging.logger {  }
+
+    private val container: S3TriggerContainer by loggedLazy(
+        name = "S3TriggerContainer",
+        logger = logger,
+        initializer = containerFactory,
+    )
 
     override fun handleRequest(sqsEvent: SQSEvent, context: Context) : String = runBlocking{
 
