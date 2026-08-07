@@ -197,6 +197,7 @@ class RegionalHealthCheckITest {
                 null
             },
             block = {
+                logger.info{ "finding awsRegion=$awsRegion, timestamp=${response.timestamp}" }
                 val records = kinesisFacade.readAllEvents()
                 records
                     .onEach { record -> logger.info { "Kinesis record: $record" } }

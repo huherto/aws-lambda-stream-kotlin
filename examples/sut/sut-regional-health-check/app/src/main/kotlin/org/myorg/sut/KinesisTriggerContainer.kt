@@ -5,7 +5,6 @@ import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import io.github.huherto.awsLambdaStream.flavors.UpdatePipeline
 import io.github.huherto.awsLambdaStream.from.KinesisAdapter
-import io.github.huherto.awsLambdaStream.sinks.DynamoDbSink
 import mu.KotlinLogging.logger
 
 class KinesisTriggerContainer (
@@ -21,9 +20,6 @@ class KinesisTriggerContainer (
         fun build() : KinesisTriggerContainer {
             val envConfig = GlobalRegistry.envConfig()
             val faultManager = GlobalRegistry.faultManager()
-                //val dynamoDbClientFactory = DefaultDynamoDbClientFactory(envConfig)
-            //val dynamoDbConnector = DynamoDbConnector(dynamoDbClientFactory = dynamoDbClientFactory)
-            val dynamoDbSink = DynamoDbSink(envConfig = envConfig)
 
             return KinesisTriggerContainer(
                 envConfig = envConfig,
@@ -37,7 +33,7 @@ class KinesisTriggerContainer (
             id = "update",
             envConfig = envConfig,
             dynamoDbConnector = dynamoDbConnector,
-            eventCodec = JsonEventCodec,
+            eventCodec = JsonEventCodec, // NOOP, Should not be required.
             toUpdateRequest = ::toUpdateRequest
         )
     }
@@ -50,6 +46,6 @@ class KinesisTriggerContainer (
             .build()
     }
 
-    val kinesisAdapter = KinesisAdapter(faultManager, eventCodec = JsonEventCodec)
+    val kinesisAdapter = KinesisAdapter(faultManager, eventCodec = TracerEventCodec)
 
 }

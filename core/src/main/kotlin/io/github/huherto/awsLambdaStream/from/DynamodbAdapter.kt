@@ -6,7 +6,6 @@ import io.github.huherto.awsLambdaStream.UnitOfWork
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.mapNotNull
-import kotlinx.serialization.json.*
 import kotlinx.serialization.json.Json.Default.decodeFromString
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue as EventAV
 
@@ -139,81 +138,5 @@ class RecordImage(val map: Map<String, EventAV?>) : Map<String, EventAV?> by map
         return getS(fieldName)?.let {
             decodeFromString<T>(it)
         }
-    }
-}
-
-fun RecordPair.toJsonString(): String {
-    val jsonObject = buildJsonObject {
-        put("new", new?.toJsonObject() ?: JsonNull)
-        put("old", old?.toJsonObject() ?: JsonNull)
-    }
-
-    return Json.encodeToString(JsonObject.serializer(), jsonObject)
-}
-
-fun RecordImage.toJsonObject(): JsonObject {
-    return buildJsonObject {
-        this@toJsonObject.forEach { (key, value) ->
-            put(key, value?.toJsonElement() ?: JsonNull)
-        }
-    }
-}
-
-fun EventAV.toJsonElement(): JsonElement {
-    val stringValue = s
-    val numberValue = n
-    val booleanValue = bool
-    val nullValue = null
-    val mapValue = m
-    val listValue = l
-    val stringSetValue = ss
-    val numberSetValue = ns
-
-    return when {
-        stringValue != null -> JsonPrimitive(stringValue)
-
-        numberValue != null -> {
-            val numericValue = numberValue.toDoubleOrNull()
-            if (numericValue != null) {
-                JsonPrimitive(numericValue)
-            } else {
-                JsonPrimitive(numberValue)
-            }
-        }
-
-        booleanValue != null -> JsonPrimitive(booleanValue)
-
-        nullValue == true -> JsonNull
-
-        mapValue != null -> buildJsonObject {
-            mapValue.forEach { (key, value) ->
-                put(key, value?.toJsonElement() ?: JsonNull)
-            }
-        }
-
-        listValue != null -> buildJsonArray {
-            listValue.forEach { value ->
-                add(value?.toJsonElement() ?: JsonNull)
-            }
-        }
-
-        stringSetValue != null -> buildJsonArray {
-            stringSetValue.forEach { value ->
-                add(JsonPrimitive(value))
-            }
-        }
-
-        numberSetValue != null -> buildJsonArray {
-            numberSetValue.forEach { value ->
-                val numericValue = value.toDoubleOrNull()
-                if (numericValue != null) {
-                    add(JsonPrimitive(numericValue))
-                } else {
-                    add(JsonPrimitive(value))
-                }
-            }
-        }
-
-        else -> JsonNull
     }
 }

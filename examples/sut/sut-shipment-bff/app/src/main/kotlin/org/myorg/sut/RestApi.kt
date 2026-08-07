@@ -4,11 +4,10 @@ import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
-import io.github.huherto.awsLambdaStream.asJson
 import io.github.huherto.awsLambdaStream.utils.loggedLazy
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.SerializationException
-import kotlinx.serialization.json.Json.Default.decodeFromString
+import kotlinx.serialization.json.Json
 import mu.KotlinLogging
 
 class RestApi(
@@ -56,7 +55,7 @@ class RestApi(
 
         return jsonResponse(
             statusCode = 200,
-            body = shipment.asJson()
+            body = Json.encodeToString(shipment)
         )
 
     }
@@ -70,7 +69,7 @@ class RestApi(
         }
 
         val shipment = try {
-            decodeFromString<Shipment>(body)
+            Json.decodeFromString<Shipment>(body)
         } catch (ex: SerializationException) {
             logger.warn(ex) { "Invalid shipment request body" }
             return jsonResponse(
@@ -96,7 +95,7 @@ class RestApi(
 
         return jsonResponse(
             statusCode = 201,
-            body = shipment.asJson()
+            body = Json.encodeToString(shipment)
         )
     }
 

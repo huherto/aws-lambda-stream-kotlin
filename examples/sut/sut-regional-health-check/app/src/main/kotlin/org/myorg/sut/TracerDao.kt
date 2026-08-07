@@ -5,26 +5,67 @@ import aws.sdk.kotlin.services.dynamodb.model.UpdateItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.UpdateItemResponse
 import aws.sdk.kotlin.services.s3.model.PutObjectRequest
 import aws.smithy.kotlin.runtime.content.ByteStream
-import io.github.huherto.awsLambdaStream.*
+import io.github.huherto.awsLambdaStream.BaseEvent
+import io.github.huherto.awsLambdaStream.Event
+import io.github.huherto.awsLambdaStream.EventCodec
+import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.from.RecordPair
+import io.github.huherto.awsLambdaStream.from.TableChangeEvent
 import io.github.huherto.awsLambdaStream.sinks.DynamoDbUpdateValue
 import io.github.huherto.awsLambdaStream.sinks.timestampCondition
 import io.github.huherto.awsLambdaStream.sinks.updateExpression
 import io.github.huherto.awsLambdaStream.utils.ttl
-import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import mu.KotlinLogging
+import java.util.*
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.milliseconds
 
 const val DISCRIMINATOR = "trace"
 
+private val tracerEventJson = Json {
+    ignoreUnknownKeys = true
+    encodeDefaults = true
+}
+
+@Serializable
 data class Tracer (
-    val awsRegion: String,
-    val roundedTimestamp: Long,
+    val awsRegion: String,  // pk
+    val roundedTimestamp: Long,  // sk
     val timestamp: Long,
     val ttl: Long,
     val status: String,
 )
+
+@Serializable
+class TracerEvent(
+    val tracer: Tracer,
+) : BaseEvent() {
+
+    val type: String = "tracer"
+
+    override fun eventType(): String = "tracer"
+
+    @Deprecated(
+        message = "Use EventCodec or the configured framework publisher instead.",
+    )
+    override fun encoded(): String = TracerEventCodec.encode(this)
+}
+
+object TracerEventCodec : EventCodec {
+    override fun decode(eventAsString: String): Event {
+        return tracerEventJson.decodeFromString<TracerEvent>(eventAsString)
+    }
+
+    override fun encode(event: Event): String {
+        require(event is TracerEvent) {
+            "TracerEventCodec can only encode TracerEvent instances, but received ${event::class.qualifiedName}"
+        }
+
+        return tracerEventJson.encodeToString(event)
+    }
+}
 
 class TracerDao(
     private val connector: Connector,
@@ -116,14 +157,21 @@ data class HealthCheckResponse(
     val saveResponse: String? = null,
 )
 
+private val logger = KotlinLogging.logger {  }
+
 fun toUpdateRequest(uow: UnitOfWork): UpdateItemRequest? {
 
-    val event = uow.event as? JsonEvent?: return null
     val timestamp = System.currentTimeMillis()
-    val newRaw : JsonObject = event.jsonObject("raw.new") ?: return null
-    val pk = newRaw.stringOrNull("pk") ?: return null
-    val sk = newRaw.stringOrNull("sk") ?: return null
-    val startTimestamp = newRaw.longOrNull("timestamp") ?: return null
+
+    val event = uow.event as? TracerEvent
+    if (event == null) {
+        logger.error { "Cannot build DynamoDb update request: event is not a TracerEvent. event=${uow.event}, classType=${uow.event?.let { it::class.qualifiedName }}" }
+        return null
+    }
+
+    val pk = event.tracer.awsRegion
+    val sk = event.tracer.roundedTimestamp.toString()
+    val startTimestamp = event.tracer.timestamp
     val latency = (timestamp - startTimestamp).milliseconds.inWholeSeconds
     val ttl = ttl(timestamp, 92.days)
 
@@ -156,9 +204,14 @@ fun toUpdateRequest(uow: UnitOfWork): UpdateItemRequest? {
     }
 }
 
-private val logger = KotlinLogging.logger {  }
 
 fun toS3PutRequest(uow: UnitOfWork): PutObjectRequest? {
+    val event = uow.event as? TableChangeEvent
+    if (event == null) {
+        logger.error { "Cannot build S3 put request: event is not a TableChangeEvent. event=${uow.event}" }
+        return null
+    }
+
     val raw = uow.event?.raw as? RecordPair
     if (raw == null) {
         logger.error { "Cannot build S3 put request: event raw is not RecordPair. event=${uow.event}" }
@@ -167,7 +220,7 @@ fun toS3PutRequest(uow: UnitOfWork): PutObjectRequest? {
 
     val newRaw = raw.new
     if (newRaw == null) {
-        logger.error { "Cannot build S3 put request: raw.new is null. event=${uow.event?.asJson()}" }
+        logger.error { "Cannot build S3 put request: raw.new is null. event=${uow.event}" }
         return null
     }
 
@@ -176,17 +229,34 @@ fun toS3PutRequest(uow: UnitOfWork): PutObjectRequest? {
 
     if (pk == null || sk == null) {
         logger.error {
-            "Cannot build S3 put request: pk or sk missing. pk=$pk, sk=$sk, event=${uow.event?.asJson()}"
+            "Cannot build S3 put request: pk or sk missing. pk=$pk, sk=$sk, event=${uow.event}"
         }
         return null
     }
 
+    val timestamp = newRaw.getLong("timestamp") ?: 0
+
     val s3Key = "${pk}/${sk}"
     logger.info { "Writing tracer event to S3. s3Key=$s3Key" }
 
+    val tracer = Tracer(
+        awsRegion = pk,
+        roundedTimestamp = sk.toLongOrNull() ?: 0,
+        timestamp = timestamp,
+        ttl = 0,
+        status = "STARTED"
+    )
+
+    val tracerEvent = TracerEvent(tracer).apply {
+        id = UUID.randomUUID().toString()
+        partitionKey = tracer.awsRegion
+    }
+
+    val eventAsString = TracerEventCodec.encode(tracerEvent)
+
     return PutObjectRequest {
         key = "${pk}/${sk}"
-        body = ByteStream.fromString(uow.event.asJson())
+        body = ByteStream.fromString(eventAsString)
     }
 }
 

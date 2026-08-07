@@ -5,6 +5,7 @@
 #   ./deploy_stacks.sh
 #   ./deploy_stacks.sh sut-event-hub
 #   ./deploy_stacks.sh sut-event-hub sut-control-service sut-shipment-bff
+#   ./deploy_stacks.sh -d sut-event-hub
 
 set -e    # (errexit): Exit immediately if a command exits with a non-zero status.
 # set -x  # (xtrace): Print each command to stdout before executing it (useful for debugging).
@@ -27,7 +28,10 @@ STACKS=(
 )
 
 usage() {
-	echo "Usage: $0 [stack ...]"
+	echo "Usage: $0 [-d] [stack ...]"
+	echo
+	echo "Options:"
+	echo "  -d  Delete localstack state before deploying"
 	echo
 	echo "Available stacks:"
 	printf '  %s\n' "${STACKS[@]}"
@@ -56,7 +60,22 @@ cdklocal_deploy() {
 if [[ "$#" -eq 0 ]]; then
 	STACKS_TO_DEPLOY=("${STACKS[@]}")
 else
-	STACKS_TO_DEPLOY=("$@")
+	DELETE_LOCALSTACK_STATE=false
+	ARGS=()
+
+	for arg in "$@"; do
+		if [[ "$arg" == "-d" ]]; then
+			DELETE_LOCALSTACK_STATE=true
+		else
+			ARGS+=("$arg")
+		fi
+	done
+
+	if [[ "${#ARGS[@]}" -eq 0 ]]; then
+		STACKS_TO_DEPLOY=("${STACKS[@]}")
+	else
+		STACKS_TO_DEPLOY=("${ARGS[@]}")
+	fi
 
 	for stack in "${STACKS_TO_DEPLOY[@]}"; do
 		if ! is_known_stack "$stack"; then
@@ -74,6 +93,10 @@ fi
 	cd "$SCRIPT_DIR"
 	$GW shadowJar
 )
+
+if [[ "${DELETE_LOCALSTACK_STATE:-false}" == true ]]; then
+	curl -X DELETE http://localhost:4566/_localstack/state
+fi
 
 for stack in "${STACKS[@]}"; do
 	for requested_stack in "${STACKS_TO_DEPLOY[@]}"; do

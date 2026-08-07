@@ -1,6 +1,9 @@
 package org.myorg.sut
 
-import io.github.huherto.awsLambdaStream.*
+import io.github.huherto.awsLambdaStream.EnvironmentConfig
+import io.github.huherto.awsLambdaStream.FaultManager
+import io.github.huherto.awsLambdaStream.GlobalRegistry
+import io.github.huherto.awsLambdaStream.PipelineAssembler
 import io.github.huherto.awsLambdaStream.connectors.DefaultS3ClientFactory
 import io.github.huherto.awsLambdaStream.connectors.S3Connector
 import io.github.huherto.awsLambdaStream.filters.EventFilter
@@ -38,10 +41,10 @@ class S3TriggerContainer(
 
     private val cdcPipeline: Pipeline by lazy {
         CdcPipeline(
-            id = "ms3",
+            id = "cdc",
             envConfig = envConfig,
             eventPublisher = eventPublisher,
-            eventFilter = EventFilter.ByName("trace-created")
+            eventFilter = EventFilter.Any
         )
     }
 
@@ -56,7 +59,7 @@ class S3TriggerContainer(
     val s3Adapter = S3Adapter(
         faultManager = faultManager,
         s3Connector = s3Connector,
-        eventCodec = JsonEventCodec,
+        eventCodec = TracerEventCodec,
     )
 
 }
