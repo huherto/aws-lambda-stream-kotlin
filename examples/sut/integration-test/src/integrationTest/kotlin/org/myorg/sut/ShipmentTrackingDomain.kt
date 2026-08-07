@@ -62,10 +62,6 @@ object ShipmentTrackingDomain {
     fun createFaultEvent() = FaultEvent().apply {
         id = "fault-" + generateRandomNumber()
         timestamp = System.currentTimeMillis()
-        tags = mapOf(
-            "functionname" to "integration-test",
-            "pipeline" to "integration-test"
-        )
 
         val exception = TestException("Test exception")
         val unitOfWork = UnitOfWork()

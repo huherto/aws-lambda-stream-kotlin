@@ -1,9 +1,10 @@
 package io.github.huherto.awsLambdaStream.serialization
 
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
+import io.github.huherto.awsLambdaStream.GlobalRegistry
 
 class SerializationStrategyResolver(
-    private val envConfig: EnvironmentConfig = EnvironmentConfig(),
+    private val envConfig: EnvironmentConfig = GlobalRegistry.envConfig(),
     private val config: SerializationConfig = SerializationConfig()
 ) {
     fun resolve(): SerializationStrategy {
