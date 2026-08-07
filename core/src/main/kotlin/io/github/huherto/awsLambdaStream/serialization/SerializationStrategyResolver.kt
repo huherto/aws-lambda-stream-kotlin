@@ -51,9 +51,21 @@ class SerializationStrategyResolver(
             available.isEmpty() -> throw IllegalStateException(
                 "No serialization strategy detected. Please add Jackson or kotlinx-serialization to your classpath, or configure it explicitly."
             )
-            available.size > 1 -> throw IllegalStateException(
-                "Multiple serialization strategies detected ($available). Please configure one explicitly using SERIALIZATION_STRATEGY or SerializationConfig."
-            )
+            available.size > 1 -> {
+                // If multiple strategies are available, prefer KOTLINX as a sensible default for Kotlin projects
+                // but allow Jackson if it's the only one or if it was explicitly configured (handled above)
+                val preferred = if (available.contains(SerializationStrategyKind.KOTLINX)) {
+                    SerializationStrategyKind.KOTLINX
+                } else {
+                    available.first()
+                }
+                when (preferred) {
+                    SerializationStrategyKind.JACKSON -> createJacksonStrategy()
+                    SerializationStrategyKind.KOTLINX -> createKotlinxStrategy()
+                    SerializationStrategyKind.MOSHI -> createMoshiStrategy()
+                    else -> throw IllegalStateException("Unexpected strategy kind: $preferred")
+                }
+            }
             else -> when (available.first()) {
                 SerializationStrategyKind.JACKSON -> createJacksonStrategy()
                 SerializationStrategyKind.KOTLINX -> createKotlinxStrategy()

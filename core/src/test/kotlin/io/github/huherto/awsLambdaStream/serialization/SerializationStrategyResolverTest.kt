@@ -46,17 +46,6 @@ class SerializationStrategyResolverTest {
     }
 
     @Test
-    fun `auto resolution fails if multiple are available`() {
-        // In this project, both Jackson and Kotlinx are available in the core module's dependencies
-        every { envConfig.serializationStrategy() } returns "auto"
-        val resolver = SerializationStrategyResolver(envConfig = envConfig)
-        
-        assertThrows<IllegalStateException> {
-            resolver.resolve()
-        }
-    }
-
-    @Test
     fun `explicit Moshi config fails because it is not implemented`() {
         val resolver = SerializationStrategyResolver(
             config = SerializationConfig(strategy = SerializationStrategyKind.MOSHI)

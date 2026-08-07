@@ -2,6 +2,7 @@ package org.myorg.sut
 
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
+import io.github.huherto.awsLambdaStream.GlobalRegistry
 import kotlinx.coroutines.runBlocking
 
 class CheckHealthApiContainer(
@@ -15,7 +16,7 @@ class CheckHealthApiContainer(
             val dynamoDbClient = runBlocking {
                 DynamoDbClient.fromEnvironment {}
             }
-            val envConfig = EnvironmentConfig()
+            val envConfig = GlobalRegistry.envConfig()
 
             return CheckHealthApiContainer(envConfig, dynamoDBClient = dynamoDbClient)
         }

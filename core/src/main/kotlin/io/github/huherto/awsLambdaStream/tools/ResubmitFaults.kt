@@ -585,7 +585,7 @@ class ResubmitFaults {
         error: Throwable,
         uow: UnitOfWork,
     ): UnitOfWork {
-        System.err.println(error.message)
+        error.printStackTrace()
 
         if (isExpiredToken(error)) {
             throw error

@@ -22,6 +22,10 @@ abstract class BaseEventsMicrostore(
 
     private val logger = KotlinLogging.logger {  }
 
+    init {
+        logger.info { "BaseEventsMicrostore initialized with tableName: $tableName" }
+    }
+
     private fun omitRaw(event: Event?): String {
         if (event == null) return ""
         return omit(event, "raw")
@@ -37,10 +41,11 @@ abstract class BaseEventsMicrostore(
         val isCorrelation = uow.queryParams.correlation
         val data = uow.queryParams.data
 
+        val targetTable = this.tableName
         if (isCorrelation) {
             if (pk.isNullOrEmpty()) return uow
             val request = QueryRequest {
-                tableName = this@BaseEventsMicrostore.tableName
+                tableName = targetTable
                 keyConditionExpression = "#pk = :pk"
                 expressionAttributeNames = mapOf("#pk" to "pk")
                 expressionAttributeValues = mapOf(":pk" to AttributeValue.S(pk))
@@ -51,6 +56,7 @@ abstract class BaseEventsMicrostore(
         else {
             if (data.isNullOrEmpty()) return uow
             val request = QueryRequest {
+                tableName = targetTable
                 indexName = uow.queryParams.index ?: "DataIndex"
                 keyConditionExpression = "#data = :data"
                 expressionAttributeNames = mapOf("#data" to "data")
@@ -105,8 +111,9 @@ abstract class BaseEventsMicrostore(
             )
         }
 
-        val putRequest = PutItemRequest.Companion {
-            tableName = this@BaseEventsMicrostore.tableName
+        val targetTable = this.tableName
+        val putRequest = PutItemRequest {
+            tableName = targetTable
             item = itemValues
         }
         return uow.copy(putRequest = putRequest)

@@ -2,13 +2,13 @@ package org.myorg.sut
 
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.FaultManager
+import io.github.huherto.awsLambdaStream.GlobalRegistry
 import io.github.huherto.awsLambdaStream.PipelineAssembler
 import io.github.huherto.awsLambdaStream.connectors.DefaultDynamoDbClientFactory
 import io.github.huherto.awsLambdaStream.filters.EventFilters
 import io.github.huherto.awsLambdaStream.flavors.CollectPipeline
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import io.github.huherto.awsLambdaStream.from.KinesisAdapter
-import io.github.huherto.awsLambdaStream.sinks.EventBridgePublisher
 import io.github.huherto.awsLambdaStream.sinks.EventsMicrostore
 import io.github.huherto.awsLambdaStream.sinks.EventsMicrostoreImpl
 
@@ -20,10 +20,9 @@ class ListenerContainer(
 
     companion object {
         fun build() : ListenerContainer {
-            val envConfig = EnvironmentConfig()
+            val envConfig = GlobalRegistry.envConfig()
+            val faultManager = GlobalRegistry.faultManager()
             val dynamoDbClientFactory = DynamoDBClientWrapperFactory(DefaultDynamoDbClientFactory(envConfig))
-            val eventPublisher = EventBridgePublisher(envConfig)
-            val faultManager = FaultManager(envConfig, eventPublisher)
             val eventsMicrostore = EventsMicrostoreImpl(
                 envConfig = envConfig,
                 dynamoDbClientFactory = dynamoDbClientFactory,

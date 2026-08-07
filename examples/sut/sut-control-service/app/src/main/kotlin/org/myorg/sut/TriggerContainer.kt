@@ -5,7 +5,6 @@ import io.github.huherto.awsLambdaStream.connectors.DefaultDynamoDbClientFactory
 import io.github.huherto.awsLambdaStream.filters.EventFilters
 import io.github.huherto.awsLambdaStream.flavors.*
 import io.github.huherto.awsLambdaStream.from.DynamodbAdapter
-import io.github.huherto.awsLambdaStream.sinks.EventBridgePublisher
 import io.github.huherto.awsLambdaStream.sinks.EventPublisher
 import io.github.huherto.awsLambdaStream.sinks.EventsMicrostore
 import io.github.huherto.awsLambdaStream.sinks.EventsMicrostoreImpl
@@ -23,10 +22,9 @@ class TriggerContainer(
         private val logger = logger {}
 
         fun build() : TriggerContainer {
-            val envConfig = EnvironmentConfig()
+            val envConfig = GlobalRegistry.envConfig()
             val dynamoDbClientFactory = DefaultDynamoDbClientFactory(envConfig)
-            val eventPublisher = EventBridgePublisher(envConfig)
-            val faultManager = FaultManager(envConfig, eventPublisher)
+            val faultManager = GlobalRegistry.faultManager()
             val eventsMicrostore = EventsMicrostoreImpl(
                 envConfig = envConfig,
                 dynamoDbClientFactory = dynamoDbClientFactory,
@@ -34,7 +32,7 @@ class TriggerContainer(
             )
             return TriggerContainer(
                 envConfig = envConfig,
-                eventPublisher = eventPublisher,
+                eventPublisher = GlobalRegistry.eventPublisher(),
                 eventsMicrostore = eventsMicrostore,
                 faultManager = faultManager,
             )

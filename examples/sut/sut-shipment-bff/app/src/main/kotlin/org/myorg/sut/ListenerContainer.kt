@@ -1,17 +1,13 @@
 package org.myorg.sut
 
 import aws.sdk.kotlin.services.dynamodb.model.UpdateItemRequest
-import io.github.huherto.awsLambdaStream.EnvironmentConfig
-import io.github.huherto.awsLambdaStream.FaultManager
-import io.github.huherto.awsLambdaStream.PipelineAssembler
-import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.*
 import io.github.huherto.awsLambdaStream.connectors.DefaultDynamoDbClientFactory
 import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
 import io.github.huherto.awsLambdaStream.filters.EventFilters
 import io.github.huherto.awsLambdaStream.flavors.MaterializePipeline
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import io.github.huherto.awsLambdaStream.from.KinesisAdapter
-import io.github.huherto.awsLambdaStream.sinks.EventBridgePublisher
 
 class ListenerContainer(
     val envConfig: EnvironmentConfig,
@@ -21,11 +17,10 @@ class ListenerContainer(
 
     companion object {
         fun build() : ListenerContainer {
-            val envConfig = EnvironmentConfig()
+            val envConfig = GlobalRegistry.envConfig()
             val dynamoDbClientFactory = DefaultDynamoDbClientFactory(envConfig)
             val dynamoDbConnector = DynamoDbConnector(dynamoDbClientFactory = dynamoDbClientFactory)
-            val eventPublisher = EventBridgePublisher(envConfig)
-            val faultManager = FaultManager(envConfig, eventPublisher)
+            val faultManager = GlobalRegistry.faultManager()
             return ListenerContainer(
                 envConfig = envConfig,
                 dynamoDbConnector = dynamoDbConnector,
