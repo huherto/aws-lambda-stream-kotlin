@@ -41,7 +41,7 @@ class PipelineAssembler private constructor(builder : Builder) {
     class Builder {
         internal val pipelines = mutableListOf<Pipeline>()
 
-        internal var envConfig = GlobalRegistry.envConfig()
+        internal var envConfig = EnvironmentConfig()
 
         internal var faultManager: FaultManager? = null
 
@@ -83,9 +83,6 @@ class PipelineAssembler private constructor(builder : Builder) {
          * @throws RuntimeException when no [FaultManager] has been configured.
          */
         fun build(): PipelineAssembler {
-            if (faultManager == null) {
-                faultManager = GlobalRegistry.faultManager()
-            }
             return PipelineAssembler(this)
         }
     }

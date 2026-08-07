@@ -135,7 +135,7 @@ class EventFaultMonitorITest {
         val argv = ResubmitFaults.Args(
             prefix = "us-east-1/${datePart}/sut-event-fault-monitor-local",
             bucket = "myorg-sut-event-fault-monitor-local-us-east-1",
-            functionname = "*",
+            functionname = "sut-control-service-local-listener",
             dry = true,
             parallel = 16,
             batch = 25,

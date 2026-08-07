@@ -1,56 +1,56 @@
 package io.github.huherto.awsLambdaStream
 
-open class EnvironmentConfig {
+class EnvironmentConfig {
 
-    open fun tableName() : String? {
+    fun tableName() : String? {
         return eventTableName() ?: entityTableName()
     }
 
-    open fun eventTableName() : String? {
+    fun eventTableName() : String? {
         return System.getenv("EVENT_TABLE_NAME")
     }
 
-    open fun entityTableName() : String? {
+    fun entityTableName() : String? {
         return System.getenv("ENTITY_TABLE_NAME")
     }
 
-    open fun awsRegion() : String {
+    fun awsRegion() : String {
         return System.getenv("AWS_REGION")
     }
 
-    open fun region(): String? {
+    fun region(): String? {
         return System.getenv("AWS_REGION")
     }
 
-    open fun accountName(): String? {
+    fun accountName(): String? {
         return System.getenv("ACCOUNT_NAME")
     }
 
-    open fun stage(): String? {
+    fun stage(): String? {
         return System.getenv("STAGE")
     }
 
-    open fun serverlessStage(): String? {
+    fun serverlessStage(): String? {
         return System.getenv("SERVERLESS_STAGE")
     }
 
-    open fun service(): String? {
+    fun service(): String? {
         return System.getenv("SERVICE")
     }
 
-    open fun awsDefaultRegion(): String? {
+    fun awsDefaultRegion(): String? {
         return System.getenv("AWS_DEFAULT_REGION")
     }
 
-    open fun endPointUrl() : String? {
+    fun endPointUrl() : String? {
         return System.getenv("AWS_ENDPOINT_URL")
     }
 
-    open fun awsLambdaFunctionName(): String? {
+    fun awsLambdaFunctionName(): String? {
         return System.getenv("AWS_LAMBDA_FUNCTION_NAME")
     }
 
-    open fun ttl() : Int? {
+    fun ttl() : Int? {
         return System.getenv("TTL")?.toInt()
     }
 
@@ -59,7 +59,7 @@ open class EnvironmentConfig {
      * an exception. The lambda handler will typically fail, which will cause kinesis to retry
      * the whole batch or bisect the batch.
      */
-    open fun streamRetryEnabled() : Boolean {
+    fun streamRetryEnabled() : Boolean {
         val enabled = System.getenv("STREAM_RETRY_ENABLED")
         return enabled != null && enabled.isNotEmpty() && enabled == "true"
     }
@@ -68,81 +68,81 @@ open class EnvironmentConfig {
      * If set to true, the fault manager will save the retryable failures so they can be retried each. Use it along
      * with reportBatchItemFailures and the STREAM_RETRY_ENABLED flag.
      */
-    open fun itemLevelRetryEnabled() : Boolean {
+    fun itemLevelRetryEnabled() : Boolean {
         val enabled = System.getenv("ITEM_LEVEL_RETRY_ENABLED")
         return enabled != null && enabled.isNotEmpty() && enabled == "true"
     }
 
-    open fun busName() : String? {
+    fun busName() : String? {
         return System.getenv("BUS_NAME")
     }
 
-    open fun busSource() : String? {
+    fun busSource() : String? {
         return System.getenv("BUS_SRC")
     }
 
-    open fun maxPublishRequestSize() : Int? {
+    fun maxPublishRequestSize() : Int? {
         return System.getenv("PUBLISH_MAX_REQ_SIZE")?.toInt()
     }
 
-    open fun maxRequestSize() : Int? {
+    fun maxRequestSize() : Int? {
         return System.getenv("MAX_REQ_SIZE")?.toInt()
     }
 
-    open fun publishBatchSize() : Int? {
+    fun publishBatchSize() : Int? {
         return System.getenv("PUBLISH_BATCH_SIZE")?.toIntOrNull()
     }
 
-    open fun batchSize() : Int? {
+    fun batchSize() : Int? {
         return System.getenv("BATCH_SIZE")?.toIntOrNull()
     }
 
-    open fun publishParallel() : Int? {
+    fun publishParallel() : Int? {
         return System.getenv("PUBLISH_PARALLEL")?.toIntOrNull()
     }
 
-    open fun parallel() : Int? {
+    fun parallel() : Int? {
         return System.getenv("PARALLEL")?.toIntOrNull()
     }
 
-    open fun busEndPointId() : String? {
+    fun busEndPointId() : String? {
         // Set this if you need to post to a global bus.
         return System.getenv("BUS_ENDPOINT_ID")
     }
 
-    open fun busTimeout() : Long? {
+    fun busTimeout() : Long? {
         return System.getenv("BUS_TIMEOUT")?.toLongOrNull()
     }
 
-    open fun timeout() : Long? {
+    fun timeout() : Long? {
         return System.getenv("TIMEOUT")?.toLongOrNull()
     }
 
-    open fun project() : String? {
+    fun project() : String? {
         return System.getenv("PROJECT")
     }
 
-    open fun serverlessProject() : String? {
+    fun serverlessProject() : String? {
         return System.getenv("SERVERLESS_PROJECT")
     }
 
-    open fun dynamodbTimeout() : Long? {
+    fun dynamodbTimeout() : Long? {
         return System.getenv("DYNAMODB_TIMEOUT")?.toLongOrNull()
     }
 
-    open fun skip() : Boolean {
+    fun skip() : Boolean {
         return System.getenv("SKIP")?.toBoolean() ?: false
     }
     
-    open fun unhealthy() : Boolean {
+    fun unhealthy() : Boolean {
         return System.getenv("UNHEALTHY")?.toBoolean() ?: false
     }
 
-    open fun bucketName() : String? {
+    fun bucketName() : String? {
         return System.getenv("BUCKET_NAME")
     }
 
-    open fun serializationStrategy() : String? {
+    fun serializationStrategy() : String? {
         return System.getenv("SERIALIZATION_STRATEGY")
     }
 
