@@ -4,6 +4,7 @@ import io.github.huherto.awsLambdaStream.BaseEvent
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.Event
 import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.extensions.saveOptions
 import io.github.huherto.awsLambdaStream.sinks.EventsMicrostore
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.comparables.shouldBeGreaterThan

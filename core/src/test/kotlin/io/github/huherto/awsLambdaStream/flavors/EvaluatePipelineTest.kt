@@ -3,6 +3,7 @@ package io.github.huherto.awsLambdaStream.flavors
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.StreamRecord
 import io.github.huherto.awsLambdaStream.*
+import io.github.huherto.awsLambdaStream.extensions.queryParams
 import io.github.huherto.awsLambdaStream.from.RecordImage
 import io.github.huherto.awsLambdaStream.from.RecordPair
 import io.github.huherto.awsLambdaStream.from.TableChangeEvent
@@ -172,8 +173,8 @@ class EvaluatePipelineTest {
         meta["partitionKey"] shouldBe "pk-1"
 
         result.queryParams.shouldNotBeNull()
-        result.queryParams.pk shouldBe "pk-1"
-        result.queryParams.correlation shouldBe true
+        result.queryParams!!.pk shouldBe "pk-1"
+        result.queryParams!!.correlation shouldBe true
         result.event.shouldNotBeNull()
         result.event.id shouldBe "decoded"
         result.event.eventType() shouldBe "DecodedType"

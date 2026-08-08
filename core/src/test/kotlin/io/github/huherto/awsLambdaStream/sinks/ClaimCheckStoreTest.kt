@@ -9,6 +9,7 @@ import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.MyEventA
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.S3ClientFactory
+import io.github.huherto.awsLambdaStream.extensions.s3
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
@@ -156,9 +157,9 @@ class ClaimCheckStoreTest {
         claimCheckEvent.eventType() shouldBe "MY_EVENT_A"
         claimCheckEvent.s3.bucket shouldBe "claim-check-bucket"
         claimCheckEvent.s3.key shouldBe "us-east-1/claimchecks/2024/03/05/06/event-123"
-        storedUow.s3?.putRequest?.bucket shouldBe "claim-check-bucket"
-        storedUow.s3?.putRequest?.key shouldBe "us-east-1/claimchecks/2024/03/05/06/event-123"
-        storedUow.s3?.putResponse shouldBe response
+        storedUow.s3.putRequest?.bucket shouldBe "claim-check-bucket"
+        storedUow.s3.putRequest?.key shouldBe "us-east-1/claimchecks/2024/03/05/06/event-123"
+        storedUow.s3.putResponse shouldBe response
 
         result[1] shouldBe eventlessUow
         s3ClientFactory.requestedPipelineIds shouldBe listOf("unknown")

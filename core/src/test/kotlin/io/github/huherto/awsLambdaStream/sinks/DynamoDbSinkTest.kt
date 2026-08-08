@@ -8,6 +8,10 @@ import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
+import io.github.huherto.awsLambdaStream.extensions.withPutRequest
+import io.github.huherto.awsLambdaStream.extensions.withPutResponse
+import io.github.huherto.awsLambdaStream.extensions.withUpdateRequest
+import io.github.huherto.awsLambdaStream.extensions.withUpdateResponse
 import io.github.huherto.awsLambdaStream.utils.mapParallel
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.collections.shouldHaveSize
@@ -69,7 +73,8 @@ class DynamoDbSinkTest {
         val sink = DynamoDbSink(envConfig, connector, parallel = 1)
         val request = UpdateItemRequest {}
         val response = UpdateItemResponse {}
-        val uow = UnitOfWork(key = "update-item", updateRequest = request)
+        val uow = UnitOfWork(key = "update-item")
+            .withUpdateRequest(request)
 
         coEvery { connector.update(request, uow) } returns response
 
@@ -77,7 +82,7 @@ class DynamoDbSinkTest {
         val result = sink.update(fm, flowOf(uow)).toList()
 
         // assert
-        result shouldBe listOf(uow.copy(updateResponse = response))
+        result shouldBe listOf(uow.withUpdateResponse(response))
         coVerify(exactly = 1) { connector.update(request, uow) }
         confirmVerified(connector)
     }
@@ -88,7 +93,7 @@ class DynamoDbSinkTest {
         val sink = DynamoDbSink(envConfig, connector, parallel = 1)
         val request = PutItemRequest {}
         val response = PutItemResponse {}
-        val uow = UnitOfWork(key = "put-item", putRequest = request)
+        val uow = UnitOfWork(key = "put-item").withPutRequest(request)
 
         coEvery { connector.put(request, uow) } returns response
 
@@ -96,7 +101,7 @@ class DynamoDbSinkTest {
         val result = sink.put(fm, flowOf(uow)).toList()
 
         // assert
-        result shouldBe listOf(uow.copy(putResponse = response))
+        result shouldBe listOf(uow.withPutResponse(response))
         coVerify(exactly = 1) { connector.put(request, uow) }
         confirmVerified(connector)
     }
@@ -107,11 +112,13 @@ class DynamoDbSinkTest {
         val sink = DynamoDbSink(envConfig, connector, parallel = 1)
 
         val updateRequest = UpdateItemRequest {}
-        val updateUow = UnitOfWork(key = "failing-update", updateRequest = updateRequest)
+        val updateUow = UnitOfWork(key = "failing-update")
+            .withUpdateRequest(updateRequest)
         val updateError = IllegalStateException("update failed")
 
         val putRequest = PutItemRequest {}
-        val putUow = UnitOfWork(key = "failing-put", putRequest = putRequest)
+        val putUow = UnitOfWork(key = "failing-put")
+            .withPutRequest(putRequest)
         val putError = IllegalArgumentException("put failed")
 
         coEvery { connector.update(updateRequest, updateUow) } throws updateError

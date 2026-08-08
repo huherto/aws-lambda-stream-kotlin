@@ -9,6 +9,8 @@ import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.Event
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
+import io.github.huherto.awsLambdaStream.extensions.batchGetRequest
+import io.github.huherto.awsLambdaStream.extensions.queryRequest
 import io.github.huherto.awsLambdaStream.queries.QueryRule
 import io.github.huherto.awsLambdaStream.sinks.EventPublisher
 import io.kotest.matchers.collections.shouldContainExactly

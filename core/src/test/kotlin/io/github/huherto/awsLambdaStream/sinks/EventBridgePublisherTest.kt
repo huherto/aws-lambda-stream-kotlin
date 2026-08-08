@@ -7,6 +7,7 @@ import io.github.huherto.awsLambdaStream.Event
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.ConnectorResponse
 import io.github.huherto.awsLambdaStream.connectors.EventBridgeConnector
+import io.github.huherto.awsLambdaStream.extensions.*
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
@@ -57,10 +58,10 @@ class EventBridgePublisherTest {
 
             // Assert
             resultWithEvent.publishRequestEntry.shouldNotBeNull()
-            resultWithEvent.publishRequestEntry.eventBusName shouldBe "test-bus"
-            resultWithEvent.publishRequestEntry.source shouldBe "test-source"
-            resultWithEvent.publishRequestEntry.detailType shouldBe "test-type"
-            resultWithEvent.publishRequestEntry.detail shouldBe """{"data":"value"}"""
+            resultWithEvent.publishRequestEntry!!.eventBusName shouldBe "test-bus"
+            resultWithEvent.publishRequestEntry!!.source shouldBe "test-source"
+            resultWithEvent.publishRequestEntry!!.detailType shouldBe "test-type"
+            resultWithEvent.publishRequestEntry!!.detail shouldBe """{"data":"value"}"""
 
             resultWithoutEvent.publishRequestEntry.shouldBeNull()
         }
@@ -78,8 +79,8 @@ class EventBridgePublisherTest {
             val entry1 = PutEventsRequestEntry.Companion { source = "source1" }
 
             val validBatch = listOf(
-                UnitOfWork(publishRequestEntry = entry1),
-                UnitOfWork(publishRequestEntry = null) // this should be filtered out
+                UnitOfWork().withPublishRequestEntry(entry1),
+                UnitOfWork().withPublishRequestEntry(null)// this should be filtered out
             )
 
             val uowWithBatch = UnitOfWork(batch = validBatch)
@@ -93,9 +94,9 @@ class EventBridgePublisherTest {
 
             // Assert
             resultWithBatch.publishRequest.shouldNotBeNull()
-            resultWithBatch.publishRequest.entries?.size shouldBe 1
-            resultWithBatch.publishRequest.entries?.get(0)?.source shouldBe "source1"
-            resultWithBatch.publishRequest.endpointId shouldBe "test-endpoint"
+            resultWithBatch.publishRequest!!.entries?.size shouldBe 1
+            resultWithBatch.publishRequest!!.entries?.get(0)?.source shouldBe "source1"
+            resultWithBatch.publishRequest!!.endpointId shouldBe "test-endpoint"
 
             resultEmptyBatch.publishRequest shouldBe null
             resultNullBatch.publishRequest shouldBe null
@@ -115,8 +116,8 @@ class EventBridgePublisherTest {
             val publisher = EventBridgePublisher(mockEnvConfig())
 
             val request = PutEventsRequest.Companion { endpointId = "test-endpoint" }
-            val uowWithRequest = UnitOfWork(publishRequest = request)
-            val uowWithoutRequest = UnitOfWork(publishRequest = null)
+            val uowWithRequest = UnitOfWork().withPublishRequest(request)
+            val uowWithoutRequest = UnitOfWork().withPublishRequest(null)
 
             // Act
             val resultWithRequest = publisher.putEvents(uowWithRequest)

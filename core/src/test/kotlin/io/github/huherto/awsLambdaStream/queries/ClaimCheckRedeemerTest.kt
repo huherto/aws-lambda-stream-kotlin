@@ -7,6 +7,7 @@ import aws.smithy.kotlin.runtime.content.ByteStream
 import io.github.huherto.awsLambdaStream.*
 import io.github.huherto.awsLambdaStream.connectors.S3ClientFactory
 import io.github.huherto.awsLambdaStream.connectors.S3Connector
+import io.github.huherto.awsLambdaStream.extensions.s3
 import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
@@ -76,9 +77,9 @@ class ClaimCheckRedeemerTest {
         // Assert
         results.shouldHaveSize(1)
         results[0].event shouldBe claimedEvent
-        results[0].s3?.getRequest?.bucket shouldBe "claim-bucket"
-        results[0].s3?.getRequest?.key shouldBe "events/claimed-event.json"
-        results[0].s3?.getResponseBytes?.decodeToString() shouldBe claimedEvent.encoded()
+        results[0].s3.getRequest?.bucket shouldBe "claim-bucket"
+        results[0].s3.getRequest?.key shouldBe "events/claimed-event.json"
+        results[0].s3.getResponseBytes?.decodeToString() shouldBe claimedEvent.encoded()
 
         coVerify(exactly = 1) {
             s3Client.getObject(

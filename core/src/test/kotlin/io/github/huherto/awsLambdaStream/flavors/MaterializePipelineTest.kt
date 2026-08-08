@@ -5,6 +5,8 @@ import aws.sdk.kotlin.services.dynamodb.model.UpdateItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.UpdateItemResponse
 import io.github.huherto.awsLambdaStream.*
 import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
+import io.github.huherto.awsLambdaStream.extensions.updateRequest
+import io.github.huherto.awsLambdaStream.extensions.updateResponse
 import io.github.huherto.awsLambdaStream.filters.EventFilter
 import io.github.huherto.awsLambdaStream.sinks.EventPublisher
 import io.kotest.matchers.collections.shouldContainExactly
@@ -55,7 +57,7 @@ class MaterializePipelineTest {
         // assert
         result.map { it.key } shouldContainExactly listOf("keep")
         result.single().updateRequest shouldBe updateRequest
-        result.single().updateResponse shouldBe updateResponse
+        result.single().updateResponse!! shouldBe updateResponse
         updateRequestCalls shouldContainExactly listOf(materialized)
 
         coVerify(exactly = 1) {

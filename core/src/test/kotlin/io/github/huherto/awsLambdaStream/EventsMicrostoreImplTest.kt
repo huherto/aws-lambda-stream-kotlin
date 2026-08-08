@@ -4,6 +4,7 @@ import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
 import aws.sdk.kotlin.services.dynamodb.model.QueryResponse
 import io.github.huherto.awsLambdaStream.connectors.DynamoDbClientFactory
+import io.github.huherto.awsLambdaStream.extensions.*
 import io.github.huherto.awsLambdaStream.sinks.EventsMicrostore
 import io.github.huherto.awsLambdaStream.sinks.EventsMicrostoreImpl
 import io.kotest.matchers.collections.shouldHaveSize
@@ -64,8 +65,7 @@ class EventsMicrostoreImplTest {
         val uow = UnitOfWork(
             event = mockEvent,
             key = "uow-key",
-            saveOptions = savedOptions
-        )
+        ).withSaveOptions(savedOptions)
 
         // Act
         val result = eventMicrostore.putRequest(uow)
@@ -91,12 +91,11 @@ class EventsMicrostoreImplTest {
     fun `toQueryRequest should set queryRequest when correlation is true and pk is provided`() {
         // Arrange
         val uow = UnitOfWork(
-            queryParams = EventsMicrostore.QueryParams(
-                pk = "test-pk",
-                correlation = true
-            ),
             meta = mapOf("correlation" to "true", "pk" to "test-pk")
-        )
+        ).withQueryParams(EventsMicrostore.QueryParams(
+            pk = "test-pk",
+            correlation = true
+        ))
 
         // Act
         val result = eventMicrostore.toQueryRequest(uow)
@@ -191,11 +190,9 @@ class EventsMicrostoreImplTest {
             mapOf("other" to AttributeValue.S("no-event-here")) // This one should be ignored gracefully
         )
 
-        val uow = UnitOfWork(
-            queryResponse = QueryResponse {
-                items = itemsList
-            }
-        )
+        val uow = UnitOfWork().withQueryResponse(QueryResponse {
+            items = itemsList
+        })
 
         // Act
         val result = eventMicrostore.toCorrelated(uow)
