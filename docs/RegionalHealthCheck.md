@@ -83,13 +83,47 @@ The calculated health check uses a health threshold that requires both child che
 
 This final calculated health check is the main regional health signal.
 
+## Infrastructure Diagram
+
+For a visual representation of the stack, including the Tracer Flow and monitoring layers, see the 
+
 ## Data Flow
 
 The data flow is metric-driven rather than request-driven.
 
-```text Client traffic | v API Gateway | v CloudWatch API Gateway metrics | v API Gateway 5XX alarm | v API Gateway Route 53 health check```
+![RegionalHealthCheck](diagrams/RegionalHealthCheck.png)
 
-```text Application reads/writes | v DynamoDB entities table | v CloudWatch DynamoDB metrics | v DynamoDB SystemErrors alarm | v DynamoDB Route 53 health check```
+```text
+Client traffic
+      | 
+      v 
+ API Gateway 
+      | 
+      v 
+ CloudWatch API Gateway metrics
+      | 
+      v 
+API Gateway 5XX alarm
+     | 
+     v 
+API Gateway Route 53 health check
+```
+
+```text 
+Application reads/writes 
+     |
+     v 
+DynamoDB entities table 
+     | 
+     v 
+CloudWatch DynamoDB metrics 
+     | 
+     v 
+DynamoDB SystemErrors alarm 
+     |
+     v 
+DynamoDB Route 53 health check
+```
 
 The two health-check paths are then combined:
 
@@ -100,14 +134,29 @@ The calculated health check becomes the regional health status for the stack.
 
 The regional stack also includes supporting event and storage resources that participate in the broader service flow.
 
-```text S3 bucket | v SNS topic | v SQS trigger queue```
-
+```text
+S3 bucket
+     | 
+     v 
+SNS topic
+     | 
+     v 
+SQS trigger queue
+```
 
 This flow allows S3-originated notifications to be published to SNS and delivered to an SQS queue for downstream processing.
 
 The stack also contains eventing resources:
 
-```text Application or service event | v EventBridge event bus | v Kinesis stream```
+```text
+ Application or service event 
+     | 
+     v 
+ EventBridge event bus 
+     | 
+     v 
+ Kinesis stream
+ ```
 
 This allows events placed on the regional event bus to be forwarded to a Kinesis stream for downstream consumers.
 
