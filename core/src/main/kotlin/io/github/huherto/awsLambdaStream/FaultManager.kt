@@ -162,9 +162,9 @@ class FaultManager(
         logError(ex)
 
         if (isStreamRetryEnabled && isRetriableException(ex)) {
-            if (isItemLevelRetryEnabled) {
+            if (isItemLevelRetryEnabled && ex.uow != null) {
                 // Save it so we can report failures at the item level.
-                retryableItems.add(ex.uow)
+                retryableItems.add(ex.uow!!)
                 return
             }
             // rethrow to allow stream retry handling.
