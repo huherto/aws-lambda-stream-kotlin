@@ -185,7 +185,7 @@ class EvaluatePipeline (
      * Creates emitted higher-order event units of work from a successfully evaluated unit of work.
      *
      * The emitted event list is produced according to [higherOrderEmit], then each event is wrapped
-     * back into a copy of the original unit of work.
+     * back into a copyEvent of the original unit of work.
      *
      * @throws IllegalArgumentException when [higherOrderEmit] is not configured.
      */
@@ -222,15 +222,16 @@ class EvaluatePipeline (
             EventReference(it.id, it.eventType(), it.timestamp)
         }
 
-        val template = HigherOrderEventTemplate(baseEvent = baseEvent).apply {
-            id = uow.meta?.get("eventId")
-            partitionKey = uow.meta?.get("partitionKey")
-            timestamp = trigger?.timestamp
-            tags = aggregatedTags
-            this.triggers = mappedTriggers
-            raw = if (basic) baseEvent.raw else null
+        val template = HigherOrderEventTemplate(
+            baseEvent = baseEvent,
+            id = uow.meta?.get("eventId"),
+            partitionKey = uow.meta?.get("partitionKey"),
+            timestamp = trigger?.timestamp,
+            tags = aggregatedTags,
+            triggers = mappedTriggers,
+            raw = if (basic) baseEvent.raw else null,
             eem = if (basic) baseEvent.eem else null
-        }
+        )
 
         return template
     }

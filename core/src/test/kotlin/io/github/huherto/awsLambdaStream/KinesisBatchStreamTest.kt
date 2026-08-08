@@ -174,7 +174,7 @@ class KinesisBatchStreamTest {
         val map = mutableMapOf<String, KinesisEvent.KinesisEventRecord>()
         val eventCodec = MyEventCodec()
         for (i in 1..numEvents) {
-            val event = MyEventA().apply { id = i.toString() }
+            val event = MyEventA(id = i.toString())
             val eventAsString = eventCodec.encode(event)
             val eventRecord = KinesisEvent.KinesisEventRecord()
             eventRecord.kinesis = KinesisEvent.Record().apply {

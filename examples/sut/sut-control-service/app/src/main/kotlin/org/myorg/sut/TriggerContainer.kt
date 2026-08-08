@@ -74,10 +74,7 @@ class TriggerContainer(
         deliveryAttempts?.let {
             if (it.size == 1) return emptyList()
             val baseEvent = uow.event as? TrackedUnitEvent ?: return emptyList()
-            val e1 = ContactCustomerEvent().apply {
-                entity = baseEvent.entity
-            }
-            template.applyTemplate(e1)
+            val e1 = template.applyTemplate(ContactCustomerEvent(entity = baseEvent.entity))
             return listOf(e1)
         }
         return emptyList()

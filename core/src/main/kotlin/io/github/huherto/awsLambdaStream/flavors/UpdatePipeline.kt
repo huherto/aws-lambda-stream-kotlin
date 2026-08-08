@@ -110,7 +110,7 @@ class UpdatePipeline(
      * Splits a unit of work with a DynamoDB query response into one unit of work per returned item.
      *
      * The current [UnitOfWork] shape does not include a dedicated `queryResponseItem` field, so each
-     * split item is represented as a shallow copy carrying a synthetic [batch] with the source item.
+     * split item is represented as a shallow copyEvent carrying a synthetic [batch] with the source item.
      * This preserves the pipeline split behavior while allowing downstream rule functions to inspect
      * the original query response from the copied unit of work if needed.
      */

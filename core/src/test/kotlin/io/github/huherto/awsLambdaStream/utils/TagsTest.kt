@@ -62,9 +62,9 @@ class TagsTest {
         val pipeline = object : Pipeline("test-pipeline", envConfig) {
             override fun connect(fm: FaultManager, fromFlow: Flow<UnitOfWork>): Flow<UnitOfWork> = fromFlow
         }
-        val event = FaultEvent().apply {
+        val event = FaultEvent(
             tags = mapOf("custom" to "value")
-        }
+        )
         val uow = UnitOfWork(
             pipeline = pipeline,
             fault = event,
@@ -79,8 +79,7 @@ class TagsTest {
 
         val result = adornStandardTags(envConfig, uow)
 
-        result shouldBe uow
-        event.tags shouldBe mapOf(
+        result.fault?.tags shouldBe mapOf(
             "account" to "test-account",
             "region" to "eu-west-1",
             "stage" to "dev",

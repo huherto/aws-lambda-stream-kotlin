@@ -4,9 +4,9 @@ import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
 import aws.sdk.kotlin.services.dynamodb.model.BatchGetItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.KeysAndAttributes
 import aws.sdk.kotlin.services.dynamodb.model.QueryRequest
-import io.github.huherto.awsLambdaStream.BaseEvent
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.Event
+import io.github.huherto.awsLambdaStream.MyEventA
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
 import io.github.huherto.awsLambdaStream.extensions.batchGetRequest
@@ -52,18 +52,25 @@ class CdcPipelineTest {
         )
     }
 
+//    private fun createEvent(
+//        id: String = "event-1",
+//        partitionKey: String? = "partition-1",
+//        type: String = "TestEvent",
+//    ): Event = class  : BaseEvent() {
+//
+//
+//        override fun eventType(): String = type
+//
+//        @Deprecated("Legacy")
+//        override fun encoded(): String = """{"id":"$id","type":"$type"}"""
+//    }
+
     private fun createEvent(
         id: String = "event-1",
         partitionKey: String? = "partition-1",
         type: String = "TestEvent",
-    ): Event = object : BaseEvent() {
-        override var id: String? = id
-        override var partitionKey: String? = partitionKey
-
-        override fun eventType(): String = type
-
-        @Deprecated("Legacy")
-        override fun encoded(): String = """{"id":"$id","type":"$type"}"""
+    ) : Event {
+        return MyEventA(id = id, partitionKey = partitionKey)
     }
 
     @Test

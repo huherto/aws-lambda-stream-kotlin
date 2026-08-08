@@ -37,20 +37,17 @@ class ClaimCheckStore(
         val key: String,
     )
 
-    class ClaimCheckEvent(
-        eventId: String?,
+    data class ClaimCheckEvent(
+        override val id: String?,
         private val type: String,
-        eventPartitionKey: String?,
-        eventTimestamp: Long?,
-        eventTags: Map<String, String>?,
+        override val partitionKey: String?,
+        override val timestamp: Long?,
+        override val tags: Map<String, String>?,
+        override val raw: Any? = null,
+        override val eem: Any? = null,
+        override val triggers: List<EventReference>? = null,
         val s3: ClaimCheck,
     ) : BaseEvent() {
-        init {
-            id = eventId
-            partitionKey = eventPartitionKey
-            timestamp = eventTimestamp
-            tags = eventTags
-        }
 
         override fun eventType(): String = type
 
@@ -90,11 +87,11 @@ class ClaimCheckStore(
         bucket: String,
     ): ClaimCheckEvent {
         return ClaimCheckEvent(
-            eventId = event.id,
+            id = event.id,
             type = event.eventType(),
-            eventPartitionKey = event.partitionKey,
-            eventTimestamp = event.timestamp,
-            eventTags = event.tags,
+            partitionKey = event.partitionKey,
+            timestamp = event.timestamp,
+            tags = event.tags,
             s3 = ClaimCheck(
                 bucket = bucket,
                 key = formatKey(event),

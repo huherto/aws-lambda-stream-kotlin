@@ -51,7 +51,7 @@ fun copyCommonFields(from: Any, to: Any) {
  *    are populated from source properties with matching names.
  *
  * After construction, mutable Kotlin properties on the created instance are also updated from
- * source properties with matching names. Unlike [copyCommonFields], this final property copy
+ * source properties with matching names. Unlike [copyCommonFields], this final property copyEvent
  * includes null values.
  *
  * Constructor arguments are matched by parameter name. If a matching source property contains
@@ -82,6 +82,44 @@ fun <T : Any> createFromCommonValues(
     }
 
     copyMutableKotlinProperties(from, instance)
+    return instance
+}
+
+/**
+ * Creates a copyEvent of [from] with the provided overrides.
+ *
+ * This function uses the primary constructor of [from]'s class. Any overrides that match
+ * constructor parameter names will be used instead of the values from [from].
+ *
+ * @param from The source object to copyEvent.
+ * @param overrides A map of property names to new values.
+ * @return A new instance of the same class as [from].
+ */
+fun <T : Any> copyWithOverrides(from: T, overrides: Map<String, Any?>): T {
+    val targetClass = from::class
+    val ctor = targetClass.primaryConstructor
+        ?: throw IllegalArgumentException("Class ${targetClass.qualifiedName} must have a primary constructor")
+
+    val sourceProps = targetClass.memberProperties.associateBy { it.name }
+    val args = mutableMapOf<KParameter, Any?>()
+
+    for (param in ctor.parameters) {
+        val name = param.name ?: continue
+        if (overrides.containsKey(name)) {
+            val value = overrides[name]
+            if (value == null && !param.type.isMarkedNullable) continue
+            args[param] = value
+        } else {
+            val sourceProp = sourceProps[name] ?: continue
+            sourceProp.isAccessible = true
+            val value = sourceProp.getter.call(from)
+            if (value == null && !param.type.isMarkedNullable) continue
+            args[param] = value
+        }
+    }
+
+    val instance = ctor.callBy(args)
+    copyMutableKotlinProperties(from, instance) // Copy other properties if mutable
     return instance
 }
 

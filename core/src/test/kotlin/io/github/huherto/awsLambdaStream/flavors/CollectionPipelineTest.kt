@@ -1,9 +1,6 @@
 package io.github.huherto.awsLambdaStream.flavors
 
-import io.github.huherto.awsLambdaStream.BaseEvent
-import io.github.huherto.awsLambdaStream.EnvironmentConfig
-import io.github.huherto.awsLambdaStream.Event
-import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.*
 import io.github.huherto.awsLambdaStream.extensions.saveOptions
 import io.github.huherto.awsLambdaStream.sinks.EventsMicrostore
 import io.kotest.matchers.collections.shouldHaveSize
@@ -53,9 +50,13 @@ class CollectionPipelineTest {
         timestamp: Long = System.currentTimeMillis(),
         partitionKey: String? = "partition-1",
     ): Event = object : BaseEvent() {
-        override var id: String? = id
-        override var timestamp: Long? = timestamp
-        override var partitionKey: String? = partitionKey
+        override val id: String? = id
+        override val timestamp: Long? = timestamp
+        override val partitionKey: String? = partitionKey
+        override val tags: Map<String, String>? = null
+        override val raw: Any? = null
+        override val eem: Any? = null
+        override val triggers: List<EventReference>? = null
         override fun eventType() = "TestEvent"
         @Deprecated("Legacy")
         override fun encoded() = """{"id":"$id"}"""

@@ -30,29 +30,22 @@ fun JsonObject.stringMapOrNull(name: String): Map<String, String>? {
 
 class JsonEvent(jsonString: String) : Event {
     private val jsonObject = Json.parseToJsonElement(jsonString).jsonObject
-    override var id: String?
+    override val id: String?
         get() = jsonObject.stringOrNull("id")
-        set(value) {}
-    override var timestamp: Long?
+    override val timestamp: Long?
         get() = jsonObject.longOrNull("timestamp")
-        set(value) {}
-    override var partitionKey: String?
+    override val partitionKey: String?
         get() = jsonObject.stringOrNull("partitionKey")
-        set(value) {}
-    override var tags: Map<String, String>?
+    override val tags: Map<String, String>?
         get() = jsonObject.stringMapOrNull("tags")
-        set(value) {}
-    override var raw: Any?
+    override val raw: Any?
         get() = jsonObject["raw"]
-        set(value) {}
-    override var eem: Any?
+    override val eem: Any?
         get() = jsonObject.stringMapOrNull("eem")
-        set(value) {}
-    override var triggers: List<EventReference>?
+    override val triggers: List<EventReference>?
         get() = (jsonObject["triggers"] as? JsonArray)
             ?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
             ?.map { EventReference(it) }
-        set(value) { }
 
     fun jsonObject(path: String) : JsonObject? {
         return getJsonObjectByPath(jsonObject, path)
@@ -60,6 +53,33 @@ class JsonEvent(jsonString: String) : Event {
 
     fun jsonPrimitive(path: String) : JsonPrimitive? {
         return getJsonPrimitiveByPath(jsonObject, path)
+    }
+
+    override fun copyEvent(
+        id: String?,
+        timestamp: Long?,
+        partitionKey: String?,
+        tags: Map<String, String>?,
+        raw: Any?,
+        eem: Any?,
+        triggers: List<EventReference>?
+    ): Event {
+        val map = jsonObject.toMutableMap()
+        id?.let { map["id"] = JsonPrimitive(it) }
+        timestamp?.let { map["timestamp"] = JsonPrimitive(it) }
+        partitionKey?.let { map["partitionKey"] = JsonPrimitive(it) }
+        tags?.let {
+            map["tags"] = JsonObject(it.mapValues { (_, v) -> JsonPrimitive(v) })
+        }
+        // For raw, eem, and triggers, it's more complex because they can be any type.
+        // But for JsonEvent, we usually deal with JsonElements.
+        if (raw is JsonElement) map["raw"] = raw
+        if (eem is JsonObject) map["eem"] = eem
+        if (triggers != null) {
+            map["triggers"] = JsonArray(triggers.map { JsonPrimitive(it.id) }) // Simplified
+        }
+
+        return JsonEvent(JsonObject(map).toString())
     }
 
     override fun eventType(): String {

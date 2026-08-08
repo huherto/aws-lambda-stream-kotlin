@@ -21,27 +21,27 @@ class FaultEventFactory(
 
         val pipelineId = uow?.pipeline?.id ?: "undefined"
 
-        return FaultEvent().apply {
-            id = uuidV1Generator.generate().toString()
-            partitionKey = UUID.randomUUID().toString()
-            timestamp = System.currentTimeMillis()
-            tags = mutableMapOf(
+        return FaultEvent(
+            id = uuidV1Generator.generate().toString(),
+            partitionKey = UUID.randomUUID().toString(),
+            timestamp = System.currentTimeMillis(),
+            tags = mapOf(
                 "functionname" to awsLambdaFunctionName,
                 "pipeline" to pipelineId
-            )
+            ),
             err = ErrorSnapshot(
                 name = error.javaClass.simpleName,
                 message = error.message,
                 stackTrace = if (options.includeStackTrace) {
                     error.stackTrace.take(options.maxStackTraceFrames).map { it.toString() }
                 } else null
-            )
-            this.uow = uow?.let {
+            ),
+            uow = uow?.let {
                 val snapshot = unitOfWorkSnapshotter.snapshot(it)
                 redactor.redact(snapshot)
-            }
-            this.runtimeUow = uow
-            this.faultException = faultException
-        }
+            },
+            runtimeUow = uow,
+            faultException = faultException
+        )
     }
 }

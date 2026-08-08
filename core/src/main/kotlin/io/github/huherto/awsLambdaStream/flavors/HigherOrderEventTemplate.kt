@@ -2,12 +2,19 @@ package io.github.huherto.awsLambdaStream.flavors
 
 import io.github.huherto.awsLambdaStream.BaseEvent
 import io.github.huherto.awsLambdaStream.Event
-import io.github.huherto.awsLambdaStream.utils.createFromCommonValues
-import kotlin.reflect.KClass
 
 // A concrete implementation of Event to create Higher Order Events
 data class HigherOrderEventTemplate (
-    var baseEvent: Event // Base event to copy from
+    val baseEvent: Event, // Base event to copyEvent from
+    override val id: String? = null,
+    override val timestamp: Long? = null,
+    override val partitionKey: String? = null,
+    override val tags: Map<String, String>? = null,
+    @kotlinx.serialization.Contextual
+    override val raw: Any? = null,
+    @kotlinx.serialization.Contextual
+    override val eem: Any? = null,
+    override val triggers: List<io.github.huherto.awsLambdaStream.EventReference>? = null
 ) : BaseEvent() {
     override fun eventType(): String = "Not used"
     @Deprecated(
@@ -15,21 +22,22 @@ data class HigherOrderEventTemplate (
     )
     override fun encoded(): String = "Not used"
 
-    fun createEvent(clazz: KClass<out Event>): Event {
-        val instance = createFromCommonValues(baseEvent, clazz)
+    fun createEvent(clazz: kotlin.reflect.KClass<out Event>): Event {
+        val instance = io.github.huherto.awsLambdaStream.utils.createFromCommonValues(baseEvent, clazz)
         return applyTemplate(instance)        // Override with template's own values
     }
 
     fun applyTemplate(
         instance: Event,
     ): Event {
-        instance.id = this.id
-        instance.timestamp = this.timestamp
-        instance.partitionKey = this.partitionKey
-        instance.tags = this.tags
-        instance.raw = this.raw
-        instance.eem = this.eem
-        instance.triggers = this.triggers
-        return instance
+        return instance.copyEvent(
+            id = this.id,
+            timestamp = this.timestamp,
+            partitionKey = this.partitionKey,
+            tags = this.tags,
+            raw = this.raw,
+            eem = this.eem,
+            triggers = this.triggers
+        )
     }
 }

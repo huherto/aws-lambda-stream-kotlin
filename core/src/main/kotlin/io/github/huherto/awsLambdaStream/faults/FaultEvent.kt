@@ -1,32 +1,30 @@
 package io.github.huherto.awsLambdaStream.faults
 
 import io.github.huherto.awsLambdaStream.FAULT_EVENT_TYPE
-import io.github.huherto.awsLambdaStream.FaultException
-import io.github.huherto.awsLambdaStream.UnitOfWork
 import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 
 @Serializable
-class FaultEvent {
-    var id: String? = null
+data class FaultEvent(
+    val id: String? = null,
     @OptIn(ExperimentalSerializationApi::class)
     @EncodeDefault
-    var type: String = FAULT_EVENT_TYPE
-    var timestamp: Long? = null
-    var partitionKey: String? = null
-    var tags: Map<String, String>? = null
-    var err: ErrorSnapshot? = null
-    var uow: UnitOfWorkSnapshot? = null
+    val type: String = FAULT_EVENT_TYPE,
+    val timestamp: Long? = null,
+    val partitionKey: String? = null,
+    val tags: Map<String, String>? = null,
+    val err: ErrorSnapshot? = null,
+    val uow: UnitOfWorkSnapshot? = null,
 
     @kotlinx.serialization.Transient
     @com.fasterxml.jackson.annotation.JsonIgnore
-    var runtimeUow: UnitOfWork? = null
+    val runtimeUow: io.github.huherto.awsLambdaStream.UnitOfWork? = null,
 
     @kotlinx.serialization.Transient
     @com.fasterxml.jackson.annotation.JsonIgnore
-    var faultException: FaultException? = null
-
+    val faultException: io.github.huherto.awsLambdaStream.FaultException? = null
+) {
     override fun toString(): String {
         return err?.message ?: "Unknown Error"
     }

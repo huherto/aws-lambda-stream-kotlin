@@ -41,12 +41,8 @@ class ClaimCheckRedeemerTest {
         }
         val s3Connector = S3Connector(clientFactory = s3ClientFactory)
         val eventCodec = MyEventCodec()
-        val claimedEvent = MyEventA(foo = "claimed-foo", bar = "claimed-bar").apply {
-            id = "claimed-event-id"
-        }
-        val claimCheckEvent = MyEventA().apply {
-            raw = ClaimCheck(bucket = "claim-bucket", key = "events/claimed-event.json")
-        }
+        val claimedEvent = MyEventA(foo = "claimed-foo", bar = "claimed-bar", id = "claimed-event-id")
+        val claimCheckEvent = MyEventA(raw = ClaimCheck(bucket = "claim-bucket", key = "events/claimed-event.json"))
         val originalUow = UnitOfWork(event = claimCheckEvent)
         val redeemer = ClaimCheckRedeemer(
             s3Connector = s3Connector,

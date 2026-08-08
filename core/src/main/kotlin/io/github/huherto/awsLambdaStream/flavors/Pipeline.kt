@@ -74,11 +74,11 @@ abstract class Pipeline(val id : String, val envConfig: EnvironmentConfig) {
     /**
      * Returns a log-safe representation of a [UnitOfWork].
      *
-     * The default implementation returns a shallow copy unchanged. Override this method in subclasses
+     * The default implementation returns a shallow copyEvent unchanged. Override this method in subclasses
      * to trim large fields or redact sensitive values before unit-of-work details are written to logs.
      *
      * @param uow Unit of work to prepare for logging.
-     * @return A copy or transformed representation suitable for log output.
+     * @return A copyEvent or transformed representation suitable for log output.
      */
     fun trimAndRedacted(uow: UnitOfWork) : UnitOfWork {
         return uow.copy()

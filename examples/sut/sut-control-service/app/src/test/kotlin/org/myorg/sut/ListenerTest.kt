@@ -133,14 +133,14 @@ class ListenerTest {
 
     @Test
     fun `create an event converted to base64 and back`() {
-        val event = ShipmentCreatedEvent().apply {
-            id = "test-event-123"
-            partitionKey = "pk-1"
+        val event = ShipmentCreatedEvent(
+            id = "test-event-123",
+            partitionKey = "pk-1",
             entity = TrackedUnit().apply {
                 id = "tu=123"
                 senderFullName = "Fulanito de tal"
             }
-        }
+        )
 
         val eventString: String = event.encoded()
         val base64: String = Base64.encode(eventString.toByteArray())

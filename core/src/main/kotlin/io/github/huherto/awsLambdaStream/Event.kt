@@ -1,20 +1,19 @@
 package io.github.huherto.awsLambdaStream
 
-import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 
 interface Event {
-    var id: String?
-    var timestamp: Long? // In milliseconds since epoch
-    var partitionKey: String?
-    var tags: Map<String, String>?
-    var raw: Any?
+    val id: String?
+    val timestamp: Long? // In milliseconds since epoch
+    val partitionKey: String?
+    val tags: Map<String, String>?
+    val raw: Any?
 
     // Envelope Encryption Metadata. See SAP4SS page 347
-    var eem: Any?
+    val eem: Any?
 
     // References to the events that triggered this event. Useful for diagnostics.
-    var triggers: List<EventReference>?
+    val triggers: List<EventReference>?
 
     fun eventType(): String
 
@@ -22,6 +21,16 @@ interface Event {
         message = "Use EventCodec or the configured framework publisher instead.",
     )
     fun encoded()  : String
+
+    fun copyEvent(
+        id: String? = this.id,
+        timestamp: Long? = this.timestamp,
+        partitionKey: String? = this.partitionKey,
+        tags: Map<String, String>? = this.tags,
+        raw: Any? = this.raw,
+        eem: Any? = this.eem,
+        triggers: List<EventReference>? = this.triggers
+    ): Event
 }
 
 @Serializable
@@ -31,19 +40,30 @@ data class EventReference(
     val timestamp: Long? = null,
 )
 
-@Serializable
 abstract class BaseEvent : Event {
-    override var id: String? = null
-    override var timestamp: Long? = null
-    override var partitionKey: String? = null
-    override var tags: Map<String, String>? = mutableMapOf()
 
-    @Contextual
-    override var raw: Any? = null
-
-    @Contextual
-    override var eem: Any? = null
-    override var triggers: List<EventReference>? = null
+    override fun copyEvent(
+        id: String?,
+        timestamp: Long?,
+        partitionKey: String?,
+        tags: Map<String, String>?,
+        raw: Any?,
+        eem: Any?,
+        triggers: List<EventReference>?
+    ): Event {
+        return io.github.huherto.awsLambdaStream.utils.copyWithOverrides(
+            this,
+            mapOf(
+                "id" to id,
+                "timestamp" to timestamp,
+                "partitionKey" to partitionKey,
+                "tags" to tags,
+                "raw" to raw,
+                "eem" to eem,
+                "triggers" to triggers
+            )
+        )
+    }
 }
 
 @Serializable

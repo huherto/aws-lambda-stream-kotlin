@@ -194,45 +194,4 @@ class JsonEventTest {
         // Assert
         Json.parseToJsonElement(encoded) shouldBe Json.parseToJsonElement(jsonString)
     }
-
-    @Test
-    fun `setters do not mutate JsonEvent values`() {
-        // Arrange
-        val event = JsonEvent(
-            """
-            {
-              "id": "event-1",
-              "timestamp": 123,
-              "partitionKey": "partition-1",
-              "tags": {
-                "source": "orders"
-              },
-              "eem": {
-                "keyId": "key-1"
-              },
-              "triggers": [
-                "trigger-1"
-              ]
-            }
-            """.trimIndent()
-        )
-
-        // Act
-        event.id = "event-2"
-        event.timestamp = 456
-        event.partitionKey = "partition-2"
-        event.tags = mapOf("source" to "payments")
-        event.raw = JsonObject(emptyMap())
-        event.eem = mapOf("keyId" to "key-2")
-        event.triggers = listOf(EventReference("trigger-2"))
-
-        // Assert
-        event.id shouldBe "event-1"
-        event.timestamp shouldBe 123L
-        event.partitionKey shouldBe "partition-1"
-        event.tags?.shouldContainExactly(mapOf("source" to "orders"))
-        event.raw shouldBe null
-        event.eem shouldBe mapOf("keyId" to "key-1")
-        event.triggers shouldContainExactly listOf(EventReference("trigger-1"))
-    }
 }

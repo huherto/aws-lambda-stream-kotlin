@@ -122,7 +122,7 @@ fun Flow<UnitOfWork>.scanSplitDynamoDB(
         }
 
         decryptedItems.forEach { item ->
-            // emit(uow.copy(scanRequest = currentRequest, scanResponseItem = item, lastEvaluatedKey = cursor))
+            // emit(uow.copyEvent(scanRequest = currentRequest, scanResponseItem = item, lastEvaluatedKey = cursor))
             emit(uow)
         }
 
@@ -161,7 +161,7 @@ fun Flow<UnitOfWork>.querySplitDynamoDB(
         }
 
         decryptedItems.forEach { item ->
-            // emit(uow.copy(querySplitRequest = currentRequest, querySplitResponseItem = item, lastEvaluatedKey = cursor))
+            // emit(uow.copyEvent(querySplitRequest = currentRequest, querySplitResponseItem = item, lastEvaluatedKey = cursor))
             emit(uow) // Re-emit new sub-uows
         }
 

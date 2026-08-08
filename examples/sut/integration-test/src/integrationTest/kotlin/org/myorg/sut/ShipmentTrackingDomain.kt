@@ -32,61 +32,59 @@ object ShipmentTrackingDomain {
         return number.toString().padStart(size, '0')
     }
 
-    fun createShipmentCreatedEvent(trackedUnit: TrackedUnit) = ShipmentCreatedEvent().apply {
-        id = "ship-" + generateRandomNumber()
-        partitionKey = trackedUnit.id
-        timestamp = System.currentTimeMillis()
-        location = "Atlanta Hub"
-        entity = trackedUnit
-    }
+    fun createShipmentCreatedEvent(trackedUnit: TrackedUnit) = ShipmentCreatedEvent(
+        id = "ship-" + generateRandomNumber(),
+        partitionKey = trackedUnit.id,
+        timestamp = System.currentTimeMillis(),
+        location = "Atlanta Hub",
+        entity = trackedUnit,
+    )
 
-    fun createDeliveryAttemptedEvent(trackedUnit: TrackedUnit) = DeliveryAttemptedEvent().apply {
-        id = "ship-" + generateRandomNumber()
-        partitionKey = trackedUnit.id
-        timestamp = System.currentTimeMillis()
-        location = "Atlanta Hub"
-        reason = "Can't access the door"
-        entity = trackedUnit
-    }
+    fun createDeliveryAttemptedEvent(trackedUnit: TrackedUnit) = DeliveryAttemptedEvent(
+        id = "ship-" + generateRandomNumber(),
+        partitionKey = trackedUnit.id,
+        timestamp = System.currentTimeMillis(),
+        location = "Atlanta Hub",
+        reason = "Can't access the door",
+        entity = trackedUnit,
+    )
 
-    fun createPoisonPillEvent(trackedUnit: TrackedUnit) = ShipmentCreatedEvent().apply {
-        id = "poison-" + generateRandomNumber()
-        partitionKey = trackedUnit.id
-        timestamp = System.currentTimeMillis()
-        location = "poison-pill"
-        entity = trackedUnit
-    }
+    fun createPoisonPillEvent(trackedUnit: TrackedUnit) = ShipmentCreatedEvent(
+        id = "poison-" + generateRandomNumber(),
+        partitionKey = trackedUnit.id,
+        timestamp = System.currentTimeMillis(),
+        location = "poison-pill",
+        entity = trackedUnit,
+    )
 
     class TestException(message: String) : RuntimeException(message, null, false, false)
 
-    fun createFaultEvent() = FaultEvent().apply {
-        id = "fault-" + generateRandomNumber()
-        timestamp = System.currentTimeMillis()
-        tags = mapOf(
-            "functionname" to "integration-test",
-            "pipeline" to "integration-test"
-        )
+    fun createFaultEvent()  : FaultEvent {
         val exception = TestException("Test exception")
-        val unitOfWork = UnitOfWork()
-
-        err = ErrorSnapshot(
-            name = exception::class.java.simpleName,
-            message = exception.message
-        )
-
-        uow = UnitOfWorkSnapshot(
-            record = ReplayRecordSnapshot(
-                kind = "kinesis",
-                payload = JsonObject(mapOf("eventID" to JsonPrimitive("dummy")))
+        return FaultEvent(
+            id = "fault-" + generateRandomNumber(),
+            timestamp = System.currentTimeMillis(),
+            tags = mapOf(
+                "functionname" to "integration-test",
+                "pipeline" to "integration-test"
+            ),
+            err = ErrorSnapshot(
+                name = exception::class.java.simpleName,
+                message = exception.message
+            ),
+            uow = UnitOfWorkSnapshot(
+                record = ReplayRecordSnapshot(
+                    kind = "kinesis",
+                    payload = JsonObject(mapOf("eventID" to JsonPrimitive("dummy")))
+                )
+            ),
+            faultException = FaultException(
+                UnitOfWork(),
+                "",
+                exception,
+                enableSuppression = false,
+                writableStackTrace = false
             )
-        )
-
-        faultException = FaultException(
-            unitOfWork,
-            "",
-            exception,
-            enableSuppression = false,
-            writableStackTrace = false
         )
     }
 }

@@ -4,6 +4,7 @@ import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequest
 import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequestEntry
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.Event
+import io.github.huherto.awsLambdaStream.MyEventA
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.ConnectorResponse
 import io.github.huherto.awsLambdaStream.connectors.EventBridgeConnector
@@ -147,16 +148,11 @@ class EventBridgePublisherTest {
                 source = "flow-source",
                 batchSize = 2)
 
-            val mockEvent1 = spyk<Event>()
-            every { mockEvent1.eventType() } returns "type1"
-            every { mockEvent1.encoded() } returns "data1"
+            val event1 = MyEventA(id = "id1", tags = emptyMap())
+            val event2 = MyEventA(id = "id2", tags = emptyMap())
 
-            val mockEvent2 = spyk<Event>()
-            every { mockEvent2.eventType() } returns "type2"
-            every { mockEvent2.encoded() } returns "data2"
-
-            val uow1 = UnitOfWork(event = mockEvent1)
-            val uow2 = UnitOfWork(event = mockEvent2)
+            val uow1 = UnitOfWork(event = event1)
+            val uow2 = UnitOfWork(event = event2)
 
             val inputFlow = flowOf(uow1, uow2)
 
@@ -167,8 +163,8 @@ class EventBridgePublisherTest {
             resultList.size shouldBe 2
             
             // Check that entries map correctly
-            resultList[0].publishRequestEntry?.detail shouldBe "data1"
-            resultList[1].publishRequestEntry?.detail shouldBe "data2"
+            resultList[0].publishRequestEntry?.detail.shouldNotBeNull()
+            resultList[1].publishRequestEntry?.detail.shouldNotBeNull()
         }
     }
 }

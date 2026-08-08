@@ -8,7 +8,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.serializerOrNull
 
 @Serializable
-sealed class TrackedUnitEvent() : Event {
+sealed class TrackedUnitEvent : Event {
 
     companion object {
         const val SHIPMENT_CREATED = "SHIPMENT_CREATED"
@@ -24,23 +24,25 @@ sealed class TrackedUnitEvent() : Event {
         const val VERIFY_TARGET_ADDRESS = "VERIFY_TARGET_ADDRESS"
         const val CONTACT_CUSTOMER = "CONTACT_CUSTOMER"
         const val POISON_PILL_EVENT = "POISON_PILL_EVENT"
-
     }
 
-    override var id: String? = null
-    override var timestamp: Long? = null
-    override var partitionKey: String? = null
-    override var tags: Map<String, String>? = HashMap<String, String>()
-    var entity: TrackedUnit? = null
+    abstract override val id: String?
+    abstract override val timestamp: Long?
+    abstract override val partitionKey: String?
+    abstract override val tags: Map<String, String>?
 
     @Contextual
-    override var raw: Any? = null
+    abstract override val raw: Any?
 
     @Contextual
-    override var eem: Any? = null
+    abstract override val eem: Any?
 
     @Serializable(with = EventReferenceListSerializer::class)
-    override var triggers: List<EventReference>? = null
+    abstract override val triggers: List<EventReference>?
+
+    abstract val entity: TrackedUnit?
+    abstract val location : String?
+    abstract val result : String?
 
     @OptIn(InternalSerializationApi::class)
     override fun eventType(): String {
@@ -51,63 +53,234 @@ sealed class TrackedUnitEvent() : Event {
         return TrackedUnitEventCodec.encode(this)
     }
 
-    var location : String? = null
-    var result : String? = null
-
     override fun toString(): String {
         return encoded()
     }
 
+    override fun copyEvent(
+        id: String?,
+        timestamp: Long?,
+        partitionKey: String?,
+        tags: Map<String, String>?,
+        raw: Any?,
+        eem: Any?,
+        triggers: List<EventReference>?
+    ): Event {
+        return io.github.huherto.awsLambdaStream.utils.copyWithOverrides(
+            this,
+            mapOf(
+                "id" to id,
+                "timestamp" to timestamp,
+                "partitionKey" to partitionKey,
+                "tags" to tags,
+                "raw" to raw,
+                "eem" to eem,
+                "triggers" to triggers
+            )
+        )
+    }
 }
 
 @Serializable
 @kotlinx.serialization.SerialName(TrackedUnitEvent.SHIPMENT_CREATED)
-class ShipmentCreatedEvent : TrackedUnitEvent()
+data class ShipmentCreatedEvent(
+    override val id: String? = null,
+    override val timestamp: Long? = null,
+    override val partitionKey: String? = null,
+    override val tags: Map<String, String>? = null,
+    @Contextual override val raw: Any? = null,
+    @Contextual override val eem: Any? = null,
+    override val triggers: List<EventReference>? = null,
+    override val entity: TrackedUnit? = null,
+    override val location: String? = null,
+    override val result: String? = null
+) : TrackedUnitEvent()
 
 @Serializable
 @kotlinx.serialization.SerialName(TrackedUnitEvent.SHIPMENT_PICKED_UP)
-class ShipmentPickedUpEvent(var carrierName: String? = null) : TrackedUnitEvent()
+data class ShipmentPickedUpEvent(
+    val carrierName: String? = null,
+    override val id: String? = null,
+    override val timestamp: Long? = null,
+    override val partitionKey: String? = null,
+    override val tags: Map<String, String>? = null,
+    @Contextual override val raw: Any? = null,
+    @Contextual override val eem: Any? = null,
+    override val triggers: List<EventReference>? = null,
+    override val entity: TrackedUnit? = null,
+    override val location: String? = null,
+    override val result: String? = null
+) : TrackedUnitEvent()
 
 @Serializable
 @kotlinx.serialization.SerialName(TrackedUnitEvent.SHIPMENT_IN_TRANSIT)
-class ShipmentInTransitEvent : TrackedUnitEvent()
+data class ShipmentInTransitEvent(
+    override val id: String? = null,
+    override val timestamp: Long? = null,
+    override val partitionKey: String? = null,
+    override val tags: Map<String, String>? = null,
+    @Contextual override val raw: Any? = null,
+    @Contextual override val eem: Any? = null,
+    override val triggers: List<EventReference>? = null,
+    override val entity: TrackedUnit? = null,
+    override val location: String? = null,
+    override val result: String? = null
+) : TrackedUnitEvent()
 
 @Serializable
 @kotlinx.serialization.SerialName(TrackedUnitEvent.ARRIVAL_AT_HUB)
-class ArrivalAtHubEvent(var hubId: String? = null) : TrackedUnitEvent()
+data class ArrivalAtHubEvent(
+    val hubId: String? = null,
+    override val id: String? = null,
+    override val timestamp: Long? = null,
+    override val partitionKey: String? = null,
+    override val tags: Map<String, String>? = null,
+    @Contextual override val raw: Any? = null,
+    @Contextual override val eem: Any? = null,
+    override val triggers: List<EventReference>? = null,
+    override val entity: TrackedUnit? = null,
+    override val location: String? = null,
+    override val result: String? = null
+) : TrackedUnitEvent()
 
 @Serializable
 @kotlinx.serialization.SerialName(TrackedUnitEvent.DEPARTURE_FROM_HUB)
-class DepartureFromHubEvent(var nextDestination: String? = null) : TrackedUnitEvent()
+data class DepartureFromHubEvent(
+    val nextDestination: String? = null,
+    override val id: String? = null,
+    override val timestamp: Long? = null,
+    override val partitionKey: String? = null,
+    override val tags: Map<String, String>? = null,
+    @Contextual override val raw: Any? = null,
+    @Contextual override val eem: Any? = null,
+    override val triggers: List<EventReference>? = null,
+    override val entity: TrackedUnit? = null,
+    override val location: String? = null,
+    override val result: String? = null
+) : TrackedUnitEvent()
 
 @Serializable
 @kotlinx.serialization.SerialName(TrackedUnitEvent.CUSTOMS_CLEARED)
-class CustomsClearedEvent(var countryCode: String? = null) : TrackedUnitEvent()
+data class CustomsClearedEvent(
+    val countryCode: String? = null,
+    override val id: String? = null,
+    override val timestamp: Long? = null,
+    override val partitionKey: String? = null,
+    override val tags: Map<String, String>? = null,
+    @Contextual override val raw: Any? = null,
+    @Contextual override val eem: Any? = null,
+    override val triggers: List<EventReference>? = null,
+    override val entity: TrackedUnit? = null,
+    override val location: String? = null,
+    override val result: String? = null
+) : TrackedUnitEvent()
 
 @Serializable
 @kotlinx.serialization.SerialName(TrackedUnitEvent.OUT_FOR_DELIVERY)
-class OutForDeliveryEvent(var estimatedArrival: String? = null) : TrackedUnitEvent()
+data class OutForDeliveryEvent(
+    val estimatedArrival: String? = null,
+    override val id: String? = null,
+    override val timestamp: Long? = null,
+    override val partitionKey: String? = null,
+    override val tags: Map<String, String>? = null,
+    @Contextual override val raw: Any? = null,
+    @Contextual override val eem: Any? = null,
+    override val triggers: List<EventReference>? = null,
+    override val entity: TrackedUnit? = null,
+    override val location: String? = null,
+    override val result: String? = null
+) : TrackedUnitEvent()
 
 @Serializable
 @kotlinx.serialization.SerialName(TrackedUnitEvent.DELIVERY_ATTEMPTED)
-class DeliveryAttemptedEvent(var reason: String? = null) : TrackedUnitEvent()
+data class DeliveryAttemptedEvent(
+    val reason: String? = null,
+    override val id: String? = null,
+    override val timestamp: Long? = null,
+    override val partitionKey: String? = null,
+    override val tags: Map<String, String>? = null,
+    @Contextual override val raw: Any? = null,
+    @Contextual override val eem: Any? = null,
+    override val triggers: List<EventReference>? = null,
+    override val entity: TrackedUnit? = null,
+    override val location: String? = null,
+    override val result: String? = null
+) : TrackedUnitEvent()
 
 @Serializable
 @kotlinx.serialization.SerialName(TrackedUnitEvent.SHIPMENT_DELIVERED)
-class ShipmentDeliveredEvent(var signedBy: String? = null) : TrackedUnitEvent()
+data class ShipmentDeliveredEvent(
+    val signedBy: String? = null,
+    override val id: String? = null,
+    override val timestamp: Long? = null,
+    override val partitionKey: String? = null,
+    override val tags: Map<String, String>? = null,
+    @Contextual override val raw: Any? = null,
+    @Contextual override val eem: Any? = null,
+    override val triggers: List<EventReference>? = null,
+    override val entity: TrackedUnit? = null,
+    override val location: String? = null,
+    override val result: String? = null
+) : TrackedUnitEvent()
 
 @Serializable
 @kotlinx.serialization.SerialName(TrackedUnitEvent.SHIPMENT_EXCEPTION)
-class ShipmentExceptionEvent(var exceptionType: String? = null, var description: String? = null) : TrackedUnitEvent()
+data class ShipmentExceptionEvent(
+    val exceptionType: String? = null,
+    val description: String? = null,
+    override val id: String? = null,
+    override val timestamp: Long? = null,
+    override val partitionKey: String? = null,
+    override val tags: Map<String, String>? = null,
+    @Contextual override val raw: Any? = null,
+    @Contextual override val eem: Any? = null,
+    override val triggers: List<EventReference>? = null,
+    override val entity: TrackedUnit? = null,
+    override val location: String? = null,
+    override val result: String? = null
+) : TrackedUnitEvent()
 
 @Serializable
 @kotlinx.serialization.SerialName(TrackedUnitEvent.VERIFY_TARGET_ADDRESS)
-class VerifyTargetAddressEvent() : TrackedUnitEvent()
+data class VerifyTargetAddressEvent(
+    override val id: String? = null,
+    override val timestamp: Long? = null,
+    override val partitionKey: String? = null,
+    override val tags: Map<String, String>? = null,
+    @Contextual override val raw: Any? = null,
+    @Contextual override val eem: Any? = null,
+    override val triggers: List<EventReference>? = null,
+    override val entity: TrackedUnit? = null,
+    override val location: String? = null,
+    override val result: String? = null
+) : TrackedUnitEvent()
 
 @Serializable
 @kotlinx.serialization.SerialName(TrackedUnitEvent.CONTACT_CUSTOMER)
-class ContactCustomerEvent() : TrackedUnitEvent()
+data class ContactCustomerEvent(
+    override val id: String? = null,
+    override val timestamp: Long? = null,
+    override val partitionKey: String? = null,
+    override val tags: Map<String, String>? = null,
+    @Contextual override val raw: Any? = null,
+    @Contextual override val eem: Any? = null,
+    override val triggers: List<EventReference>? = null,
+    override val entity: TrackedUnit? = null,
+    override val location: String? = null,
+    override val result: String? = null
+) : TrackedUnitEvent()
 
 @Serializable
 @kotlinx.serialization.SerialName(TrackedUnitEvent.POISON_PILL_EVENT)
-class PoisonPillEvent() : TrackedUnitEvent()
+data class PoisonPillEvent(
+    override val id: String? = null,
+    override val timestamp: Long? = null,
+    override val partitionKey: String? = null,
+    override val tags: Map<String, String>? = null,
+    @Contextual override val raw: Any? = null,
+    @Contextual override val eem: Any? = null,
+    override val triggers: List<EventReference>? = null,
+    override val entity: TrackedUnit? = null,
+    override val location: String? = null,
+    override val result: String? = null
+) : TrackedUnitEvent()

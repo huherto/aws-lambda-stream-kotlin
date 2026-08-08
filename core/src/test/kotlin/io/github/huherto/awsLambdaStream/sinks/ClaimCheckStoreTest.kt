@@ -40,7 +40,7 @@ class ClaimCheckStoreTest {
     fun `formatKey uses region clock and event id`() {
         // arrange
         val store = claimCheckStore()
-        val event = MyEventA().apply { id = "event-123" }
+        val event = MyEventA(id = "event-123")
 
         every { envConfig.awsRegion() } returns "us-west-2"
 
@@ -72,12 +72,14 @@ class ClaimCheckStoreTest {
     fun `toClaimCheckEvent keeps event metadata and points to s3 object`() {
         // arrange
         val store = claimCheckStore()
-        val event = MyEventA(foo = "foo", bar = "bar").apply {
-            id = "event-123"
-            partitionKey = "partition-1"
-            timestamp = 123456789L
+        val event = MyEventA(
+            foo = "foo",
+            bar = "bar",
+            id = "event-123",
+            partitionKey = "partition-1",
+            timestamp = 123456789L,
             tags = mapOf("source" to "test")
-        }
+        )
 
         every { envConfig.awsRegion() } returns "eu-central-1"
 
@@ -102,7 +104,7 @@ class ClaimCheckStoreTest {
     fun `toPutClaimCheckRequest creates request with bucket key and encoded event body`() = runTest {
         // arrange
         val store = claimCheckStore()
-        val event = MyEventA(foo = "foo", bar = "bar").apply { id = "event-123" }
+        val event = MyEventA(foo = "foo", bar = "bar", id = "event-123")
 
         every { envConfig.awsRegion() } returns "ap-southeast-2"
 
@@ -120,8 +122,8 @@ class ClaimCheckStoreTest {
         // arrange
         val storeWithoutBucket = claimCheckStore(bucket = " ")
         val uows = listOf(
-            UnitOfWork(key = "one", event = MyEventA().apply { id = "event-1" }),
-            UnitOfWork(key = "two", event = MyEventA().apply { id = "event-2" }),
+            UnitOfWork(key = "one", event = MyEventA(id = "event-1")),
+            UnitOfWork(key = "two", event = MyEventA(id = "event-2")),
         )
 
         // act
@@ -138,7 +140,7 @@ class ClaimCheckStoreTest {
         // arrange
         val store = claimCheckStore()
         val response = PutObjectResponse {}
-        val event = MyEventA(foo = "foo").apply { id = "event-123" }
+        val event = MyEventA(foo = "foo", id = "event-123")
         val eventUow = UnitOfWork(key = "with-event", event = event)
         val eventlessUow = UnitOfWork(key = "without-event")
 
@@ -180,8 +182,8 @@ class ClaimCheckStoreTest {
         val store = claimCheckStore()
         val response1 = PutObjectResponse { eTag = "etag-1" }
         val response2 = PutObjectResponse { eTag = "etag-2" }
-        val event1 = MyEventA(foo = "foo-1").apply { id = "event-1" }
-        val event2 = MyEventA(foo = "foo-2").apply { id = "event-2" }
+        val event1 = MyEventA(foo = "foo-1", id = "event-1")
+        val event2 = MyEventA(foo = "foo-2", id = "event-2")
         val batchWrapper = UnitOfWork(
             key = "batch-wrapper",
             batch = listOf(

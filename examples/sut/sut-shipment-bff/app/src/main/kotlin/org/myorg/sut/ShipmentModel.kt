@@ -55,15 +55,15 @@ fun toEvent(uow: UnitOfWork) : Event? {
     if (newImage.getS("sk") == SHIPMENT) {
         val shipment = recordImageToShipment(newImage)
         if (raw.old == null) {
-            val event = ShipmentCreatedEvent().apply {
-                id = randomUUID().toString()
-                timestamp = System.currentTimeMillis()
-                partitionKey = shipment.id
-                tags = emptyMap()
-                entity = shipment
-                location = "Unknown"
+            val event = ShipmentCreatedEvent(
+                id = randomUUID().toString(),
+                timestamp = System.currentTimeMillis(),
+                partitionKey = shipment.id,
+                tags = emptyMap(),
+                entity = shipment,
+                location = "Unknown",
                 result = "Success"
-            }
+            )
             return event
         }
     }

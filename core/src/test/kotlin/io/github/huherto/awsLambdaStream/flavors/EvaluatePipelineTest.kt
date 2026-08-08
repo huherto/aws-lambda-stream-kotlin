@@ -67,6 +67,23 @@ class EvaluatePipelineTest {
         )
     }
 
+    data class TestEvent(
+        override val id: String? = null,
+        override val timestamp: Long? = null,
+        override val partitionKey: String? = null,
+        override val tags: Map<String, String>? = null,
+        @kotlinx.serialization.Contextual
+        override val raw: Any? = null,
+        @kotlinx.serialization.Contextual
+        override val eem: Any? = null,
+        override val triggers: List<EventReference>? = null,
+        val type: String = "TestEvent",
+    ) : BaseEvent() {
+        override fun eventType() = type
+        @Deprecated("Legacy")
+        override fun encoded() = """{"id":"$id","type":"$type"}"""
+    }
+
     private fun createEvent(
         id: String = "event-1",
         timestamp: Long = 1_700_000_000_000L,
@@ -75,17 +92,15 @@ class EvaluatePipelineTest {
         raw: Any? = null,
         eem: Any? = null,
         type: String = "TestEvent",
-    ): Event = object : BaseEvent() {
-        override var id: String? = id
-        override var timestamp: Long? = timestamp
-        override var partitionKey: String? = partitionKey
-        override var tags: Map<String, String>? = tags
-        override var raw: Any? = raw
-        override var eem: Any? = eem
-        override fun eventType() = type
-        @Deprecated("Legacy")
-        override fun encoded() = """{"id":"$id","type":"$type"}"""
-    }
+    ): Event = TestEvent(
+        id = id,
+        timestamp = timestamp,
+        partitionKey = partitionKey,
+        tags = tags,
+        raw = raw,
+        eem = eem,
+        type = type
+    )
 
     private fun createInsertRecord(
         sk: String = "EVENT",
@@ -155,10 +170,10 @@ class EvaluatePipelineTest {
                 "expire" to StreamAV().withBOOL(true),
             )
         )
-        val tableChangeEvent = TableChangeEvent().apply {
-            id = "event-1"
+        val tableChangeEvent = TableChangeEvent(
+            id = "event-1",
             raw = RecordPair(new = rawNew, old = null)
-        }
+        )
         val uow = UnitOfWork(
             record = createInsertRecord(discriminator = "CORREL"),
             event = tableChangeEvent
@@ -245,7 +260,17 @@ class EvaluatePipelineTest {
         expressionResult[0].meta!!["keep"] shouldBe "true"
     }
 
-    class HigherType : BaseEvent() {
+    data class HigherType(
+        override val id: String? = null,
+        override val timestamp: Long? = null,
+        override val partitionKey: String? = null,
+        override val tags: Map<String, String>? = null,
+        @kotlinx.serialization.Contextual
+        override val raw: Any? = null,
+        @kotlinx.serialization.Contextual
+        override val eem: Any? = null,
+        override val triggers: List<EventReference>? = null
+    ) : BaseEvent() {
         override fun eventType(): String {
             return "HigherType"
         }
@@ -254,7 +279,6 @@ class EvaluatePipelineTest {
         override fun encoded(): String {
             TODO("Not yet implemented")
         }
-
     }
 
     @Test

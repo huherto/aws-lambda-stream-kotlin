@@ -14,19 +14,19 @@ class FaultEventGoldenJsonTest {
 
     @Test
     fun `fault event should produce stable JSON structure`() {
-        val event = FaultEvent().apply {
-            id = "fault-123"
-            type = "fault"
-            timestamp = 123456789L
-            partitionKey = "pk-1"
+        val event = FaultEvent(
+            id = "fault-123",
+            type = "fault",
+            timestamp = 123456789L,
+            partitionKey = "pk-1",
             tags = mapOf(
                 "functionname" to "target-lambda",
                 "pipeline" to "target-pipeline"
-            )
+            ),
             err = ErrorSnapshot(
                 name = "IllegalStateException",
                 message = "Something failed"
-            )
+            ),
             uow = UnitOfWorkSnapshot(
                 pipeline = PipelineSnapshot(id = "target-pipeline"),
                 key = "pk-1",
@@ -54,7 +54,7 @@ class FaultEventGoldenJsonTest {
                     partitionKey = "pk-1"
                 )
             )
-        }
+        )
 
         val jacksonJson = jackson.serialize(event)
         val kotlinxJson = kotlinx.serialize(event)

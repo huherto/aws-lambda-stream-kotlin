@@ -9,14 +9,22 @@ import io.github.huherto.awsLambdaStream.serialization.RecordPairJsonSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json.Default.encodeToString
 
-class TableChangeEvent : BaseEvent() {
-
-    var type: String? = null
-
+@Serializable
+data class TableChangeEvent(
+    override val id: String? = null,
+    override val timestamp: Long? = null,
+    override val partitionKey: String? = null,
+    override val tags: Map<String, String>? = null,
     @Serializable(with = RecordPairAsJsonObjectSerializer::class)
     @JsonSerialize(using = RecordPairJsonSerializer::class)
     @JsonDeserialize(using = RecordPairJsonDeserializer::class)
-    override var raw: Any? = null
+    @kotlinx.serialization.Contextual
+    override val raw: Any? = null,
+    @kotlinx.serialization.Contextual
+    override val eem: Any? = null,
+    override val triggers: List<io.github.huherto.awsLambdaStream.EventReference>? = null,
+    val type: String? = null,
+) : BaseEvent() {
 
     override fun eventType(): String {
         return type ?: "table_change"
@@ -32,5 +40,4 @@ class TableChangeEvent : BaseEvent() {
     override fun encoded(): String {
         return encodeToString(this)
     }
-
 }

@@ -12,13 +12,21 @@ fun adornStandardTags(
     val fault = uow.fault
 
     if (event != null) {
-        event.tags = envTags(envConfig, uow.pipeline?.id) +
-            skipTag(envConfig).mapValues { it.value.toString() } +
-            event.tags.orEmpty()
+        return uow.copy(
+            event = event.copyEvent(
+                tags = envTags(envConfig, uow.pipeline?.id) +
+                        skipTag(envConfig).mapValues { it.value.toString() } +
+                        event.tags.orEmpty()
+            )
+        )
     } else if (fault != null) {
-        fault.tags = envTags(envConfig, uow.pipeline?.id) +
-            skipTag(envConfig).mapValues { it.value.toString() } +
-            fault.tags.orEmpty()
+        return uow.copy(
+            fault = fault.copy(
+                tags = envTags(envConfig, uow.pipeline?.id) +
+                        skipTag(envConfig).mapValues { it.value.toString() } +
+                        fault.tags.orEmpty()
+            )
+        )
     }
 
     return uow

@@ -5,10 +5,7 @@ import aws.sdk.kotlin.services.dynamodb.model.UpdateItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.UpdateItemResponse
 import aws.sdk.kotlin.services.s3.model.PutObjectRequest
 import aws.smithy.kotlin.runtime.content.ByteStream
-import io.github.huherto.awsLambdaStream.BaseEvent
-import io.github.huherto.awsLambdaStream.Event
-import io.github.huherto.awsLambdaStream.EventCodec
-import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.*
 import io.github.huherto.awsLambdaStream.from.RecordPair
 import io.github.huherto.awsLambdaStream.from.TableChangeEvent
 import io.github.huherto.awsLambdaStream.sinks.DynamoDbUpdateValue
@@ -39,11 +36,19 @@ data class Tracer (
 )
 
 @Serializable
-class TracerEvent(
+data class TracerEvent(
     val tracer: Tracer,
+    override val id: String? = null,
+    override val timestamp: Long? = null,
+    override val partitionKey: String? = null,
+    override val tags: Map<String, String>? = null,
+    @kotlinx.serialization.Contextual
+    override val raw: Any? = null,
+    @kotlinx.serialization.Contextual
+    override val eem: Any? = null,
+    override val triggers: List<EventReference>? = null,
+    val type : String = "tracer"
 ) : BaseEvent() {
-
-    val type: String = "tracer"
 
     override fun eventType(): String = "tracer"
 
@@ -247,10 +252,11 @@ fun toS3PutRequest(uow: UnitOfWork): PutObjectRequest? {
         status = "STARTED"
     )
 
-    val tracerEvent = TracerEvent(tracer).apply {
-        id = UUID.randomUUID().toString()
+    val tracerEvent = TracerEvent(
+        tracer = tracer,
+        id = UUID.randomUUID().toString(),
         partitionKey = tracer.awsRegion
-    }
+    )
 
     val eventAsString = TracerEventCodec.encode(tracerEvent)
 

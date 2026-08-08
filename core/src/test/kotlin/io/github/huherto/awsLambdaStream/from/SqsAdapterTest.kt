@@ -100,9 +100,7 @@ class SqsAdapterTest {
         val adapter = adapter()
 
         val eventWithoutId = MyEventA(foo = "foo-1", bar = "bar-1")
-        val eventWithId = MyEventB(foo = "foo-2", bar = "bar-2").apply {
-            id = "existing-event-id"
-        }
+        val eventWithId = MyEventB(foo = "foo-2", bar = "bar-2", id = "existing-event-id")
 
         val firstRecord = createSqsMessage(
             messageId = "message-1",
@@ -123,8 +121,7 @@ class SqsAdapterTest {
         results.shouldHaveSize(2)
 
         results[0].record shouldBe firstRecord
-        results[0].event shouldBe eventWithoutId
-        results[0].event?.id shouldBe "message-1"
+        results[0].event shouldBe eventWithoutId.copyEvent(id = "message-1")
 
         results[1].record shouldBe secondRecord
         results[1].event shouldBe eventWithId
@@ -137,9 +134,7 @@ class SqsAdapterTest {
         val faultManager = faultManager()
         val adapter = adapter(faultManager = faultManager)
 
-        val validEvent = MyEventA(foo = "valid-foo", bar = "valid-bar").apply {
-            id = "valid-event-id"
-        }
+        val validEvent = MyEventA(foo = "valid-foo", bar = "valid-bar", id = "valid-event-id")
 
         val invalidRecord = createSqsMessage(
             messageId = "invalid-message",
@@ -170,17 +165,9 @@ class SqsAdapterTest {
         // Arrange
         val adapter = adapter()
 
-        val skippedEvent = MyEventA(foo = "skip-foo").apply {
-            id = "skipped-event-id"
-            tags = mapOf("skip" to "true")
-        }
-        val keptEvent = MyEventA(foo = "keep-foo").apply {
-            id = "kept-event-id"
-            tags = mapOf("skip" to "false")
-        }
-        val eventWithoutSkipTag = MyEventA(foo = "untagged-foo").apply {
-            id = "untagged-event-id"
-        }
+        val skippedEvent = MyEventA(foo = "skip-foo", id = "skipped-event-id", tags = mapOf("skip" to "true"))
+        val keptEvent = MyEventA(foo = "keep-foo", id = "kept-event-id", tags = mapOf("skip" to "false"))
+        val eventWithoutSkipTag = MyEventA(foo = "untagged-foo", id = "untagged-event-id")
 
         val skippedRecord = createSqsMessage(
             messageId = "skipped-message",

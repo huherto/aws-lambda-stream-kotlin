@@ -50,9 +50,7 @@ class KinesisAdapterTest {
     fun `fromKinesis should decode kinesis records and preserve record sequence number and event ids`() : Unit = runBlocking {
         // Arrange
         val eventWithoutId = MyEventA(foo = "foo-1", bar = "bar-1")
-        val eventWithId = MyEventB(foo = "foo-2", bar = "bar-2").apply {
-            id = "existing-event-id"
-        }
+        val eventWithId = MyEventB(foo = "foo-2", bar = "bar-2", id = "existing-event-id")
 
         val firstRecord = createKinesisRecord(
             eventId = "kinesis-event-1",
@@ -75,8 +73,7 @@ class KinesisAdapterTest {
         results.shouldHaveSize(2)
 
         results[0].record shouldBe firstRecord
-        results[0].event shouldBe eventWithoutId
-        results[0].event?.id shouldBe "kinesis-event-1"
+        results[0].event shouldBe eventWithoutId.copyEvent(id = "kinesis-event-1")
         results[0].sequenceNumber shouldBe "sequence-1"
 
         results[1].record shouldBe secondRecord
@@ -88,9 +85,7 @@ class KinesisAdapterTest {
     @Test
     fun `fromKinesis should redirect decode failures to fault manager and continue processing remaining records`() : Unit = runBlocking {
         // Arrange
-        val validEvent = MyEventA(foo = "valid-foo", bar = "valid-bar").apply {
-            id = "valid-event-id"
-        }
+        val validEvent = MyEventA(foo = "valid-foo", bar = "valid-bar", id = "valid-event-id")
 
         val invalidRecord = createKinesisRecord(
             eventId = "invalid-kinesis-event",
@@ -148,7 +143,7 @@ class KinesisAdapterTest {
         // Assert
         results.shouldHaveSize(1)
         results[0].record shouldBe record
-        results[0].event shouldBe event
+        results[0].event shouldBe event.copyEvent(id = "kinesis-event-with-claim-check")
         results[0].sequenceNumber shouldBe "sequence-with-claim-check"
 
         with(claimCheckRedeemer) {

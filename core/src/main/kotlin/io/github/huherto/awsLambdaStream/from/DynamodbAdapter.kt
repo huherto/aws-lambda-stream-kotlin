@@ -39,19 +39,19 @@ class DynamodbAdapter (private val faultManager: FaultManager) {
 
     internal fun buildEvent(dynamodbRecord: DynamodbEvent.DynamodbStreamRecord): TableChangeEvent {
 
-        val event = TableChangeEvent().apply {
-            id = dynamodbRecord.eventID
-            timestamp = deriveTimestamp(dynamodbRecord)
-            partitionKey = dynamodbRecord.dynamodb.keys[pkFn]?.s
-            type = calculateEventType(dynamodbRecord)
+        val event = TableChangeEvent(
+            id = dynamodbRecord.eventID,
+            timestamp = deriveTimestamp(dynamodbRecord),
+            partitionKey = dynamodbRecord.dynamodb.keys[pkFn]?.s,
+            type = calculateEventType(dynamodbRecord),
             tags = mapOf(
                 "region" to dynamodbRecord.awsRegion
-            )
+            ),
             raw = RecordPair(
                 new = dynamodbRecord.dynamodb.newImage?.let { RecordImage(it) },
                 old = dynamodbRecord.dynamodb.oldImage?.let { RecordImage(it) },
             )
-        }
+        )
         return event
     }
 

@@ -31,9 +31,8 @@ class KinesisAdapter(
                     val record = uow.record as KinesisEvent.KinesisEventRecord
                     val payload = record.kinesis?.data
 
-                    val event: Event = eventCodec.decode(payload)
-                    if (event.id == null) {
-                        event.id = (record.eventID)
+                    val event: Event = eventCodec.decode(payload).let {
+                        if (it.id == null) it.copyEvent(id = record.eventID) else it
                     }
                     uow.copy( event = event, sequenceNumber = record.kinesis?.sequenceNumber)
                 }.let { flow ->

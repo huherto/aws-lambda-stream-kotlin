@@ -42,12 +42,13 @@ class CorrelatePipelineTest {
      * inside the filterEventTypes stage of the pipeline.
      */
     class FakeEvent(
-        override var id: String? = "event-1",
-        override var timestamp: Long? = TIMESTAMP,
-        override var partitionKey: String? = null,
-        override var tags: Map<String, String>? = null,
-        override var raw: Any? = null,
-        override var eem: Any? = null,
+        override val id: String? = "event-1",
+        override val timestamp: Long? = TIMESTAMP,
+        override val partitionKey: String? = null,
+        override val tags: Map<String, String>? = null,
+        override val raw: Any? = null,
+        override val eem: Any? = null,
+        override val triggers: List<EventReference>? = null,
         val encodedStr: String = "{}"
     ) : BaseEvent() {
         override fun eventType() = "TestEvent"

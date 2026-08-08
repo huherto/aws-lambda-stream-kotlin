@@ -4,20 +4,23 @@ import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.modules.SerializersModule
-import kotlinx.serialization.modules.polymorphic
-import kotlinx.serialization.modules.subclass
 import kotlinx.serialization.serializerOrNull
 
 @Serializable
-class MyThing {
-    var id: String? = null
-}
+data class MyThing(val id: String? = null)
 
 @Serializable
 sealed class MyEvent : BaseEvent() {
-
-    var entity: MyThing? = null
+    override val id: String? get() = null
+    override val timestamp: Long? get() = null
+    override val partitionKey: String? get() = null
+    override val tags: Map<String, String>? get() = null
+    @kotlinx.serialization.Contextual
+    override val raw: Any? get() = null
+    @kotlinx.serialization.Contextual
+    override val eem: Any? get() = null
+    override val triggers: List<EventReference>? get() = null
+    abstract val entity: MyThing?
 
     @OptIn(InternalSerializationApi::class)
     override fun eventType(): String {
@@ -32,17 +35,56 @@ sealed class MyEvent : BaseEvent() {
     }
 }
 
-@Serializable
 @SerialName("MY_EVENT_A")
-data class MyEventA(var foo: String? = null, var bar: String? = null) : MyEvent()
-
 @Serializable
+data class MyEventA(
+    val foo: String? = null,
+    val bar: String? = null,
+    override val id: String? = null,
+    override val timestamp: Long? = null,
+    override val partitionKey: String? = null,
+    override val tags: Map<String, String>? = null,
+    @kotlinx.serialization.Contextual
+    override val raw: Any? = null,
+    @kotlinx.serialization.Contextual
+    override val eem: Any? = null,
+    override val triggers: List<EventReference>? = null,
+    override val entity: MyThing? = null
+) : MyEvent()
+
 @SerialName("MY_EVENT_B")
-data class MyEventB(var foo: String? = null, var bar: String? = null) : MyEvent()
-
 @Serializable
+data class MyEventB(
+    val foo: String? = null,
+    val bar: String? = null,
+    override val id: String? = null,
+    override val timestamp: Long? = null,
+    override val partitionKey: String? = null,
+    override val tags: Map<String, String>? = null,
+    @kotlinx.serialization.Contextual
+    override val raw: Any? = null,
+    @kotlinx.serialization.Contextual
+    override val eem: Any? = null,
+    override val triggers: List<EventReference>? = null,
+    override val entity: MyThing? = null
+) : MyEvent()
+
 @SerialName("MY_EVENT_C")
-data class MyEventC(var foo: String? = null, var bar: String? = null) : MyEvent()
+@Serializable
+data class MyEventC(
+    val foo: String? = null,
+    val bar: String? = null,
+    override val id: String? = null,
+    override val timestamp: Long? = null,
+    override val partitionKey: String? = null,
+    override val tags: Map<String, String>? = null,
+    @kotlinx.serialization.Contextual
+    override val raw: Any? = null,
+    @kotlinx.serialization.Contextual
+    override val eem: Any? = null,
+    override val triggers: List<EventReference>? = null,
+    override val entity: MyThing? = null
+) : MyEvent()
 
 class MyEventCodec : EventCodec {
 
@@ -64,11 +106,4 @@ val sutJson: Json = Json {
     prettyPrint = true
     isLenient = true
     classDiscriminator = "type"
-    serializersModule = SerializersModule {
-        polymorphic(MyEvent::class) {
-            subclass(MyEventA::class)
-            subclass(MyEventB::class)
-            subclass(MyEventC::class)
-        }
-    }
 }

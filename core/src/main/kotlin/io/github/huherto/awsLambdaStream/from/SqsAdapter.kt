@@ -54,9 +54,8 @@ class SqsAdapter(
                 .mapNotFaulty { uow ->
                     val record = uow.record as SQSEvent.SQSMessage
 
-                    val event = eventCodec.decode(record.body)
-                    if (event.id == null) {
-                        event.id = record.messageId
+                    val event = eventCodec.decode(record.body).let {
+                        if (it.id == null) it.copyEvent(id = record.messageId) else it
                     }
 
                     uow.copy(
