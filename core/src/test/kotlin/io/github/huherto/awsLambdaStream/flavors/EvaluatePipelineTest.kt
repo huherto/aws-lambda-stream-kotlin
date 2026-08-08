@@ -80,8 +80,7 @@ class EvaluatePipelineTest {
         val type: String = "TestEvent",
     ) : BaseEvent() {
         override fun eventType() = type
-        @Deprecated("Legacy")
-        override fun encoded() = """{"id":"$id","type":"$type"}"""
+        override fun toString() = """{"id":"$id","type":"$type"}"""
     }
 
     private fun createEvent(
@@ -275,8 +274,7 @@ class EvaluatePipelineTest {
             return "HigherType"
         }
 
-        @Deprecated("Legacy")
-        override fun encoded(): String {
+        override fun toString(): String {
             TODO("Not yet implemented")
         }
     }

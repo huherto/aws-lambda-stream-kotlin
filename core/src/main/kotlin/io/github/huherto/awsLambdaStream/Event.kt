@@ -17,11 +17,6 @@ interface Event {
 
     fun eventType(): String
 
-    @Deprecated(
-        message = "Use EventCodec or the configured framework publisher instead.",
-    )
-    fun encoded()  : String
-
     fun copyEvent(
         id: String? = this.id,
         timestamp: Long? = this.timestamp,

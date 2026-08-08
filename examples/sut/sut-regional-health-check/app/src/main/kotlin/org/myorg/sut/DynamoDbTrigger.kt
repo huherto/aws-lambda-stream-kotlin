@@ -30,7 +30,6 @@ class DynamoDbTrigger (
             .assemble(headFlow, true)
             .collect {
                 val eventClass = it.event?.javaClass?.simpleName ?: "unknown"
-                //val eventAsString = it.event?.encoded() ?: "no event"
                 logger.info { "processed event ${it.event?.id}, $eventClass" }
             }
 

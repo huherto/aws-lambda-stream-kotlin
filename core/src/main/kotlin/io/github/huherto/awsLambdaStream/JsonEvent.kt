@@ -84,14 +84,6 @@ class JsonEvent(jsonString: String) : Event {
 
     override fun eventType(): String {
         return jsonObject.stringOrNull("type") ?: "unknown"
-        return "unknown"
-    }
-
-    @Deprecated(
-        message = "Use EventCodec or the configured framework publisher instead.",
-    )
-    override fun encoded(): String {
-        return jsonObject.toString()
     }
 
     override fun toString(): String {
@@ -115,6 +107,6 @@ object JsonEventCodec : EventCodec {
     }
 
     override fun encode(event: Event): String {
-        return event.encoded()
+        return event.toString()
     }
 }

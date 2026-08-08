@@ -27,7 +27,7 @@ class EventBridgeFacade(
                 source = "integration-test"
                 when (event) {
                     is Event -> {
-                        detail = event.encoded()
+                        detail = event.toString()
                         detailType = event.eventType()
                     }
                     is FaultEvent -> {

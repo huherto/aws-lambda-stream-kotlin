@@ -60,7 +60,7 @@ class ClaimCheckRedeemerTest {
         } coAnswers {
             secondArg<suspend (GetObjectResponse) -> ByteArray>().invoke(
                 GetObjectResponse {
-                    body = ByteStream.fromBytes(claimedEvent.encoded().encodeToByteArray())
+                    body = ByteStream.fromBytes(claimedEvent.toString().encodeToByteArray())
                 }
             )
         }
@@ -75,7 +75,7 @@ class ClaimCheckRedeemerTest {
         results[0].event shouldBe claimedEvent
         results[0].s3.getRequest?.bucket shouldBe "claim-bucket"
         results[0].s3.getRequest?.key shouldBe "events/claimed-event.json"
-        results[0].s3.getResponseBytes?.decodeToString() shouldBe claimedEvent.encoded()
+        results[0].s3.getResponseBytes?.decodeToString() shouldBe claimedEvent.toString()
 
         coVerify(exactly = 1) {
             s3Client.getObject(

@@ -98,7 +98,7 @@ data class SerializableEvent(
         raw = event.raw?.toString(),
         eem = event.eem?.toString(),
         triggers = event.triggers,
-        encoded = event.encoded(),
+        encoded = event.toString(),
     )
 }
 

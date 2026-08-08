@@ -189,7 +189,7 @@ class JsonEventTest {
         val event = JsonEvent(jsonString)
 
         // Act
-        val encoded = event.encoded()
+        val encoded = event.toString()
 
         // Assert
         Json.parseToJsonElement(encoded) shouldBe Json.parseToJsonElement(jsonString)

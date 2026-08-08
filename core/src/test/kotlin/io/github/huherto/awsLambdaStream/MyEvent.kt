@@ -27,11 +27,8 @@ sealed class MyEvent : BaseEvent() {
         return this::class.serializerOrNull()?.descriptor?.serialName ?: "unknown"
     }
 
-    @Deprecated(
-        message = "Use EventCodec or the configured framework publisher instead.",
-    )
-    override fun encoded(): String {
-        return sutJson.encodeToString(serializer(), this)
+    override fun toString(): String {
+        return sutJson.encodeToString(MyEvent.serializer(), this)
     }
 }
 
@@ -50,7 +47,9 @@ data class MyEventA(
     override val eem: Any? = null,
     override val triggers: List<EventReference>? = null,
     override val entity: MyThing? = null
-) : MyEvent()
+) : MyEvent() {
+    override fun toString() = super.toString()
+}
 
 @SerialName("MY_EVENT_B")
 @Serializable
@@ -67,7 +66,9 @@ data class MyEventB(
     override val eem: Any? = null,
     override val triggers: List<EventReference>? = null,
     override val entity: MyThing? = null
-) : MyEvent()
+) : MyEvent() {
+    override fun toString() = super.toString()
+}
 
 @SerialName("MY_EVENT_C")
 @Serializable
@@ -84,7 +85,9 @@ data class MyEventC(
     override val eem: Any? = null,
     override val triggers: List<EventReference>? = null,
     override val entity: MyThing? = null
-) : MyEvent()
+) : MyEvent() {
+    override fun toString() = super.toString()
+}
 
 class MyEventCodec : EventCodec {
 
@@ -103,7 +106,7 @@ class MyEventCodec : EventCodec {
 
 val sutJson: Json = Json {
     ignoreUnknownKeys = true
-    prettyPrint = true
+    prettyPrint = false
     isLenient = true
     classDiscriminator = "type"
 }

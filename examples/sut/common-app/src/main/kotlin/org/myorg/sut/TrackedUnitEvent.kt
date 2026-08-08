@@ -49,12 +49,8 @@ sealed class TrackedUnitEvent : Event {
         return this::class.serializerOrNull()?.descriptor?.serialName ?: "unknown"
     }
 
-    override fun encoded(): String {
-        return TrackedUnitEventCodec.encode(this)
-    }
-
     override fun toString(): String {
-        return encoded()
+        return TrackedUnitEventCodec.encode(this)
     }
 
     override fun copyEvent(
@@ -94,7 +90,9 @@ data class ShipmentCreatedEvent(
     override val entity: TrackedUnit? = null,
     override val location: String? = null,
     override val result: String? = null
-) : TrackedUnitEvent()
+) : TrackedUnitEvent() {
+    override fun toString() = super.toString()
+}
 
 @Serializable
 @kotlinx.serialization.SerialName(TrackedUnitEvent.SHIPMENT_PICKED_UP)
@@ -110,7 +108,9 @@ data class ShipmentPickedUpEvent(
     override val entity: TrackedUnit? = null,
     override val location: String? = null,
     override val result: String? = null
-) : TrackedUnitEvent()
+) : TrackedUnitEvent() {
+    override fun toString() = super.toString()
+}
 
 @Serializable
 @kotlinx.serialization.SerialName(TrackedUnitEvent.SHIPMENT_IN_TRANSIT)
@@ -125,7 +125,9 @@ data class ShipmentInTransitEvent(
     override val entity: TrackedUnit? = null,
     override val location: String? = null,
     override val result: String? = null
-) : TrackedUnitEvent()
+) : TrackedUnitEvent() {
+    override fun toString() = super.toString()
+}
 
 @Serializable
 @kotlinx.serialization.SerialName(TrackedUnitEvent.ARRIVAL_AT_HUB)
@@ -141,7 +143,9 @@ data class ArrivalAtHubEvent(
     override val entity: TrackedUnit? = null,
     override val location: String? = null,
     override val result: String? = null
-) : TrackedUnitEvent()
+) : TrackedUnitEvent() {
+    override fun toString() = super.toString()
+}
 
 @Serializable
 @kotlinx.serialization.SerialName(TrackedUnitEvent.DEPARTURE_FROM_HUB)
@@ -157,7 +161,9 @@ data class DepartureFromHubEvent(
     override val entity: TrackedUnit? = null,
     override val location: String? = null,
     override val result: String? = null
-) : TrackedUnitEvent()
+) : TrackedUnitEvent() {
+    override fun toString() = super.toString()
+}
 
 @Serializable
 @kotlinx.serialization.SerialName(TrackedUnitEvent.CUSTOMS_CLEARED)
@@ -173,7 +179,9 @@ data class CustomsClearedEvent(
     override val entity: TrackedUnit? = null,
     override val location: String? = null,
     override val result: String? = null
-) : TrackedUnitEvent()
+) : TrackedUnitEvent() {
+    override fun toString() = super.toString()
+}
 
 @Serializable
 @kotlinx.serialization.SerialName(TrackedUnitEvent.OUT_FOR_DELIVERY)
@@ -189,7 +197,9 @@ data class OutForDeliveryEvent(
     override val entity: TrackedUnit? = null,
     override val location: String? = null,
     override val result: String? = null
-) : TrackedUnitEvent()
+) : TrackedUnitEvent() {
+    override fun toString() = super.toString()
+}
 
 @Serializable
 @kotlinx.serialization.SerialName(TrackedUnitEvent.DELIVERY_ATTEMPTED)
@@ -205,7 +215,9 @@ data class DeliveryAttemptedEvent(
     override val entity: TrackedUnit? = null,
     override val location: String? = null,
     override val result: String? = null
-) : TrackedUnitEvent()
+) : TrackedUnitEvent() {
+    override fun toString() = super.toString()
+}
 
 @Serializable
 @kotlinx.serialization.SerialName(TrackedUnitEvent.SHIPMENT_DELIVERED)
@@ -221,7 +233,9 @@ data class ShipmentDeliveredEvent(
     override val entity: TrackedUnit? = null,
     override val location: String? = null,
     override val result: String? = null
-) : TrackedUnitEvent()
+) : TrackedUnitEvent() {
+    override fun toString() = super.toString()
+}
 
 @Serializable
 @kotlinx.serialization.SerialName(TrackedUnitEvent.SHIPMENT_EXCEPTION)
@@ -238,7 +252,9 @@ data class ShipmentExceptionEvent(
     override val entity: TrackedUnit? = null,
     override val location: String? = null,
     override val result: String? = null
-) : TrackedUnitEvent()
+) : TrackedUnitEvent() {
+    override fun toString() = super.toString()
+}
 
 @Serializable
 @kotlinx.serialization.SerialName(TrackedUnitEvent.VERIFY_TARGET_ADDRESS)
@@ -253,7 +269,9 @@ data class VerifyTargetAddressEvent(
     override val entity: TrackedUnit? = null,
     override val location: String? = null,
     override val result: String? = null
-) : TrackedUnitEvent()
+) : TrackedUnitEvent() {
+    override fun toString() = super.toString()
+}
 
 @Serializable
 @kotlinx.serialization.SerialName(TrackedUnitEvent.CONTACT_CUSTOMER)
@@ -268,7 +286,9 @@ data class ContactCustomerEvent(
     override val entity: TrackedUnit? = null,
     override val location: String? = null,
     override val result: String? = null
-) : TrackedUnitEvent()
+) : TrackedUnitEvent() {
+    override fun toString() = super.toString()
+}
 
 @Serializable
 @kotlinx.serialization.SerialName(TrackedUnitEvent.POISON_PILL_EVENT)
@@ -283,4 +303,6 @@ data class PoisonPillEvent(
     override val entity: TrackedUnit? = null,
     override val location: String? = null,
     override val result: String? = null
-) : TrackedUnitEvent()
+) : TrackedUnitEvent() {
+    override fun toString() = super.toString()
+}

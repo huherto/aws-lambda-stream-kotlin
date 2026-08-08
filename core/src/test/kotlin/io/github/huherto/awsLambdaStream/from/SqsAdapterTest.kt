@@ -104,11 +104,11 @@ class SqsAdapterTest {
 
         val firstRecord = createSqsMessage(
             messageId = "message-1",
-            body = eventWithoutId.encoded(),
+            body = eventWithoutId.toString(),
         )
         val secondRecord = createSqsMessage(
             messageId = "message-2",
-            body = eventWithId.encoded(),
+            body = eventWithId.toString(),
         )
         val sqsEvent = SQSEvent().apply {
             records = listOf(firstRecord, secondRecord)
@@ -142,7 +142,7 @@ class SqsAdapterTest {
         )
         val validRecord = createSqsMessage(
             messageId = "valid-message",
-            body = validEvent.encoded(),
+            body = validEvent.toString(),
         )
         val sqsEvent = SQSEvent().apply {
             records = listOf(invalidRecord, validRecord)
@@ -171,15 +171,15 @@ class SqsAdapterTest {
 
         val skippedRecord = createSqsMessage(
             messageId = "skipped-message",
-            body = skippedEvent.encoded(),
+            body = skippedEvent.toString(),
         )
         val keptRecord = createSqsMessage(
             messageId = "kept-message",
-            body = keptEvent.encoded(),
+            body = keptEvent.toString(),
         )
         val untaggedRecord = createSqsMessage(
             messageId = "untagged-message",
-            body = eventWithoutSkipTag.encoded(),
+            body = eventWithoutSkipTag.toString(),
         )
         val sqsEvent = SQSEvent().apply {
             records = listOf(skippedRecord, keptRecord, untaggedRecord)
@@ -210,7 +210,7 @@ class SqsAdapterTest {
             }
 
             override fun encode(event: Event): String {
-                return event.encoded()
+                return event.toString()
             }
         }
         val adapter = adapter(

@@ -43,10 +43,16 @@ class EventsMicrostoreImplTest {
         val awsRegion = "eu-west-1"
         val expectedTableName = "events"
 
-        val mockEvent = mockk<Event> {
-            every { id } returns eventId
-            every { timestamp } returns eventTimestamp
-            every { encoded() } returns eventEncoded
+        val mockEvent = object : BaseEvent() {
+            override val id = eventId
+            override val timestamp = eventTimestamp
+            override val partitionKey = null
+            override val tags = null
+            override val raw = null
+            override val eem = null
+            override val triggers = null
+            override fun eventType() = "TEST_EVENT"
+            override fun toString() = eventEncoded
         }
 
         val savedOptions = EventsMicrostore.SaveOptions(

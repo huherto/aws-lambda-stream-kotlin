@@ -96,8 +96,8 @@ class ClaimCheckStoreTest {
             bucket = "claim-check-bucket",
             key = "eu-central-1/claimchecks/2024/03/05/06/event-123",
         )
-        claimCheckEvent.encoded() shouldContain "\"bucket\": \"claim-check-bucket\""
-        claimCheckEvent.encoded() shouldContain "\"key\": \"eu-central-1/claimchecks/2024/03/05/06/event-123\""
+        claimCheckEvent.toString() shouldContain "\"bucket\": \"claim-check-bucket\""
+        claimCheckEvent.toString() shouldContain "\"key\": \"eu-central-1/claimchecks/2024/03/05/06/event-123\""
     }
 
     @Test
@@ -114,7 +114,7 @@ class ClaimCheckStoreTest {
         // assert
         request.bucket shouldBe "claim-check-bucket"
         request.key shouldBe "ap-southeast-2/claimchecks/2024/03/05/06/event-123"
-        request.body?.toByteArray()?.decodeToString() shouldBe event.encoded()
+        request.body?.toByteArray()?.decodeToString() shouldBe event.toString()
     }
 
     @Test

@@ -17,10 +17,8 @@ data class HigherOrderEventTemplate (
     override val triggers: List<io.github.huherto.awsLambdaStream.EventReference>? = null
 ) : BaseEvent() {
     override fun eventType(): String = "Not used"
-    @Deprecated(
-        message = "Use EventCodec or the configured framework publisher instead.",
-    )
-    override fun encoded(): String = "Not used"
+
+    override fun toString(): String = "Not used"
 
     fun createEvent(clazz: kotlin.reflect.KClass<out Event>): Event {
         val instance = io.github.huherto.awsLambdaStream.utils.createFromCommonValues(baseEvent, clazz)

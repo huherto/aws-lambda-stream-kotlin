@@ -87,7 +87,7 @@ class EventBridgePublisher(
                 eventBusName = busName
                 source = this@EventBridgePublisher.source
                 detailType = event.eventType()
-                detail = eventCodec?.encode(event) ?: event.encoded()
+                detail = eventCodec?.encode(event) ?: event.toString()
             }
             return uow.withPublishRequestEntry(entry)
         } else if (fault != null) {

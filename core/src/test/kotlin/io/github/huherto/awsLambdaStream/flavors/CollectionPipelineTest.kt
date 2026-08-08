@@ -58,8 +58,7 @@ class CollectionPipelineTest {
         override val eem: Any? = null
         override val triggers: List<EventReference>? = null
         override fun eventType() = "TestEvent"
-        @Deprecated("Legacy")
-        override fun encoded() = """{"id":"$id"}"""
+        override fun toString() = """{"id":"$id"}"""
     }
 
     @Test

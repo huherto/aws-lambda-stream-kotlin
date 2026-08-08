@@ -9,6 +9,7 @@ import io.github.huherto.awsLambdaStream.extensions.copyS3
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.buffer
+import kotlinx.serialization.Serializable
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
@@ -32,6 +33,7 @@ class ClaimCheckStore(
     private val clock: Clock = Clock.systemUTC(),
     private val bufferCapacity: Int = Channel.BUFFERED,
 ) {
+    @Serializable
     data class ClaimCheck(
         val bucket: String,
         val key: String,
@@ -51,10 +53,7 @@ class ClaimCheckStore(
 
         override fun eventType(): String = type
 
-        @Deprecated(
-            message = "Use EventCodec or the configured framework publisher instead.",
-        )
-        override fun encoded(): String {
+        override fun toString(): String {
             return """
             {
               "id": ${id?.let { "\"$it\"" }},
@@ -106,7 +105,7 @@ class ClaimCheckStore(
         return PutObjectRequest {
             this.bucket = bucket
             this.key = formatKey(event)
-            this.body = ByteStream.fromString(event.encoded())
+            this.body = ByteStream.fromString(event.toString())
         }
     }
 

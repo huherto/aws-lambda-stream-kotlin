@@ -52,10 +52,7 @@ data class TracerEvent(
 
     override fun eventType(): String = "tracer"
 
-    @Deprecated(
-        message = "Use EventCodec or the configured framework publisher instead.",
-    )
-    override fun encoded(): String = TracerEventCodec.encode(this)
+    override fun toString(): String = TracerEventCodec.encode(this)
 }
 
 object TracerEventCodec : EventCodec {

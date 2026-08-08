@@ -92,7 +92,7 @@ abstract class BaseEventsMicrostore(
 
         val saveOptions = uow.saveOptions ?: return uow.withPutRequest(null)
         val itemValues = with(saveOptions) {
-            val encodedEvent = if (includeRaw) event?.encoded() else omitRaw(event)
+            val encodedEvent = if (includeRaw) event?.toString() else omitRaw(event)
             mapOf(
                 "pk" to nullableS(pk),
                 "sk" to nullableS(sk),

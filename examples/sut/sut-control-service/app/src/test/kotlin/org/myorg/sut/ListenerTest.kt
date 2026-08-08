@@ -142,7 +142,7 @@ class ListenerTest {
             }
         )
 
-        val eventString: String = event.encoded()
+        val eventString: String = event.toString()
         val base64: String = Base64.encode(eventString.toByteArray())
 
         val payload: ByteArray = Base64.decode(base64)

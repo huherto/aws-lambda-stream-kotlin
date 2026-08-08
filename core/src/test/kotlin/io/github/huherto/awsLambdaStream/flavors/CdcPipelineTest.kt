@@ -52,19 +52,6 @@ class CdcPipelineTest {
         )
     }
 
-//    private fun createEvent(
-//        id: String = "event-1",
-//        partitionKey: String? = "partition-1",
-//        type: String = "TestEvent",
-//    ): Event = class  : BaseEvent() {
-//
-//
-//        override fun eventType(): String = type
-//
-//        @Deprecated("Legacy")
-//        override fun encoded(): String = """{"id":"$id","type":"$type"}"""
-//    }
-
     private fun createEvent(
         id: String = "event-1",
         partitionKey: String? = "partition-1",

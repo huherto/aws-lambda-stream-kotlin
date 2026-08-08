@@ -55,12 +55,12 @@ class KinesisAdapterTest {
         val firstRecord = createKinesisRecord(
             eventId = "kinesis-event-1",
             sequenceNumber = "sequence-1",
-            payload = eventWithoutId.encoded(),
+            payload = eventWithoutId.toString(),
         )
         val secondRecord = createKinesisRecord(
             eventId = "kinesis-event-2",
             sequenceNumber = "sequence-2",
-            payload = eventWithId.encoded(),
+            payload = eventWithId.toString(),
         )
         val kinesisEvent = KinesisEvent().apply {
             records = listOf(firstRecord, secondRecord)
@@ -95,7 +95,7 @@ class KinesisAdapterTest {
         val validRecord = createKinesisRecord(
             eventId = "valid-kinesis-event",
             sequenceNumber = "sequence-valid",
-            payload = validEvent.encoded(),
+            payload = validEvent.toString(),
         )
         val kinesisEvent = KinesisEvent().apply {
             records = listOf(invalidRecord, validRecord)
@@ -123,7 +123,7 @@ class KinesisAdapterTest {
         val record = createKinesisRecord(
             eventId = "kinesis-event-with-claim-check",
             sequenceNumber = "sequence-with-claim-check",
-            payload = event.encoded(),
+            payload = event.toString(),
         )
         val kinesisEvent = KinesisEvent().apply {
             records = listOf(record)

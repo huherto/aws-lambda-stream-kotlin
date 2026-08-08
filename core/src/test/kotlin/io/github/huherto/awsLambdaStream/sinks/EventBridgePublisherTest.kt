@@ -48,7 +48,7 @@ class EventBridgePublisherTest {
 
             val mockEvent = mockk<Event>()
             every { mockEvent.eventType() } returns "test-type"
-            every { mockEvent.encoded() } returns """{"data":"value"}"""
+            every { mockEvent.toString() } returns """{"data":"value"}"""
 
             val uowWithEvent = UnitOfWork(event = mockEvent)
             val uowWithoutEvent = UnitOfWork(event = null)

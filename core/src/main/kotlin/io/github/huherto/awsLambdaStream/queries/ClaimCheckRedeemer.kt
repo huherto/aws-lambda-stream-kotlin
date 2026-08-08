@@ -8,10 +8,12 @@ import io.github.huherto.awsLambdaStream.connectors.S3Connector
 import io.github.huherto.awsLambdaStream.extensions.copyS3
 import io.github.huherto.awsLambdaStream.extensions.s3
 import kotlinx.coroutines.flow.Flow
+import kotlinx.serialization.Serializable
 
 // claim-check pattern support
 // https://www.enterpriseintegrationpatterns.com/patterns/messaging/StoreInLibrary.html
 
+@Serializable
 data class ClaimCheck(
     val bucket: String,
     val key: String,
