@@ -109,16 +109,6 @@ private val jacksonMapper = jacksonObjectMapper().apply {
     registerModule(module)
 }
 
-@Deprecated("Use SerializationStrategy or EventCodec instead.")
-fun Any?.asJson() : String {
-    if (this == null) return "null"
-    return try {
-        jacksonMapper.writeValueAsString(this)
-    } catch (e: Exception) {
-        "\"Error serializing to JSON: ${e.message}\""
-    }
-}
-
 object SafeLogger {
     // Jackson module for Kotlin adds support for data classes and nullability
     private val mapper: ObjectMapper = jacksonObjectMapper().apply {

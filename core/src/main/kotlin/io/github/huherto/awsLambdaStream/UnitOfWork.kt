@@ -83,7 +83,7 @@ data class S3UnitOfWork(
         if (getRequest != other.getRequest) return false
         if (getResponse != other.getResponse) return false
         if (deleteRequest != other.deleteRequest) return false
-        if (deleteResponse != other.deleteRequest) return false
+        if (deleteResponse != other.deleteResponse) return false
         if (copyRequest != other.copyRequest) return false
         if (copyResponse != other.copyResponse) return false
         if (getResponseText != other.getResponseText) return false
@@ -102,6 +102,10 @@ data class S3UnitOfWork(
     override fun hashCode(): Int {
         var result = getRequest?.hashCode() ?: 0
         result = 31 * result + (getResponse?.hashCode() ?: 0)
+        result = 31 * result + (deleteRequest?.hashCode() ?: 0)
+        result = 31 * result + (deleteResponse?.hashCode() ?: 0)
+        result = 31 * result + (copyRequest?.hashCode() ?: 0)
+        result = 31 * result + (copyResponse?.hashCode() ?: 0)
         result = 31 * result + (getResponseText?.hashCode() ?: 0)
         result = 31 * result + (getResponseBytes?.contentHashCode() ?: 0)
         result = 31 * result + (putRequest?.hashCode() ?: 0)
