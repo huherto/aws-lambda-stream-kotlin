@@ -6,6 +6,10 @@ import aws.sdk.kotlin.services.dynamodb.model.UpdateItemRequest
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import io.github.huherto.awsLambdaStream.*
 import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
+import io.github.huherto.awsLambdaStream.extensions.queryResponse
+import io.github.huherto.awsLambdaStream.extensions.withBatchGetRequest
+import io.github.huherto.awsLambdaStream.extensions.withQueryRequest
+import io.github.huherto.awsLambdaStream.extensions.withUpdateRequest
 import io.github.huherto.awsLambdaStream.filters.EventFilter
 import io.github.huherto.awsLambdaStream.filters.filterEvents
 import io.github.huherto.awsLambdaStream.from.RecordImage
@@ -99,9 +103,7 @@ class UpdatePipeline(
      * Adds the DynamoDB query request to the unit of work.
      */
     internal fun toQuery(uow: UnitOfWork): UnitOfWork {
-        return uow.copy(
-            queryRequest = toQueryRequest?.invoke(uow),
-        )
+        return uow.withQueryRequest(toQueryRequest?.invoke(uow))
     }
 
     /**
@@ -128,18 +130,14 @@ class UpdatePipeline(
      * Adds the DynamoDB batch-get request to the unit of work.
      */
     internal fun toGetRequest(uow: UnitOfWork): UnitOfWork {
-        return uow.copy(
-            batchGetRequest = toGetRequest?.invoke(uow),
-        )
+        return uow.withBatchGetRequest(toGetRequest?.invoke(uow))
     }
 
     /**
      * Adds the DynamoDB update request to the unit of work.
      */
     internal suspend fun toUpdateRequest(uow: UnitOfWork): UnitOfWork {
-        return uow.copy(
-            updateRequest = toUpdateRequest.invoke(uow),
-        )
+        return uow.withUpdateRequest(toUpdateRequest.invoke(uow))
     }
 
     /**

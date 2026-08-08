@@ -2,8 +2,8 @@ package io.github.huherto.awsLambdaStream.serialization
 
 import io.github.huherto.awsLambdaStream.Event
 import io.github.huherto.awsLambdaStream.EventReference
-import io.github.huherto.awsLambdaStream.S3UnitOfWork
 import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.extensions.*
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
@@ -40,6 +40,7 @@ data class SerializableUnitOfWork(
     val updateRequest: String? = null,
     val updateResponse: String? = null,
     val s3: SerializableS3UnitOfWork? = null,
+    val extensions: Map<String, String?> = emptyMap(),
 ) {
     constructor(unitOfWork: UnitOfWork) : this(
         pipeline = unitOfWork.pipeline?.toString(),
@@ -67,7 +68,12 @@ data class SerializableUnitOfWork(
         scanRequest = unitOfWork.scanRequest?.toString(),
         updateRequest = unitOfWork.updateRequest?.toString(),
         updateResponse = unitOfWork.updateResponse?.toString(),
-        s3 = unitOfWork.s3?.takeUnless { it.isEmpty() }?.let(::SerializableS3UnitOfWork),
+        s3 = unitOfWork.s3.takeUnless { it.isEmpty() }?.let(::SerializableS3UnitOfWork),
+        extensions = unitOfWork.extensions.entries.associate { (k, v) ->
+            val name = k.simpleName ?: "unknown"
+            val snapshot = if (v is Snapshottable) v.toSnapshot() else v
+            name to snapshot?.toString()
+        },
     )
 }
 

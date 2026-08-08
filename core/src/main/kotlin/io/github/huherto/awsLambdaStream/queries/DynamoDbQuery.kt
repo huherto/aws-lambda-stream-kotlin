@@ -6,6 +6,10 @@ import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.DefaultDynamoDbClientFactory
 import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
+import io.github.huherto.awsLambdaStream.extensions.batchGetRequest
+import io.github.huherto.awsLambdaStream.extensions.queryRequest
+import io.github.huherto.awsLambdaStream.extensions.withBatchGetResponse
+import io.github.huherto.awsLambdaStream.extensions.withQueryResponse
 import io.github.huherto.awsLambdaStream.from.RecordPair
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -49,7 +53,7 @@ class DynamoDbQuery(
                 cachedResponse = getConnector().queryAll(request, uow)
                 memoryCache[reqKey] = cachedResponse
             }
-            uow.copy(queryResponse = cachedResponse)
+            uow.withQueryResponse(cachedResponse)
         }
     }
 
@@ -68,7 +72,7 @@ class DynamoDbQuery(
                 cachedResponse = result.copy { responses = decryptedResponses }
                 memoryCache[reqKey] = cachedResponse
             }
-            uow.copy(batchGetResponse = cachedResponse)
+            uow.withBatchGetResponse(cachedResponse)
         }
     }
 

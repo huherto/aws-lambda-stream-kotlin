@@ -9,6 +9,7 @@ import io.github.huherto.awsLambdaStream.connectors.DefaultEventBridgeClientFact
 import io.github.huherto.awsLambdaStream.connectors.EventBridgeClientFactory
 import io.github.huherto.awsLambdaStream.connectors.EventBridgeConnector
 import io.github.huherto.awsLambdaStream.connectors.RetryConfig
+import io.github.huherto.awsLambdaStream.extensions.*
 import io.github.huherto.awsLambdaStream.serialization.SerializationStrategy
 import io.github.huherto.awsLambdaStream.serialization.SerializationStrategyResolver
 import io.github.huherto.awsLambdaStream.utils.adornStandardTags
@@ -88,7 +89,7 @@ class EventBridgePublisher(
                 detailType = event.eventType()
                 detail = eventCodec?.encode(event) ?: event.encoded()
             }
-            return uow.copy(publishRequestEntry = entry )
+            return uow.withPublishRequestEntry(entry)
         } else if (fault != null) {
             val logger = KotlinLogging.logger { }
             logger.info{"Busname: $busName, Source: $source"}
@@ -98,7 +99,7 @@ class EventBridgePublisher(
                 detailType = fault.type
                 detail = serializationStrategy.serialize(fault)
             }
-            return uow.copy(publishRequestEntry = entry )
+            return uow.withPublishRequestEntry(entry)
         }
         return uow
     }
@@ -111,7 +112,7 @@ class EventBridgePublisher(
             this.entries = entries
             this.endpointId = this@EventBridgePublisher.endpointId
         }
-        return batchUow.copy(publishRequest = putEventsRequest)
+        return batchUow.withPublishRequest(putEventsRequest)
     }
 
     internal suspend fun putEvents(batchUow: UnitOfWork): UnitOfWork {
@@ -125,8 +126,8 @@ class EventBridgePublisher(
                 timeout = envConfig.timeout()?.milliseconds ?: 1000.milliseconds,
                 clientFactory = clientFactory
             )
-            val publishResponse = connector.putEvents(batchUow.publishRequest)
-            return batchUow.copy(publishResponse = publishResponse)
+            val publishResponse = connector.putEvents(batchUow.publishRequest!!)
+            return batchUow.withPublishResponse(publishResponse)
         }
 
         return batchUow

@@ -31,13 +31,11 @@ fun unBatchUow(uow: UnitOfWork): List<UnitOfWork> {
             sequenceNumber = outerMinusBatch.sequenceNumber ?: inner.sequenceNumber,
             shardId = outerMinusBatch.shardId ?: inner.shardId,
             timestamp = outerMinusBatch.timestamp ?: inner.timestamp,
-            putRequest = outerMinusBatch.putRequest ?: inner.putRequest,
-            putResponse = outerMinusBatch.putResponse ?: inner.putResponse,
             meta = outerMinusBatch.meta ?: inner.meta,
-            queryRequest = outerMinusBatch.queryRequest ?: inner.queryRequest,
             triggers = outerMinusBatch.triggers ?: inner.triggers,
             correlated = outerMinusBatch.correlated ?: inner.correlated,
-            batch = null
+            batch = null,
+            extensions = inner.extensions + outerMinusBatch.extensions
         )
     }
 }

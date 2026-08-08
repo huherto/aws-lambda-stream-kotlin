@@ -7,6 +7,8 @@ import io.github.huherto.awsLambdaStream.Event
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
+import io.github.huherto.awsLambdaStream.extensions.withBatchGetRequest
+import io.github.huherto.awsLambdaStream.extensions.withQueryRequest
 import io.github.huherto.awsLambdaStream.filters.EventFilter
 import io.github.huherto.awsLambdaStream.filters.filterEvents
 import io.github.huherto.awsLambdaStream.filters.outLatched
@@ -87,16 +89,14 @@ class CdcPipeline(
             else -> null
         }
 
-        return uow.copy(queryRequest = queryRequest)
+        return uow.withQueryRequest(queryRequest)
     }
 
     /**
      * Builds the optional DynamoDB batch-get request for the current unit of work.
      */
     internal suspend fun addBatchGetRequest(uow: UnitOfWork): UnitOfWork {
-        return uow.copy(
-            batchGetRequest = toBatchGetRequest?.invoke(uow)
-        )
+        return uow.withBatchGetRequest(toBatchGetRequest?.invoke(uow))
     }
 
     /**

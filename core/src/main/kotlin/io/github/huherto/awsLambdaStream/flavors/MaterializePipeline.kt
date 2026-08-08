@@ -5,6 +5,7 @@ import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
+import io.github.huherto.awsLambdaStream.extensions.withUpdateRequest
 import io.github.huherto.awsLambdaStream.filters.EventFilter
 import io.github.huherto.awsLambdaStream.filters.filterEvents
 import io.github.huherto.awsLambdaStream.filters.outSourceIsSelf
@@ -38,9 +39,7 @@ class MaterializePipeline(
                 .filterNotFaulty { uow -> onContentType(uow) }
                 .let { flow -> compact(flow) }
                 .mapNotFaulty { uow ->
-                    uow.copy(
-                        updateRequest = toUpdateRequest(uow),
-                    )
+                    uow.withUpdateRequest(toUpdateRequest(uow))
                 }
                 .let { flow -> dynamoDbSink.update(this, flow) }
                 .onEach { uow -> printEndPipeline(uow) }

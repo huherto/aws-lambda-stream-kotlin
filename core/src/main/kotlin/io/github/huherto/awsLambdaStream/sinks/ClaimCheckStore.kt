@@ -5,6 +5,7 @@ import aws.sdk.kotlin.services.s3.model.PutObjectResponse
 import aws.smithy.kotlin.runtime.content.ByteStream
 import io.github.huherto.awsLambdaStream.*
 import io.github.huherto.awsLambdaStream.connectors.S3ClientFactory
+import io.github.huherto.awsLambdaStream.extensions.copyS3
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.buffer

@@ -3,7 +3,8 @@ package io.github.huherto.awsLambdaStream.sinks
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.S3Connector
-import io.github.huherto.awsLambdaStream.copyS3
+import io.github.huherto.awsLambdaStream.extensions.copyS3
+import io.github.huherto.awsLambdaStream.extensions.s3
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -16,27 +17,33 @@ class S3Sink(
     fun Flow<UnitOfWork>.rateLimit(): Flow<UnitOfWork> = this
 
     fun ensurePutRequestBucket(uow: UnitOfWork): UnitOfWork  {
-        if (uow.s3?.putRequest != null) {
-            if (uow.s3.putRequest.bucket == null) {
-                return uow.copyS3 { copy(putRequest = putRequest?.copy { bucket = bucketName }) }
+        val s3 = uow.s3
+        val putRequest = s3.putRequest
+        if (putRequest != null) {
+            if (putRequest.bucket == null) {
+                return uow.copyS3 { copy(putRequest = putRequest.copy { bucket = bucketName }) }
             }
         }
         return uow
     }
 
     fun ensureDeleteRequestBucket(uow: UnitOfWork): UnitOfWork  {
-        if (uow.s3?.deleteRequest != null) {
-            if (uow.s3.deleteRequest.bucket == null) {
-                return uow.copyS3 { copy(deleteRequest = deleteRequest?.copy { bucket = bucketName }) }
+        val s3 = uow.s3
+        val deleteRequest = s3.deleteRequest
+        if (deleteRequest != null) {
+            if (deleteRequest.bucket == null) {
+                return uow.copyS3 { copy(deleteRequest = deleteRequest.copy { bucket = bucketName }) }
             }
         }
         return uow
     }
 
     fun ensureCopyRequestBucket(uow: UnitOfWork): UnitOfWork  {
-        if (uow.s3?.copyRequest != null) {
-            if (uow.s3.copyRequest.bucket == null) {
-                return uow.copyS3 { copy(copyRequest = copyRequest?.copy { bucket = bucketName }) }
+        val s3 = uow.s3
+        val copyRequest = s3.copyRequest
+        if (copyRequest != null) {
+            if (copyRequest.bucket == null) {
+                return uow.copyS3 { copy(copyRequest = copyRequest.copy { bucket = bucketName }) }
             }
         }
         return uow

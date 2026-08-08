@@ -6,6 +6,7 @@ import aws.sdk.kotlin.services.dynamodb.model.BatchGetItemResponse
 import aws.sdk.kotlin.services.dynamodb.model.QueryResponse
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
+import io.github.huherto.awsLambdaStream.extensions.*
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -45,7 +46,7 @@ fun Flow<UnitOfWork>.batchGetDynamoDB(
         cachedResponse = result.copy { responses = decryptedResponses }
         memoryCache[reqKey] = cachedResponse
     }
-    uow.copy(batchGetResponse = cachedResponse)
+    uow.withBatchGetResponse(cachedResponse)
 }
 
 private suspend fun decryptResponses(
@@ -86,7 +87,7 @@ fun Flow<UnitOfWork>.queryAllDynamoDB(
         cachedResponse = dynamoDbConnector.queryAll(request, uow)
         memoryCache[reqKey] = cachedResponse
     }
-    uow.copy(queryResponse = cachedResponse)
+    uow.withQueryResponse(cachedResponse)
 }
 
 fun Flow<UnitOfWork>.scanSplitDynamoDB(
@@ -112,8 +113,9 @@ fun Flow<UnitOfWork>.scanSplitDynamoDB(
 
         itemsCount += decryptedItems.size
 
+        val limit = currentRequest.limit
         if (response.lastEvaluatedKey?.isNotEmpty() == true &&
-            (currentRequest.limit == null || itemsCount < currentRequest.limit!!)) {
+            (limit == null || itemsCount < limit)) {
             cursor = response.lastEvaluatedKey
         } else {
             cursor = null
@@ -150,8 +152,9 @@ fun Flow<UnitOfWork>.querySplitDynamoDB(
 
         itemsCount += decryptedItems.size
 
+        val limit = currentRequest.limit
         if (response.lastEvaluatedKey?.isNotEmpty() == true &&
-            (currentRequest.limit == null || itemsCount < currentRequest.limit!!)) {
+            (limit == null || itemsCount < limit)) {
             cursor = response.lastEvaluatedKey
         } else {
             cursor = null

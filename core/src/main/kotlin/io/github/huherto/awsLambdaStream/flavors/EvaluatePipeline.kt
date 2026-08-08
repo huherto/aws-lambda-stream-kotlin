@@ -2,6 +2,7 @@ package io.github.huherto.awsLambdaStream.flavors
 
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import io.github.huherto.awsLambdaStream.*
+import io.github.huherto.awsLambdaStream.extensions.withQueryParams
 import io.github.huherto.awsLambdaStream.filters.EventFilter
 import io.github.huherto.awsLambdaStream.filters.filterEvents
 import io.github.huherto.awsLambdaStream.from.RecordImage
@@ -123,8 +124,7 @@ class EvaluatePipeline (
         val correlationKey = if (correlation) pk else data
         val partitionKey = correlationKey?.replace(".${suffix}", "")
 
-        return uow.copy(
-            queryParams = queryParams,
+        return uow.withQueryParams(queryParams).copy(
             event = eventAsObject,
             meta = mapOf(
                 "eventId" to "${tableChangeEvent.id}.${id}",

@@ -5,6 +5,10 @@ import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.DefaultDynamoDbClientFactory
 import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
+import io.github.huherto.awsLambdaStream.extensions.putRequest
+import io.github.huherto.awsLambdaStream.extensions.updateRequest
+import io.github.huherto.awsLambdaStream.extensions.withPutResponse
+import io.github.huherto.awsLambdaStream.extensions.withUpdateResponse
 import io.github.huherto.awsLambdaStream.utils.mapParallel
 import kotlinx.coroutines.flow.Flow
 
@@ -47,7 +51,7 @@ class DynamoDbSink(
                 val request = uow.updateRequest ?: return@mapParallel uow
                 fm.faulty(uow) {
                     val updateResponse = getConnector().update(request, uow)
-                    uow.copy(updateResponse = updateResponse)
+                    uow.withUpdateResponse(updateResponse)
                 }
             }
 
@@ -67,7 +71,7 @@ class DynamoDbSink(
                 val request = uow.putRequest ?: return@mapParallel uow
                 fm.faulty(uow) {
                     val putResponse = getConnector().put(request, uow)
-                    uow.copy(putResponse = putResponse)
+                    uow.withPutResponse(putResponse)
                 }
             }
 }

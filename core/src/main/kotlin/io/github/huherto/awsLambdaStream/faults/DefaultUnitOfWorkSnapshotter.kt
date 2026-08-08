@@ -1,6 +1,7 @@
 package io.github.huherto.awsLambdaStream.faults
 
 import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.extensions.*
 import kotlinx.serialization.json.JsonObject
 
 class DefaultUnitOfWorkSnapshotter(

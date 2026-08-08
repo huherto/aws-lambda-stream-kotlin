@@ -4,6 +4,7 @@ import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.Event
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.extensions.withSaveOptions
 import io.github.huherto.awsLambdaStream.filters.EventFilter
 import io.github.huherto.awsLambdaStream.filters.filterEvents
 import io.github.huherto.awsLambdaStream.sinks.EventsMicrostore
@@ -75,7 +76,7 @@ class CollectPipeline(
                 suffix = "",
                 pipelineId = id,
             )
-            uow.copy(saveOptions = saveOptions)
+            uow.withSaveOptions(saveOptions)
         }
         // The eventsMicrostore already has its own fault manager.
         return eventsMicrostore.save(flow)

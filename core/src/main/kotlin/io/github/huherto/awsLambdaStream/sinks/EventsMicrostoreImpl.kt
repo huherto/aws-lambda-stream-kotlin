@@ -5,6 +5,10 @@ import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.DynamoDbClientFactory
+import io.github.huherto.awsLambdaStream.extensions.putRequest
+import io.github.huherto.awsLambdaStream.extensions.queryRequest
+import io.github.huherto.awsLambdaStream.extensions.withPutResponse
+import io.github.huherto.awsLambdaStream.extensions.withQueryResponse
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.buffer
@@ -95,17 +99,17 @@ open class EventsMicrostoreImpl(
     private val putDynamoDb: suspend (UnitOfWork) -> UnitOfWork = { uow ->
         val client = getClient(uow)
         val putResponse = uow.putRequest?.let {
-            client.putItem(uow.putRequest)
+            client.putItem(it)
         }
-        uow.copy(putResponse = putResponse)
+        uow.withPutResponse(putResponse)
     }
 
     private val queryDynamoDb: suspend (UnitOfWork) -> UnitOfWork = { uow ->
         val client = getClient(uow)
         val queryResponse = uow.queryRequest?.let {
-            client.query(uow.queryRequest)
+            client.query(it)
         }
-        uow.copy(queryResponse = queryResponse)
+        uow.withQueryResponse(queryResponse)
     }
 
 }

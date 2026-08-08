@@ -7,6 +7,7 @@ import io.github.huherto.awsLambdaStream.Event
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.JsonEvent
 import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.extensions.*
 import io.github.huherto.awsLambdaStream.utils.nullableBool
 import io.github.huherto.awsLambdaStream.utils.nullableN
 import io.github.huherto.awsLambdaStream.utils.nullableS
@@ -33,13 +34,10 @@ abstract class BaseEventsMicrostore(
 
     internal fun toQueryRequest(uow: UnitOfWork) : UnitOfWork {
 
-        if (uow.queryParams == null) {
-            return uow
-        }
-
-        val pk = uow.queryParams.pk
-        val isCorrelation = uow.queryParams.correlation
-        val data = uow.queryParams.data
+        val queryParams = uow.queryParams ?: return uow
+        val pk = queryParams.pk
+        val isCorrelation = queryParams.correlation
+        val data = queryParams.data
 
         val targetTable = this.tableName
         if (isCorrelation) {
@@ -51,19 +49,19 @@ abstract class BaseEventsMicrostore(
                 expressionAttributeValues = mapOf(":pk" to AttributeValue.S(pk))
                 consistentRead = true
             }
-            return uow.copy(queryRequest = request)
+            return uow.withQueryRequest(request)
         }
         else {
             if (data.isNullOrEmpty()) return uow
             val request = QueryRequest {
                 tableName = targetTable
-                indexName = uow.queryParams.index ?: "DataIndex"
+                indexName = uow.queryParams?.index ?: "DataIndex"
                 keyConditionExpression = "#data = :data"
                 expressionAttributeNames = mapOf("#data" to "data")
                 expressionAttributeValues = mapOf(":data" to AttributeValue.S(data))
                 consistentRead = true
             }
-            return uow.copy(queryRequest = request)
+            return uow.withQueryRequest(request)
         }
     }
 
@@ -80,7 +78,7 @@ abstract class BaseEventsMicrostore(
     internal fun toCorrelated(uow: UnitOfWork): UnitOfWork {
         if (uow.queryResponse == null) return uow
 
-        val correlatedEvents = uow.queryResponse.items?.mapNotNull { item ->
+        val correlatedEvents = uow.queryResponse?.items?.mapNotNull { item ->
             val eventString = (item["event"] as? AttributeValue.S)?.value
             eventString?.let { unmarshall(it) }
         }
@@ -92,8 +90,8 @@ abstract class BaseEventsMicrostore(
     internal fun putRequest(uow: UnitOfWork) : UnitOfWork {
         val event: Event? = uow.event
 
-        if (uow.saveOptions == null) return uow.copy(putRequest = null)
-        val itemValues = with(uow.saveOptions) {
+        val saveOptions = uow.saveOptions ?: return uow.withPutRequest(null)
+        val itemValues = with(saveOptions) {
             val encodedEvent = if (includeRaw) event?.encoded() else omitRaw(event)
             mapOf(
                 "pk" to nullableS(pk),
@@ -116,6 +114,6 @@ abstract class BaseEventsMicrostore(
             tableName = targetTable
             item = itemValues
         }
-        return uow.copy(putRequest = putRequest)
+        return uow.withPutRequest(putRequest)
     }
 }

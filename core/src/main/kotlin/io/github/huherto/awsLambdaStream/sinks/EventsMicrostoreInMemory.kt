@@ -5,6 +5,10 @@ import aws.sdk.kotlin.services.dynamodb.model.PutItemResponse
 import aws.sdk.kotlin.services.dynamodb.model.QueryResponse
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.extensions.putRequest
+import io.github.huherto.awsLambdaStream.extensions.queryRequest
+import io.github.huherto.awsLambdaStream.extensions.withPutResponse
+import io.github.huherto.awsLambdaStream.extensions.withQueryResponse
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.mapNotNull
@@ -48,7 +52,7 @@ class EventsMicrostoreInMemory(
 
             // Replicating previously existing behavior.
             uowMap[uow.event?.id ?: "unknown id"] = uow
-            return uow.copy(putResponse = PutItemResponse { })
+            return uow.withPutResponse(PutItemResponse { })
         }
         return uow
     }
@@ -75,7 +79,7 @@ class EventsMicrostoreInMemory(
                 this.items = items
                 this.count = items.size
             }
-            return uow.copy(queryResponse = response)
+            return uow.withQueryResponse(response)
         }
         return uow
     }

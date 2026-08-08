@@ -2,6 +2,7 @@ package io.github.huherto.awsLambdaStream.flavors
 
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import io.github.huherto.awsLambdaStream.*
+import io.github.huherto.awsLambdaStream.extensions.withSaveOptions
 import io.github.huherto.awsLambdaStream.filters.EventFilter
 import io.github.huherto.awsLambdaStream.filters.filterEvents
 import io.github.huherto.awsLambdaStream.from.RecordImage
@@ -144,7 +145,7 @@ class CorrelatePipeline(
                 suffix = correlationKeySuffix,
                 pipelineId = id,
             )
-            uow.copy(saveOptions = saveOptions)
+            uow.withSaveOptions(saveOptions)
         }
         // Save already has a fault manager.
         return eventsMicrostore.save(flow)

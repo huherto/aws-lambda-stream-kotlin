@@ -5,7 +5,8 @@ import io.github.huherto.awsLambdaStream.EventCodec
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.S3Connector
-import io.github.huherto.awsLambdaStream.copyS3
+import io.github.huherto.awsLambdaStream.extensions.copyS3
+import io.github.huherto.awsLambdaStream.extensions.s3
 import kotlinx.coroutines.flow.Flow
 
 // claim-check pattern support
