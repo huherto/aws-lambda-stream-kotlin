@@ -164,7 +164,7 @@ object UnitOfWorkAsSerializableUnitOfWorkSerializer : KSerializer<UnitOfWork?> {
 
     override fun deserialize(decoder: Decoder): UnitOfWork? {
         throw SerializationException(
-            "UnitOfWork deserialization is not supported. SerializableUnitOfWork is a one-way serialization surrogate.",
+            "ReplayUnitOfWork deserialization is not supported. SerializableUnitOfWork is a one-way serialization surrogate.",
         )
     }
 }

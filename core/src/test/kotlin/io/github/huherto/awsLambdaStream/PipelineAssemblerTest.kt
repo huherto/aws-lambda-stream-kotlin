@@ -134,7 +134,7 @@ class PipelineAssemblerTest {
         assertEquals(1, publishedFaults.size, "Should publish one failure event")
         assertEquals(0, fm.getFaults().size, "Faults should be empty after publishing")
 
-        // Retrieve the event from the captured UnitOfWork
+        // Retrieve the event from the captured ReplayUnitOfWork
         val failureEvent = publishedFaults[0]
         assertNotNull(failureEvent)
         assertEquals(FAULT_EVENT_TYPE, failureEvent?.type)

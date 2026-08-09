@@ -1198,7 +1198,7 @@ It should exclude:
 Add tests:
 ```
 text
-core/src/test/kotlin/io/github/huherto/awsLambdaStream/faults/DefaultUnitOfWorkSnapshotterTest.kt
+core/src/test/kotlin/io/github/huherto/awsLambdaStream/faults/DefaultReplayUnitOfWorkSnapshotterTest.kt
 ```
 Verify:
 

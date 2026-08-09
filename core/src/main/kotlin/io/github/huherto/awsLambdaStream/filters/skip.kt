@@ -15,7 +15,7 @@ fun skipTag(envConfig: EnvironmentConfig): Map<String, Boolean?> {
 /**
  * Use this filter in pipelines to ignore test events.
  *
- * Returns true when the UnitOfWork should be kept.
+ * Returns true when the ReplayUnitOfWork should be kept.
  */
 fun outSkip(uow: UnitOfWork): Boolean {
     return uow.event?.tags?.get("skip") != "true"

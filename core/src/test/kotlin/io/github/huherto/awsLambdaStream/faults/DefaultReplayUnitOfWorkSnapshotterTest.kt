@@ -6,7 +6,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import org.junit.jupiter.api.Test
 
-class DefaultUnitOfWorkSnapshotterTest {
+class DefaultReplayUnitOfWorkSnapshotterTest {
 
     private val snapshotter = DefaultUnitOfWorkSnapshotter()
 

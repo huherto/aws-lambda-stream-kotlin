@@ -67,7 +67,7 @@ class ReplayEvents {
         var functions: MutableMap<String, Int> = mutableMapOf(),
         var invoked: InvokedCounters? = null,
         var errors: Int = 0,
-        var errored: MutableList<UnitOfWork> = mutableListOf(),
+        var errored: MutableList<ReplayUnitOfWork> = mutableListOf(),
     )
 
     data class ListedObject(
@@ -76,7 +76,7 @@ class ReplayEvents {
         val nextContinuationToken: String?,
     )
 
-    data class UnitOfWork(
+    data class ReplayUnitOfWork(
         val argv: Args? = null,
         val listRequest: ListObjectsV2Request? = null,
         val listResponse: ListedObject? = null,
@@ -84,7 +84,7 @@ class ReplayEvents {
         val getResponseLine: String? = null,
         val record: JsonObject? = null,
         val event: JsonObject? = null,
-        val batch: List<UnitOfWork>? = null,
+        val batch: List<ReplayUnitOfWork>? = null,
         val recordCount: Int? = null,
         val invokeRequest: InvokeRequest? = null,
         val invokeResponseStatusCode: Int? = null,
@@ -215,7 +215,7 @@ class ReplayEvents {
     fun head(
         argv: Args,
         s3: S3Client,
-    ): Flow<UnitOfWork> {
+    ): Flow<ReplayUnitOfWork> {
         val bucket = argv.bucket
             ?: error("Missing S3 bucket. Set bucket in config or BUCKET_NAME.")
 
@@ -231,7 +231,7 @@ class ReplayEvents {
                         prefix
                     }
 
-                UnitOfWork(
+                ReplayUnitOfWork(
                     argv = argv,
                     listRequest = ListObjectsV2Request {
                         this.bucket = bucket
@@ -266,7 +266,7 @@ class ReplayEvents {
             .onEach(::debug)
     }
 
-    private fun filterByType(argv: Args): (UnitOfWork) -> Boolean {
+    private fun filterByType(argv: Args): (ReplayUnitOfWork) -> Boolean {
         return { uow ->
             val eventType = uow.event?.string("type")
 
@@ -291,7 +291,7 @@ class ReplayEvents {
         }
     }
 
-    private fun parseEventBridgeLine(uow: UnitOfWork): UnitOfWork {
+    private fun parseEventBridgeLine(uow: ReplayUnitOfWork): ReplayUnitOfWork {
         val line = uow.getResponseLine ?: return uow
 
         return try {
@@ -318,14 +318,14 @@ class ReplayEvents {
         }
     }
 
-    private fun toBatchUow(batch: List<UnitOfWork>): UnitOfWork {
-        return UnitOfWork(batch = batch)
+    private fun toBatchUow(batch: List<ReplayUnitOfWork>): ReplayUnitOfWork {
+        return ReplayUnitOfWork(batch = batch)
     }
 
     private fun withInvokeRequest(
-        uow: UnitOfWork,
+        uow: ReplayUnitOfWork,
         argv: Args,
-    ): UnitOfWork {
+    ): ReplayUnitOfWork {
         val records = if (uow.batch != null) {
             uow.batch.mapNotNull { it.event }
         } else {
@@ -382,8 +382,8 @@ class ReplayEvents {
 
     private suspend fun invokeLambda(
         lambda: LambdaClient,
-        uow: UnitOfWork,
-    ): UnitOfWork {
+        uow: ReplayUnitOfWork,
+    ): ReplayUnitOfWork {
         val request = uow.invokeRequest ?: return uow
 
         return try {
@@ -399,8 +399,8 @@ class ReplayEvents {
 
     private fun errors(
         error: Throwable,
-        uow: UnitOfWork,
-    ): UnitOfWork {
+        uow: ReplayUnitOfWork,
+    ): ReplayUnitOfWork {
         System.err.println(error.message)
 
         if (error.message == "The provided token has expired.") {
@@ -412,7 +412,7 @@ class ReplayEvents {
 
     private fun count(
         counters: Counters,
-        uow: UnitOfWork,
+        uow: ReplayUnitOfWork,
     ): Counters {
         synchronized(counterLock) {
             val event = uow.event
@@ -459,9 +459,9 @@ class ReplayEvents {
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun pageObjectsFromS3(
         s3: S3Client,
-        uows: List<UnitOfWork>,
+        uows: List<ReplayUnitOfWork>,
         parallel: Int,
-    ): Flow<UnitOfWork> {
+    ): Flow<ReplayUnitOfWork> {
         return uows
             .asFlow()
             .mapParallel(parallel) { listObjectsForPrefix(s3, it) }
@@ -470,9 +470,9 @@ class ReplayEvents {
 
     private suspend fun listObjectsForPrefix(
         s3: S3Client,
-        initialUow: UnitOfWork,
-    ): List<UnitOfWork> {
-        val results = mutableListOf<UnitOfWork>()
+        initialUow: ReplayUnitOfWork,
+    ): List<ReplayUnitOfWork> {
+        val results = mutableListOf<ReplayUnitOfWork>()
         var continuationToken = initialUow.listRequest?.continuationToken
 
         do {
@@ -543,8 +543,8 @@ class ReplayEvents {
 
     private suspend fun getObjectFromS3(
         s3: S3Client,
-        uow: UnitOfWork,
-    ): UnitOfWork {
+        uow: ReplayUnitOfWork,
+    ): ReplayUnitOfWork {
         val request = uow.getRequest
             ?: error("Missing get request")
 
@@ -565,7 +565,7 @@ class ReplayEvents {
         }
     }
 
-    private fun splitLines(uow: UnitOfWork): List<UnitOfWork> {
+    private fun splitLines(uow: ReplayUnitOfWork): List<ReplayUnitOfWork> {
         val text = uow.getResponseLine ?: return listOf(uow)
 
         return text
@@ -577,14 +577,14 @@ class ReplayEvents {
             .toList()
     }
 
-    private fun Flow<UnitOfWork>.batchWithSize(
+    private fun Flow<ReplayUnitOfWork>.batchWithSize(
         maxBytes: Int,
         timeoutMillis: Long,
-    ): Flow<List<UnitOfWork>> = flow {
+    ): Flow<List<ReplayUnitOfWork>> = flow {
         val input = this@batchWithSize
-        val output = Channel<List<UnitOfWork>>(Channel.UNLIMITED)
+        val output = Channel<List<ReplayUnitOfWork>>(Channel.UNLIMITED)
 
-        val batched = mutableListOf<UnitOfWork>()
+        val batched = mutableListOf<ReplayUnitOfWork>()
         var timeoutJob: Job? = null
 
         suspend fun flush() {
@@ -639,7 +639,7 @@ class ReplayEvents {
         }
     }
 
-    private fun batchPayloadSize(batch: List<UnitOfWork>): Int {
+    private fun batchPayloadSize(batch: List<ReplayUnitOfWork>): Int {
         val payload = JsonObject(
             mapOf(
                 "Records" to JsonArray(

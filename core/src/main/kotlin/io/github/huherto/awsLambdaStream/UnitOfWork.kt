@@ -21,7 +21,7 @@ data class UnitOfWork(
     /** Retrieves an extension of the specified type. */
     inline fun <reified T : Any> getExtension(): T? = extensions[T::class] as? T
 
-    /** Returns a new UnitOfWork with the given extension attached. */
+    /** Returns a new ReplayUnitOfWork with the given extension attached. */
     fun withExtension(extension: Any): UnitOfWork {
         return copy(extensions = extensions + (extension::class to extension))
     }

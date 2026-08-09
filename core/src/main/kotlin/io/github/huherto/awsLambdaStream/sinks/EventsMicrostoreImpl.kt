@@ -32,8 +32,8 @@ import kotlinx.coroutines.flow.buffer
  *     faultManager = faultManager,
  * )
  *
- * val saved: Flow<UnitOfWork> = microstore.save(inputFlow)
- * val correlated: Flow<UnitOfWork> = microstore.queryByPk(queryFlow)
+ * val saved: Flow<ReplayUnitOfWork> = microstore.save(inputFlow)
+ * val correlated: Flow<ReplayUnitOfWork> = microstore.queryByPk(queryFlow)
  * ```
  *
  * ## Saving events

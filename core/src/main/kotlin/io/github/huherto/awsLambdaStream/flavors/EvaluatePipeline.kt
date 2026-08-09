@@ -199,7 +199,7 @@ class EvaluatePipeline (
             null -> throw IllegalArgumentException("higherOrderEmit must be a String or a function")
         }
 
-        // Maps results back to a UnitOfWork (replacing the current event with the emitted one)
+        // Maps results back to a ReplayUnitOfWork (replacing the current event with the emitted one)
         return resultEvents.map { emit ->
             uow.copy(event = emit)
         }
