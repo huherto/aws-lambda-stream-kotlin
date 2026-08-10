@@ -54,7 +54,7 @@ class CollectionPipelineTest {
         override val timestamp: Long? = timestamp
         override val partitionKey: String? = partitionKey
         override val tags: Map<String, String>? = null
-        override val raw: Any? = null
+        override val raw: RawRecord? = null
         override val eem: Any? = null
         override val triggers: List<EventReference>? = null
         override fun eventType() = "TestEvent"

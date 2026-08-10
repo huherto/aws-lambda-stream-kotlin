@@ -28,6 +28,7 @@ import io.mockk.spyk
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.JsonPrimitive
 import kotlin.test.Test
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue as EventAV
 
@@ -46,7 +47,7 @@ class CorrelatePipelineTest {
         override val timestamp: Long? = TIMESTAMP,
         override val partitionKey: String? = null,
         override val tags: Map<String, String>? = null,
-        override val raw: Any? = null,
+        override val raw: RawRecord? = null,
         override val eem: Any? = null,
         override val triggers: List<EventReference>? = null,
         val encodedStr: String = "{}"
@@ -66,7 +67,7 @@ class CorrelatePipelineTest {
     }
 
     private fun createFakeEvent(
-        rawObj: Any? = null,
+        rawObj: RawRecord? = null,
         encodedStr: String = "{}",
         eventId: String? = "event-1",
         eventTimestamp: Long? = 1600000000L
@@ -140,7 +141,7 @@ class CorrelatePipelineTest {
         }
         pipeline.forCollectedEvents(validUow.copy(record = wrongSkRecord)).shouldBeFalse()
         
-        pipeline.forCollectedEvents(validUow.copy(event = createFakeEvent(rawObj = "Not a RecordPair"))).shouldBeFalse()
+        pipeline.forCollectedEvents(validUow.copy(event = createFakeEvent(rawObj = JsonRaw(JsonPrimitive("Not a RecordPair"))))).shouldBeFalse()
     }
 
     @Test

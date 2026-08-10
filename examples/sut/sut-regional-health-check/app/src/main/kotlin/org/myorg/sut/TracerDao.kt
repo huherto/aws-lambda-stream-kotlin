@@ -42,8 +42,7 @@ data class TracerEvent(
     override val timestamp: Long? = null,
     override val partitionKey: String? = null,
     override val tags: Map<String, String>? = null,
-    @kotlinx.serialization.Contextual
-    override val raw: Any? = null,
+    override val raw: RawRecord? = null,
     @kotlinx.serialization.Contextual
     override val eem: Any? = null,
     override val triggers: List<EventReference>? = null,

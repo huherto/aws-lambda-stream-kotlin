@@ -15,8 +15,7 @@ sealed class MyEvent : BaseEvent() {
     override val timestamp: Long? get() = null
     override val partitionKey: String? get() = null
     override val tags: Map<String, String>? get() = null
-    @kotlinx.serialization.Contextual
-    override val raw: Any? get() = null
+    override val raw: RawRecord? get() = null
     @kotlinx.serialization.Contextual
     override val eem: Any? get() = null
     override val triggers: List<EventReference>? get() = null
@@ -41,8 +40,7 @@ data class MyEventA(
     override val timestamp: Long? = null,
     override val partitionKey: String? = null,
     override val tags: Map<String, String>? = null,
-    @kotlinx.serialization.Contextual
-    override val raw: Any? = null,
+    override val raw: RawRecord? = null,
     @kotlinx.serialization.Contextual
     override val eem: Any? = null,
     override val triggers: List<EventReference>? = null,
@@ -60,8 +58,7 @@ data class MyEventB(
     override val timestamp: Long? = null,
     override val partitionKey: String? = null,
     override val tags: Map<String, String>? = null,
-    @kotlinx.serialization.Contextual
-    override val raw: Any? = null,
+    override val raw: RawRecord? = null,
     @kotlinx.serialization.Contextual
     override val eem: Any? = null,
     override val triggers: List<EventReference>? = null,
@@ -79,8 +76,7 @@ data class MyEventC(
     override val timestamp: Long? = null,
     override val partitionKey: String? = null,
     override val tags: Map<String, String>? = null,
-    @kotlinx.serialization.Contextual
-    override val raw: Any? = null,
+    override val raw: RawRecord? = null,
     @kotlinx.serialization.Contextual
     override val eem: Any? = null,
     override val triggers: List<EventReference>? = null,

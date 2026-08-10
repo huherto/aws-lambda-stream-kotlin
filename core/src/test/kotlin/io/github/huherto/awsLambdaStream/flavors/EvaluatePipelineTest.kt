@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonPrimitive
 import org.junit.jupiter.api.Test
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue as StreamAV
 
@@ -72,8 +73,7 @@ class EvaluatePipelineTest {
         override val timestamp: Long? = null,
         override val partitionKey: String? = null,
         override val tags: Map<String, String>? = null,
-        @kotlinx.serialization.Contextual
-        override val raw: Any? = null,
+        override val raw: RawRecord? = null,
         @kotlinx.serialization.Contextual
         override val eem: Any? = null,
         override val triggers: List<EventReference>? = null,
@@ -88,7 +88,7 @@ class EvaluatePipelineTest {
         timestamp: Long = 1_700_000_000_000L,
         partitionKey: String? = "partition-1",
         tags: Map<String, String>? = null,
-        raw: Any? = null,
+        raw: RawRecord? = null,
         eem: Any? = null,
         type: String = "TestEvent",
     ): Event = TestEvent(
@@ -264,8 +264,7 @@ class EvaluatePipelineTest {
         override val timestamp: Long? = null,
         override val partitionKey: String? = null,
         override val tags: Map<String, String>? = null,
-        @kotlinx.serialization.Contextual
-        override val raw: Any? = null,
+        override val raw: RawRecord? = null,
         @kotlinx.serialization.Contextual
         override val eem: Any? = null,
         override val triggers: List<EventReference>? = null
@@ -286,7 +285,7 @@ class EvaluatePipelineTest {
             id = "base-event",
             timestamp = 1_700_000_000_000L,
             tags = mapOf("region" to "eu-west-1", "source" to "app", "team" to "core", "env" to "test"),
-            raw = "raw-value",
+            raw = JsonRaw(JsonPrimitive("raw-value")),
             eem = mapOf("key" to "value"),
             type = "BaseType"
         )
@@ -319,7 +318,7 @@ class EvaluatePipelineTest {
         basicEvent.tags shouldBe mapOf("team" to "core", "env" to "test")
         basicEvent.triggers?.shouldHaveSize(2)
         // basicEvent.base shouldBe baseEvent
-        basicEvent.raw shouldBe "raw-value"
+        basicEvent.raw shouldBe JsonRaw(JsonPrimitive("raw-value"))
         basicEvent.eem shouldBe mapOf("key" to "value")
     }
 
@@ -330,7 +329,7 @@ class EvaluatePipelineTest {
             id = "base-event",
             timestamp = 1_700_000_000_000L,
             tags = mapOf("region" to "eu-west-1", "source" to "app", "team" to "core", "env" to "test"),
-            raw = "raw-value",
+            raw = JsonRaw(JsonPrimitive("raw-value")),
             eem = mapOf("key" to "value"),
             type = "BaseType"
         )

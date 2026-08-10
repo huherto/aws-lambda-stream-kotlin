@@ -10,8 +10,7 @@ data class HigherOrderEventTemplate (
     override val timestamp: Long? = null,
     override val partitionKey: String? = null,
     override val tags: Map<String, String>? = null,
-    @kotlinx.serialization.Contextual
-    override val raw: Any? = null,
+    override val raw: io.github.huherto.awsLambdaStream.RawRecord? = null,
     @kotlinx.serialization.Contextual
     override val eem: Any? = null,
     override val triggers: List<io.github.huherto.awsLambdaStream.EventReference>? = null

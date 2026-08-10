@@ -7,7 +7,7 @@ interface Event {
     val timestamp: Long? // In milliseconds since epoch
     val partitionKey: String?
     val tags: Map<String, String>?
-    val raw: Any?
+    val raw: RawRecord?
 
     // Envelope Encryption Metadata. See SAP4SS page 347
     val eem: Any?
@@ -22,7 +22,7 @@ interface Event {
         timestamp: Long? = this.timestamp,
         partitionKey: String? = this.partitionKey,
         tags: Map<String, String>? = this.tags,
-        raw: Any? = this.raw,
+        raw: RawRecord? = this.raw,
         eem: Any? = this.eem,
         triggers: List<EventReference>? = this.triggers
     ): Event
@@ -42,7 +42,7 @@ abstract class BaseEvent : Event {
         timestamp: Long?,
         partitionKey: String?,
         tags: Map<String, String>?,
-        raw: Any?,
+        raw: RawRecord?,
         eem: Any?,
         triggers: List<EventReference>?
     ): Event {

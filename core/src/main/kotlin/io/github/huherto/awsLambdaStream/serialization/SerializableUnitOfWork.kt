@@ -1,9 +1,16 @@
 package io.github.huherto.awsLambdaStream.serialization
 
+import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
+import com.amazonaws.services.lambda.runtime.events.KinesisEvent
+import com.amazonaws.services.lambda.runtime.events.SQSEvent
 import io.github.huherto.awsLambdaStream.Event
 import io.github.huherto.awsLambdaStream.EventReference
+import io.github.huherto.awsLambdaStream.RawRecord
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.extensions.*
+import io.github.huherto.awsLambdaStream.serialization.aws.DynamodbStreamRecordReplayJson
+import io.github.huherto.awsLambdaStream.serialization.aws.KinesisEventRecordReplayJson
+import io.github.huherto.awsLambdaStream.serialization.aws.SQSMessageReplayJson
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
@@ -11,6 +18,7 @@ import kotlinx.serialization.builtins.nullable
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.json.Json
 
 @Serializable
 data class SerializableUnitOfWork(
@@ -44,7 +52,7 @@ data class SerializableUnitOfWork(
 ) {
     constructor(unitOfWork: UnitOfWork) : this(
         pipeline = unitOfWork.pipeline?.toString(),
-        record = unitOfWork.record?.toString(),
+        record = unitOfWork.record?.let(::encodeSourceRecord),
         event = unitOfWork.event?.let(::SerializableEvent),
         key = unitOfWork.key,
         sequenceNumber = unitOfWork.sequenceNumber,
@@ -95,7 +103,7 @@ data class SerializableEvent(
         timestamp = event.timestamp,
         partitionKey = event.partitionKey,
         tags = event.tags,
-        raw = event.raw?.toString(),
+        raw = event.raw?.let { Json.encodeToString(RawRecord.serializer(), it) },
         eem = event.eem?.toString(),
         triggers = event.triggers,
         encoded = event.toString(),
@@ -141,6 +149,21 @@ data class SerializableS3UnitOfWork(
 
 fun UnitOfWork.toSerializableUnitOfWork(): SerializableUnitOfWork =
     SerializableUnitOfWork(this)
+
+/**
+ * Encodes [UnitOfWork.record] — the AWS event record the unit of work came from.
+ *
+ * The AWS event classes are Java beans whose `toString()` is not JSON, so recognized record
+ * types go through the AWS serializers to keep replay payloads machine-readable. Anything
+ * unrecognized still falls back to `toString()`.
+ */
+private fun encodeSourceRecord(record: Any): String =
+    when (record) {
+        is DynamodbEvent.DynamodbStreamRecord -> DynamodbStreamRecordReplayJson.encode(record)
+        is KinesisEvent.KinesisEventRecord -> KinesisEventRecordReplayJson.encode(record)
+        is SQSEvent.SQSMessage -> SQSMessageReplayJson.encode(record)
+        else -> record.toString()
+    }
 
 private fun Event.toEventReference(): EventReference =
     EventReference(

@@ -38,8 +38,8 @@ class JsonEvent(jsonString: String) : Event {
         get() = jsonObject.stringOrNull("partitionKey")
     override val tags: Map<String, String>?
         get() = jsonObject.stringMapOrNull("tags")
-    override val raw: Any?
-        get() = jsonObject["raw"]
+    override val raw: RawRecord?
+        get() = jsonObject["raw"]?.takeUnless { it is JsonNull }?.toRawRecord()
     override val eem: Any?
         get() = jsonObject.stringMapOrNull("eem")
     override val triggers: List<EventReference>?
@@ -60,7 +60,7 @@ class JsonEvent(jsonString: String) : Event {
         timestamp: Long?,
         partitionKey: String?,
         tags: Map<String, String>?,
-        raw: Any?,
+        raw: RawRecord?,
         eem: Any?,
         triggers: List<EventReference>?
     ): Event {
@@ -71,9 +71,8 @@ class JsonEvent(jsonString: String) : Event {
         tags?.let {
             map["tags"] = JsonObject(it.mapValues { (_, v) -> JsonPrimitive(v) })
         }
-        // For raw, eem, and triggers, it's more complex because they can be any type.
-        // But for JsonEvent, we usually deal with JsonElements.
-        if (raw is JsonElement) map["raw"] = raw
+        // eem and triggers are still loosely typed, so they need runtime checks.
+        if (raw != null) map["raw"] = raw.toJsonElement()
         if (eem is JsonObject) map["eem"] = eem
         if (triggers != null) {
             map["triggers"] = JsonArray(triggers.map { JsonPrimitive(it.id) }) // Simplified

@@ -2,6 +2,7 @@ package org.myorg.sut
 
 import io.github.huherto.awsLambdaStream.Event
 import io.github.huherto.awsLambdaStream.EventReference
+import io.github.huherto.awsLambdaStream.RawRecord
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.Serializable
@@ -31,8 +32,7 @@ sealed class TrackedUnitEvent : Event {
     abstract override val partitionKey: String?
     abstract override val tags: Map<String, String>?
 
-    @Contextual
-    abstract override val raw: Any?
+    abstract override val raw: RawRecord?
 
     @Contextual
     abstract override val eem: Any?
@@ -58,7 +58,7 @@ sealed class TrackedUnitEvent : Event {
         timestamp: Long?,
         partitionKey: String?,
         tags: Map<String, String>?,
-        raw: Any?,
+        raw: RawRecord?,
         eem: Any?,
         triggers: List<EventReference>?
     ): Event {
@@ -84,7 +84,7 @@ data class ShipmentCreatedEvent(
     override val timestamp: Long? = null,
     override val partitionKey: String? = null,
     override val tags: Map<String, String>? = null,
-    @Contextual override val raw: Any? = null,
+    override val raw: RawRecord? = null,
     @Contextual override val eem: Any? = null,
     override val triggers: List<EventReference>? = null,
     override val entity: TrackedUnit? = null,
@@ -102,7 +102,7 @@ data class ShipmentPickedUpEvent(
     override val timestamp: Long? = null,
     override val partitionKey: String? = null,
     override val tags: Map<String, String>? = null,
-    @Contextual override val raw: Any? = null,
+    override val raw: RawRecord? = null,
     @Contextual override val eem: Any? = null,
     override val triggers: List<EventReference>? = null,
     override val entity: TrackedUnit? = null,
@@ -119,7 +119,7 @@ data class ShipmentInTransitEvent(
     override val timestamp: Long? = null,
     override val partitionKey: String? = null,
     override val tags: Map<String, String>? = null,
-    @Contextual override val raw: Any? = null,
+    override val raw: RawRecord? = null,
     @Contextual override val eem: Any? = null,
     override val triggers: List<EventReference>? = null,
     override val entity: TrackedUnit? = null,
@@ -137,7 +137,7 @@ data class ArrivalAtHubEvent(
     override val timestamp: Long? = null,
     override val partitionKey: String? = null,
     override val tags: Map<String, String>? = null,
-    @Contextual override val raw: Any? = null,
+    override val raw: RawRecord? = null,
     @Contextual override val eem: Any? = null,
     override val triggers: List<EventReference>? = null,
     override val entity: TrackedUnit? = null,
@@ -155,7 +155,7 @@ data class DepartureFromHubEvent(
     override val timestamp: Long? = null,
     override val partitionKey: String? = null,
     override val tags: Map<String, String>? = null,
-    @Contextual override val raw: Any? = null,
+    override val raw: RawRecord? = null,
     @Contextual override val eem: Any? = null,
     override val triggers: List<EventReference>? = null,
     override val entity: TrackedUnit? = null,
@@ -173,7 +173,7 @@ data class CustomsClearedEvent(
     override val timestamp: Long? = null,
     override val partitionKey: String? = null,
     override val tags: Map<String, String>? = null,
-    @Contextual override val raw: Any? = null,
+    override val raw: RawRecord? = null,
     @Contextual override val eem: Any? = null,
     override val triggers: List<EventReference>? = null,
     override val entity: TrackedUnit? = null,
@@ -191,7 +191,7 @@ data class OutForDeliveryEvent(
     override val timestamp: Long? = null,
     override val partitionKey: String? = null,
     override val tags: Map<String, String>? = null,
-    @Contextual override val raw: Any? = null,
+    override val raw: RawRecord? = null,
     @Contextual override val eem: Any? = null,
     override val triggers: List<EventReference>? = null,
     override val entity: TrackedUnit? = null,
@@ -209,7 +209,7 @@ data class DeliveryAttemptedEvent(
     override val timestamp: Long? = null,
     override val partitionKey: String? = null,
     override val tags: Map<String, String>? = null,
-    @Contextual override val raw: Any? = null,
+    override val raw: RawRecord? = null,
     @Contextual override val eem: Any? = null,
     override val triggers: List<EventReference>? = null,
     override val entity: TrackedUnit? = null,
@@ -227,7 +227,7 @@ data class ShipmentDeliveredEvent(
     override val timestamp: Long? = null,
     override val partitionKey: String? = null,
     override val tags: Map<String, String>? = null,
-    @Contextual override val raw: Any? = null,
+    override val raw: RawRecord? = null,
     @Contextual override val eem: Any? = null,
     override val triggers: List<EventReference>? = null,
     override val entity: TrackedUnit? = null,
@@ -246,7 +246,7 @@ data class ShipmentExceptionEvent(
     override val timestamp: Long? = null,
     override val partitionKey: String? = null,
     override val tags: Map<String, String>? = null,
-    @Contextual override val raw: Any? = null,
+    override val raw: RawRecord? = null,
     @Contextual override val eem: Any? = null,
     override val triggers: List<EventReference>? = null,
     override val entity: TrackedUnit? = null,
@@ -263,7 +263,7 @@ data class VerifyTargetAddressEvent(
     override val timestamp: Long? = null,
     override val partitionKey: String? = null,
     override val tags: Map<String, String>? = null,
-    @Contextual override val raw: Any? = null,
+    override val raw: RawRecord? = null,
     @Contextual override val eem: Any? = null,
     override val triggers: List<EventReference>? = null,
     override val entity: TrackedUnit? = null,
@@ -280,7 +280,7 @@ data class ContactCustomerEvent(
     override val timestamp: Long? = null,
     override val partitionKey: String? = null,
     override val tags: Map<String, String>? = null,
-    @Contextual override val raw: Any? = null,
+    override val raw: RawRecord? = null,
     @Contextual override val eem: Any? = null,
     override val triggers: List<EventReference>? = null,
     override val entity: TrackedUnit? = null,
@@ -297,7 +297,7 @@ data class PoisonPillEvent(
     override val timestamp: Long? = null,
     override val partitionKey: String? = null,
     override val tags: Map<String, String>? = null,
-    @Contextual override val raw: Any? = null,
+    override val raw: RawRecord? = null,
     @Contextual override val eem: Any? = null,
     override val triggers: List<EventReference>? = null,
     override val entity: TrackedUnit? = null,
