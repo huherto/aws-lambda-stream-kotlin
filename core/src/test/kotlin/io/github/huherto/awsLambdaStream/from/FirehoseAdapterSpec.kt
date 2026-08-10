@@ -1,0 +1,102 @@
+package io.github.huherto.awsLambdaStream.from
+
+import com.amazonaws.services.lambda.runtime.events.KinesisFirehoseEvent
+import io.github.huherto.awsLambdaStream.*
+import io.github.huherto.awsLambdaStream.queries.ClaimCheckRedeemer
+import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
+import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.shouldBe
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.spyk
+import io.mockk.verify
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.toList
+import java.nio.ByteBuffer
+import java.nio.charset.StandardCharsets
+
+class FirehoseAdapterSpec : StringSpec({
+
+    val envConfig = spyk(EnvironmentConfig()).apply {
+        every { serializationStrategy() } returns "jackson"
+    }
+
+    fun faultManager() = FaultManager(
+        envConfig = envConfig,
+        eventPublisher = EventPublisherInMemory(),
+        skipErrorLogging = true,
+    )
+
+    fun adapter(
+        faultManager: FaultManager = faultManager(),
+        eventCodec: EventCodec = MyEventCodec(),
+        claimCheckRedeemer: ClaimCheckRedeemer? = null
+    ) = FirehoseAdapter(faultManager, eventCodec, claimCheckRedeemer)
+
+    fun createFirehoseRecord(
+        recordId: String,
+        payload: String,
+        timestamp: Long = 123456789L
+    ): KinesisFirehoseEvent.Record {
+        return KinesisFirehoseEvent.Record().apply {
+            this.recordId = recordId
+            this.data = ByteBuffer.wrap(payload.toByteArray(StandardCharsets.UTF_8))
+            this.approximateArrivalTimestamp = timestamp
+        }
+    }
+
+    "fromFirehose should decode records and preserve record id" {
+        val adapter = adapter()
+        val payload = """{"type":"MY_EVENT_A","foo":"bar"}"""
+        val record = createFirehoseRecord(recordId = "rec-1", payload = payload)
+        val event = KinesisFirehoseEvent().apply {
+            records = listOf(record)
+        }
+
+        val results = adapter.fromFirehose(event).toList()
+
+        results.shouldHaveSize(1)
+        results[0].record shouldBe record
+        results[0].event?.id shouldBe "rec-1"
+        results[0].event?.eventType() shouldBe "MY_EVENT_A"
+        results[0].timestamp shouldBe "123456789"
+        results[0].getExtension<FirehoseExtension>()?.recordId shouldBe "rec-1"
+    }
+
+    "fromFirehose should handle decode failures" {
+        val faultManager = faultManager()
+        val adapter = adapter(faultManager = faultManager)
+        val record = createFirehoseRecord(recordId = "rec-fail", payload = "invalid")
+        val event = KinesisFirehoseEvent().apply {
+            records = listOf(record)
+        }
+
+        val results = adapter.fromFirehose(event).toList()
+
+        results.shouldHaveSize(0)
+        faultManager.getFaults().shouldHaveSize(1)
+    }
+
+    "fromFirehose should redeem claim checks" {
+        val claimCheckRedeemer = mockk<ClaimCheckRedeemer>()
+        val adapter = adapter(claimCheckRedeemer = claimCheckRedeemer)
+        val payload = """{"type":"MY_EVENT_A","foo":"bar"}"""
+        val record = createFirehoseRecord(recordId = "rec-cc", payload = payload)
+        val event = KinesisFirehoseEvent().apply {
+            records = listOf(record)
+        }
+
+        every {
+            with(claimCheckRedeemer) { any<Flow<UnitOfWork>>().redeemClaimCheck() }
+        } answers {
+            firstArg()
+        }
+
+        adapter.fromFirehose(event).toList()
+
+        verify(exactly = 1) {
+            with(claimCheckRedeemer) { any<Flow<UnitOfWork>>().redeemClaimCheck() }
+        }
+    }
+})
