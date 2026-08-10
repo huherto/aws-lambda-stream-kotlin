@@ -22,6 +22,7 @@ dependencies {
 
     implementation(libs.aws.java.core)
     implementation(libs.aws.java.events)
+    implementation(libs.aws.java.serial)
     implementation(libs.aws.sdk.dynamodb)
     implementation(libs.aws.sdk.eventbridge)
     implementation(libs.aws.sdk.kinesis)
