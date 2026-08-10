@@ -11,7 +11,11 @@ object TrackedUnitEventCodec : EventCodec {
     }
 
     override fun encode(event: Event): String {
-        return sutJson.encodeToString(TrackedUnitEvent.serializer(), event as TrackedUnitEvent)
+        require(event is TrackedUnitEvent) {
+            "TrackedUnitEventCodec can only encode TrackedUnitEvent instances, but received ${event::class.qualifiedName}"
+        }
+
+        return sutJson.encodeToString(TrackedUnitEvent.serializer(), event)
     }
 }
 
