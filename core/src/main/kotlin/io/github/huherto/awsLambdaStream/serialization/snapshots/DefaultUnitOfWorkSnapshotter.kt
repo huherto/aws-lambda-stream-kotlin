@@ -80,11 +80,11 @@ class DefaultUnitOfWorkSnapshotter(
                     headResponse = s3.headResponse?.toString()
                 )
             },
-            extensions = uow.extensions?.entries?.associate { (k, v) ->
+            extensions = uow.extensions.entries.associate { (k, v) ->
                 val name = k.simpleName ?: "unknown"
                 val snapshot = if (v is Snapshottable) v.toSnapshot() else v
                 name to snapshot?.toString()
-            }?.takeUnless { it.isEmpty() },
+            }.takeUnless { it.isEmpty() },
             batchGetRequest = uow.batchGetRequest?.toString(),
             batchGetResponse = uow.batchGetResponse?.toString(),
             publishRequest = uow.publishRequest?.toString(),
