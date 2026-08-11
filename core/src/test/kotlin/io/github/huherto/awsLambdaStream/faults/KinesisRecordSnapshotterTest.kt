@@ -1,10 +1,9 @@
 package io.github.huherto.awsLambdaStream.faults
 
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
-import io.github.huherto.awsLambdaStream.faults.replay.KinesisReplayRecord
+import io.github.huherto.awsLambdaStream.serialization.snapshots.KinesisRecordSnapshotter
 import io.kotest.matchers.shouldBe
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.JsonPrimitive
 import org.junit.jupiter.api.Test
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
@@ -37,11 +36,12 @@ class KinesisRecordSnapshotterTest {
         // Assert
         snapshot.kind shouldBe "kinesis"
         
-        val replayRecord = Json.decodeFromJsonElement<KinesisReplayRecord>(snapshot.payload)
-        replayRecord.eventID shouldBe "event-123"
-        replayRecord.kinesis.partitionKey shouldBe "pk-123"
-        replayRecord.kinesis.sequenceNumber shouldBe "seq-456"
-        replayRecord.kinesis.data shouldBe Base64.getEncoder().encodeToString(payloadBytes)
+        val payloadElement = snapshot.payload
+        payloadElement["eventID"] shouldBe JsonPrimitive("event-123")
+        val kinesis = payloadElement["kinesis"]?.let { it as kotlinx.serialization.json.JsonObject }
+        kinesis?.get("partitionKey") shouldBe JsonPrimitive("pk-123")
+        kinesis?.get("sequenceNumber") shouldBe JsonPrimitive("seq-456")
+        kinesis?.get("data") shouldBe JsonPrimitive(Base64.getEncoder().encodeToString(payloadBytes))
     }
 
     @Test

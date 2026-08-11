@@ -2,6 +2,7 @@ package io.github.huherto.awsLambdaStream.faults
 
 import io.github.huherto.awsLambdaStream.serialization.JacksonSerializationStrategy
 import io.github.huherto.awsLambdaStream.serialization.KotlinxSerializationStrategy
+import io.github.huherto.awsLambdaStream.serialization.snapshots.*
 import io.kotest.matchers.shouldBe
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -32,7 +33,7 @@ class FaultEventGoldenJsonTest {
                 key = "pk-1",
                 sequenceNumber = "123456",
                 shardId = "shardId-000000000000",
-                record = ReplayRecordSnapshot(
+                record = RecordSnapshot(
                     kind = "kinesis",
                     payload = Json.parseToJsonElement("""
                         {
@@ -48,7 +49,7 @@ class FaultEventGoldenJsonTest {
                         }
                     """).let { it as JsonObject }
                 ),
-                event = EventSummarySnapshot(
+                event = EventSnapshot(
                     id = "original-event-id",
                     type = "shipment-created",
                     partitionKey = "pk-1"

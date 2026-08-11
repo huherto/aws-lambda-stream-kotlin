@@ -18,15 +18,17 @@ import org.junit.jupiter.api.Test
  * A replay fixture is only useful if what it captures can be fed back to a Lambda. These pin down
  * that both the source record and `event.raw` come out as JSON rather than a Java `toString()`.
  */
-class SerializableUnitOfWorkTest {
+class UnitOfWorkSnapshotTest {
 
     @Test
     fun `should encode the source record as replayable json`() {
         val record = DynamodbStreamRecordReplayJsonTest.streamRecord()
 
-        val serializable = UnitOfWork(record = record).toSerializableUnitOfWork()
+        val snapshot = UnitOfWork(record = record).toSnapshot()
 
-        val recordJson = serializable.record.shouldNotBeNull()
+        val recordSnapshot = snapshot.record.shouldNotBeNull()
+        recordSnapshot.kind shouldBe "dynamodb"
+        val recordJson = Json.encodeToString(recordSnapshot.payload)
         DynamodbStreamRecordReplayJson.decode(recordJson) shouldBe record
     }
 
@@ -35,18 +37,18 @@ class SerializableUnitOfWorkTest {
         val record = DynamodbStreamRecordReplayJsonTest.streamRecord()
         val event = TableChangeEvent(id = "event-1", raw = DynamodbRaw(record))
 
-        val serializable = UnitOfWork(event = event).toSerializableUnitOfWork()
+        val snapshot = UnitOfWork(event = event).toSnapshot()
 
-        val rawJson = serializable.event.shouldNotBeNull().raw.shouldNotBeNull()
+        val rawJson = snapshot.event.shouldNotBeNull().raw.shouldNotBeNull()
         Json.parseToJsonElement(rawJson).jsonObject["type"] shouldBe JsonPrimitive(RAW_DYNAMODB)
         Json.decodeFromString(RawRecord.serializer(), rawJson) shouldBe DynamodbRaw(record)
     }
 
     @Test
     fun `should leave record and raw absent when the unit of work has neither`() {
-        val serializable = UnitOfWork().toSerializableUnitOfWork()
+        val snapshot = UnitOfWork().toSnapshot()
 
-        serializable.record shouldBe null
-        serializable.event shouldBe null
+        snapshot.record shouldBe null
+        snapshot.event shouldBe null
     }
 }

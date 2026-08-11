@@ -23,7 +23,7 @@ class FaultManagerTest {
         // Arrange
         val eventPublisher = EventPublisherInMemory()
         val faultManager = FaultManager(envConfig, eventPublisher)
-        val uow = mockk<UnitOfWork>(relaxed = true)
+        val uow = UnitOfWork()
 
         // Act
         val result = faultManager.faulty(uow) { "success" }
@@ -68,7 +68,7 @@ class FaultManagerTest {
         val faultManager = spyk(FaultManager(envConfig, eventPublisher))
         every { faultManager.logError(any()) } returns Unit
 
-        val uow = mockk<UnitOfWork>(relaxed = true)
+        val uow = UnitOfWork()
         val nonRetriableEx = FaultException(uow, RuntimeException("non-retriable"))
 
         // Act
@@ -90,7 +90,7 @@ class FaultManagerTest {
         val faultManager = spyk(FaultManager(envConfig, eventPublisher))
         every { faultManager.logError(any()) } returns Unit
 
-        val uow = mockk<UnitOfWork>(relaxed = true)
+        val uow = UnitOfWork()
         val sdkException = mockk<SdkBaseException>(relaxed = true)
         every { sdkException.sdkErrorMetadata.isRetryable } returns true
         val retriableEx = FaultException(uow, sdkException)
@@ -113,7 +113,7 @@ class FaultManagerTest {
         val faultManager = spyk(FaultManager(envConfig, eventPublisher))
         every { faultManager.logError(any()) } returns Unit
 
-        val uow = mockk<UnitOfWork>(relaxed = true)
+        val uow = UnitOfWork()
         val sdkException = mockk<SdkBaseException>(relaxed = true)
         every { sdkException.sdkErrorMetadata.isRetryable } returns false
         val nonRetriableSdkEx = FaultException(uow, sdkException)
@@ -135,9 +135,9 @@ class FaultManagerTest {
         val faultManager = spyk(FaultManager(envConfig, eventPublisher))
         every { faultManager.logError(any()) } returns Unit
 
-        val uow1 = mockk<UnitOfWork>(relaxed = true)
-        val uow2 = mockk<UnitOfWork>(relaxed = true)
-        val uow3 = mockk<UnitOfWork>(relaxed = true)
+        val uow1 = UnitOfWork(key = "uow1")
+        val uow2 = UnitOfWork(key = "uow2")
+        val uow3 = UnitOfWork(key = "uow3")
 
         val flow = flowOf(uow1, uow2, uow3)
 
@@ -167,7 +167,7 @@ class FaultManagerTest {
         val faultManager = spyk(FaultManager(envConfig, eventPublisher))
         every { faultManager.logError(any()) } returns Unit
 
-        val uow = mockk<UnitOfWork>(relaxed = true)
+        val uow = UnitOfWork()
 
         faultManager.faulty(uow) { throw RuntimeException("error 1") }
         faultManager.faulty(uow) { throw RuntimeException("error 2") }

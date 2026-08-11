@@ -1,4 +1,4 @@
-package io.github.huherto.awsLambdaStream.faults
+package io.github.huherto.awsLambdaStream.serialization.snapshots
 
 interface SnapshotRedactor {
     fun redact(snapshot: UnitOfWorkSnapshot): UnitOfWorkSnapshot

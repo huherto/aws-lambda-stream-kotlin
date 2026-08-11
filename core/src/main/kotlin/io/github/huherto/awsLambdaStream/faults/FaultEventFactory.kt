@@ -3,13 +3,14 @@ package io.github.huherto.awsLambdaStream.faults
 import com.fasterxml.uuid.Generators
 import io.github.huherto.awsLambdaStream.FaultException
 import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.serialization.snapshots.*
 import java.util.*
 
 class FaultEventFactory(
     private val awsLambdaFunctionName: String = "undefined",
     private val unitOfWorkSnapshotter: UnitOfWorkSnapshotter = DefaultUnitOfWorkSnapshotter(),
     private val redactor: SnapshotRedactor = NoOpSnapshotRedactor,
-    private val options: FaultSnapshotOptions = FaultSnapshotOptions()
+    private val options: SnapshotOptions = SnapshotOptions()
 ) {
     private val uuidV1Generator = Generators.timeBasedGenerator()
 

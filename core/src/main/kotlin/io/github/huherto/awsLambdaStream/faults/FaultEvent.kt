@@ -1,6 +1,8 @@
 package io.github.huherto.awsLambdaStream.faults
 
 import io.github.huherto.awsLambdaStream.FAULT_EVENT_TYPE
+import io.github.huherto.awsLambdaStream.serialization.snapshots.ErrorSnapshot
+import io.github.huherto.awsLambdaStream.serialization.snapshots.UnitOfWorkSnapshot
 import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable

@@ -3,10 +3,10 @@ package io.github.huherto.awsLambdaStream.faults
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.StreamRecord
-import io.github.huherto.awsLambdaStream.faults.replay.DynamoDbReplayRecord
+import io.github.huherto.awsLambdaStream.serialization.snapshots.DynamoDbRecordSnapshotter
 import io.kotest.matchers.shouldBe
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.JsonPrimitive
 import org.junit.jupiter.api.Test
 
 class DynamoDbRecordSnapshotterTest {
@@ -36,16 +36,18 @@ class DynamoDbRecordSnapshotterTest {
 
         // Act
         val snapshot = snapshotter.snapshot(record)
+        println("DynamoDB Snapshot Payload: ${Json.encodeToString(snapshot.payload)}")
 
         // Assert
         snapshot.kind shouldBe "dynamodb"
 
-        val replayRecord = Json.decodeFromJsonElement<DynamoDbReplayRecord>(snapshot.payload)
-        replayRecord.eventID shouldBe "event-456"
-        replayRecord.dynamodb.keys?.get("id")?.S shouldBe "id-123"
-        replayRecord.dynamodb.newImage?.get("active")?.BOOL shouldBe true
-        replayRecord.dynamodb.newImage?.get("count")?.N shouldBe "10"
-        replayRecord.dynamodb.sequenceNumber shouldBe "seq-789"
+        val payload = snapshot.payload
+        payload["eventID"] shouldBe JsonPrimitive("event-456")
+        val dynamodb = payload["dynamodb"]?.let { it as kotlinx.serialization.json.JsonObject }
+        dynamodb?.get("Keys")?.let { it as kotlinx.serialization.json.JsonObject }?.get("id")?.let { it as kotlinx.serialization.json.JsonObject }?.get("S") shouldBe JsonPrimitive("id-123")
+        dynamodb?.get("NewImage")?.let { it as kotlinx.serialization.json.JsonObject }?.get("active")?.let { it as kotlinx.serialization.json.JsonObject }?.get("BOOL") shouldBe JsonPrimitive(true)
+        dynamodb?.get("NewImage")?.let { it as kotlinx.serialization.json.JsonObject }?.get("count")?.let { it as kotlinx.serialization.json.JsonObject }?.get("N") shouldBe JsonPrimitive("10")
+        dynamodb?.get("SequenceNumber") shouldBe JsonPrimitive("seq-789")
     }
 
     @Test

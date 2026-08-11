@@ -2,10 +2,10 @@ package org.myorg.sut
 
 import io.github.huherto.awsLambdaStream.FaultException
 import io.github.huherto.awsLambdaStream.UnitOfWork
-import io.github.huherto.awsLambdaStream.faults.ErrorSnapshot
 import io.github.huherto.awsLambdaStream.faults.FaultEvent
-import io.github.huherto.awsLambdaStream.faults.ReplayRecordSnapshot
-import io.github.huherto.awsLambdaStream.faults.UnitOfWorkSnapshot
+import io.github.huherto.awsLambdaStream.serialization.snapshots.ErrorSnapshot
+import io.github.huherto.awsLambdaStream.serialization.snapshots.RecordSnapshot
+import io.github.huherto.awsLambdaStream.serialization.snapshots.UnitOfWorkSnapshot
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlin.math.pow
@@ -73,7 +73,7 @@ object ShipmentTrackingDomain {
                 message = exception.message
             ),
             uow = UnitOfWorkSnapshot(
-                record = ReplayRecordSnapshot(
+                record = RecordSnapshot(
                     kind = "kinesis",
                     payload = JsonObject(mapOf("eventID" to JsonPrimitive("dummy")))
                 )
