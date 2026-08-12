@@ -1,6 +1,7 @@
 package io.github.huherto.awsLambdaStream
 
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
+import io.github.huherto.awsLambdaStream.metrics.metrics
 import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
 import io.mockk.coEvery
 import io.mockk.spyk
@@ -145,17 +146,18 @@ class PipelineAssemblerTest {
     }
 
     @Test
-    fun `test startPipeline and endPipeline simply return uow`() {
+    fun `test startPipeline and endPipeline add metrics`() {
         val assembler = PipelineAssembler.builder()
             .faultManager(FaultManager(envConfig = envConfig, eventPublisher = EventPublisherInMemory()))
             .build()
         val uow = UnitOfWork(key = "test")
 
         val startedUow = assembler.startPipeline(uow)
-        assertEquals(uow, startedUow)
+        assertNotNull(startedUow.metrics)
+        assertTrue(startedUow.metrics!!.timer.checkpoints.containsKey("default|stream.channel.wait.time"))
 
-        val endedUow = assembler.endPipeline(uow)
-        assertEquals(uow, endedUow)
+        val endedUow = assembler.endPipeline(startedUow)
+        assertTrue(endedUow.metrics!!.timer.checkpoints.containsKey("default|stream.pipeline.time"))
     }
 
     @Test

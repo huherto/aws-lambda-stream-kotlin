@@ -1,7 +1,11 @@
 package io.github.huherto.awsLambdaStream
 
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
-import kotlinx.coroutines.flow.*
+import io.github.huherto.awsLambdaStream.metrics.updateMetrics
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.onCompletion
 
 /**
  * Assembles and runs one or more [Pipeline] instances against a shared upstream flow.
@@ -124,9 +128,9 @@ class PipelineAssembler private constructor(builder : Builder) {
         for (pipeline in pipelines) {
             var flow = headFlow
                 .map { uow -> uow.copy(pipeline = pipeline) }
-                .onEach { uow -> startPipeline(uow) }
+                .map { uow -> startPipeline(uow) }
             flow = pipeline.connect(faultManager, flow)
-                .onEach { uow -> endPipeline(uow) }
+                .map { uow -> endPipeline(uow) }
             flows.add(flow)
         }
 
@@ -154,7 +158,9 @@ class PipelineAssembler private constructor(builder : Builder) {
      * @return The same or modified unit of work.
      */
     fun startPipeline(uow: UnitOfWork): UnitOfWork {
-        return uow
+        return uow.updateMetrics { pm ->
+            pm.startPipeline(uow.pipeline?.id ?: "default")
+        }
     }
 
     /**
@@ -167,7 +173,9 @@ class PipelineAssembler private constructor(builder : Builder) {
      * @return The same or modified unit of work.
      */
     fun endPipeline(uow: UnitOfWork): UnitOfWork {
-        return uow
+        return uow.updateMetrics { pm ->
+            pm.endPipeline()
+        }
     }
 
 
