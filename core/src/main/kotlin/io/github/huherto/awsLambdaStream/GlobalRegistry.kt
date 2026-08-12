@@ -3,51 +3,122 @@ package io.github.huherto.awsLambdaStream
 import io.github.huherto.awsLambdaStream.sinks.EventBridgePublisher
 import io.github.huherto.awsLambdaStream.sinks.EventPublisher
 
-object GlobalRegistry {
+private class RegistrySingleton<T>(
+    private val lock: Any,
+    private val defaultFactory: () -> T,
+    private val onChange: () -> Unit = {},
+) {
+    @Volatile
+    private var factory: () -> T = defaultFactory
 
     @Volatile
-    private var _envConfig: EnvironmentConfig? = null
+    private var instance: T? = null
 
-    @Volatile
-    private var _eventPublisher: EventPublisher? = null
-
-    @Volatile
-    private var _faultManager: FaultManager? = null
-
-    fun envConfig(): EnvironmentConfig {
-        return _envConfig ?: synchronized(this) {
-            _envConfig ?: EnvironmentConfig().also { _envConfig = it }
+    fun get(): T {
+        return instance ?: synchronized(lock) {
+            instance ?: factory().also { instance = it }
         }
     }
 
-    fun setEnvConfig(config: EnvironmentConfig) {
-        _envConfig = config
-    }
-
-    fun eventPublisher(): EventPublisher {
-        return _eventPublisher ?: synchronized(this) {
-            _eventPublisher ?: EventBridgePublisher(envConfig()).also { _eventPublisher = it }
+    fun set(value: T) {
+        synchronized(lock) {
+            instance = value
+            onChange()
         }
     }
 
-    fun setEventPublisher(publisher: EventPublisher) {
-        _eventPublisher = publisher
-    }
-
-    fun faultManager(): FaultManager {
-        return _faultManager ?: synchronized(this) {
-            _faultManager ?: FaultManager(envConfig(), eventPublisher()).also { _faultManager = it }
+    fun setFactory(factory: () -> T) {
+        synchronized(lock) {
+            this.factory = factory
+            instance = null
+            onChange()
         }
     }
 
-    fun setFaultManager(manager: FaultManager) {
-        _faultManager = manager
+    fun clear() {
+        synchronized(lock) {
+            instance = null
+        }
     }
 
     fun reset() {
-        _envConfig = null
-        _eventPublisher = null
-        _faultManager = null
+        synchronized(lock) {
+            factory = defaultFactory
+            instance = null
+        }
+    }
+}
+
+object GlobalRegistry {
+
+    private val lock = Any()
+
+    private val envConfigSingleton = RegistrySingleton(
+        lock = lock,
+        defaultFactory = { EnvironmentConfig() },
+        onChange = {
+            eventPublisherSingleton.clear()
+            faultManagerSingleton.clear()
+        },
+    )
+
+    private val eventPublisherSingleton = RegistrySingleton(
+        lock = lock,
+        defaultFactory = {
+            val ep : EventPublisher = EventBridgePublisher(envConfig())
+            ep },
+        onChange = {
+            faultManagerSingleton.clear()
+        },
+    )
+
+    private val faultManagerSingleton = RegistrySingleton(
+        lock = lock,
+        defaultFactory = { FaultManager(envConfig(), eventPublisher()) },
+    )
+
+    fun envConfig(): EnvironmentConfig {
+        return envConfigSingleton.get()
+    }
+
+    fun setEnvConfig(config: EnvironmentConfig) {
+        envConfigSingleton.set(config)
+    }
+
+    fun setEnvConfigFactory(factory: () -> EnvironmentConfig) {
+        envConfigSingleton.setFactory(factory)
+    }
+
+    fun eventPublisher(): EventPublisher {
+        return eventPublisherSingleton.get()
+    }
+
+    fun setEventPublisher(publisher: EventPublisher) {
+        eventPublisherSingleton.set(publisher)
+    }
+
+    fun setEventPublisherFactory(factory: () -> EventPublisher) {
+        eventPublisherSingleton.setFactory(factory)
+    }
+
+    fun faultManager(): FaultManager {
+        return faultManagerSingleton.get()
+    }
+
+    fun setFaultManager(manager: FaultManager) {
+        faultManagerSingleton.set(manager)
+    }
+
+    fun setFaultManagerFactory(factory: () -> FaultManager) {
+        faultManagerSingleton.setFactory(factory)
+    }
+
+    fun reset() {
+        synchronized(lock) {
+            envConfigSingleton.reset()
+            eventPublisherSingleton.reset()
+            faultManagerSingleton.reset()
+        }
     }
 
 }

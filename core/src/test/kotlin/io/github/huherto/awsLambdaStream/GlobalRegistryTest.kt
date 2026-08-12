@@ -1,6 +1,7 @@
 package io.github.huherto.awsLambdaStream
 
 import io.github.huherto.awsLambdaStream.sinks.EventPublisher
+import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.mockk.mockk
@@ -44,11 +45,41 @@ class GlobalRegistryTest {
     }
 
     @Test
-    fun `eventPublisher should be lazy and return singleton`() {
+    fun `envConfig factory should be lazy and return singleton`() {
+        var createCount = 0
+
+        GlobalRegistry.setEnvConfigFactory {
+            createCount++
+            object : EnvironmentConfig() {
+                override fun awsLambdaFunctionName(): String? = "factory-function"
+            }
+        }
+
+        createCount shouldBe 0
+
+        val config1 = GlobalRegistry.envConfig()
+        val config2 = GlobalRegistry.envConfig()
+
+        config1 shouldBe config2
+        createCount shouldBe 1
+    }
+
+    @Test
+    fun `eventPublisher factory should be lazy and return singleton`() {
+        var createCount = 0
+
+        GlobalRegistry.setEventPublisherFactory {
+            createCount++
+            EventPublisherInMemory()
+        }
+
+        createCount shouldBe 0
+
         val pub1 = GlobalRegistry.eventPublisher()
         val pub2 = GlobalRegistry.eventPublisher()
-        
+
         pub1 shouldBe pub2
+        createCount shouldBe 1
     }
 
     @Test
@@ -76,19 +107,27 @@ class GlobalRegistryTest {
     }
 
     @Test
-    fun `reset should clear all cached instances`() {
-        val config1 = GlobalRegistry.envConfig()
-        val pub1 = GlobalRegistry.eventPublisher()
-        val fm1 = GlobalRegistry.faultManager()
-        
+    fun `reset should restore default factories`() {
+        val customConfig = object : EnvironmentConfig() {
+            override fun awsLambdaFunctionName(): String? = "custom-factory-function"
+        }
+        val customPublisher = EventPublisherInMemory()
+        val customFaultManager = FaultManager(customConfig, customPublisher)
+
+        GlobalRegistry.setEnvConfigFactory { customConfig }
+        GlobalRegistry.setEventPublisherFactory { customPublisher }
+        GlobalRegistry.setFaultManagerFactory { customFaultManager }
+
+        GlobalRegistry.envConfig() shouldBe customConfig
+        GlobalRegistry.eventPublisher() shouldBe customPublisher
+        GlobalRegistry.faultManager() shouldBe customFaultManager
+
         GlobalRegistry.reset()
-        // We must re-set a valid config after reset, otherwise the next 
-        // calls to pub/fm will fail during default initialization
         GlobalRegistry.setEnvConfig(TestEnvironmentConfig())
-        
-        GlobalRegistry.envConfig() shouldNotBe config1
-        GlobalRegistry.eventPublisher() shouldNotBe pub1
-        GlobalRegistry.faultManager() shouldNotBe fm1
+
+        GlobalRegistry.envConfig() shouldNotBe customConfig
+        GlobalRegistry.eventPublisher() shouldNotBe customPublisher
+        GlobalRegistry.faultManager() shouldNotBe customFaultManager
     }
 
     @Test
