@@ -33,22 +33,6 @@ fun EventFaultMonitorStack.newLogStream(logGroup: LogGroup): LogStream =
         .removalPolicy(RemovalPolicy.DESTROY)
         .build()
 
-fun EventFaultMonitorStack.newTransformLambda(): Function =
-    Function.Builder.create(this, "TransformLambdaFunction")
-        .functionName("${service()}-${stage()}-transform")
-        .code(jarFile)
-        .handler("org.myorg.sut.Transform::handleRequest")
-        .timeout(Duration.seconds(60))
-        .memorySize(1024)
-        .runtime(runtime)
-        .environment(
-            mapOf(
-                "JAVA_TOOL_OPTIONS" to "-Dslf4j.provider=io.github.vitalijr2.aws.lambda.slf4j.AWSLambdaServiceProvider",
-                "LOG_DEFAULT_LEVEL" to "DEBUG",
-                "TOPIC_ARN" to topic.topicArn,
-            )
-        )
-        .build()
 
 fun EventFaultMonitorStack.newDeliveryRole(
     bucket: Bucket,
@@ -177,7 +161,7 @@ fun EventFaultMonitorStack.newEventBridgeRole(deliveryStream: DeliveryStream): R
     return role
 }
 
-fun EventFaultMonitorStack.newEventRule(
+fun EventFaultMonitorStack.publishToFirehose(
     deliveryStream: DeliveryStream,
     eventBridgeRole: Role,
 ): Rule {

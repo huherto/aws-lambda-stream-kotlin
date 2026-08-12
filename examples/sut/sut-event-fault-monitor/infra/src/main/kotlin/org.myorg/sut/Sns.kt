@@ -25,7 +25,7 @@ fun EventFaultMonitorStack.newNotificationVerificationQueue(): Queue =
         .removalPolicy(RemovalPolicy.DESTROY)
         .build()
 
-fun EventFaultMonitorStack.subscribeNotificationVerificationQueue(
+fun EventFaultMonitorStack.publishToQueue(
     topic: Topic,
     queue: Queue,
 ) {
@@ -52,9 +52,9 @@ fun EventFaultMonitorStack.subscribeNotificationVerificationQueue(
     )
 }
 
-fun EventFaultMonitorStack.grantTopicPublish(
-    topic: Topic,
+fun EventFaultMonitorStack.grantAccessToTopic(
     grantable: IGrantable,
+    topic: Topic,
 ) {
     grantable.grantPrincipal.addToPrincipalPolicy(
         PolicyStatement.Builder.create()
