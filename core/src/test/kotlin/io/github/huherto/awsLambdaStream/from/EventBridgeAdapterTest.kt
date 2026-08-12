@@ -6,31 +6,33 @@ import io.github.huherto.awsLambdaStream.EventCodec
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.MyEventCodec
 import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
-import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.spyk
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.runBlocking
+import org.junit.jupiter.api.Test
 
-class EventBridgeAdapterSpec : StringSpec({
+class EventBridgeAdapterTest {
 
-    val envConfig = spyk(EnvironmentConfig()).apply {
+    private val envConfig = spyk(EnvironmentConfig()).apply {
         every { serializationStrategy() } returns "jackson"
     }
 
-    fun faultManager() = FaultManager(
+    private fun faultManager() = FaultManager(
         envConfig = envConfig,
         eventPublisher = EventPublisherInMemory(),
         skipErrorLogging = true,
     )
 
-    fun adapter(
+    private fun adapter(
         faultManager: FaultManager = faultManager(),
         eventCodec: EventCodec = MyEventCodec(),
     ) = EventBridgeAdapter(faultManager, eventCodec)
 
-    "fromEventBridge should decode detail and preserve event id" {
+    @Test
+    fun `fromEventBridge should decode detail and preserve event id`() = runBlocking {
         val adapter = adapter()
         val eventBridgeEvent = ScheduledEvent().apply {
             id = "event-id"
@@ -50,7 +52,8 @@ class EventBridgeAdapterSpec : StringSpec({
         results[0].event?.eventType() shouldBe "MY_EVENT_A"
     }
 
-    "fromEventBridge should use record id if event id is missing" {
+    @Test
+    fun `fromEventBridge should use record id if event id is missing`() = runBlocking {
         val adapter = adapter()
         val eventBridgeEvent = ScheduledEvent().apply {
             id = "event-id"
@@ -68,7 +71,8 @@ class EventBridgeAdapterSpec : StringSpec({
         results[0].event?.id shouldBe "event-id"
     }
 
-    "fromEventBridge should handle decode failures" {
+    @Test
+    fun `fromEventBridge should handle decode failures`() = runBlocking {
         val faultManager = faultManager()
         val adapter = adapter(faultManager = faultManager)
         val eventBridgeEvent = ScheduledEvent().apply {
@@ -86,7 +90,8 @@ class EventBridgeAdapterSpec : StringSpec({
         faultManager.getFaults()[0].runtimeUow?.record shouldBe eventBridgeEvent
     }
 
-    "fromScheduledEvent should wrap event" {
+    @Test
+    fun `fromScheduledEvent should wrap event`() = runBlocking {
         val adapter = adapter()
         val scheduledEvent = ScheduledEvent().apply {
             id = "scheduled-id"
@@ -99,4 +104,4 @@ class EventBridgeAdapterSpec : StringSpec({
         results[0].record shouldBe scheduledEvent
         results[0].event?.id shouldBe "scheduled-id"
     }
-})
+}

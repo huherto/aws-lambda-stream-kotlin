@@ -4,28 +4,30 @@ import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.JsonRaw
 import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
-import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.mockk.every
 import io.mockk.spyk
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.runBlocking
+import org.junit.jupiter.api.Test
 
-class CognitoAdapterSpec : StringSpec({
+class CognitoAdapterTest {
 
-    val envConfig = spyk(EnvironmentConfig()).apply {
+    private val envConfig = spyk(EnvironmentConfig()).apply {
         every { serializationStrategy() } returns "jackson"
     }
 
-    fun faultManager() = FaultManager(
+    private fun faultManager() = FaultManager(
         envConfig = envConfig,
         eventPublisher = EventPublisherInMemory(),
         skipErrorLogging = true,
     )
 
-    fun adapter() = CognitoAdapter(faultManager())
+    private fun adapter() = CognitoAdapter(faultManager())
 
-    "fromCognito should map cognito event fields" {
+    @Test
+    fun `fromCognito should map cognito event fields`() = runBlocking {
         val adapter = adapter()
         val cognitoEvent = mapOf(
             "triggerSource" to "PostConfirmation_ConfirmSignUp",
@@ -51,4 +53,4 @@ class CognitoAdapterSpec : StringSpec({
         val raw = event.raw as JsonRaw
         raw.value.toString() shouldBe """{"userAttributes":{"email":"user@example.com"}}"""
     }
-})
+}

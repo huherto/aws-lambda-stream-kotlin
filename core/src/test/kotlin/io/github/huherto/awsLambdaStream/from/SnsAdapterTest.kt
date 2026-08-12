@@ -6,32 +6,33 @@ import io.github.huherto.awsLambdaStream.EventCodec
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.MyEventCodec
 import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
-import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.spyk
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.runBlocking
 import org.joda.time.DateTime
+import org.junit.jupiter.api.Test
 
-class SnsAdapterSpec : StringSpec({
+class SnsAdapterTest {
 
-    val envConfig = spyk(EnvironmentConfig()).apply {
+    private val envConfig = spyk(EnvironmentConfig()).apply {
         every { serializationStrategy() } returns "jackson"
     }
 
-    fun faultManager() = FaultManager(
+    private fun faultManager() = FaultManager(
         envConfig = envConfig,
         eventPublisher = EventPublisherInMemory(),
         skipErrorLogging = true,
     )
 
-    fun adapter(
+    private fun adapter(
         faultManager: FaultManager = faultManager(),
         eventCodec: EventCodec = MyEventCodec(),
     ) = SnsAdapter(faultManager, eventCodec)
 
-    fun createSnsRecord(
+    private fun createSnsRecord(
         message: String,
         messageId: String = "id",
         timestamp: DateTime = DateTime.now()
@@ -45,7 +46,8 @@ class SnsAdapterSpec : StringSpec({
         }
     }
 
-    "fromSns should wrap records without decoding" {
+    @Test
+    fun `fromSns should wrap records without decoding`() = runBlocking {
         val adapter = adapter()
         val snsRecord = createSnsRecord(message = "foo")
         val snsEvent = SNSEvent().apply {
@@ -59,7 +61,8 @@ class SnsAdapterSpec : StringSpec({
         results[0].event shouldBe null
     }
 
-    "fromSnsEvent should decode records and preserve message id" {
+    @Test
+    fun `fromSnsEvent should decode records and preserve message id`() = runBlocking {
         val adapter = adapter()
         val now = DateTime.now()
         val snsRecord = createSnsRecord(
@@ -80,7 +83,8 @@ class SnsAdapterSpec : StringSpec({
         results[0].event?.timestamp shouldBe now.millis
     }
 
-    "fromSnsEvent should handle decode failures" {
+    @Test
+    fun `fromSnsEvent should handle decode failures`() = runBlocking {
         val faultManager = faultManager()
         val adapter = adapter(faultManager = faultManager)
         val snsRecord = createSnsRecord(message = """{"type":"UNKNOWN"}""")
@@ -93,4 +97,4 @@ class SnsAdapterSpec : StringSpec({
         results.shouldHaveSize(0)
         faultManager.getFaults().shouldHaveSize(1)
     }
-})
+}

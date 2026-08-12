@@ -4,7 +4,6 @@ import com.amazonaws.services.lambda.runtime.events.KinesisFirehoseEvent
 import io.github.huherto.awsLambdaStream.*
 import io.github.huherto.awsLambdaStream.queries.ClaimCheckRedeemer
 import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
-import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.mockk.every
@@ -13,27 +12,29 @@ import io.mockk.spyk
 import io.mockk.verify
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.runBlocking
+import org.junit.jupiter.api.Test
 import java.nio.ByteBuffer
 
-class FirehoseAdapterSpec : StringSpec({
+class FirehoseAdapterTest {
 
-    val envConfig = spyk(EnvironmentConfig()).apply {
+    private val envConfig = spyk(EnvironmentConfig()).apply {
         every { serializationStrategy() } returns "jackson"
     }
 
-    fun faultManager() = FaultManager(
+    private fun faultManager() = FaultManager(
         envConfig = envConfig,
         eventPublisher = EventPublisherInMemory(),
         skipErrorLogging = true,
     )
 
-    fun adapter(
+    private fun adapter(
         faultManager: FaultManager = faultManager(),
         eventCodec: EventCodec = MyEventCodec(),
         claimCheckRedeemer: ClaimCheckRedeemer? = null
     ) = FirehoseAdapter(faultManager, eventCodec, claimCheckRedeemer)
 
-    fun createFirehoseRecord(
+    private fun createFirehoseRecord(
         recordId: String,
         payload: String,
         timestamp: Long = 123456789L
@@ -45,7 +46,8 @@ class FirehoseAdapterSpec : StringSpec({
         }
     }
 
-    "fromFirehose should decode records and preserve record id" {
+    @Test
+    fun `fromFirehose should decode records and preserve record id`() = runBlocking {
         val adapter = adapter()
         val payload = """{"type":"MY_EVENT_A","foo":"bar"}"""
         val record = createFirehoseRecord(recordId = "rec-1", payload = payload)
@@ -63,7 +65,8 @@ class FirehoseAdapterSpec : StringSpec({
         results[0].getExtension<FirehoseExtension>()?.recordId shouldBe "rec-1"
     }
 
-    "fromFirehose should handle decode failures" {
+    @Test
+    fun `fromFirehose should handle decode failures`() = runBlocking {
         val faultManager = faultManager()
         val adapter = adapter(faultManager = faultManager)
         val record = createFirehoseRecord(recordId = "rec-fail", payload = "invalid")
@@ -77,7 +80,8 @@ class FirehoseAdapterSpec : StringSpec({
         faultManager.getFaults().shouldHaveSize(1)
     }
 
-    "fromFirehose should redeem claim checks" {
+    @Test
+    fun `fromFirehose should redeem claim checks`() = runBlocking {
         val claimCheckRedeemer = mockk<ClaimCheckRedeemer>()
         val adapter = adapter(claimCheckRedeemer = claimCheckRedeemer)
         val payload = """{"type":"MY_EVENT_A","foo":"bar"}"""
@@ -98,4 +102,4 @@ class FirehoseAdapterSpec : StringSpec({
             with(claimCheckRedeemer) { any<Flow<UnitOfWork>>().redeemClaimCheck() }
         }
     }
-})
+}

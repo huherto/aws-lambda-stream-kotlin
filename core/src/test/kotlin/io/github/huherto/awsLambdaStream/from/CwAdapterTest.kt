@@ -1,12 +1,14 @@
 package io.github.huherto.awsLambdaStream.from
 
-import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.runBlocking
+import org.junit.jupiter.api.Test
 
-class CwAdapterSpec : StringSpec({
-    "fromAlarm should wrap alarm event" {
+class CwAdapterTest {
+    @Test
+    fun `fromAlarm should wrap alarm event`() = runBlocking {
         val adapter = CwAdapter()
         val alarmEvent = mapOf("AlarmName" to "MyAlarm")
 
@@ -19,4 +21,4 @@ class CwAdapterSpec : StringSpec({
         event.eventType() shouldBe "aws-cloudwatch-alarm"
         event.record shouldBe alarmEvent
     }
-})
+}
