@@ -146,4 +146,8 @@ open class EnvironmentConfig {
         return System.getenv("SERIALIZATION_STRATEGY")
     }
 
+    open fun getProperty(name: String): String? {
+        return System.getenv(name)
+    }
+
 }

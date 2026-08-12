@@ -5,6 +5,9 @@ import io.github.huherto.awsLambdaStream.Event
 import io.github.huherto.awsLambdaStream.EventCodec
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.metrics.PipelineMetrics
+import io.github.huherto.awsLambdaStream.metrics.Timer
+import io.github.huherto.awsLambdaStream.metrics.withMetrics
 import io.github.huherto.awsLambdaStream.queries.ClaimCheckRedeemer
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
@@ -24,8 +27,16 @@ class KinesisAdapter(
         with(faultManager) {
             return kinesisEvent.records.asFlow()
                 .mapNotNull { record ->
+                    val timestamp = record.kinesis?.approximateArrivalTimestamp?.time ?: System.currentTimeMillis()
                     UnitOfWork().copy(
                         record = record,
+                    ).withMetrics(
+                        PipelineMetrics(
+                            timer = Timer(
+                                start = timestamp,
+                                last = timestamp
+                            )
+                        )
                     )
                 }.mapNotFaulty { uow ->
                     val record = uow.record as KinesisEvent.KinesisEventRecord

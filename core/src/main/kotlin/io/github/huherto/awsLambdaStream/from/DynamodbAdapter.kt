@@ -4,6 +4,9 @@ import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import io.github.huherto.awsLambdaStream.DynamodbRaw
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.metrics.PipelineMetrics
+import io.github.huherto.awsLambdaStream.metrics.Timer
+import io.github.huherto.awsLambdaStream.metrics.withMetrics
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.mapNotNull
@@ -28,10 +31,18 @@ class DynamodbAdapter (private val faultManager: FaultManager) {
                 .mapNotFaulty { uow ->
                     val dynamodbRecord = uow.record as DynamodbEvent.DynamodbStreamRecord
                     val event = buildEvent(dynamodbRecord)
+                    val timestamp = event.timestamp ?: System.currentTimeMillis()
                     UnitOfWork().copy(
                         record = dynamodbRecord,
                         event = event,
-                        sequenceNumber = dynamodbRecord.dynamodb.sequenceNumber,
+                        sequenceNumber = dynamodbRecord.dynamodb?.sequenceNumber,
+                    ).withMetrics(
+                        PipelineMetrics(
+                            timer = Timer(
+                                start = timestamp,
+                                last = timestamp
+                            )
+                        )
                     )
                 }
         }
@@ -42,7 +53,7 @@ class DynamodbAdapter (private val faultManager: FaultManager) {
         val event = TableChangeEvent(
             id = dynamodbRecord.eventID,
             timestamp = deriveTimestamp(dynamodbRecord),
-            partitionKey = dynamodbRecord.dynamodb.keys[pkFn]?.s,
+            partitionKey = dynamodbRecord.dynamodb?.keys?.get(pkFn)?.s,
             type = calculateEventType(dynamodbRecord),
             tags = mapOf(
                 "region" to dynamodbRecord.awsRegion
@@ -53,9 +64,9 @@ class DynamodbAdapter (private val faultManager: FaultManager) {
     }
 
     private fun deriveTimestamp(dynamodbRecord: DynamodbEvent.DynamodbStreamRecord) : Long? {
-        val timestamp =  dynamodbRecord.dynamodb.newImage?.get("timestamp")?.n?.toLong()
+        val timestamp =  dynamodbRecord.dynamodb?.newImage?.get("timestamp")?.n?.toLong()
         if (preferApproximateTimestamp || timestamp == null) {
-            return dynamodbRecord.dynamodb.approximateCreationDateTime?.time?.let {
+            return dynamodbRecord.dynamodb?.approximateCreationDateTime?.time?.let {
                 it * 1000
             }
         }
@@ -71,7 +82,7 @@ class DynamodbAdapter (private val faultManager: FaultManager) {
     }
 
     private fun calculateEventTypePrefix(dynamodbRecord: DynamodbEvent.DynamodbStreamRecord): String {
-        val image = dynamodbRecord.dynamodb.newImage ?: dynamodbRecord.dynamodb.oldImage
+        val image = dynamodbRecord.dynamodb?.newImage ?: dynamodbRecord.dynamodb?.oldImage
         val discriminator : EventAV? = image?.get(discriminatorFn) ?: image?.get(skFn)
         return discriminator?.s ?: ""
     }
@@ -86,8 +97,8 @@ class DynamodbAdapter (private val faultManager: FaultManager) {
         val suffix = eventNameMap[dynamodbRecord.eventName] ?: ""
 
         if (suffix != "deleted") {
-            val newImage = dynamodbRecord.dynamodb.newImage
-            val oldImage = dynamodbRecord.dynamodb.oldImage
+            val newImage = dynamodbRecord.dynamodb?.newImage
+            val oldImage = dynamodbRecord.dynamodb?.oldImage
 
             if ((newImage?.containsKey("deleted") == true) || (oldImage?.containsKey("deleted") == true)) {
                 if (newImage?.get("deleted")?.bool == true) {

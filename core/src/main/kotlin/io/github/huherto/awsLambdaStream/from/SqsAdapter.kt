@@ -5,6 +5,9 @@ import io.github.huherto.awsLambdaStream.EventCodec
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.filters.outSkip
+import io.github.huherto.awsLambdaStream.metrics.PipelineMetrics
+import io.github.huherto.awsLambdaStream.metrics.Timer
+import io.github.huherto.awsLambdaStream.metrics.withMetrics
 import io.github.huherto.awsLambdaStream.queries.ClaimCheckRedeemer
 import kotlinx.coroutines.flow.*
 
@@ -27,13 +30,17 @@ class SqsAdapter(
 
         return records.asFlow()
             .map { record ->
+                val timestamp = record.attributes?.get("SentTimestamp")?.toLong() ?: System.currentTimeMillis()
                 UnitOfWork().copy(
                     record = record,
+                ).withMetrics(
+                    PipelineMetrics(
+                        timer = Timer(
+                            start = timestamp,
+                            last = timestamp
+                        )
+                    )
                 )
-            }
-            .map { uow ->
-                // TODO: call adorn metrics
-                uow
             }
     }
 
@@ -47,8 +54,16 @@ class SqsAdapter(
         with(faultManager) {
             return records.asFlow()
                 .mapNotNull { record ->
+                    val timestamp = record.attributes?.get("SentTimestamp")?.toLong() ?: System.currentTimeMillis()
                     UnitOfWork().copy(
                         record = record,
+                    ).withMetrics(
+                        PipelineMetrics(
+                            timer = Timer(
+                                start = timestamp,
+                                last = timestamp
+                            )
+                        )
                     )
                 }
                 .mapNotFaulty { uow ->
@@ -61,10 +76,6 @@ class SqsAdapter(
                     uow.copy(
                         event = event,
                     )
-                }
-                .map { uow ->
-                    // TODO: adorn metrics.
-                    uow
                 }
                 .filter { uow ->
                     outSkip(uow)
