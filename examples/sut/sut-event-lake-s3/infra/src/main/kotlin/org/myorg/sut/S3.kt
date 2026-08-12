@@ -32,7 +32,7 @@ fun EventLakeS3Stack.replicationBucketArn(): String =
 fun EventLakeS3Stack.replicationRoleName(): String =
     "${service()}-${stage()}-${regionName()}-replicate"
 
-fun EventLakeS3Stack.newBucketOutputs(bucket: Bucket) {
+fun EventLakeS3Stack.outputBucketDetails(bucket: Bucket) {
     CfnOutput.Builder.create(this, "BucketName")
         .value(bucket.bucketName)
         .build()
@@ -162,7 +162,7 @@ fun EventLakeS3Stack.newBucketReplicationRole(bucket: Bucket): Role {
  *
  * Call this on the destination bucket stack if this bucket should allow replication writes.
  */
-fun EventLakeS3Stack.newBucketReplicationPolicy(bucket: Bucket) {
+fun EventLakeS3Stack.grantReplicationAccess(bucket: Bucket) {
     bucket.addToResourcePolicy(
         PolicyStatement.Builder.create()
             .effect(Effect.ALLOW)
@@ -192,7 +192,7 @@ fun EventLakeS3Stack.newBucketReplicationPolicy(bucket: Bucket) {
  *
  * Call this only after the target bucket has already been deployed in the mirrored region.
  */
-fun EventLakeS3Stack.configureBucketReplication(
+fun EventLakeS3Stack.replicateToMirrorRegion(
     bucket: Bucket,
     bucketReplicationRole: Role,
 ) {

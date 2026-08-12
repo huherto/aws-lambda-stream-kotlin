@@ -151,7 +151,7 @@ fun EventLakeS3Stack.newEventBridgeRole(deliveryStream: CfnDeliveryStream): Role
         )
         .build()
 
-fun EventLakeS3Stack.newEventRule(
+fun EventLakeS3Stack.publishToFirehose(
     deliveryStream: CfnDeliveryStream,
     eventBridgeRole: Role,
 ): CfnRule =
