@@ -34,6 +34,7 @@ dependencies {
     implementation(libs.jackson.kotlin)
     implementation(libs.kotlin.logging)
     implementation(libs.kotlinx.coroutines)
+    implementation(libs.kotlinx.datetime)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.lambda.json.logger)
     implementation(libs.slf4j.api)

@@ -12,7 +12,6 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 import kotlinx.serialization.json.*
 import org.junit.jupiter.api.Test
 import java.nio.ByteBuffer
-import java.nio.charset.StandardCharsets
 import java.util.*
 
 /**
@@ -224,7 +223,7 @@ class RawRecordSerializationTest {
             kinesisSchemaVersion = "1.0"
             encryptionType = "NONE"
             approximateArrivalTimestamp = Date(1_700_000_000_000L)
-            data = ByteBuffer.wrap("""{"id":"1"}""".toByteArray(StandardCharsets.UTF_8))
+            data = ByteBuffer.wrap("""{"id":"1"}""".toByteArray())
         }
     }
 

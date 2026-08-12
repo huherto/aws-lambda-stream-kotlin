@@ -9,6 +9,7 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import kotlinx.datetime.Clock
 import mu.KotlinLogging
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Test
@@ -147,13 +148,13 @@ class RegionalHealthCheckITest {
 
         verifyTracerIsComplete(response)
 
-        val startTime = System.currentTimeMillis()
+        val startTime = Clock.System.now().toEpochMilliseconds()
         while(true) {
             val latestResponse = checkHealthApiFacade.check()
             if (latestResponse.statusCode == 200) {
                 break
             }
-            val elapsedTime = System.currentTimeMillis() - startTime
+            val elapsedTime = Clock.System.now().toEpochMilliseconds() - startTime
             if (elapsedTime > 10_000) {
                 throw RuntimeException("Timed out waiting for checkHealth to return 200.")
             }
@@ -235,10 +236,10 @@ class RegionalHealthCheckITest {
         timeoutMillis: Long = 30_000,
         pollIntervalMillis: Long = 1_000,
     ): List<HealthCheck> {
-        val startTime = System.currentTimeMillis()
+        val startTime = Clock.System.now().toEpochMilliseconds()
         var latestHealthChecks: List<HealthCheck> = emptyList()
 
-        while (System.currentTimeMillis() - startTime < timeoutMillis) {
+        while (Clock.System.now().toEpochMilliseconds() - startTime < timeoutMillis) {
             latestHealthChecks = route53Client.listHealthChecks()
                 .healthChecks
                 .orEmpty()

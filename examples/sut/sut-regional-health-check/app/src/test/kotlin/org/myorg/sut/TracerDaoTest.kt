@@ -9,6 +9,7 @@ import io.kotest.matchers.maps.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import io.mockk.*
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.Clock
 import org.junit.jupiter.api.Test
 import kotlin.time.Duration.Companion.days
 
@@ -196,7 +197,7 @@ class TracerDaoTest {
         val connector = mockk<Connector>()
         val saveResponse = UpdateItemResponse {}
 
-        val recentRoundedTimestamp = truncateToMinute(System.currentTimeMillis())
+        val recentRoundedTimestamp = truncateToMinute(Clock.System.now().toEpochMilliseconds())
 
         coEvery {
             connector.get(awsRegion)
@@ -250,7 +251,7 @@ class TracerDaoTest {
         val connector = mockk<Connector>()
         val saveResponse = UpdateItemResponse {}
 
-        val recentRoundedTimestamp = truncateToMinute(System.currentTimeMillis())
+        val recentRoundedTimestamp = truncateToMinute(Clock.System.now().toEpochMilliseconds())
 
         coEvery {
             connector.get(awsRegion)

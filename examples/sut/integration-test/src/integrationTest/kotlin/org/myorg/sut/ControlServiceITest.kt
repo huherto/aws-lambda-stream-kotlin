@@ -11,6 +11,7 @@ import io.kotest.matchers.string.shouldMatch
 import io.kotest.matchers.string.shouldNotBeBlank
 import io.kotest.matchers.string.shouldNotBeEmpty
 import kotlinx.coroutines.runBlocking
+import kotlinx.datetime.Clock
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
@@ -21,7 +22,6 @@ import org.myorg.sut.ShipmentTrackingDomain.createTrackedUnit
 import org.myorg.sut.facades.DynamoDbFacade
 import org.myorg.sut.facades.EventBridgeFacade
 import org.myorg.sut.facades.KinesisFacade
-import java.lang.System.currentTimeMillis
 import kotlin.math.abs
 import kotlin.time.ExperimentalTime
 
@@ -217,7 +217,7 @@ class ControlServiceITest {
         ttl shouldBeLessThan 1900093311L // A date in 2030
 
         val timeStamp = dbrecord["timestamp"]?.asN()?.toLong()
-        checkTimestampDiff(expectedTimestamp ?: currentTimeMillis(), timeStamp)
+        checkTimestampDiff(expectedTimestamp ?: Clock.System.now().toEpochMilliseconds(), timeStamp)
     }
 
     private fun checkTimestampDiff(t1: Long?, t2: Long?) {

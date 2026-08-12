@@ -6,7 +6,6 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import org.junit.jupiter.api.Test
 import java.nio.ByteBuffer
-import java.nio.charset.StandardCharsets
 
 class SQSMessageReplayJsonTest {
 
@@ -60,7 +59,7 @@ class SQSMessageReplayJsonTest {
                 },
                 "binaryAttribute" to SQSEvent.MessageAttribute().apply {
                     dataType = "Binary"
-                    binaryValue = ByteBuffer.wrap("binary-payload".toByteArray(StandardCharsets.UTF_8))
+                    binaryValue = ByteBuffer.wrap("binary-payload".toByteArray())
                 },
             )
         }
@@ -167,6 +166,6 @@ class SQSMessageReplayJsonTest {
         val duplicate = duplicate()
         val bytes = ByteArray(duplicate.remaining())
         duplicate.get(bytes)
-        return bytes.toString(StandardCharsets.UTF_8)
+        return bytes.toString(Charsets.UTF_8)
     }
 }

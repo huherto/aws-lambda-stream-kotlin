@@ -5,8 +5,8 @@ import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.runBlocking
+import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
-import kotlinx.datetime.number
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.json.*
 import org.junit.jupiter.api.AfterAll
@@ -15,7 +15,6 @@ import org.junit.jupiter.api.TestInstance
 import org.myorg.sut.ShipmentTrackingDomain.createFaultEvent
 import org.myorg.sut.ShipmentTrackingDomain.createPoisonPillEvent
 import org.myorg.sut.facades.*
-import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
 // Components tested.
@@ -53,7 +52,7 @@ class EventFaultMonitorITest {
     fun `sns topic should deliver directly published message to verification queue`() : Unit = runBlocking {
         purgeSqsQueue()
 
-        val verificationId = "sns-to-sqs-it-${System.currentTimeMillis()}"
+        val verificationId = "sns-to-sqs-it-${Clock.System.now().toEpochMilliseconds()}"
         //val message = """{"verification":"$verificationId"}"""
 
         val payload = "x".repeat(12_000)
@@ -129,7 +128,7 @@ class EventFaultMonitorITest {
         notification.shouldNotBeNull()
 
         val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
-        val datePart = "%04d/%02d/%02d/%02d".format(now.year, now.month.number, now.day, now.hour)
+        val datePart = "%04d/%02d/%02d/%02d".format(now.year, now.monthNumber, now.dayOfMonth, now.hour)
 
         val resubmit = ResubmitFaults()
         val argv = ResubmitFaults.Args(

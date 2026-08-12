@@ -6,7 +6,6 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import org.junit.jupiter.api.Test
 import java.nio.ByteBuffer
-import java.nio.charset.StandardCharsets
 
 class SQSEventReplayJsonTest {
 
@@ -84,7 +83,7 @@ class SQSEventReplayJsonTest {
 
     @Test
     fun `should round trip sqs message attributes`() {
-        val binaryValue = "binary-payload".toByteArray(StandardCharsets.UTF_8)
+        val binaryValue = "binary-payload".toByteArray()
         val original = SQSEvent().apply {
             records = listOf(
                 sqsMessage(
@@ -184,6 +183,6 @@ class SQSEventReplayJsonTest {
         val duplicate = duplicate()
         val bytes = ByteArray(duplicate.remaining())
         duplicate.get(bytes)
-        return bytes.toString(StandardCharsets.UTF_8)
+        return bytes.toString(Charsets.UTF_8)
     }
 }

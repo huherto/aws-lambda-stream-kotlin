@@ -8,6 +8,7 @@ import io.github.huherto.awsLambdaStream.from.RecordPair
 import io.github.huherto.awsLambdaStream.utils.AttributeValueMapReader
 import io.github.huherto.awsLambdaStream.utils.DynamoDbAttributeValueMapReader
 import io.github.huherto.awsLambdaStream.utils.StreamAttributeValueMapReader
+import kotlinx.datetime.Clock
 import kotlinx.serialization.json.Json.Default.decodeFromString
 import java.util.UUID.randomUUID
 
@@ -57,7 +58,7 @@ fun toEvent(uow: UnitOfWork) : Event? {
         if (raw.old == null) {
             val event = ShipmentCreatedEvent(
                 id = randomUUID().toString(),
-                timestamp = System.currentTimeMillis(),
+                timestamp = Clock.System.now().toEpochMilliseconds(),
                 partitionKey = shipment.id,
                 tags = emptyMap(),
                 entity = shipment,

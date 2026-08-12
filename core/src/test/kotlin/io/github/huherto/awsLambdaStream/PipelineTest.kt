@@ -28,7 +28,6 @@ import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.nio.ByteBuffer
-import java.nio.charset.StandardCharsets
 
 /**
  * Test failure scenarios:
@@ -267,7 +266,7 @@ class PipelineTest {
         KinesisEvent.KinesisEventRecord().apply {
             eventID = sequenceNumber
             kinesis = KinesisEvent.Record().apply {
-                data = ByteBuffer.wrap(payload.toByteArray(StandardCharsets.UTF_8))
+                data = ByteBuffer.wrap(payload.toByteArray())
                 this.sequenceNumber = sequenceNumber
                 partitionKey = "partition-$sequenceNumber"
             }

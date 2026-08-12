@@ -7,7 +7,6 @@ import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.filters.outSkip
 import io.github.huherto.awsLambdaStream.queries.ClaimCheckRedeemer
 import kotlinx.coroutines.flow.*
-import java.nio.charset.StandardCharsets
 
 class FirehoseAdapter(
     private val faultManager: FaultManager,
@@ -28,7 +27,7 @@ class FirehoseAdapter(
                 .mapNotFaulty { uow ->
                     val record = uow.record as KinesisFirehoseEvent.Record
                     val data = record.data
-                    val payload = StandardCharsets.UTF_8.decode(data).toString()
+                    val payload = Charsets.UTF_8.decode(data).toString()
 
                     val eventObj = eventCodec.decode(payload).let {
                         if (it.id == null) it.copyEvent(id = record.recordId) else it

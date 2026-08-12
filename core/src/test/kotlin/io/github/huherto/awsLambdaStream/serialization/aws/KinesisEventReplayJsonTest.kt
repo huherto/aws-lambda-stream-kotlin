@@ -6,7 +6,6 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import org.junit.jupiter.api.Test
 import java.nio.ByteBuffer
-import java.nio.charset.StandardCharsets
 import java.util.*
 
 class KinesisEventReplayJsonTest {
@@ -98,7 +97,7 @@ class KinesisEventReplayJsonTest {
     fun `should serialize kinesis data as base64 in replay json`() {
         val payload = """{"id":"event-with-base64-check"}"""
         val expectedBase64Payload = Base64.getEncoder()
-            .encodeToString(payload.toByteArray(StandardCharsets.UTF_8))
+            .encodeToString(payload.toByteArray())
 
         val original = KinesisEvent().apply {
             records = listOf(
@@ -151,7 +150,7 @@ class KinesisEventReplayJsonTest {
                 this.kinesisSchemaVersion = "1.0"
                 this.encryptionType = "NONE"
                 this.approximateArrivalTimestamp = Date(1_700_000_000_000L)
-                this.data = ByteBuffer.wrap(payload.toByteArray(StandardCharsets.UTF_8))
+                this.data = ByteBuffer.wrap(payload.toByteArray())
             }
         }
     }
@@ -160,6 +159,6 @@ class KinesisEventReplayJsonTest {
         val duplicate = duplicate()
         val bytes = ByteArray(duplicate.remaining())
         duplicate.get(bytes)
-        return bytes.toString(StandardCharsets.UTF_8)
+        return bytes.toString(Charsets.UTF_8)
     }
 }

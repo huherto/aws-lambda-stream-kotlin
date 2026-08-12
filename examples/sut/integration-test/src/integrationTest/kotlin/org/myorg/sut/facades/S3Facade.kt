@@ -5,6 +5,7 @@ import aws.sdk.kotlin.services.s3.listObjectsV2
 import aws.sdk.kotlin.services.s3.model.GetObjectRequest
 import aws.smithy.kotlin.runtime.content.decodeToString
 import kotlinx.coroutines.delay
+import kotlinx.datetime.Clock
 import mu.KotlinLogging
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -29,7 +30,7 @@ class S3Facade(
         onTimeout: () -> T?,
         block: suspend S3Client.() -> T?,
     ): T? {
-        val startTime = System.currentTimeMillis()
+        val startTime = Clock.System.now().toEpochMilliseconds()
 
         while (true) {
             val result = client.block()
@@ -37,7 +38,7 @@ class S3Facade(
                 return result
             }
 
-            if (System.currentTimeMillis() - startTime > timeout.inWholeMilliseconds) {
+            if (Clock.System.now().toEpochMilliseconds() - startTime > timeout.inWholeMilliseconds) {
                 return onTimeout()
             }
 

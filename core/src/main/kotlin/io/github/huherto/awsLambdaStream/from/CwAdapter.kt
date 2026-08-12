@@ -6,6 +6,7 @@ import io.github.huherto.awsLambdaStream.RawRecord
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.datetime.Clock
 import java.util.*
 
 class CwAdapter {
@@ -21,7 +22,7 @@ class CwAdapter {
 data class AlarmEvent(
     override val id: String?,
     val record: Any,
-    override val timestamp: Long? = System.currentTimeMillis(),
+    override val timestamp: Long? = Clock.System.now().toEpochMilliseconds(),
     override val partitionKey: String? = null,
     override val tags: Map<String, String>? = null,
     override val raw: RawRecord? = null,

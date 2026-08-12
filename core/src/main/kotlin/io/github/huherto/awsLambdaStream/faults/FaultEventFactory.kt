@@ -4,13 +4,15 @@ import com.fasterxml.uuid.Generators
 import io.github.huherto.awsLambdaStream.FaultException
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.serialization.snapshots.*
+import kotlinx.datetime.Clock
 import java.util.*
 
 class FaultEventFactory(
     private val awsLambdaFunctionName: String = "undefined",
     private val unitOfWorkSnapshotter: UnitOfWorkSnapshotter = DefaultUnitOfWorkSnapshotter(),
     private val redactor: SnapshotRedactor = NoOpSnapshotRedactor,
-    private val options: SnapshotOptions = SnapshotOptions()
+    private val options: SnapshotOptions = SnapshotOptions(),
+    private val clock: Clock = Clock.System,
 ) {
     private val uuidV1Generator = Generators.timeBasedGenerator()
 
@@ -25,7 +27,7 @@ class FaultEventFactory(
         return FaultEvent(
             id = uuidV1Generator.generate().toString(),
             partitionKey = UUID.randomUUID().toString(),
-            timestamp = System.currentTimeMillis(),
+            timestamp = clock.now().toEpochMilliseconds(),
             tags = mapOf(
                 "functionname" to awsLambdaFunctionName,
                 "pipeline" to pipelineId

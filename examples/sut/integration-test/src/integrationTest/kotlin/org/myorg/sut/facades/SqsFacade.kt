@@ -3,6 +3,7 @@ package org.myorg.sut.facades
 import aws.sdk.kotlin.services.sqs.SqsClient
 import aws.sdk.kotlin.services.sqs.model.*
 import kotlinx.coroutines.delay
+import kotlinx.datetime.Clock
 import mu.KotlinLogging
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -37,10 +38,10 @@ class SqsFacade(
             this.queueName = queueName
         }).queueUrl ?: error("Queue URL not found for queue: $queueName")
 
-        val startTime = System.currentTimeMillis()
+        val startTime = Clock.System.now().toEpochMilliseconds()
 
         while (true) {
-            if (System.currentTimeMillis() - startTime > 10000) {
+            if (Clock.System.now().toEpochMilliseconds() - startTime > 10000) {
                 logger.error { "Timed out waiting for SNS notification containing: $expectedContent" }
                 return null
             }

@@ -12,15 +12,15 @@ import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.longOrNull
 import io.github.huherto.awsLambdaStream.stringOrNull
 import kotlinx.coroutines.runBlocking
+import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
 import mu.KotlinLogging
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.io.OutputStream
-import java.nio.charset.StandardCharsets
-import java.time.Instant
-import java.time.ZoneId
 import java.util.*
 import java.util.zip.GZIPInputStream
 
@@ -53,7 +53,7 @@ class Transform : RequestHandler<KinesisFirehoseEvent, FirehoseTransformResponse
         val notifications = linkedMapOf<String, Notification>()
 
         val results = input.records.map { record ->
-            val originalData = StandardCharsets.UTF_8.decode(record.data).toString()
+            val originalData = Charsets.UTF_8.decode(record.data).toString()
             fixRecordId(record)
             logger.info { "Original data: $originalData" }
             val event = json.parseToJsonElement(originalData)
@@ -80,7 +80,7 @@ class Transform : RequestHandler<KinesisFirehoseEvent, FirehoseTransformResponse
 
         return try {
             val decodedBytes = Base64.getDecoder().decode(trimmed)
-            val decodedString = decodedBytes.toString(StandardCharsets.UTF_8).trimStart()
+            val decodedString = decodedBytes.toString(Charsets.UTF_8).trimStart()
 
             if (decodedString.startsWith("{") || decodedString.startsWith("[")) {
                 decodedString
@@ -99,7 +99,7 @@ class Transform : RequestHandler<KinesisFirehoseEvent, FirehoseTransformResponse
         // This is shared by all the uows.
         val notifications = linkedMapOf<String, Notification>()
         val results = input.records.map { record ->
-            val originalData = StandardCharsets.UTF_8.decode(record.data).toString()
+            val originalData = Charsets.UTF_8.decode(record.data).toString()
             fixRecordId(record)
             processAsPipeline(record, originalData, context, notifications)
         }
@@ -248,10 +248,9 @@ class Transform : RequestHandler<KinesisFirehoseEvent, FirehoseTransformResponse
 
         val timestamp = detail.longOrNull("timestamp") ?: 0L
 
-        val d = Instant.ofEpochMilli(timestamp)
-            .atZone(ZoneId.systemDefault())
+        val d = Instant.fromEpochMilliseconds(timestamp).toLocalDateTime(TimeZone.currentSystemDefault())
 
-        val t = "%04d%02d%02d%02d".format(d.year, d.monthValue, d.dayOfMonth, d.hour)
+        val t = "${d.year}${d.monthNumber.toString().padStart(2, '0')}${d.dayOfMonth.toString().padStart(2, '0')}${d.hour.toString().padStart(2, '0')}"
 
         val account = tags.stringOrNull("account") ?: "account"
         val region = tags.stringOrNull("region") ?: "region"

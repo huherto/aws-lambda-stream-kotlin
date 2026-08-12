@@ -4,13 +4,13 @@ import com.amazonaws.services.lambda.runtime.Context
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.mockk.mockk
+import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.json.*
 import org.junit.jupiter.api.Test
 import java.io.ByteArrayOutputStream
 import java.lang.reflect.Method
-import java.nio.charset.StandardCharsets
-import java.time.Instant
-import java.time.ZoneId
 import java.util.*
 import java.util.zip.GZIPOutputStream
 
@@ -29,7 +29,7 @@ class TransformTest {
         // Arrange
         val originalJson = """{"detail":{"message":"hello"}}"""
         val uow = uow(
-            originalData = Base64.getEncoder().encodeToString(originalJson.toByteArray(StandardCharsets.UTF_8)),
+            originalData = Base64.getEncoder().encodeToString(originalJson.toByteArray()),
         )
 
         // Act
@@ -76,7 +76,7 @@ class TransformTest {
 
         val decoded = Base64.getDecoder()
             .decode(encoded.stringProperty("data"))
-            .toString(StandardCharsets.UTF_8)
+            .toString(Charsets.UTF_8)
 
         decoded shouldBe """{"source":"test","detail":{"message":"hello"}}""" + "\n"
     }
@@ -232,9 +232,9 @@ class TransformTest {
             """.trimIndent(),
         )
         val uow = uow(event = event, notifications = notifications)
-        val d = Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault())
+        val d = Instant.fromEpochMilliseconds(timestamp).toLocalDateTime(TimeZone.currentSystemDefault())
 
-        val expectedTimeBucket = "%04d%02d%02d%02d".format(d.year, d.monthValue, d.dayOfMonth, d.hour)
+        val expectedTimeBucket = "${d.year}${d.monthNumber.toString().padStart(2, '0')}${d.dayOfMonth.toString().padStart(2, '0')}${d.hour.toString().padStart(2, '0')}"
         val expectedDeduplicationId = "function-a-pipeline-a-${expectedTimeBucket}-boom"
 
         // Act
@@ -268,9 +268,9 @@ class TransformTest {
             """.trimIndent(),
         )
         val uow = uow(event = event, notifications = notifications)
-        val d = Instant.ofEpochMilli(0).atZone(ZoneId.systemDefault())
+        val d = Instant.fromEpochMilliseconds(0).toLocalDateTime(TimeZone.currentSystemDefault())
 
-        val expectedTimeBucket = "%04d%02d%02d%02d".format(d.year, d.monthValue, d.dayOfMonth, d.hour)
+        val expectedTimeBucket = "${d.year}${d.monthNumber.toString().padStart(2, '0')}${d.dayOfMonth.toString().padStart(2, '0')}${d.hour.toString().padStart(2, '0')}"
         val expectedDeduplicationId = "functionname-pipeline-$expectedTimeBucket-"
 
         // Act
@@ -380,7 +380,7 @@ class TransformTest {
         val output = ByteArrayOutputStream()
 
         GZIPOutputStream(output).use { gzip ->
-            gzip.write(value.toByteArray(StandardCharsets.UTF_8))
+            gzip.write(value.toByteArray())
         }
 
         return Base64.getEncoder().encodeToString(output.toByteArray())

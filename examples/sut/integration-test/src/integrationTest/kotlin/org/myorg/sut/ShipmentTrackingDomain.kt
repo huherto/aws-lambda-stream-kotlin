@@ -6,6 +6,7 @@ import io.github.huherto.awsLambdaStream.faults.FaultEvent
 import io.github.huherto.awsLambdaStream.serialization.snapshots.ErrorSnapshot
 import io.github.huherto.awsLambdaStream.serialization.snapshots.RecordSnapshot
 import io.github.huherto.awsLambdaStream.serialization.snapshots.UnitOfWorkSnapshot
+import kotlinx.datetime.Clock
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlin.math.pow
@@ -35,7 +36,7 @@ object ShipmentTrackingDomain {
     fun createShipmentCreatedEvent(trackedUnit: TrackedUnit) = ShipmentCreatedEvent(
         id = "ship-" + generateRandomNumber(),
         partitionKey = trackedUnit.id,
-        timestamp = System.currentTimeMillis(),
+        timestamp = Clock.System.now().toEpochMilliseconds(),
         location = "Atlanta Hub",
         entity = trackedUnit,
     )
@@ -43,7 +44,7 @@ object ShipmentTrackingDomain {
     fun createDeliveryAttemptedEvent(trackedUnit: TrackedUnit) = DeliveryAttemptedEvent(
         id = "ship-" + generateRandomNumber(),
         partitionKey = trackedUnit.id,
-        timestamp = System.currentTimeMillis(),
+        timestamp = Clock.System.now().toEpochMilliseconds(),
         location = "Atlanta Hub",
         reason = "Can't access the door",
         entity = trackedUnit,
@@ -52,7 +53,7 @@ object ShipmentTrackingDomain {
     fun createPoisonPillEvent(trackedUnit: TrackedUnit) = ShipmentCreatedEvent(
         id = "poison-" + generateRandomNumber(),
         partitionKey = trackedUnit.id,
-        timestamp = System.currentTimeMillis(),
+        timestamp = Clock.System.now().toEpochMilliseconds(),
         location = "poison-pill",
         entity = trackedUnit,
     )
@@ -63,7 +64,7 @@ object ShipmentTrackingDomain {
         val exception = TestException("Test exception")
         return FaultEvent(
             id = "fault-" + generateRandomNumber(),
-            timestamp = System.currentTimeMillis(),
+            timestamp = Clock.System.now().toEpochMilliseconds(),
             tags = mapOf(
                 "functionname" to "integration-test",
                 "pipeline" to "integration-test"

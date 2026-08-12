@@ -1,7 +1,6 @@
 package io.github.huherto.awsLambdaStream.testsupport
 
 import com.amazonaws.services.lambda.runtime.LambdaLogger
-import java.nio.charset.StandardCharsets
 
 class TestLogger : LambdaLogger {
     private val buffer = StringBuilder()
@@ -11,7 +10,7 @@ class TestLogger : LambdaLogger {
     }
 
     override fun log(message: ByteArray?) {
-        buffer.append(String(message ?: ByteArray(0), StandardCharsets.UTF_8)).append('\n')
+        buffer.append(String(message ?: ByteArray(0), Charsets.UTF_8)).append('\n')
     }
 
     fun content(): String = buffer.toString()

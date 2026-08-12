@@ -1,3 +1,4 @@
+@file:OptIn(kotlin.time.ExperimentalTime::class)
 package io.github.huherto.awsLambdaStream.sinks
 
 import aws.sdk.kotlin.services.s3.model.PutObjectRequest
@@ -9,11 +10,10 @@ import io.github.huherto.awsLambdaStream.extensions.copyS3
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.buffer
+import kotlinx.datetime.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.Serializable
-import java.time.Clock
-import java.time.Instant
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
 
 /**
  * S3-backed Claim Check store.
@@ -29,8 +29,8 @@ class ClaimCheckStore(
     private val envConfig: EnvironmentConfig,
     private val s3ClientFactory: S3ClientFactory,
     private val faultManager: FaultManager,
-    private val claimCheckBucketName: String? = System.getenv("CLAIMCHECK_BUCKET_NAME"),
-    private val clock: Clock = Clock.systemUTC(),
+    private val claimCheckBucketName: String? = java.lang.System.getenv("CLAIMCHECK_BUCKET_NAME"),
+    private val clock: Clock = kotlinx.datetime.Clock.System,
     private val bufferCapacity: Int = Channel.BUFFERED,
 ) {
     @Serializable
@@ -70,12 +70,16 @@ class ClaimCheckStore(
         }
     }
 
-    private val keyDateFormatter: DateTimeFormatter =
-        DateTimeFormatter.ofPattern("yyyy/MM/dd/HH").withZone(ZoneOffset.UTC)
-
     fun formatKey(event: Event): String {
         val region = envConfig.awsRegion()
-        val timestamp = keyDateFormatter.format(Instant.now(clock))
+        val instant = clock.now()
+        val dateTime = instant.toLocalDateTime(TimeZone.UTC)
+        val year = dateTime.year
+        val month = dateTime.monthNumber.toString().padStart(2, '0')
+        val day = dateTime.dayOfMonth.toString().padStart(2, '0')
+        val hour = dateTime.hour.toString().padStart(2, '0')
+
+        val timestamp = "$year/$month/$day/$hour"
         val eventId = event.id ?: error("Cannot create claim-check key for event without id")
 
         return "$region/claimchecks/$timestamp/$eventId"

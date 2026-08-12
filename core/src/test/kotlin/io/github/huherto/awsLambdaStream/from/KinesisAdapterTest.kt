@@ -16,7 +16,6 @@ import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
 import java.nio.ByteBuffer
-import java.nio.charset.StandardCharsets
 
 class KinesisAdapterTest {
 
@@ -158,7 +157,7 @@ class KinesisAdapterTest {
         sequenceNumber: String,
         payload: String,
     ): KinesisEvent.KinesisEventRecord {
-        val payloadBytes = payload.toByteArray(StandardCharsets.UTF_8)
+        val payloadBytes = payload.toByteArray()
         return KinesisEvent.KinesisEventRecord().apply {
             this.eventID = eventId
             this.kinesis = KinesisEvent.Record().apply {

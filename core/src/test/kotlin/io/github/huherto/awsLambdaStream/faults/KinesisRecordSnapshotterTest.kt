@@ -6,7 +6,6 @@ import io.kotest.matchers.shouldBe
 import kotlinx.serialization.json.JsonPrimitive
 import org.junit.jupiter.api.Test
 import java.nio.ByteBuffer
-import java.nio.charset.StandardCharsets
 import java.util.*
 
 class KinesisRecordSnapshotterTest {
@@ -17,7 +16,7 @@ class KinesisRecordSnapshotterTest {
     fun `snapshot should capture kinesis record fields correctly`() {
         // Arrange
         val payload = "{\"foo\":\"bar\"}"
-        val payloadBytes = payload.toByteArray(StandardCharsets.UTF_8)
+        val payloadBytes = payload.toByteArray()
         val record = KinesisEvent.KinesisEventRecord().apply {
             eventID = "event-123"
             eventName = "aws:kinesis:record"

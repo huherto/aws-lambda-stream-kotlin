@@ -5,6 +5,7 @@ import aws.sdk.kotlin.services.kinesis.model.GetRecordsRequest
 import aws.sdk.kotlin.services.kinesis.model.GetShardIteratorRequest
 import aws.sdk.kotlin.services.kinesis.model.ShardIteratorType
 import kotlinx.coroutines.delay
+import kotlinx.datetime.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -26,7 +27,7 @@ class KinesisFacade(
         onTimeout: () -> T?,
         block: suspend KinesisClient.() -> T?,
     ): T? {
-        val startTime = System.currentTimeMillis()
+        val startTime = Clock.System.now().toEpochMilliseconds()
 
         while (true) {
             val result = client.block()
@@ -34,7 +35,7 @@ class KinesisFacade(
                 return result
             }
 
-            if (System.currentTimeMillis() - startTime > timeout.inWholeMilliseconds) {
+            if (Clock.System.now().toEpochMilliseconds() - startTime > timeout.inWholeMilliseconds) {
                 return onTimeout()
             }
 

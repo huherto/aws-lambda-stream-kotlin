@@ -4,6 +4,7 @@ import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
 import aws.sdk.kotlin.services.dynamodb.model.QueryRequest
 import kotlinx.coroutines.delay
+import kotlinx.datetime.Clock
 import mu.KotlinLogging
 import org.myorg.sut.DBRecord
 import kotlin.time.Duration.Companion.milliseconds
@@ -34,15 +35,15 @@ class DynamoDbFacade(
         debug: Boolean = false,
         checkResponse: (List<DBRecord>?) -> DBRecord?,
     ): DBRecord? {
-        val startTime = System.currentTimeMillis()
+        val startTime = Clock.System.now().toEpochMilliseconds()
 
         while (true) {
-            if (System.currentTimeMillis() - startTime > 30000) {
+            if (Clock.System.now().toEpochMilliseconds() - startTime > 30000) {
                 logger.error { "Timed out waiting for event $pk to be inserted." }
                 return null
             }
 
-            logger.debug { "find event $pk in ${System.currentTimeMillis() - startTime}ms" }
+            logger.debug { "find event $pk in ${Clock.System.now().toEpochMilliseconds() - startTime}ms" }
 
             val response = client.query(QueryRequest {
                 tableName = eventTableName()
@@ -69,15 +70,15 @@ class DynamoDbFacade(
         pk: String,
         checkResponse: (List<DBRecord>?) -> DBRecord?,
     ): DBRecord? {
-        val startTime = System.currentTimeMillis()
+        val startTime = Clock.System.now().toEpochMilliseconds()
 
         while (true) {
-            if (System.currentTimeMillis() - startTime > 10000) {
+            if (Clock.System.now().toEpochMilliseconds() - startTime > 10000) {
                 logger.error { "Timed out waiting for entity $pk to be inserted." }
                 return null
             }
 
-            logger.debug { "find entity $pk in ${System.currentTimeMillis() - startTime}" }
+            logger.debug { "find entity $pk in ${Clock.System.now().toEpochMilliseconds() - startTime}" }
 
             val response = client.query(QueryRequest {
                 tableName = entityTableName()

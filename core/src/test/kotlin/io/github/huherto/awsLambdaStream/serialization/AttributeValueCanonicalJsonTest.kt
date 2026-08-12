@@ -8,7 +8,6 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import org.junit.jupiter.api.Test
 import java.nio.ByteBuffer
-import java.nio.charset.StandardCharsets
 
 class AttributeValueCanonicalJsonTest {
 
@@ -87,12 +86,12 @@ class AttributeValueCanonicalJsonTest {
     }
 
     private fun bytes(text: String): ByteBuffer =
-        ByteBuffer.wrap(text.toByteArray(StandardCharsets.UTF_8))
+        ByteBuffer.wrap(text.toByteArray())
 
     private fun ByteBuffer.utf8(): String {
         val copy = duplicate()
         val out = ByteArray(copy.remaining())
         copy.get(out)
-        return out.toString(StandardCharsets.UTF_8)
+        return out.toString(Charsets.UTF_8)
     }
 }

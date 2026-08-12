@@ -19,10 +19,9 @@ import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
 import org.junit.jupiter.api.Test
-import java.time.Clock
-import java.time.Instant
-import java.time.ZoneOffset
 
 class ClaimCheckStoreTest {
 
@@ -34,7 +33,9 @@ class ClaimCheckStoreTest {
         eventPublisher = EventPublisherInMemory(),
         skipErrorLogging = true,
     )
-    private val clock = Clock.fixed(Instant.parse("2024-03-05T06:07:08Z"), ZoneOffset.UTC)
+    private val clock = object : Clock {
+        override fun now(): Instant = Instant.parse("2024-03-05T06:07:08Z")
+    }
 
     @Test
     fun `formatKey uses region clock and event id`() {

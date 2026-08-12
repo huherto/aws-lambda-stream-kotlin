@@ -28,6 +28,7 @@ import io.mockk.spyk
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
+import kotlinx.datetime.Clock
 import kotlinx.serialization.json.JsonPrimitive
 import kotlin.test.Test
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue as EventAV
@@ -35,7 +36,7 @@ import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeVal
 
 class CorrelatePipelineTest {
     companion object {
-        val TIMESTAMP = System.currentTimeMillis()
+        val TIMESTAMP = Clock.System.now().toEpochMilliseconds()
     }
 
     /**

@@ -12,13 +12,12 @@ import io.github.huherto.awsLambdaStream.utils.rateLimit
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
+import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
-import kotlinx.datetime.number
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.json.*
 import java.io.File
 import kotlin.math.floor
-import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.ExperimentalTime
 
@@ -91,7 +90,7 @@ class ReplayEvents {
         val err: Throwable? = null,
     )
 
-    private val start = System.currentTimeMillis()
+    private val start = Clock.System.now().toEpochMilliseconds()
     private val counterLock = Any()
 
     private val maxPayloadBytes = 100_000
@@ -99,7 +98,7 @@ class ReplayEvents {
     val counters = Counters()
 
     fun runtimeMinutes(): Double {
-        return (System.currentTimeMillis() - start).toDouble() / 1000.0 / 60.0
+        return (Clock.System.now().toEpochMilliseconds() - start).toDouble() / 1000.0 / 60.0
     }
 
     suspend fun main(
@@ -156,8 +155,8 @@ class ReplayEvents {
         val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
         val defaultPrefix = "%04d/%02d/%02d/".format(
             now.year,
-            now.month.number,
-            now.day,
+            now.monthNumber,
+            now.dayOfMonth,
         )
 
         val config = findUpConfigFile()

@@ -12,6 +12,7 @@ import io.github.huherto.awsLambdaStream.sinks.DynamoDbUpdateValue
 import io.github.huherto.awsLambdaStream.sinks.timestampCondition
 import io.github.huherto.awsLambdaStream.sinks.updateExpression
 import io.github.huherto.awsLambdaStream.utils.ttl
+import kotlinx.datetime.Clock
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import mu.KotlinLogging
@@ -76,7 +77,7 @@ class TracerDao(
     private val logger = KotlinLogging.logger {  }
 
     suspend fun check( unhealthyFlag: Boolean? = null): HealthCheckResponse {
-        val now = System.currentTimeMillis()
+        val now = Clock.System.now().toEpochMilliseconds()
         val truncatedTimestamp = truncateToMinute(now)
 
         if (unhealthyFlag == true) {
@@ -162,7 +163,7 @@ private val logger = KotlinLogging.logger {  }
 
 fun toUpdateRequest(uow: UnitOfWork): UpdateItemRequest? {
 
-    val timestamp = System.currentTimeMillis()
+    val timestamp = Clock.System.now().toEpochMilliseconds()
 
     val event = uow.event as? TracerEvent
     if (event == null) {

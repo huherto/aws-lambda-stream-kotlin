@@ -5,6 +5,7 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.github.huherto.awsLambdaStream.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.datetime.Clock
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import java.util.*
@@ -59,7 +60,7 @@ data class CognitoEvent(
     override val partitionKey: String?,
     override val tags: Map<String, String>?,
     override val raw: RawRecord?,
-    override val timestamp: Long? = System.currentTimeMillis(),
+    override val timestamp: Long? = Clock.System.now().toEpochMilliseconds(),
     override val eem: Any? = null,
     override val triggers: List<EventReference>? = null
 ) : BaseEvent() {

@@ -7,8 +7,8 @@ import io.kotest.matchers.maps.shouldContainKey
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.runBlocking
+import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
-import kotlinx.datetime.number
 import kotlinx.datetime.toLocalDateTime
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Test
@@ -18,7 +18,6 @@ import org.myorg.sut.ShipmentTrackingDomain.createTrackedUnit
 import org.myorg.sut.facades.EventBridgeFacade
 import org.myorg.sut.facades.LambdaFacade
 import org.myorg.sut.facades.S3Facade
-import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -54,8 +53,8 @@ class ReplayEventsITest {
         val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
         val prefix = "us-east-1/%04d/%02d/%02d/".format(
             now.year,
-            now.month.number,
-            now.day,
+            now.monthNumber,
+            now.dayOfMonth,
         )
 
         val replayEvents = ReplayEvents()

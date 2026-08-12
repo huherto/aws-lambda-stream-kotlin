@@ -14,7 +14,6 @@ import io.mockk.verify
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.toList
 import java.nio.ByteBuffer
-import java.nio.charset.StandardCharsets
 
 class FirehoseAdapterSpec : StringSpec({
 
@@ -41,7 +40,7 @@ class FirehoseAdapterSpec : StringSpec({
     ): KinesisFirehoseEvent.Record {
         return KinesisFirehoseEvent.Record().apply {
             this.recordId = recordId
-            this.data = ByteBuffer.wrap(payload.toByteArray(StandardCharsets.UTF_8))
+            this.data = ByteBuffer.wrap(payload.toByteArray())
             this.approximateArrivalTimestamp = timestamp
         }
     }

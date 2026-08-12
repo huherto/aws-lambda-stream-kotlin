@@ -15,12 +15,13 @@ import io.mockk.spyk
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
+import kotlinx.datetime.Clock
 import org.junit.jupiter.api.Test
 
 class CollectionPipelineTest {
 
     companion object {
-        val TIMESTAMP = System.currentTimeMillis()
+        val TIMESTAMP = Clock.System.now().toEpochMilliseconds()
     }
 
     private val envConfig = spyk<EnvironmentConfig> {
@@ -47,7 +48,7 @@ class CollectionPipelineTest {
 
     private fun createEvent(
         id: String = "event-1",
-        timestamp: Long = System.currentTimeMillis(),
+        timestamp: Long = Clock.System.now().toEpochMilliseconds(),
         partitionKey: String? = "partition-1",
     ): Event = object : BaseEvent() {
         override val id: String? = id
@@ -129,7 +130,7 @@ class CollectionPipelineTest {
             expire = false,
         )
         val uow = UnitOfWork(
-            event = createEvent(timestamp = System.currentTimeMillis()),
+            event = createEvent(timestamp = Clock.System.now().toEpochMilliseconds()),
             key = null,
             sequenceNumber = null,
         )
@@ -146,7 +147,7 @@ class CollectionPipelineTest {
         val options = result.first().saveOptions.shouldNotBeNull()
 
         options.pk shouldBe "event-1"
-        options.timeStamp!! shouldBeGreaterThan System.currentTimeMillis() - 5_000L
+        options.timeStamp!! shouldBeGreaterThan Clock.System.now().toEpochMilliseconds() - 5_000L
         options.ttl shouldNotBe null
         options.expire shouldBe false
         options.data shouldBe null
