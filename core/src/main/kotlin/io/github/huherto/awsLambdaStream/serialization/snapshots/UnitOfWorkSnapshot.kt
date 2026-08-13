@@ -1,6 +1,7 @@
 package io.github.huherto.awsLambdaStream.serialization.snapshots
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 
 @Serializable
@@ -18,7 +19,7 @@ data class UnitOfWorkSnapshot(
     val batch: List<UnitOfWorkSnapshot>? = null,
     val aws: List<AwsOperationSnapshot>? = null,
     val s3: S3Snapshot? = null,
-    val extensions: Map<String, String?>? = null,
+    val extensions: Map<String, JsonElement>? = null,
     val batchGetRequest: String? = null,
     val batchGetResponse: String? = null,
     val publishRequest: String? = null,

@@ -3,7 +3,9 @@ package io.github.huherto.awsLambdaStream.flavors
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.serialization.UnitOfWorkSnapshotSerializer
 import kotlinx.coroutines.flow.Flow
+import kotlinx.serialization.json.Json
 import mu.KotlinLogging
 
 /**
@@ -26,6 +28,12 @@ abstract class Pipeline(val id : String, val envConfig: EnvironmentConfig) {
      * Logger shared by pipeline implementations.
      */
     protected val logger = KotlinLogging.logger {  }
+
+
+    private val jsonForLogs = Json {
+        explicitNulls = false
+        encodeDefaults = false
+    }
 
     /**
      * Logs the start of processing for a [UnitOfWork].
@@ -51,10 +59,10 @@ abstract class Pipeline(val id : String, val envConfig: EnvironmentConfig) {
      * @param uow Unit of work leaving the pipeline.
      */
     fun printEndPipeline(uow: UnitOfWork) {
-        val redacted = trimAndRedacted(uow)
+        val uowAsString = uowAsString(trimAndRedacted(uow))
         val eventType = uow.event?.eventType() ?: "unknown"
         val pipelineId = this.id
-        logger.debug { "end type:${eventType}, eid:${uow.event?.id}, pipelineId:${pipelineId}, uow: $redacted" }
+        logger.debug { "end type:${eventType}, eid:${uow.event?.id}, pipelineId:${pipelineId}, uow: $uowAsString" }
     }
 
     /**
@@ -67,8 +75,8 @@ abstract class Pipeline(val id : String, val envConfig: EnvironmentConfig) {
      * @param uow Unit of work being processed at the step.
      */
     fun printStepPipeline(step: String, uow: UnitOfWork) {
-        val redacted = trimAndRedacted(uow)
-        logger.info { "step: ${step}, eid:${uow.event?.id}, uow: $redacted" }
+        val uowAsString = uowAsString(trimAndRedacted(uow))
+        logger.info { "step: ${step}, eid:${uow.event?.id}, uow: $uowAsString" }
     }
 
     /**
@@ -82,6 +90,10 @@ abstract class Pipeline(val id : String, val envConfig: EnvironmentConfig) {
      */
     fun trimAndRedacted(uow: UnitOfWork) : UnitOfWork {
         return uow.copy()
+    }
+
+    fun uowAsString(uow: UnitOfWork) : String {
+        return jsonForLogs.encodeToString(UnitOfWorkSnapshotSerializer, uow)
     }
 
     /**

@@ -131,6 +131,7 @@ class ListenerTest {
 
     }
 
+   // @OptIn(ExperimentalEncodingApi::class)
     @Test
     fun `create an event converted to base64 and back`() {
         val event = ShipmentCreatedEvent(

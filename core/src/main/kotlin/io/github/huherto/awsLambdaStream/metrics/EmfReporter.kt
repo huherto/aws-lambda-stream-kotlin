@@ -1,10 +1,12 @@
 package io.github.huherto.awsLambdaStream.metrics
 
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
-import io.github.huherto.awsLambdaStream.SafeLogger
 import io.github.huherto.awsLambdaStream.utils.envTags
+import mu.KotlinLogging
 
 object EmfReporter {
+
+    private val logger=  KotlinLogging.logger { }
 
     fun formatUnit(metric: String, key: String? = null): String {
         return when {
@@ -15,6 +17,7 @@ object EmfReporter {
             else -> "None"
         }
     }
+
 
     private data class FormattedMetric(
         val Name: String,
@@ -135,11 +138,11 @@ object EmfReporter {
         if (metricsEnv.contains("emf")) {
             val emf = formatMetrics(metrics, envConfig)
             emf.forEach { m ->
-                println(SafeLogger.toJson(m))
+                logger.info { m }
             }
         } else {
             // Standard logging
-            println(SafeLogger.toJson(metrics))
+            
         }
     }
 }
