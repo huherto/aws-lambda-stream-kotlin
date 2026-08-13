@@ -25,6 +25,8 @@ data class UnitOfWorkSnapshot(
     val publishRequest: String? = null,
     val publishRequestEntry: String? = null,
     val publishResponse: String? = null,
+    val putMetricDataRequest: String? = null,
+    val putMetricDataResponse: String? = null,
     val putRequest: String? = null,
     val putResponse: String? = null,
     val queryParams: String? = null,

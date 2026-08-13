@@ -25,6 +25,7 @@ class KinesisAdapter(
             return emptyFlow()
         }
         with(faultManager) {
+            val batchUtilization = kinesisEvent.records.size.toDouble() / (envConfig.batchSize() ?: 100)
             return kinesisEvent.records.asFlow()
                 .mapNotNull { record ->
                     val timestamp = record.kinesis?.approximateArrivalTimestamp?.time ?: System.currentTimeMillis()
@@ -36,7 +37,7 @@ class KinesisAdapter(
                                 start = timestamp,
                                 last = timestamp
                             )
-                        )
+                        ).gauge("stream.batch.utilization", batchUtilization)
                     )
                 }.mapNotFaulty { uow ->
                     val record = uow.record as KinesisEvent.KinesisEventRecord

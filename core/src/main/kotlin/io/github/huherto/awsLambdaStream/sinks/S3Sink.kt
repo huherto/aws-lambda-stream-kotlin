@@ -5,6 +5,7 @@ import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.S3Connector
 import io.github.huherto.awsLambdaStream.extensions.copyS3
 import io.github.huherto.awsLambdaStream.extensions.s3
+import io.github.huherto.awsLambdaStream.metrics.withStepMetrics
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -53,13 +54,14 @@ class S3Sink(
         return fromFlow.rateLimit()
             .map { uow -> ensurePutRequestBucket(uow) }
             .map { uow ->
-            val request = uow.s3?.putRequest ?: return@map uow
-            val response = s3Connector.putObject(request, uow)
-
-            uow.copyS3 {
-                copy(putResponse = response)
+                val request = uow.s3?.putRequest ?: return@map uow
+                uow.withStepMetrics("save", envConfig) { uowWithMetrics ->
+                    val response = s3Connector.putObject(uowWithMetrics.s3.putRequest!!, uowWithMetrics)
+                    uowWithMetrics.copyS3 {
+                        copy(putResponse = response)
+                    }
+                }
             }
-        }
     }
 
     fun deleteObject(fromFlow: Flow<UnitOfWork>): Flow<UnitOfWork> {
@@ -67,10 +69,11 @@ class S3Sink(
             .map { uow -> ensureDeleteRequestBucket(uow) }
             .map { uow ->
                 val request = uow.s3?.deleteRequest ?: return@map uow
-                val response = s3Connector.deleteObject(request, uow)
-
-                uow.copyS3 {
-                    copy(deleteResponse = response)
+                uow.withStepMetrics("delete", envConfig) { uowWithMetrics ->
+                    val response = s3Connector.deleteObject(uowWithMetrics.s3.deleteRequest!!, uowWithMetrics)
+                    uowWithMetrics.copyS3 {
+                        copy(deleteResponse = response)
+                    }
                 }
             }
     }
@@ -79,12 +82,13 @@ class S3Sink(
         return fromFlow.rateLimit()
             .map { uow -> ensureCopyRequestBucket(uow) }
             .map { uow ->
-            val request = uow.s3?.copyRequest ?: return@map uow
-            val response = s3Connector.copyObject(request, uow)
-
-            uow.copyS3 {
-                copy(copyResponse = response)
+                val request = uow.s3?.copyRequest ?: return@map uow
+                uow.withStepMetrics("copy", envConfig) { uowWithMetrics ->
+                    val response = s3Connector.copyObject(uowWithMetrics.s3.copyRequest!!, uowWithMetrics)
+                    uowWithMetrics.copyS3 {
+                        copy(copyResponse = response)
+                    }
+                }
             }
-        }
     }
 }

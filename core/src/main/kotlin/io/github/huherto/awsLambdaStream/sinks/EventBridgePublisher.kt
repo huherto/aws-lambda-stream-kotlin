@@ -10,6 +10,7 @@ import io.github.huherto.awsLambdaStream.connectors.EventBridgeClientFactory
 import io.github.huherto.awsLambdaStream.connectors.EventBridgeConnector
 import io.github.huherto.awsLambdaStream.connectors.RetryConfig
 import io.github.huherto.awsLambdaStream.extensions.*
+import io.github.huherto.awsLambdaStream.metrics.withStepMetrics
 import io.github.huherto.awsLambdaStream.serialization.SerializationStrategy
 import io.github.huherto.awsLambdaStream.serialization.SerializationStrategyResolver
 import io.github.huherto.awsLambdaStream.utils.adornStandardTags
@@ -116,18 +117,18 @@ class EventBridgePublisher(
     }
 
     internal suspend fun putEvents(batchUow: UnitOfWork): UnitOfWork {
-
         if (batchUow.publishRequest != null) {
-
-            val connector = EventBridgeConnector(
-                pipelineId = batchUow.pipeline?.id ?: "undefined",
-                envConfig = envConfig,
-                retryConfig = RetryConfig(),
-                timeout = envConfig.timeout()?.milliseconds ?: 1000.milliseconds,
-                clientFactory = clientFactory
-            )
-            val publishResponse = connector.putEvents(batchUow.publishRequest!!)
-            return batchUow.withPublishResponse(publishResponse)
+            return batchUow.withStepMetrics("publish", envConfig) { uow ->
+                val connector = EventBridgeConnector(
+                    pipelineId = uow.pipeline?.id ?: "undefined",
+                    envConfig = envConfig,
+                    retryConfig = RetryConfig(),
+                    timeout = envConfig.timeout()?.milliseconds ?: 1000.milliseconds,
+                    clientFactory = clientFactory
+                )
+                val publishResponse = connector.putEvents(uow.publishRequest!!)
+                uow.withPublishResponse(publishResponse)
+            }
         }
 
         return batchUow

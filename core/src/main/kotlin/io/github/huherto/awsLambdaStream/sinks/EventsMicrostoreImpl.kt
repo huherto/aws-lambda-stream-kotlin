@@ -9,6 +9,7 @@ import io.github.huherto.awsLambdaStream.extensions.putRequest
 import io.github.huherto.awsLambdaStream.extensions.queryRequest
 import io.github.huherto.awsLambdaStream.extensions.withPutResponse
 import io.github.huherto.awsLambdaStream.extensions.withQueryResponse
+import io.github.huherto.awsLambdaStream.metrics.withStepMetrics
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.buffer
@@ -78,7 +79,11 @@ open class EventsMicrostoreImpl(
         with(faultManager) {
             return flow.mapNotFaulty{ uow -> putRequest(uow) }
                 .buffer(bufferCapacity)
-                .mapNotFaulty { uow -> putDynamoDb(uow)  }
+                .mapNotFaulty { uow ->
+                    uow.withStepMetrics("save", envConfig) { uowWithMetrics ->
+                        putDynamoDb(uowWithMetrics)
+                    }
+                }
         }
     }
 
@@ -86,7 +91,11 @@ open class EventsMicrostoreImpl(
         with(faultManager) {
             return flow.mapNotFaulty{ uow -> toQueryRequest(uow) }
                 .buffer(bufferCapacity)
-                .mapNotFaulty { uow -> queryDynamoDb(uow) }
+                .mapNotFaulty { uow ->
+                    uow.withStepMetrics("query", envConfig) { uowWithMetrics ->
+                        queryDynamoDb(uowWithMetrics)
+                    }
+                }
                 .mapNotFaulty { uow -> toCorrelated(uow) }
         }
     }
@@ -96,20 +105,20 @@ open class EventsMicrostoreImpl(
         return dynamoDbClientFactory.getClient(pipelineId)
     }
 
-    private val putDynamoDb: suspend (UnitOfWork) -> UnitOfWork = { uow ->
+    private suspend fun putDynamoDb(uow: UnitOfWork): UnitOfWork {
         val client = getClient(uow)
         val putResponse = uow.putRequest?.let {
             client.putItem(it)
         }
-        uow.withPutResponse(putResponse)
+        return uow.withPutResponse(putResponse)
     }
 
-    private val queryDynamoDb: suspend (UnitOfWork) -> UnitOfWork = { uow ->
+    private suspend fun queryDynamoDb(uow: UnitOfWork): UnitOfWork {
         val client = getClient(uow)
         val queryResponse = uow.queryRequest?.let {
             client.query(it)
         }
-        uow.withQueryResponse(queryResponse)
+        return uow.withQueryResponse(queryResponse)
     }
 
 }

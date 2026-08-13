@@ -17,6 +17,26 @@ fun UnitOfWork.updateMetrics(transform: (PipelineMetrics) -> PipelineMetrics): U
     return this.withMetrics(transform(currentMetrics))
 }
 
+suspend fun UnitOfWork.withStepMetrics(
+    step: String,
+    envConfig: EnvironmentConfig,
+    block: suspend (UnitOfWork) -> UnitOfWork
+): UnitOfWork {
+    val uowWithStart = if (envConfig.isMetricEnabled("step")) {
+        updateMetrics { it.startStep(step) }
+    } else {
+        this
+    }
+
+    val result = block(uowWithStart)
+
+    return if (envConfig.isMetricEnabled("step")) {
+        result.updateMetrics { it.endStep(step) }
+    } else {
+        result
+    }
+}
+
 fun Flow<UnitOfWork>.collectMetrics(
     envConfig: EnvironmentConfig,
     functionMetrics: Map<String, Any> = emptyMap()

@@ -28,6 +28,7 @@ class SqsAdapter(
             return emptyFlow()
         }
 
+        val batchUtilization = records.size.toDouble() / (faultManager.envConfig.batchSize() ?: 100)
         return records.asFlow()
             .map { record ->
                 val timestamp = record.attributes?.get("SentTimestamp")?.toLong() ?: System.currentTimeMillis()
@@ -39,7 +40,7 @@ class SqsAdapter(
                             start = timestamp,
                             last = timestamp
                         )
-                    )
+                    ).gauge("stream.batch.utilization", batchUtilization)
                 )
             }
     }
@@ -52,6 +53,7 @@ class SqsAdapter(
         }
 
         with(faultManager) {
+            val batchUtilization = records.size.toDouble() / (envConfig.batchSize() ?: 100)
             return records.asFlow()
                 .mapNotNull { record ->
                     val timestamp = record.attributes?.get("SentTimestamp")?.toLong() ?: System.currentTimeMillis()
@@ -63,7 +65,7 @@ class SqsAdapter(
                                 start = timestamp,
                                 last = timestamp
                             )
-                        )
+                        ).gauge("stream.batch.utilization", batchUtilization)
                     )
                 }
                 .mapNotFaulty { uow ->

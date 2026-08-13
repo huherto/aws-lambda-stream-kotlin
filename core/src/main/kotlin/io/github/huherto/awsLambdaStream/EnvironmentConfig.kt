@@ -101,6 +101,10 @@ open class EnvironmentConfig {
         return System.getenv("PUBLISH_PARALLEL")?.toIntOrNull()
     }
 
+    open fun cloudWatchParallel() : Int? {
+        return System.getenv("CW_PARALLEL")?.toIntOrNull()
+    }
+
     open fun parallel() : Int? {
         return System.getenv("PARALLEL")?.toIntOrNull()
     }
@@ -112,6 +116,10 @@ open class EnvironmentConfig {
 
     open fun busTimeout() : Long? {
         return System.getenv("BUS_TIMEOUT")?.toLongOrNull()
+    }
+
+    open fun cloudWatchTimeout() : Long? {
+        return System.getenv("CW_TIMEOUT")?.toLongOrNull()
     }
 
     open fun timeout() : Long? {
@@ -144,6 +152,15 @@ open class EnvironmentConfig {
 
     open fun serializationStrategy() : String? {
         return System.getenv("SERIALIZATION_STRATEGY")
+    }
+
+    open fun metricsConfig(): String? {
+        return System.getenv("METRICS")
+    }
+
+    open fun isMetricEnabled(key: String): Boolean {
+        val config = metricsConfig() ?: return false
+        return config.contains(key) || config.contains("*")
     }
 
     open fun getProperty(name: String): String? {

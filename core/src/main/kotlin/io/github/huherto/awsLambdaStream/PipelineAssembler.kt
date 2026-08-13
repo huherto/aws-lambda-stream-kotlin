@@ -158,6 +158,7 @@ class PipelineAssembler private constructor(builder : Builder) {
      * @return The same or modified unit of work.
      */
     fun startPipeline(uow: UnitOfWork): UnitOfWork {
+        if (!faultManager.envConfig.isMetricEnabled("pipeline")) return uow
         return uow.updateMetrics { pm ->
             pm.startPipeline(uow.pipeline?.id ?: "default")
         }
@@ -173,6 +174,7 @@ class PipelineAssembler private constructor(builder : Builder) {
      * @return The same or modified unit of work.
      */
     fun endPipeline(uow: UnitOfWork): UnitOfWork {
+        if (!faultManager.envConfig.isMetricEnabled("pipeline")) return uow
         return uow.updateMetrics { pm ->
             pm.endPipeline()
         }

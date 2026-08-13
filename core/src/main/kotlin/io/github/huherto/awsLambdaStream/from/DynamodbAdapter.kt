@@ -26,6 +26,7 @@ class DynamodbAdapter (private val faultManager: FaultManager) {
 
     fun fromDynamoDB(dynamodbEvent: DynamodbEvent) : Flow<UnitOfWork> {
         with(faultManager) {
+            val batchUtilization = dynamodbEvent.records.size.toDouble() / (envConfig.batchSize() ?: 100)
             return dynamodbEvent.records.asFlow()
                 .mapNotNull { dynamodbRecord -> UnitOfWork().copy(record = dynamodbRecord) }
                 .mapNotFaulty { uow ->
@@ -42,7 +43,7 @@ class DynamodbAdapter (private val faultManager: FaultManager) {
                                 start = timestamp,
                                 last = timestamp
                             )
-                        )
+                        ).gauge("stream.batch.utilization", batchUtilization)
                     )
                 }
         }
@@ -66,9 +67,7 @@ class DynamodbAdapter (private val faultManager: FaultManager) {
     private fun deriveTimestamp(dynamodbRecord: DynamodbEvent.DynamodbStreamRecord) : Long? {
         val timestamp =  dynamodbRecord.dynamodb?.newImage?.get("timestamp")?.n?.toLong()
         if (preferApproximateTimestamp || timestamp == null) {
-            return dynamodbRecord.dynamodb?.approximateCreationDateTime?.time?.let {
-                it * 1000
-            }
+            return dynamodbRecord.dynamodb?.approximateCreationDateTime?.time
         }
         else {
             return timestamp * 1000

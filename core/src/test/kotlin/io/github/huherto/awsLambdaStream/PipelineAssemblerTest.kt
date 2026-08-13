@@ -3,7 +3,7 @@ package io.github.huherto.awsLambdaStream
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import io.github.huherto.awsLambdaStream.metrics.metrics
 import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
-import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.spyk
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.runBlocking
@@ -14,8 +14,9 @@ class PipelineAssemblerTest {
 
     private val envConfig : EnvironmentConfig by lazy {
         val spy = spyk<EnvironmentConfig>()
-        coEvery { spy.awsRegion() } returns "us-east-1"
-        //coEvery { spy.tableName() } returns "test-table"
+        every { spy.awsRegion() } returns "us-east-1"
+        every { spy.isMetricEnabled(match { true }) } returns true
+        //every { spy.tableName() } returns "test-table"
         spy
     }
 

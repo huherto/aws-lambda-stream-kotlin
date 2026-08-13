@@ -56,6 +56,8 @@ class DefaultUnitOfWorkSnapshotter(
                 )
             },
             batch = uow.batch?.map { snapshot(it) },
+            putMetricDataRequest = uow.putMetricDataRequest?.toString(),
+            putMetricDataResponse = uow.putMetricDataResponse?.toString(),
             aws = captureAwsOperations(uow),
             extensions = snapshotExtensions(uow),
         )
@@ -100,6 +102,9 @@ class DefaultUnitOfWorkSnapshotter(
 
         uow.publishResponse?.let {
             ops.add(AwsOperationSnapshot(service = "EventBridge", operation = "PutEvents"))
+        }
+        uow.putMetricDataResponse?.let {
+            ops.add(AwsOperationSnapshot(service = "CloudWatch", operation = "PutMetricData"))
         }
         uow.putResponse?.let {
             ops.add(AwsOperationSnapshot(service = "DynamoDB", operation = "PutItem"))
