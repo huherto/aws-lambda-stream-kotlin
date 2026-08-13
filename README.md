@@ -1,6 +1,6 @@
-# AWS Lambda Stream for Kotlin and Java
+# AWS Lambda Stream for Kotlin
 
-A Kotlin-first framework for building reliable, serverless, event-driven applications on AWS, with Java interoperability in mind.
+A Kotlin-first framework for building reliable, serverless, event-driven applications on AWS.
 
 ## Value Proposition
 
@@ -21,11 +21,9 @@ building reusable libraries and components. It is also a great fit for serverles
 choice for this framework. In particular, support for coroutines and the Flow framework make it a natural fit for building
 [serverless pipelines](docs/KotlinCoRoutinesAndFlow.md)
 
-A key goal of this project is to make these components usable by Java developers as well. A Java-based example application 
-will be added to demonstrate interoperability and usage from Java code.
-
 ## Documentation Contents
 
+* [Framework Features](FEATURES.md)
 * [Architectural Approach](docs/ArchitecturalApproach.md)
 * [Understanding Events and Event Types](docs/Events.md)
 * [Autonomous Service Patterns](docs/AutonomousServicePatterns.md)
