@@ -3,6 +3,7 @@ package org.myorg.sut
 import io.github.huherto.awsLambdaStream.Event
 import io.github.huherto.awsLambdaStream.EventReference
 import io.github.huherto.awsLambdaStream.RawRecord
+import io.github.huherto.awsLambdaStream.utils.Copyable
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.Serializable
@@ -12,6 +13,9 @@ import kotlinx.serialization.serializerOrNull
 sealed class TrackedUnitEvent : Event {
 
     companion object {
+        init {
+            KspRegistrar.registerAll()
+        }
         const val SHIPMENT_CREATED = "SHIPMENT_CREATED"
         const val SHIPMENT_PICKED_UP = "SHIPMENT_PICKED_UP"
         const val SHIPMENT_IN_TRANSIT = "SHIPMENT_IN_TRANSIT"
@@ -77,6 +81,7 @@ sealed class TrackedUnitEvent : Event {
     }
 }
 
+@Copyable
 @Serializable
 @kotlinx.serialization.SerialName(TrackedUnitEvent.SHIPMENT_CREATED)
 data class ShipmentCreatedEvent(
@@ -94,6 +99,7 @@ data class ShipmentCreatedEvent(
     override fun toString() = super.toString()
 }
 
+@Copyable
 @Serializable
 @kotlinx.serialization.SerialName(TrackedUnitEvent.SHIPMENT_PICKED_UP)
 data class ShipmentPickedUpEvent(
@@ -112,6 +118,7 @@ data class ShipmentPickedUpEvent(
     override fun toString() = super.toString()
 }
 
+@Copyable
 @Serializable
 @kotlinx.serialization.SerialName(TrackedUnitEvent.SHIPMENT_IN_TRANSIT)
 data class ShipmentInTransitEvent(
@@ -129,6 +136,7 @@ data class ShipmentInTransitEvent(
     override fun toString() = super.toString()
 }
 
+@Copyable
 @Serializable
 @kotlinx.serialization.SerialName(TrackedUnitEvent.ARRIVAL_AT_HUB)
 data class ArrivalAtHubEvent(
@@ -147,6 +155,7 @@ data class ArrivalAtHubEvent(
     override fun toString() = super.toString()
 }
 
+@Copyable
 @Serializable
 @kotlinx.serialization.SerialName(TrackedUnitEvent.DEPARTURE_FROM_HUB)
 data class DepartureFromHubEvent(
@@ -165,6 +174,7 @@ data class DepartureFromHubEvent(
     override fun toString() = super.toString()
 }
 
+@Copyable
 @Serializable
 @kotlinx.serialization.SerialName(TrackedUnitEvent.CUSTOMS_CLEARED)
 data class CustomsClearedEvent(
@@ -183,6 +193,7 @@ data class CustomsClearedEvent(
     override fun toString() = super.toString()
 }
 
+@Copyable
 @Serializable
 @kotlinx.serialization.SerialName(TrackedUnitEvent.OUT_FOR_DELIVERY)
 data class OutForDeliveryEvent(
@@ -201,6 +212,7 @@ data class OutForDeliveryEvent(
     override fun toString() = super.toString()
 }
 
+@Copyable
 @Serializable
 @kotlinx.serialization.SerialName(TrackedUnitEvent.DELIVERY_ATTEMPTED)
 data class DeliveryAttemptedEvent(
@@ -219,6 +231,7 @@ data class DeliveryAttemptedEvent(
     override fun toString() = super.toString()
 }
 
+@Copyable
 @Serializable
 @kotlinx.serialization.SerialName(TrackedUnitEvent.SHIPMENT_DELIVERED)
 data class ShipmentDeliveredEvent(
@@ -237,6 +250,7 @@ data class ShipmentDeliveredEvent(
     override fun toString() = super.toString()
 }
 
+@Copyable
 @Serializable
 @kotlinx.serialization.SerialName(TrackedUnitEvent.SHIPMENT_EXCEPTION)
 data class ShipmentExceptionEvent(
@@ -256,6 +270,7 @@ data class ShipmentExceptionEvent(
     override fun toString() = super.toString()
 }
 
+@Copyable
 @Serializable
 @kotlinx.serialization.SerialName(TrackedUnitEvent.VERIFY_TARGET_ADDRESS)
 data class VerifyTargetAddressEvent(
@@ -273,6 +288,7 @@ data class VerifyTargetAddressEvent(
     override fun toString() = super.toString()
 }
 
+@Copyable
 @Serializable
 @kotlinx.serialization.SerialName(TrackedUnitEvent.CONTACT_CUSTOMER)
 data class ContactCustomerEvent(
@@ -290,6 +306,7 @@ data class ContactCustomerEvent(
     override fun toString() = super.toString()
 }
 
+@Copyable
 @Serializable
 @kotlinx.serialization.SerialName(TrackedUnitEvent.POISON_PILL_EVENT)
 data class PoisonPillEvent(

@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.serialization)
     alias(libs.plugins.shadow)
+    alias(libs.plugins.ksp)
 }
 
 group = "io.github.huherto.awsLambdaStream"
@@ -35,6 +36,9 @@ dependencies {
     implementation(libs.kotlinx.coroutines)
     implementation(libs.kotlinx.datetime)
     implementation(libs.uuid.generator)
+    implementation(project(":ksp-annotations"))
+
+    ksp(project(":ksp-processor"))
 
     testImplementation(kotlin("test"))
     testImplementation(libs.aws.lambda.java.tests)

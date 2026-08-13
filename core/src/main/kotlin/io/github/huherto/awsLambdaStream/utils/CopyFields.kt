@@ -96,6 +96,11 @@ fun <T : Any> createFromCommonValues(
  * @return A new instance of the same class as [from].
  */
 fun <T : Any> copyWithOverrides(from: T, overrides: Map<String, Any?>): T {
+    val helper = KspCopyRegistry.getHelper(from::class)
+    if (helper != null) {
+        return helper.copyWithOverrides(from, overrides)
+    }
+
     val targetClass = from::class
     val ctor = targetClass.primaryConstructor
         ?: throw IllegalArgumentException("Class ${targetClass.qualifiedName} must have a primary constructor")

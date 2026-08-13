@@ -10,6 +10,8 @@
 rootProject.name = "aws-lambda-stream-kotlin"
 
 include("core")
+include("ksp-annotations")
+include("ksp-processor")
 
 include(":tools:resubmit-events")
 include(":tools:replay-events")

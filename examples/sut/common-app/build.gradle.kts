@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.serialization)
     alias(libs.plugins.shadow)
+    alias(libs.plugins.ksp)
 }
 
 group = "org.myorg"
@@ -28,6 +29,9 @@ dependencies {
     implementation(libs.kotlinx.coroutines)
     implementation(libs.kotlinx.serialization.json)
     implementation(project(":core"))
+    implementation(project(":ksp-annotations"))
+
+    ksp(project(":ksp-processor"))
 
     testImplementation(kotlin("test"))
     testImplementation(libs.aws.lambda.java.tests)
