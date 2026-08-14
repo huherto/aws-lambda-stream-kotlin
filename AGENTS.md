@@ -24,3 +24,5 @@ This project provides Kotlin utilities and pipeline abstractions for AWS Lambda 
 - UnitOfWork.record should be an instance of 
 - UnitOfWork should be serializable with snapshots for diagnostic purposes.
 
+Use the Mac OS "say" command when tasks are complete or you need me to act.
+

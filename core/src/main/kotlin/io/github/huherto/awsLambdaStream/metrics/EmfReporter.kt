@@ -46,7 +46,7 @@ object EmfReporter {
         envConfig: EnvironmentConfig
     ): List<Map<String, Any>> {
         val timestamp = System.currentTimeMillis()
-        val namespace = envConfig.getProperty("NAMESPACE") ?: "lambda-stream/metrics"
+        val namespace = envConfig.nameSpace() ?: "lambda-stream/metrics"
         val tags = envTags(envConfig, null).toMutableMap()
         tags.remove("pipeline")
 
@@ -134,8 +134,7 @@ object EmfReporter {
     private val StepDimensions = listOf(listOf("step", "pipeline", "functionname", "source", "stage", "region", "account"))
 
     fun logMetrics(metrics: Map<String, Any>, envConfig: EnvironmentConfig) {
-        val metricsEnv = envConfig.getProperty("METRICS") ?: ""
-        if (metricsEnv.contains("emf")) {
+        if (envConfig.isMetricEnabled("emf")) {
             val emf = formatMetrics(metrics, envConfig)
             emf.forEach { m ->
                 logger.info { m }

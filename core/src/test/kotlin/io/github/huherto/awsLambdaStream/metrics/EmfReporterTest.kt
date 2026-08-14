@@ -8,9 +8,8 @@ class EmfReporterTest {
     @Test
     fun `should format metrics into EMF structure`() {
         val envConfig = object : EnvironmentConfig() {
-            override fun getProperty(name: String): String? = when(name) {
-                "NAMESPACE" -> "test-ns"
-                else -> null
+            override fun metrics() : String {
+                return "test-ns"
             }
         }
 

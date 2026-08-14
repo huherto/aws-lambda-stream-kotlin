@@ -53,11 +53,10 @@ class CalculateMetricsTest {
     }
 
     @Test
-    fun `should collect metrics from flow`() = runBlocking {
+    fun `should collect metrics from flow`() : Unit = runBlocking {
         val envConfig = object : EnvironmentConfig() {
-            override fun getProperty(name: String): String? = when(name) {
-                "METRICS" -> "emf"
-                else -> null
+            override fun metrics(): String {
+                return "emf"
             }
         }
 

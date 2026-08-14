@@ -154,17 +154,21 @@ open class EnvironmentConfig {
         return System.getenv("SERIALIZATION_STRATEGY")
     }
 
-    open fun metricsConfig(): String? {
+    open fun metrics(): String? {
         return System.getenv("METRICS")
     }
 
     open fun isMetricEnabled(key: String): Boolean {
-        val config = metricsConfig() ?: return false
+        val config = metrics() ?: return false
         return config.contains(key) || config.contains("*")
     }
 
-    open fun getProperty(name: String): String? {
-        return System.getenv(name)
+    open fun nameSpace(): String? {
+        return System.getenv("NAMESPACE")
     }
+
+//    open fun getProperty(name: String): String? {
+//        return System.getenv(name)
+//    }
 
 }
