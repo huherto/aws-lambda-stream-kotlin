@@ -54,7 +54,7 @@ class DynamoDbTriggerTest {
                 sequenceNumber = "1",
                 pk = "health-check#eu-west-1",
                 sk = "regional-health-check",
-                data = """{"status":"STARTED"}""",
+                status = "STARTED",
             ),
             dynamoDbRecord(
                 eventId = "event-2",
@@ -62,7 +62,7 @@ class DynamoDbTriggerTest {
                 sequenceNumber = "2",
                 pk = "health-check#eu-west-1",
                 sk = "regional-health-check",
-                data = """{"status":"COMPLETED"}""",
+                status = "COMPLETED",
             ),
         )
 
@@ -72,7 +72,7 @@ class DynamoDbTriggerTest {
         // Assert
         result shouldBe "Done"
 
-        coVerify(exactly = 2) {
+        coVerify(exactly = 1) {
             s3Connector.putObject(any(), any())
         }
     }
@@ -123,7 +123,7 @@ class DynamoDbTriggerTest {
         sequenceNumber: String,
         pk: String,
         sk: String,
-        data: String,
+        status: String,
     ): DynamodbEvent.DynamodbStreamRecord {
         return DynamodbEvent.DynamodbStreamRecord().apply {
             this.eventID = eventId
@@ -140,7 +140,7 @@ class DynamoDbTriggerTest {
                     "pk" to DynamoDbEventAttributeValue().withS(pk),
                     "sk" to DynamoDbEventAttributeValue().withS(sk),
                     "discriminator" to DynamoDbEventAttributeValue().withS("regional-health-check"),
-                    "data" to DynamoDbEventAttributeValue().withS(data),
+                    "status" to DynamoDbEventAttributeValue().withS(status),
                     "timestamp" to DynamoDbEventAttributeValue().withN("1700000000"),
                 )
             }

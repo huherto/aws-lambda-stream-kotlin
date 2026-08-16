@@ -69,6 +69,9 @@ object TracerEventCodec : EventCodec {
     }
 }
 
+private const val STARTED = "STARTED"
+private const val COMPLETED = "COMPLETED"
+
 class TracerDao(
     private val connector: Connector,
     private val awsRegion: String,
@@ -94,12 +97,13 @@ class TracerDao(
             roundedTimestamp = truncatedTimestamp,
             timestamp = now,
             ttl = ttl(now, 92.days),
-            status = "STARTED")
+            status = STARTED
+        )
         val save = save(toBeSaved)
         logger.info { "tracers=$currentTracers save=$toBeSaved" }
 
         val mostRecent = currentTracers.firstOrNull()
-        val incomplete = mostRecent?.status == "STARTED"
+        val incomplete = mostRecent?.status == STARTED
 
         val sk = mostRecent?.roundedTimestamp ?: 0L
         val elapsed = (truncatedTimestamp - sk).toDouble() / 1000.0 / 60.0
@@ -179,7 +183,7 @@ fun toUpdateRequest(uow: UnitOfWork): UpdateItemRequest? {
 
     val expression = updateExpression(
         mapOf(
-            "status" to DynamoDbUpdateValue.DbSet(AttributeValue.S("COMPLETED")),
+            "status" to DynamoDbUpdateValue.DbSet(AttributeValue.S(COMPLETED)),
             "discriminator" to DynamoDbUpdateValue.DbSet(AttributeValue.S(DISCRIMINATOR)),
             "timestamp" to DynamoDbUpdateValue.DbSet(AttributeValue.N(timestamp.toString())),
             "latency" to DynamoDbUpdateValue.DbSet(
@@ -233,6 +237,11 @@ fun toS3PutRequest(uow: UnitOfWork): PutObjectRequest? {
         logger.error {
             "Cannot build S3 put request: pk or sk missing. pk=$pk, sk=$sk, event=${uow.event}"
         }
+        return null
+    }
+
+    val status = newRaw.getS("status")
+    if (status != STARTED) {
         return null
     }
 
