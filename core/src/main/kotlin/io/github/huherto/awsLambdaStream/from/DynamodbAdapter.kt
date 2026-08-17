@@ -3,6 +3,7 @@ package io.github.huherto.awsLambdaStream.from
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import io.github.huherto.awsLambdaStream.DynamodbRaw
 import io.github.huherto.awsLambdaStream.FaultManager
+import io.github.huherto.awsLambdaStream.GlobalRegistry
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.metrics.PipelineMetrics
 import io.github.huherto.awsLambdaStream.metrics.Timer
@@ -12,7 +13,7 @@ import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.mapNotNull
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue as EventAV
 
-class DynamodbAdapter (private val faultManager: FaultManager) {
+class DynamodbAdapter (private val faultManager: FaultManager = GlobalRegistry.faultManager()) {
 
     private val logger = mu.KotlinLogging.logger {  }
 

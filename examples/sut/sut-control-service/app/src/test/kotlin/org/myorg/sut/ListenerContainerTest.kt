@@ -9,9 +9,15 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.mockk
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 class ListenerContainerTest {
+
+    @BeforeEach
+    fun setUp() {
+        GlobalRegistry.reset()
+    }
 
     @Test
     fun `Container properties should be initialized correctly`() {
@@ -19,11 +25,11 @@ class ListenerContainerTest {
         val envConfig: EnvironmentConfig = mockk(relaxed = true)
         val eventsMicrostore: EventsMicrostore = mockk(relaxed = true)
         val faultManager: FaultManager = mockk(relaxed = true)
+        GlobalRegistry.setFaultManager(faultManager)
 
         val container = ListenerContainer(
             envConfig = envConfig,
             eventsMicrostore = eventsMicrostore,
-            faultManager = faultManager
         )
 
         // Act & Assert
@@ -47,6 +53,5 @@ class ListenerContainerTest {
         val container = ListenerContainer.build()
 
         container.envConfig shouldBe customConfig
-        container.faultManager.envConfig shouldBe customConfig
     }
 }

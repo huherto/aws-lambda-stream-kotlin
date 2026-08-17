@@ -1,6 +1,9 @@
 package org.myorg.sut
 
-import io.github.huherto.awsLambdaStream.*
+import io.github.huherto.awsLambdaStream.EnvironmentConfig
+import io.github.huherto.awsLambdaStream.GlobalRegistry
+import io.github.huherto.awsLambdaStream.JsonEventCodec
+import io.github.huherto.awsLambdaStream.PipelineAssembler
 import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import io.github.huherto.awsLambdaStream.flavors.UpdatePipeline
@@ -9,7 +12,6 @@ import mu.KotlinLogging.logger
 
 class KinesisTriggerContainer (
     val envConfig: EnvironmentConfig,
-    val faultManager: FaultManager,
     val dynamoDbConnector: DynamoDbConnector? = null,
 ) {
 
@@ -19,11 +21,8 @@ class KinesisTriggerContainer (
 
         fun build() : KinesisTriggerContainer {
             val envConfig = GlobalRegistry.envConfig()
-            val faultManager = GlobalRegistry.faultManager()
-
             return KinesisTriggerContainer(
                 envConfig = envConfig,
-                faultManager = faultManager,
             )
         }
     }
@@ -42,10 +41,11 @@ class KinesisTriggerContainer (
         PipelineAssembler
             .builder()
             .addPipeline(updatePipeline)
-            .faultManager(faultManager)
             .build()
     }
 
-    val kinesisAdapter = KinesisAdapter(faultManager, eventCodec = TracerEventCodec)
+    val kinesisAdapter: KinesisAdapter by lazy {
+        KinesisAdapter(eventCodec = TracerEventCodec)
+    }
 
 }

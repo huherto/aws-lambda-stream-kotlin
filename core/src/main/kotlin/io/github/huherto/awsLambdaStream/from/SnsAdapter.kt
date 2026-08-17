@@ -3,6 +3,7 @@ package io.github.huherto.awsLambdaStream.from
 import com.amazonaws.services.lambda.runtime.events.SNSEvent
 import io.github.huherto.awsLambdaStream.EventCodec
 import io.github.huherto.awsLambdaStream.FaultManager
+import io.github.huherto.awsLambdaStream.GlobalRegistry
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.metrics.PipelineMetrics
 import io.github.huherto.awsLambdaStream.metrics.Timer
@@ -12,7 +13,7 @@ import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.map
 
 class SnsAdapter(
-    private val faultManager: FaultManager,
+    private val faultManager: FaultManager = GlobalRegistry.faultManager(),
     private val eventCodec: EventCodec
 ) {
     fun fromSns(event: SNSEvent): Flow<UnitOfWork> {

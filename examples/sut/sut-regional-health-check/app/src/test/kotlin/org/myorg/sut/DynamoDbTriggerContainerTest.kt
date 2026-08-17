@@ -33,9 +33,9 @@ class DynamoDbTriggerContainerTest {
         val faultManager: FaultManager = mockk(relaxed = true)
         val s3Connector: S3Connector = mockk(relaxed = true)
         val envConfig = mockEnvConfig()
+        GlobalRegistry.setFaultManager(faultManager)
 
         val container = DynamoDbTriggerContainer(
-            faultManager = faultManager,
             s3Connector = s3Connector,
             envConfig = envConfig,
         )
@@ -55,7 +55,6 @@ class DynamoDbTriggerContainerTest {
         // Arrange
         val envConfig = mockEnvConfig()
         val container = DynamoDbTriggerContainer(
-            faultManager = mockk(relaxed = true),
             s3Connector = mockk(relaxed = true),
             envConfig = envConfig,
         )
@@ -76,7 +75,6 @@ class DynamoDbTriggerContainerTest {
         // Arrange
         val envConfig = mockEnvConfig()
         val container = DynamoDbTriggerContainer(
-            faultManager = mockk(relaxed = true),
             s3Connector = mockk(relaxed = true),
             envConfig = envConfig,
         )
@@ -102,7 +100,7 @@ class DynamoDbTriggerContainerTest {
         val container = DynamoDbTriggerContainer.build()
 
         container.envConfig shouldBe customConfig
-        container.faultManager.envConfig shouldBe customConfig
+        GlobalRegistry.faultManager().envConfig shouldBe customConfig
     }
 
     private fun DynamoDbTriggerContainer.materializeS3Pipeline(): Pipeline {

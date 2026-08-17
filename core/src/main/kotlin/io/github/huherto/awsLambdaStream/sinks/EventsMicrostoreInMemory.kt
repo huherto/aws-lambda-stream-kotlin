@@ -4,6 +4,7 @@ import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
 import aws.sdk.kotlin.services.dynamodb.model.PutItemResponse
 import aws.sdk.kotlin.services.dynamodb.model.QueryResponse
 import io.github.huherto.awsLambdaStream.FaultManager
+import io.github.huherto.awsLambdaStream.GlobalRegistry
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.extensions.putRequest
 import io.github.huherto.awsLambdaStream.extensions.queryRequest
@@ -14,7 +15,7 @@ import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.mapNotNull
 
 class EventsMicrostoreInMemory(
-    faultManager: FaultManager,
+    faultManager: FaultManager = GlobalRegistry.faultManager(),
 ) : BaseEventsMicrostore(faultManager, bufferCapacity = 0, tableName = "events") {
 
     private val uowMap: MutableMap<String, UnitOfWork> = mutableMapOf()

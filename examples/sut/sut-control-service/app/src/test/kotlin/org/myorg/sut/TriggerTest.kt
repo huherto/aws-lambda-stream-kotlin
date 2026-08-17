@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.StreamRecord
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.FaultManager
+import io.github.huherto.awsLambdaStream.GlobalRegistry
 import io.github.huherto.awsLambdaStream.PipelineAssembler
 import io.github.huherto.awsLambdaStream.from.DynamodbAdapter
 import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
@@ -22,8 +23,9 @@ class TriggerTest {
         val envConfig = spyk<EnvironmentConfig>()
         val eventPublisher = EventPublisherInMemory()
         val faultManager = FaultManager(envConfig, eventPublisher, skipErrorLogging = true)
+        GlobalRegistry.setFaultManager(faultManager)
         val eventsMicrostore = EventsMicrostoreInMemory(faultManager)
-        val container = TriggerContainer(envConfig, eventPublisher, eventsMicrostore, faultManager)
+        val container = TriggerContainer(envConfig, eventPublisher, eventsMicrostore)
         
         return container
     }
@@ -42,7 +44,7 @@ class TriggerTest {
         assembler.shouldBeInstanceOf<PipelineAssembler>()
 
         assembler.getFaultManager() shouldNotBe null
-        assembler.getFaultManager() shouldBe container.faultManager
+        assembler.getFaultManager() shouldBe GlobalRegistry.faultManager()
 
         dynamoDBAdapter shouldNotBe null
         dynamoDBAdapter.shouldBeInstanceOf<DynamodbAdapter>()

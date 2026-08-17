@@ -3,6 +3,7 @@ package org.myorg.sut
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.FaultManager
+import io.github.huherto.awsLambdaStream.GlobalRegistry
 import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
 import io.github.huherto.awsLambdaStream.sinks.EventsMicrostoreInMemory
 import io.github.huherto.awsLambdaStream.testsupport.TestContext
@@ -35,12 +36,12 @@ class ListenerTest {
         every { envConfig.tableName() } returns "events-table-name"
         val eventPublisher = EventPublisherInMemory()
         val faultManager = FaultManager(envConfig, eventPublisher, skipErrorLogging = true)
+        GlobalRegistry.setFaultManager(faultManager)
         microstore = EventsMicrostoreInMemory(faultManager)
         
         container = ListenerContainer(
             envConfig = envConfig,
             eventsMicrostore = microstore,
-            faultManager = faultManager,
         )
         
         listener = Listener({ container })
@@ -83,7 +84,7 @@ class ListenerTest {
         uow.event shouldNotBe null
         uow.event?.id shouldBe "test-event-123"
 
-        val publisher = container.faultManager.publisher() as EventPublisherInMemory
+        val publisher = GlobalRegistry.faultManager().publisher() as EventPublisherInMemory
         publisher shouldNotBe null
         publisher.uows().size shouldBe 1
         val fault = publisher.faults().first()
@@ -113,7 +114,8 @@ class ListenerTest {
             uow.event?.id shouldBe "test-event-123"
         }
 
-        val faults = container.faultManager.getFaults()
+        val fm = GlobalRegistry.faultManager()
+        val faults = fm.getFaults()
         faults.size shouldBe 1
         val fault = faults[0]
         fault shouldNotBe null
@@ -122,7 +124,6 @@ class ListenerTest {
         val faultUow = fault.uow
         faultUow shouldNotBe null
         faultUow?.record shouldNotBe null
-        val fm = container.faultManager
 
         runBlocking {
             val flushedCount = fm.flushFaults()

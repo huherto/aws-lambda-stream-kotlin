@@ -1,7 +1,6 @@
 package org.myorg.sut
 
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
-import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.GlobalRegistry
 import io.github.huherto.awsLambdaStream.PipelineAssembler
 import io.github.huherto.awsLambdaStream.connectors.DefaultDynamoDbClientFactory
@@ -10,18 +9,14 @@ import io.github.huherto.awsLambdaStream.flavors.CdcPipeline
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import io.github.huherto.awsLambdaStream.from.DynamodbAdapter
 import io.github.huherto.awsLambdaStream.sinks.EventPublisher
-import mu.KotlinLogging.logger
 
 class TriggerContainer(
     val envConfig: EnvironmentConfig,
     val dynamoDbConnector: DynamoDbConnector,
     val eventPublisher: EventPublisher,
-    val faultManager: FaultManager,
 ) {
 
     companion object {
-
-        private val logger = logger {}
 
         fun build() : TriggerContainer {
             val envConfig = GlobalRegistry.envConfig()
@@ -33,7 +28,6 @@ class TriggerContainer(
                 envConfig = envConfig,
                 eventPublisher = GlobalRegistry.eventPublisher(),
                 dynamoDbConnector = dynamoDbConnector,
-                faultManager = faultManager,
             )
         }
     }
@@ -52,10 +46,11 @@ class TriggerContainer(
         PipelineAssembler
             .builder()
             .addPipeline(cdcPipeline)
-            .faultManager(faultManager)
             .build()
     }
 
-    val dynamoDbAdapter = DynamodbAdapter(faultManager)
+    val dynamoDbAdapter : DynamodbAdapter by lazy {
+        DynamodbAdapter()
+    }
 
 }

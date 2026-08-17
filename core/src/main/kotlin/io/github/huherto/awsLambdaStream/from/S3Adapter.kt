@@ -4,6 +4,7 @@ import aws.sdk.kotlin.services.s3.model.GetObjectRequest
 import com.amazonaws.services.lambda.runtime.events.SQSEvent
 import io.github.huherto.awsLambdaStream.EventCodec
 import io.github.huherto.awsLambdaStream.FaultManager
+import io.github.huherto.awsLambdaStream.GlobalRegistry
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.S3Connector
 import io.github.huherto.awsLambdaStream.extensions.copyS3
@@ -15,7 +16,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 class S3Adapter(
-    private val faultManager: FaultManager,
+    private val faultManager: FaultManager = GlobalRegistry.faultManager(),
     private val eventCodec: EventCodec,
     private val s3Connector: S3Connector,
 ) {

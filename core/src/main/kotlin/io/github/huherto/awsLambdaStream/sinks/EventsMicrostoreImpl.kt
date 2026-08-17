@@ -3,6 +3,7 @@ package io.github.huherto.awsLambdaStream.sinks
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.FaultManager
+import io.github.huherto.awsLambdaStream.GlobalRegistry
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.DynamoDbClientFactory
 import io.github.huherto.awsLambdaStream.extensions.putRequest
@@ -71,7 +72,7 @@ import kotlinx.coroutines.flow.buffer
 open class EventsMicrostoreImpl(
     envConfig: EnvironmentConfig,
     private val dynamoDbClientFactory: DynamoDbClientFactory,
-    faultManager: FaultManager,
+    faultManager: FaultManager = GlobalRegistry.faultManager(),
     bufferCapacity: Int = Channel.BUFFERED,
 ): BaseEventsMicrostore(faultManager, bufferCapacity, envConfig.tableName() ?: "events") {
 

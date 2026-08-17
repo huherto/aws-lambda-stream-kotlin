@@ -10,7 +10,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import java.util.*
 
-class CognitoAdapter(private val faultManager: FaultManager) {
+class CognitoAdapter(private val faultManager: FaultManager = GlobalRegistry.faultManager()) {
     private val mapper = jacksonObjectMapper()
 
     fun fromCognito(event: Any, eventTypePrefix: String = "aws-cognito"): Flow<UnitOfWork> {

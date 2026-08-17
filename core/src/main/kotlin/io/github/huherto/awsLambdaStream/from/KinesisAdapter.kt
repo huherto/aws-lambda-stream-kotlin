@@ -1,10 +1,7 @@
 package io.github.huherto.awsLambdaStream.from
 
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
-import io.github.huherto.awsLambdaStream.Event
-import io.github.huherto.awsLambdaStream.EventCodec
-import io.github.huherto.awsLambdaStream.FaultManager
-import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.*
 import io.github.huherto.awsLambdaStream.metrics.PipelineMetrics
 import io.github.huherto.awsLambdaStream.metrics.Timer
 import io.github.huherto.awsLambdaStream.metrics.withMetrics
@@ -15,7 +12,7 @@ import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.mapNotNull
 
 class KinesisAdapter(
-    private val faultManager: FaultManager,
+    private val faultManager: FaultManager = GlobalRegistry.faultManager(),
     private val eventCodec: EventCodec,
     private val claimCheckRedeemer: ClaimCheckRedeemer? = null
 ) {

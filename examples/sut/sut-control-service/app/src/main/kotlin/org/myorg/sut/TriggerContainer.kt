@@ -14,7 +14,6 @@ class TriggerContainer(
     val envConfig: EnvironmentConfig,
     val eventPublisher: EventPublisher,
     val eventsMicrostore: EventsMicrostore,
-    val faultManager: FaultManager,
 ) {
 
     companion object {
@@ -24,17 +23,14 @@ class TriggerContainer(
         fun build() : TriggerContainer {
             val envConfig = GlobalRegistry.envConfig()
             val dynamoDbClientFactory = DefaultDynamoDbClientFactory(envConfig)
-            val faultManager = GlobalRegistry.faultManager()
             val eventsMicrostore = EventsMicrostoreImpl(
                 envConfig = envConfig,
                 dynamoDbClientFactory = dynamoDbClientFactory,
-                faultManager = faultManager,
             )
             return TriggerContainer(
                 envConfig = envConfig,
                 eventPublisher = GlobalRegistry.eventPublisher(),
                 eventsMicrostore = eventsMicrostore,
-                faultManager = faultManager,
             )
         }
     }
@@ -96,13 +92,12 @@ class TriggerContainer(
     val assembler: PipelineAssembler by lazy {
         PipelineAssembler
             .builder()
-            .faultManager(faultManager)
             .addPipeline(correlatePipeline)
             .addPipeline(evaluatePipeline1)
             .addPipeline(evaluatePipeline2)
             .build()
     }
 
-    val dynamoDbAdapter = DynamodbAdapter(faultManager)
+    val dynamoDbAdapter = DynamodbAdapter()
 
 }

@@ -7,21 +7,32 @@ import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.StreamRecord
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.FaultManager
+import io.github.huherto.awsLambdaStream.GlobalRegistry
 import io.github.huherto.awsLambdaStream.connectors.S3Connector
 import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
 import io.kotest.matchers.shouldBe
 import io.mockk.*
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.util.*
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue as DynamoDbEventAttributeValue
 
 class DynamoDbTriggerTest {
 
-    fun mockEnvConfig() : EnvironmentConfig {
-        val envConfig: EnvironmentConfig = spyk()
+    @BeforeEach
+    fun beforeEach() {
+
+        val envConfig = spyk<EnvironmentConfig>(EnvironmentConfig())
         coEvery { envConfig.awsRegion() } returns "eu-west-1"
         coEvery { envConfig.bucketName() } returns "bucket-name"
-        return envConfig
+        GlobalRegistry.setEnvConfig(envConfig)
+        val fm =  FaultManager(
+            envConfig = envConfig,
+            eventPublisher = EventPublisherInMemory(),
+            skipErrorLogging = false,
+            isStreamRetryEnabled = false,
+        )
+        GlobalRegistry.setFaultManager(fm)
     }
 
     @Test
@@ -29,18 +40,12 @@ class DynamoDbTriggerTest {
         // Arrange
         val putRequestSlot = slot<PutObjectRequest>()
         val s3Connector: S3Connector = mockk(relaxed = true)
-        val envConfig = mockEnvConfig()
+        val envConfig = GlobalRegistry.envConfig()
         coEvery {
             s3Connector.putObject(capture(putRequestSlot), any())
         } returns PutObjectResponse {}
 
         val container = DynamoDbTriggerContainer(
-            faultManager = FaultManager(
-                envConfig = envConfig,
-                eventPublisher = EventPublisherInMemory(),
-                skipErrorLogging = false,
-                isStreamRetryEnabled = false,
-            ),
             s3Connector = s3Connector,
             envConfig = envConfig
         )
@@ -82,14 +87,8 @@ class DynamoDbTriggerTest {
         // Arrange
         val s3Connector: S3Connector = mockk(relaxed = true)
 
-        val envConfig = mockEnvConfig()
+        val envConfig = GlobalRegistry.envConfig()
         val container = DynamoDbTriggerContainer(
-            faultManager = FaultManager(
-                envConfig = envConfig,
-                eventPublisher = EventPublisherInMemory(),
-                skipErrorLogging = true,
-                isStreamRetryEnabled = false,
-            ),
             s3Connector = s3Connector,
             envConfig = envConfig
         )

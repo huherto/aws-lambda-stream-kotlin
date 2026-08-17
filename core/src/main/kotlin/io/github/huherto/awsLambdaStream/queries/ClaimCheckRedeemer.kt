@@ -1,10 +1,7 @@
 package io.github.huherto.awsLambdaStream.queries
 
 import aws.sdk.kotlin.services.s3.model.GetObjectRequest
-import io.github.huherto.awsLambdaStream.EventCodec
-import io.github.huherto.awsLambdaStream.FaultManager
-import io.github.huherto.awsLambdaStream.RawRecord
-import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.*
 import io.github.huherto.awsLambdaStream.connectors.S3Connector
 import io.github.huherto.awsLambdaStream.extensions.copyS3
 import io.github.huherto.awsLambdaStream.extensions.s3
@@ -22,7 +19,7 @@ typealias ClaimCheck = io.github.huherto.awsLambdaStream.ClaimCheck
 
 class ClaimCheckRedeemer(
     s3Connector: S3Connector,
-    private val faultManager: FaultManager,
+    private val faultManager: FaultManager = GlobalRegistry.faultManager(),
     private val eventCodec: EventCodec,
     private val claimCheck: (UnitOfWork) -> ClaimCheck? = { uow ->
         uow.event?.raw as? ClaimCheck
