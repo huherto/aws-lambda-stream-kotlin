@@ -27,7 +27,6 @@ class DynamoDbTriggerTest {
         coEvery { envConfig.bucketName() } returns "bucket-name"
         GlobalRegistry.setEnvConfig(envConfig)
         val fm =  FaultManager(
-            envConfig = envConfig,
             eventPublisher = EventPublisherInMemory(),
             skipErrorLogging = false,
             isStreamRetryEnabled = false,
@@ -47,7 +46,6 @@ class DynamoDbTriggerTest {
 
         val container = DynamoDbTriggerContainer(
             s3Connector = s3Connector,
-            envConfig = envConfig
         )
 
         val trigger = DynamoDbTrigger({ container })
@@ -87,10 +85,8 @@ class DynamoDbTriggerTest {
         // Arrange
         val s3Connector: S3Connector = mockk(relaxed = true)
 
-        val envConfig = GlobalRegistry.envConfig()
         val container = DynamoDbTriggerContainer(
             s3Connector = s3Connector,
-            envConfig = envConfig
         )
 
         val trigger = DynamoDbTrigger({ container})

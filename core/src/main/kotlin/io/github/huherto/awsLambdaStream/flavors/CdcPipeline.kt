@@ -2,7 +2,6 @@ package io.github.huherto.awsLambdaStream.flavors
 
 import aws.sdk.kotlin.services.dynamodb.model.BatchGetItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.QueryRequest
-import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.Event
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
@@ -58,7 +57,6 @@ import kotlinx.coroutines.flow.onEach
  */
 class CdcPipeline(
     id: String,
-    envConfig: EnvironmentConfig,
     private val dynamoDbConnector: DynamoDbConnector? = null,
     private val eventPublisher: EventPublisher,
     private val eventFilter: EventFilter = EventFilter.Any,
@@ -70,10 +68,10 @@ class CdcPipeline(
     private val toEvent: (suspend (UnitOfWork) -> Event?)? = null,
     private val encryptEvent: (suspend (UnitOfWork) -> UnitOfWork)? = null,
     private val parallel: Int = System.getenv("PARALLEL")?.toIntOrNull() ?: 4,
-) : Pipeline(id, envConfig) {
+) : Pipeline(id) {
 
 
-    val dynamoDbQuery by lazy { DynamoDbQuery(envConfig, dynamoDbConnector) }
+    val dynamoDbQuery by lazy { DynamoDbQuery(dynamoDbConnector) }
 
     /**
      * Builds the DynamoDB query request for the current unit of work.

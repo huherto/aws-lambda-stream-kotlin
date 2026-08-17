@@ -26,7 +26,6 @@ import kotlinx.serialization.Serializable
  * AWS_REGION/claimchecks/YYYY/MM/DD/HH/eventId
  */
 class ClaimCheckStore(
-    private val envConfig: EnvironmentConfig,
     private val s3ClientFactory: S3ClientFactory,
     private val faultManager: FaultManager = GlobalRegistry.faultManager(),
     private val claimCheckBucketName: String? = java.lang.System.getenv("CLAIMCHECK_BUCKET_NAME"),
@@ -71,7 +70,7 @@ class ClaimCheckStore(
     }
 
     fun formatKey(event: Event): String {
-        val region = envConfig.awsRegion()
+        val region = envConfig().awsRegion()
         val instant = clock.now()
         val dateTime = instant.toLocalDateTime(TimeZone.UTC)
         val year = dateTime.year

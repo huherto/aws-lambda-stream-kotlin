@@ -1,6 +1,6 @@
 package io.github.huherto.awsLambdaStream.metrics
 
-import io.github.huherto.awsLambdaStream.EnvironmentConfig
+import io.github.huherto.awsLambdaStream.GlobalRegistry.envConfig
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.onCompletion
@@ -19,10 +19,9 @@ fun UnitOfWork.updateMetrics(transform: (PipelineMetrics) -> PipelineMetrics): U
 
 suspend fun UnitOfWork.withStepMetrics(
     step: String,
-    envConfig: EnvironmentConfig,
     block: suspend (UnitOfWork) -> UnitOfWork
 ): UnitOfWork {
-    val uowWithStart = if (envConfig.isMetricEnabled("step")) {
+    val uowWithStart = if (envConfig().isMetricEnabled("step")) {
         updateMetrics { it.startStep(step) }
     } else {
         this
@@ -30,7 +29,7 @@ suspend fun UnitOfWork.withStepMetrics(
 
     val result = block(uowWithStart)
 
-    return if (envConfig.isMetricEnabled("step")) {
+    return if (envConfig().isMetricEnabled("step")) {
         result.updateMetrics { it.endStep(step) }
     } else {
         result
@@ -38,7 +37,6 @@ suspend fun UnitOfWork.withStepMetrics(
 }
 
 fun Flow<UnitOfWork>.collectMetrics(
-    envConfig: EnvironmentConfig,
     functionMetrics: Map<String, Any> = emptyMap()
 ): Flow<UnitOfWork> {
     val collected = mutableListOf<UnitOfWork>()
@@ -47,7 +45,7 @@ fun Flow<UnitOfWork>.collectMetrics(
         .onCompletion {
             if (collected.isNotEmpty()) {
                 val aggregated = CalculateMetrics.calculateMetrics(collected, functionMetrics)
-                EmfReporter.logMetrics(aggregated, envConfig)
+                EmfReporter.logMetrics(aggregated)
             }
         }
 }

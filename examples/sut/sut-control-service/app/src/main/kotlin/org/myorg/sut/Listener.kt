@@ -33,7 +33,7 @@ class Listener(
             .map { uow ->
                 uow.updateMetrics { it.gauge("custom.metric", 1.0) }
             }
-            .collectMetrics(container.envConfig)
+            .collectMetrics()
             .collect { logger.info { "collected " + it.event?.id } }
         null
     }

@@ -1,6 +1,6 @@
 package io.github.huherto.awsLambdaStream.metrics
 
-import io.github.huherto.awsLambdaStream.EnvironmentConfig
+import io.github.huherto.awsLambdaStream.GlobalRegistry.envConfig
 import io.github.huherto.awsLambdaStream.utils.envTags
 import mu.KotlinLogging
 
@@ -43,11 +43,10 @@ object EmfReporter {
 
     fun formatMetrics(
         metrics: Map<String, Any>,
-        envConfig: EnvironmentConfig
     ): List<Map<String, Any>> {
         val timestamp = System.currentTimeMillis()
-        val namespace = envConfig.nameSpace() ?: "lambda-stream/metrics"
-        val tags = envTags(envConfig, null).toMutableMap()
+        val namespace = envConfig().nameSpace() ?: "lambda-stream/metrics"
+        val tags = envTags( null).toMutableMap()
         tags.remove("pipeline")
 
         val functionMetrics = mutableListOf<FormattedMetric>()
@@ -133,9 +132,9 @@ object EmfReporter {
     private val PipelineDimensions = listOf(listOf("pipeline", "functionname", "source", "stage", "region", "account"))
     private val StepDimensions = listOf(listOf("step", "pipeline", "functionname", "source", "stage", "region", "account"))
 
-    fun logMetrics(metrics: Map<String, Any>, envConfig: EnvironmentConfig) {
-        if (envConfig.isMetricEnabled("emf")) {
-            val emf = formatMetrics(metrics, envConfig)
+    fun logMetrics(metrics: Map<String, Any>) {
+        if (envConfig().isMetricEnabled("emf")) {
+            val emf = formatMetrics(metrics)
             emf.forEach { m ->
                 logger.info { m }
             }

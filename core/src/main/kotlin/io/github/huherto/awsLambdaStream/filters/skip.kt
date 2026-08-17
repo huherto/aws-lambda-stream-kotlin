@@ -1,14 +1,14 @@
 package io.github.huherto.awsLambdaStream.filters
 
-import io.github.huherto.awsLambdaStream.EnvironmentConfig
+import io.github.huherto.awsLambdaStream.GlobalRegistry.envConfig
 import io.github.huherto.awsLambdaStream.UnitOfWork
 
 /**
  * Mark generated events with the skip tag.
  */
-fun skipTag(envConfig: EnvironmentConfig): Map<String, Boolean?> {
+fun skipTag(): Map<String, Boolean?> {
     return mapOf(
-        "skip" to envConfig.skip(),
+        "skip" to envConfig().skip(),
     )
 }
 

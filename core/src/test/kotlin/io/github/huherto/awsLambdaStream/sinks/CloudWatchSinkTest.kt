@@ -37,8 +37,8 @@ class CloudWatchSinkTest {
         coEvery { anyConstructed<CloudWatchConnector>().putMetricData(any()) } returns mockResponse
 
         val envConfig = mockEnvConfig()
-        val fm = FaultManager(envConfig, EventPublisherInMemory())
-        val sink = CloudWatchSink(envConfig)
+        val fm = FaultManager(EventPublisherInMemory())
+        val sink = CloudWatchSink()
 
         val request = PutMetricDataRequest {
             namespace = "TestNamespace"
@@ -56,15 +56,15 @@ class CloudWatchSinkTest {
     }
 
     @Test
-    fun `should store response in extensions`() = runBlocking {
+    fun `should store response in extensions`() : Unit = runBlocking {
         // Arrange
         mockkConstructor(CloudWatchConnector::class)
         val mockResponse = PutMetricDataResponse { }
         coEvery { anyConstructed<CloudWatchConnector>().putMetricData(any()) } returns mockResponse
 
         val envConfig = mockEnvConfig()
-        val fm = FaultManager(envConfig, EventPublisherInMemory())
-        val sink = CloudWatchSink(envConfig)
+        val fm = FaultManager(EventPublisherInMemory())
+        val sink = CloudWatchSink()
 
         val request = PutMetricDataRequest {
             namespace = "TestNamespace"
@@ -84,8 +84,8 @@ class CloudWatchSinkTest {
     fun `should skip when request is missing`() : Unit = runBlocking {
         // Arrange
         val envConfig = mockEnvConfig()
-        val fm = FaultManager(envConfig, EventPublisherInMemory())
-        val sink = CloudWatchSink(envConfig)
+        val fm = FaultManager(EventPublisherInMemory())
+        val sink = CloudWatchSink()
 
         val uow = UnitOfWork()
         val flow = flowOf(uow)

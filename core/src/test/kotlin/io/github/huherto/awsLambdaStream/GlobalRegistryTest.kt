@@ -112,7 +112,7 @@ class GlobalRegistryTest {
             override fun awsLambdaFunctionName(): String? = "custom-factory-function"
         }
         val customPublisher = EventPublisherInMemory()
-        val customFaultManager = FaultManager(customConfig, customPublisher)
+        val customFaultManager = FaultManager(customPublisher)
 
         GlobalRegistry.setEnvConfigFactory { customConfig }
         GlobalRegistry.setEventPublisherFactory { customPublisher }
@@ -141,8 +141,7 @@ class GlobalRegistryTest {
         GlobalRegistry.setEventPublisher(customPub)
         
         val fm = GlobalRegistry.faultManager()
-        
-        fm.envConfig shouldBe customConfig
+
         fm.publisher() shouldBe customPub
     }
 }

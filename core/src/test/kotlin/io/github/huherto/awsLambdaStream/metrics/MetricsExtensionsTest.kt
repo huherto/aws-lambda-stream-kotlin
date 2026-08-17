@@ -1,6 +1,7 @@
 package io.github.huherto.awsLambdaStream.metrics
 
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
+import io.github.huherto.awsLambdaStream.GlobalRegistry
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
@@ -15,9 +16,10 @@ class MetricsExtensionsTest {
     fun `withStepMetrics should add start and end checkpoints when enabled`(): Unit = runBlocking {
         val envConfig = mockk<EnvironmentConfig>()
         every { envConfig.isMetricEnabled("step") } returns true
-        
+        GlobalRegistry.setEnvConfig(envConfig)
+
         val uow = UnitOfWork()
-        val result = uow.withStepMetrics("test-step", envConfig) { 
+        val result = uow.withStepMetrics("test-step") {
             val waitTime = it.metrics?.timer?.checkpoints?.get("default|test-step|stream.pipeline.io.wait.time")
             waitTime shouldNotBe null
             it
@@ -31,9 +33,10 @@ class MetricsExtensionsTest {
     fun `withStepMetrics should not add checkpoints when disabled`(): Unit = runBlocking {
         val envConfig = mockk<EnvironmentConfig>()
         every { envConfig.isMetricEnabled("step") } returns false
-        
+        GlobalRegistry.setEnvConfig(envConfig)
+
         val uow = UnitOfWork()
-        val result = uow.withStepMetrics("test-step", envConfig) { 
+        val result = uow.withStepMetrics("test-step") {
             val waitTime = it.metrics?.timer?.checkpoints?.get("default|test-step|stream.pipeline.io.wait.time")
             waitTime shouldBe null
             it

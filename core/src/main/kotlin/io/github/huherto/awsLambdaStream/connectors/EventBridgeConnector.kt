@@ -5,7 +5,7 @@ import aws.sdk.kotlin.services.eventbridge.EventBridgeClient
 import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequest
 import aws.sdk.kotlin.services.eventbridge.model.PutEventsResponse
 import aws.smithy.kotlin.runtime.net.url.Url
-import io.github.huherto.awsLambdaStream.EnvironmentConfig
+import io.github.huherto.awsLambdaStream.GlobalRegistry.envConfig
 import kotlin.time.Duration
 
 data class ConnectorOptions(
@@ -31,10 +31,10 @@ data class ConnectorResponse(
 interface EventBridgeClientFactory : ClientFactory<EventBridgeClient> {
 }
 
-class DefaultEventBridgeClientFactory(private val envConfig: EnvironmentConfig) : EventBridgeClientFactory, AbstractClientFactory<EventBridgeClient>() {
+class DefaultEventBridgeClientFactory() : EventBridgeClientFactory, AbstractClientFactory<EventBridgeClient>() {
     override fun create(): EventBridgeClient {
-        val endpointUrl = envConfig.endPointUrl()?.ifEmpty { null }
-        val region = envConfig.awsRegion()
+        val endpointUrl = envConfig().endPointUrl()?.ifEmpty { null }
+        val region = envConfig().awsRegion()
         return EventBridgeClient {
             this.region = region
             this.credentialsProvider = EnvironmentCredentialsProvider()
@@ -45,7 +45,6 @@ class DefaultEventBridgeClientFactory(private val envConfig: EnvironmentConfig) 
 
 class EventBridgeConnector(
     pipelineId: String,
-    private val envConfig: EnvironmentConfig,
     timeout: Duration,
     private val retryConfig: RetryConfig,
     private val opt: ConnectorOptions = ConnectorOptions(),

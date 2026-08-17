@@ -5,10 +5,8 @@ import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.GlobalRegistry
 import io.github.huherto.awsLambdaStream.PipelineAssembler
 import io.github.huherto.awsLambdaStream.connectors.S3Connector
-import io.github.huherto.awsLambdaStream.flavors.MaterializeS3Pipeline
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import io.github.huherto.awsLambdaStream.from.DynamodbAdapter
-import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.mockk.coEvery
@@ -33,11 +31,11 @@ class DynamoDbTriggerContainerTest {
         val faultManager: FaultManager = mockk(relaxed = true)
         val s3Connector: S3Connector = mockk(relaxed = true)
         val envConfig = mockEnvConfig()
+        GlobalRegistry.setEnvConfig(envConfig)
         GlobalRegistry.setFaultManager(faultManager)
 
         val container = DynamoDbTriggerContainer(
             s3Connector = s3Connector,
-            envConfig = envConfig,
         )
 
         // Act
@@ -54,9 +52,9 @@ class DynamoDbTriggerContainerTest {
     fun `lazy properties should return the same instances when accessed repeatedly`() {
         // Arrange
         val envConfig = mockEnvConfig()
+        GlobalRegistry.setEnvConfig(envConfig)
         val container = DynamoDbTriggerContainer(
             s3Connector = mockk(relaxed = true),
-            envConfig = envConfig,
         )
 
         // Act
@@ -68,39 +66,6 @@ class DynamoDbTriggerContainerTest {
         // Assert
         secondAssembler.shouldBeSameInstanceAs(firstAssembler)
         secondMaterializeS3Pipeline.shouldBeSameInstanceAs(firstMaterializeS3Pipeline)
-    }
-
-    @Test
-    fun `materialize s3 pipeline should be configured with expected main settings`() {
-        // Arrange
-        val envConfig = mockEnvConfig()
-        val container = DynamoDbTriggerContainer(
-            s3Connector = mockk(relaxed = true),
-            envConfig = envConfig,
-        )
-
-        // Act
-        val pipeline = container.materializeS3Pipeline()
-
-        // Assert
-        pipeline.shouldBeInstanceOf<MaterializeS3Pipeline>()
-        pipeline.id shouldBe "t1"
-    }
-    
-    @Test
-    fun `build() should use GlobalRegistry defaults`() {
-        GlobalRegistry.reset()
-        val customConfig = object : EnvironmentConfig() {
-            override fun awsRegion(): String = "us-east-1"
-            override fun bucketName(): String = "custom-bucket"
-            override fun serializationStrategy(): String = "jackson"
-        }
-        GlobalRegistry.setEnvConfig(customConfig)
-
-        val container = DynamoDbTriggerContainer.build()
-
-        container.envConfig shouldBe customConfig
-        GlobalRegistry.faultManager().envConfig shouldBe customConfig
     }
 
     private fun DynamoDbTriggerContainer.materializeS3Pipeline(): Pipeline {

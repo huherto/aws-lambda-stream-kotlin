@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.Clock
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 class CollectionPipelineTest {
@@ -24,8 +25,13 @@ class CollectionPipelineTest {
         val TIMESTAMP = Clock.System.now().toEpochMilliseconds()
     }
 
-    private val envConfig = spyk<EnvironmentConfig> {
+    val envConfig = spyk<EnvironmentConfig> {
         every { awsRegion() } returns "eu-west-1"
+    }
+
+    @BeforeEach
+    fun beforeEach() {
+        GlobalRegistry.setEnvConfig(envConfig)
     }
 
     private val eventsMicrostore = mockk<EventsMicrostore>()
@@ -38,7 +44,6 @@ class CollectionPipelineTest {
     ): CollectPipeline {
         return CollectPipeline(
             pipelineId = pipelineId,
-            envConfig = envConfig,
             eventsMicrostore = eventsMicrostore,
             ttlDays = ttlDays,
             includeRaw = includeRaw,

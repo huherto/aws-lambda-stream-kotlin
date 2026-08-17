@@ -3,6 +3,7 @@ package org.myorg.sut
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import com.amazonaws.services.lambda.runtime.Context
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
+import io.github.huherto.awsLambdaStream.GlobalRegistry
 import io.kotest.matchers.maps.shouldContain
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
@@ -20,7 +21,8 @@ class CheckHealthApiTest {
         coEvery { envConfig.entityTableName() } returns "tracer-table-name"
         coEvery { envConfig.unhealthy() } returns unhealthyFlag
 
-        return CheckHealthApiContainer(envConfig, dynamoDBClient = mockk<DynamoDbClient>())
+        GlobalRegistry.setEnvConfig(envConfig)
+        return CheckHealthApiContainer(dynamoDBClient = mockk<DynamoDbClient>())
     }
 
     @Test

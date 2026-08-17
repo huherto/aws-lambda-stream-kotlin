@@ -7,13 +7,18 @@ import io.mockk.spyk
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.test.runTest
+import org.junit.jupiter.api.BeforeEach
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class EventsFiltersTest {
 
-    private val envConfig = spyk(EnvironmentConfig())
+    @BeforeEach
+    fun beforeEach() {
+        val envConfig = spyk(EnvironmentConfig())
+        GlobalRegistry.setEnvConfig(envConfig)
+    }
 
     @Test
     fun `test any filter matches all events`() {
@@ -70,7 +75,7 @@ class EventsFiltersTest {
     @Test
     fun `test event types filter`() = runTest {
 
-        val faultManager = FaultManager(envConfig = envConfig, eventPublisher = EventPublisherInMemory())
+        val faultManager = FaultManager(eventPublisher = EventPublisherInMemory())
 
         val  myEventA = MyEventA()
         val  myEventB = MyEventB()

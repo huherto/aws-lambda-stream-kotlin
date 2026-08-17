@@ -1,10 +1,12 @@
 package io.github.huherto.awsLambdaStream.faults
 
+import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import io.github.huherto.awsLambdaStream.serialization.snapshots.DefaultUnitOfWorkSnapshotter
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import kotlinx.coroutines.flow.Flow
 import org.junit.jupiter.api.Test
 
 class DefaultReplayUnitOfWorkSnapshotterTest {
@@ -15,8 +17,8 @@ class DefaultReplayUnitOfWorkSnapshotterTest {
     fun `snapshot should capture basic UnitOfWork fields`() {
         // Arrange
         val uow = UnitOfWork(
-            pipeline = object : Pipeline("pipe-1", io.github.huherto.awsLambdaStream.EnvironmentConfig()) {
-                override fun connect(fm: io.github.huherto.awsLambdaStream.FaultManager, fromFlow: kotlinx.coroutines.flow.Flow<UnitOfWork>) = fromFlow
+            pipeline = object : Pipeline("pipe-1") {
+                override fun connect(fm: FaultManager, fromFlow: Flow<UnitOfWork>) = fromFlow
             },
             key = "key-1",
             sequenceNumber = "seq-1",

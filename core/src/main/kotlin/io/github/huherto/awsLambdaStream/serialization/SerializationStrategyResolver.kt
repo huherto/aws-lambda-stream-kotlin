@@ -1,10 +1,8 @@
 package io.github.huherto.awsLambdaStream.serialization
 
-import io.github.huherto.awsLambdaStream.EnvironmentConfig
-import io.github.huherto.awsLambdaStream.GlobalRegistry
+import io.github.huherto.awsLambdaStream.GlobalRegistry.envConfig
 
 class SerializationStrategyResolver(
-    private val envConfig: EnvironmentConfig = GlobalRegistry.envConfig(),
     private val config: SerializationConfig = SerializationConfig()
 ) {
     fun resolve(): SerializationStrategy {
@@ -22,7 +20,7 @@ class SerializationStrategyResolver(
             return config.strategy
         }
 
-        val envValue = envConfig.serializationStrategy()
+        val envValue = envConfig().serializationStrategy()
 
         return when (envValue?.lowercase()) {
             "jackson" -> SerializationStrategyKind.JACKSON

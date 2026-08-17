@@ -63,7 +63,7 @@ class CalculateMetricsTest {
         val uow1 = UnitOfWork().withMetrics(PipelineMetrics(pipeline = "p1").gauge("g1", 10.0))
         val flow = flowOf(uow1)
 
-        val results = flow.collectMetrics(envConfig).toList()
+        val results = flow.collectMetrics().toList()
 
         results.size shouldBe 1
         results[0] shouldBe uow1

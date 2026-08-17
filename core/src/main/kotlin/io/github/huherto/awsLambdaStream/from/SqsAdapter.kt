@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.events.SQSEvent
 import io.github.huherto.awsLambdaStream.EventCodec
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.GlobalRegistry
+import io.github.huherto.awsLambdaStream.GlobalRegistry.envConfig
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.filters.outSkip
 import io.github.huherto.awsLambdaStream.metrics.PipelineMetrics
@@ -29,7 +30,7 @@ class SqsAdapter(
             return emptyFlow()
         }
 
-        val batchUtilization = records.size.toDouble() / (faultManager.envConfig.batchSize() ?: 100)
+        val batchUtilization = records.size.toDouble() / (envConfig().batchSize() ?: 100)
         return records.asFlow()
             .map { record ->
                 val timestamp = record.attributes?.get("SentTimestamp")?.toLong() ?: System.currentTimeMillis()
@@ -54,7 +55,7 @@ class SqsAdapter(
         }
 
         with(faultManager) {
-            val batchUtilization = records.size.toDouble() / (envConfig.batchSize() ?: 100)
+            val batchUtilization = records.size.toDouble() / (envConfig().batchSize() ?: 100)
             return records.asFlow()
                 .mapNotNull { record ->
                     val timestamp = record.attributes?.get("SentTimestamp")?.toLong() ?: System.currentTimeMillis()

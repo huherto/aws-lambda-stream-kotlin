@@ -1,6 +1,9 @@
 package org.myorg.sut
 
-import io.github.huherto.awsLambdaStream.*
+import io.github.huherto.awsLambdaStream.Event
+import io.github.huherto.awsLambdaStream.GlobalRegistry
+import io.github.huherto.awsLambdaStream.PipelineAssembler
+import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.DefaultDynamoDbClientFactory
 import io.github.huherto.awsLambdaStream.filters.EventFilters
 import io.github.huherto.awsLambdaStream.flavors.*
@@ -11,7 +14,6 @@ import io.github.huherto.awsLambdaStream.sinks.EventsMicrostoreImpl
 import mu.KotlinLogging.logger
 
 class TriggerContainer(
-    val envConfig: EnvironmentConfig,
     val eventPublisher: EventPublisher,
     val eventsMicrostore: EventsMicrostore,
 ) {
@@ -21,14 +23,11 @@ class TriggerContainer(
         private val logger = logger {}
 
         fun build() : TriggerContainer {
-            val envConfig = GlobalRegistry.envConfig()
-            val dynamoDbClientFactory = DefaultDynamoDbClientFactory(envConfig)
+            val dynamoDbClientFactory = DefaultDynamoDbClientFactory()
             val eventsMicrostore = EventsMicrostoreImpl(
-                envConfig = envConfig,
                 dynamoDbClientFactory = dynamoDbClientFactory,
             )
             return TriggerContainer(
-                envConfig = envConfig,
                 eventPublisher = GlobalRegistry.eventPublisher(),
                 eventsMicrostore = eventsMicrostore,
             )
@@ -38,7 +37,6 @@ class TriggerContainer(
     private val correlatePipeline: Pipeline by lazy {
         CorrelatePipeline(
             id = "corre1",
-            envConfig = envConfig,
             correlationKeySupplier = { uow ->
                 val event = uow.event as? TrackedUnitEvent
                 event?.entity?.id ?: throw RuntimeException(
@@ -53,7 +51,6 @@ class TriggerContainer(
     private val evaluatePipeline1: Pipeline by lazy {
         EvaluatePipeline(
             id = "eval_vta",
-            envConfig = envConfig,
             eventPublisher = eventPublisher,
             eventsMicrostore = eventsMicrostore,
             eventCodec = TrackedUnitEventCodec,
@@ -79,7 +76,6 @@ class TriggerContainer(
     private val evaluatePipeline2: Pipeline by lazy {
         EvaluatePipeline(
             id = "eval2",
-            envConfig = envConfig,
             eventPublisher = eventPublisher,
             eventsMicrostore = eventsMicrostore,
             eventCodec = TrackedUnitEventCodec,

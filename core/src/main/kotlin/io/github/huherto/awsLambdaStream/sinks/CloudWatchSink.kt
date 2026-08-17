@@ -1,7 +1,7 @@
 package io.github.huherto.awsLambdaStream.sinks
 
-import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.FaultManager
+import io.github.huherto.awsLambdaStream.GlobalRegistry.envConfig
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.CloudWatchClientFactory
 import io.github.huherto.awsLambdaStream.connectors.CloudWatchConnector
@@ -14,9 +14,8 @@ import kotlinx.coroutines.flow.Flow
 import mu.KotlinLogging
 
 class CloudWatchSink(
-    private val envConfig: EnvironmentConfig,
-    private val clientFactory: CloudWatchClientFactory = DefaultCloudWatchClientFactory(envConfig),
-    private val parallel: Int = envConfig.cloudWatchParallel() ?: envConfig.parallel() ?: 8,
+    private val clientFactory: CloudWatchClientFactory = DefaultCloudWatchClientFactory(),
+    private val parallel: Int = envConfig().cloudWatchParallel() ?: envConfig().parallel() ?: 8,
 ) {
     private val logger = KotlinLogging.logger {}
 
@@ -29,10 +28,9 @@ class CloudWatchSink(
             }
             logger.debug { "Sending metrics to CloudWatch: $request" }
             fm.faulty(uow) {
-                it.withStepMetrics("put-metrics", envConfig) { uowWithMetrics ->
+                it.withStepMetrics("put-metrics") { uowWithMetrics ->
                     val connector = CloudWatchConnector(
                         pipelineId = uowWithMetrics.pipeline?.id ?: "undefined",
-                        envConfig = envConfig,
                         clientFactory = clientFactory
                     )
                     val response = connector.putMetricData(uowWithMetrics.putMetricDataRequest!!)

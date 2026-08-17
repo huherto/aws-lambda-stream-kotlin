@@ -5,15 +5,15 @@ import aws.sdk.kotlin.services.cloudwatch.CloudWatchClient
 import aws.sdk.kotlin.services.cloudwatch.model.PutMetricDataRequest
 import aws.sdk.kotlin.services.cloudwatch.model.PutMetricDataResponse
 import aws.smithy.kotlin.runtime.net.url.Url
-import io.github.huherto.awsLambdaStream.EnvironmentConfig
+import io.github.huherto.awsLambdaStream.GlobalRegistry.envConfig
 import mu.KotlinLogging
 
 interface CloudWatchClientFactory : ClientFactory<CloudWatchClient>
 
-class DefaultCloudWatchClientFactory(private val envConfig: EnvironmentConfig) : CloudWatchClientFactory, AbstractClientFactory<CloudWatchClient>() {
+class DefaultCloudWatchClientFactory() : CloudWatchClientFactory, AbstractClientFactory<CloudWatchClient>() {
     override fun create(): CloudWatchClient {
-        val endpointUrl = envConfig.endPointUrl()?.ifEmpty { null }
-        val region = envConfig.awsRegion()
+        val endpointUrl = envConfig().endPointUrl()?.ifEmpty { null }
+        val region = envConfig().awsRegion()
         return CloudWatchClient {
             this.region = region
             this.credentialsProvider = EnvironmentCredentialsProvider()
@@ -24,8 +24,7 @@ class DefaultCloudWatchClientFactory(private val envConfig: EnvironmentConfig) :
 
 class CloudWatchConnector(
     pipelineId: String,
-    private val envConfig: EnvironmentConfig,
-    private val clientFactory: CloudWatchClientFactory = DefaultCloudWatchClientFactory(envConfig),
+    clientFactory: CloudWatchClientFactory = DefaultCloudWatchClientFactory(),
 ) {
     private val client: CloudWatchClient = clientFactory.getClient(pipelineId)
     private val logger = KotlinLogging.logger {}

@@ -19,7 +19,7 @@ class EmfReporterTest {
             "p1|s1|stream.pipeline.io.time" to MetricStats(50.0, 40.0, 60.0, 100.0, 2)
         )
 
-        val entries = EmfReporter.formatMetrics(metrics, envConfig)
+        val entries = EmfReporter.formatMetrics(metrics)
 
         entries.size shouldBe 3 // function level, p1 level, p1|s1 level
 

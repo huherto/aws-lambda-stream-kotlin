@@ -18,6 +18,7 @@ import io.mockk.spyk
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 class ClaimCheckRedeemerTest {
@@ -26,11 +27,16 @@ class ClaimCheckRedeemerTest {
 
     private fun faultManager(): FaultManager {
         return FaultManager(
-            envConfig = envConfig,
             eventPublisher = EventPublisherInMemory(),
             skipErrorLogging = true,
         )
     }
+
+    @BeforeEach
+    fun beforeEach() {
+        GlobalRegistry.setEnvConfig(envConfig)
+    }
+
 
     @Test
     fun `redeemClaimCheck should fetch claimed event from s3 and replace event`() = runBlocking {

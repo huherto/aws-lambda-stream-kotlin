@@ -49,6 +49,11 @@ private class RegistrySingleton<T>(
     }
 }
 
+
+fun envConfig() : EnvironmentConfig {
+    return GlobalRegistry.envConfig()
+}
+
 object GlobalRegistry {
 
     private val lock = Any()
@@ -65,7 +70,7 @@ object GlobalRegistry {
     private val eventPublisherSingleton = RegistrySingleton(
         lock = lock,
         defaultFactory = {
-            val ep : EventPublisher = EventBridgePublisher(envConfig())
+            val ep : EventPublisher = EventBridgePublisher()
             ep },
         onChange = {
             faultManagerSingleton.clear()
@@ -74,7 +79,7 @@ object GlobalRegistry {
 
     private val faultManagerSingleton = RegistrySingleton(
         lock = lock,
-        defaultFactory = { FaultManager(envConfig(), eventPublisher()) },
+        defaultFactory = { FaultManager(eventPublisher()) },
     )
 
     fun envConfig(): EnvironmentConfig {

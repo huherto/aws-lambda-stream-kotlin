@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.Clock
 import kotlinx.serialization.json.JsonPrimitive
+import org.junit.jupiter.api.BeforeEach
 import kotlin.test.Test
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue as EventAV
 
@@ -88,6 +89,11 @@ class CorrelatePipelineTest {
         spy
     }
 
+    @BeforeEach
+    fun beforeEach() {
+        GlobalRegistry.setEnvConfig(envConfig)
+    }
+
     fun createEventsMicrostore() : EventsMicrostoreInMemory {
         val faultManager = mockk<FaultManager>(relaxed = true)
         val eventsMicrostore = EventsMicrostoreInMemory(faultManager)
@@ -101,7 +107,6 @@ class CorrelatePipelineTest {
         // Arrange
         val pipeline = CorrelatePipeline(
             "test-pipeline",
-            envConfig = envConfig,
             correlationKeySupplier = { "test-correlation-key" },
             eventCodec = FakeEventCodec(),
             eventsMicrostore = createEventsMicrostore()
@@ -150,7 +155,6 @@ class CorrelatePipelineTest {
         // Arrange
         val pipeline = CorrelatePipeline(
             "test-pipeline",
-            envConfig = envConfig,
             correlationKeySupplier = { "test-correlation-key" },
             eventCodec = FakeEventCodec(),
             eventsMicrostore = createEventsMicrostore()
@@ -184,7 +188,6 @@ class CorrelatePipelineTest {
         // Arrange
         val pipeline = CorrelatePipeline(
             id = "test-pipeline",
-            envConfig = envConfig,
             eventsMicrostore = createEventsMicrostore(),
             expire = true,
             correlationKeySupplier = { "test-correlation-key" },
@@ -234,15 +237,13 @@ class CorrelatePipelineTest {
         every { dynamoDbClientFactory.getClient(any()) } returns dynamoDbClientMock
         coEvery { dynamoDbClientMock.putItem(any()) } returns PutItemResponse.invoke {}
 
-        val faultManager = FaultManager(envConfig, eventPublisher = EventPublisherInMemory())
+        val faultManager = FaultManager(eventPublisher = EventPublisherInMemory())
         val pipeline = CorrelatePipeline(
             id = "test-pipeline",
             correlationKeySupplier = { "test-correlation-key" },
-            envConfig = envConfig,
             eventFilter = EventFilters.classes(FakeEvent::class),
             eventCodec = FakeEventCodec(),
             eventsMicrostore = EventsMicrostoreImpl(
-                envConfig = envConfig,
                 dynamoDbClientFactory = dynamoDbClientFactory,
                 faultManager = faultManager),
         )
@@ -280,7 +281,6 @@ class CorrelatePipelineTest {
         // Arrange
         val pipeline = CorrelatePipeline(
             id = "test-pipeline",
-            envConfig = envConfig,
             correlationKeySupplier = { "test-correlation-key" },
             eventCodec = FakeEventCodec(),
             eventsMicrostore = createEventsMicrostore(),
@@ -296,7 +296,7 @@ class CorrelatePipelineTest {
             event = createFakeEvent(rawObj = RecordPair(null, null))
         )
 
-        val fm = FaultManager(envConfig, eventPublisher = EventPublisherInMemory())
+        val fm = FaultManager(eventPublisher = EventPublisherInMemory())
 
         // Act
         val resultFlow = pipeline.connect(fm, flowOf(invalidUow))
@@ -311,7 +311,6 @@ class CorrelatePipelineTest {
         // Arrange
         val pipeline = CorrelatePipeline(
             id = "test-pipeline",
-            envConfig = envConfig,
             correlationKeySupplier = { "test-correlation-key" },
             eventCodec = FakeEventCodec(),
             onContentType = { false }, // This will cause the event to be filtered mid-pipeline
@@ -332,7 +331,7 @@ class CorrelatePipelineTest {
             event = createFakeEvent(rawObj = RecordPair(null, null))
         )
 
-        val fm = FaultManager(envConfig, eventPublisher = EventPublisherInMemory())
+        val fm = FaultManager(eventPublisher = EventPublisherInMemory())
 
         // Act
         val resultFlow = pipeline.connect(fm, flowOf(validUow))

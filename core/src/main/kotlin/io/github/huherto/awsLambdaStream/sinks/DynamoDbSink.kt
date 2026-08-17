@@ -2,6 +2,7 @@ package io.github.huherto.awsLambdaStream.sinks
 
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.FaultManager
+import io.github.huherto.awsLambdaStream.GlobalRegistry.envConfig
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.DefaultDynamoDbClientFactory
 import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
@@ -24,16 +25,15 @@ import kotlinx.coroutines.flow.Flow
  * falling back to `4` when no value is configured.
  */
 class DynamoDbSink(
-    private val envConfig: EnvironmentConfig,
     private val connector: DynamoDbConnector? = null,
-    private val parallel: Int = envConfig.parallel() ?: 4,
+    private val parallel: Int = envConfig().parallel() ?: 4,
 ) {
 
     fun getConnector()  : DynamoDbConnector {
         if (connector != null) {
             return connector
         }
-        return DynamoDbConnector(dynamoDbClientFactory = DefaultDynamoDbClientFactory(envConfig))
+        return DynamoDbConnector(dynamoDbClientFactory = DefaultDynamoDbClientFactory())
     }
 
     /**
@@ -51,7 +51,7 @@ class DynamoDbSink(
             .mapParallel(parallel) { uow ->
                 val request = uow.updateRequest ?: return@mapParallel uow
                 fm.faulty(uow) {
-                    it.withStepMetrics("update", envConfig) { uowWithMetrics ->
+                    it.withStepMetrics("update") { uowWithMetrics ->
                         val updateResponse = getConnector().update(uowWithMetrics.updateRequest!!, uowWithMetrics)
                         uowWithMetrics.withUpdateResponse(updateResponse)
                     }
@@ -73,7 +73,7 @@ class DynamoDbSink(
             .mapParallel(parallel) { uow ->
                 val request = uow.putRequest ?: return@mapParallel uow
                 fm.faulty(uow) {
-                    it.withStepMetrics("put", envConfig) { uowWithMetrics ->
+                    it.withStepMetrics("put") { uowWithMetrics ->
                         val putResponse = getConnector().put(uowWithMetrics.putRequest!!, uowWithMetrics)
                         uowWithMetrics.withPutResponse(putResponse)
                     }

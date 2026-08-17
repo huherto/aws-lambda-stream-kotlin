@@ -47,7 +47,6 @@ const val CORREL = "CORREL"
  */
 class CorrelatePipeline(
     id: String,
-    envConfig: EnvironmentConfig,
     val onContentType: (UnitOfWork) -> Boolean = { true },
     val eventFilter: EventFilter = EventFilter.Any,
     val correlationKeySupplier: ((UnitOfWork) -> String),
@@ -55,7 +54,7 @@ class CorrelatePipeline(
     var eventsMicrostore: EventsMicrostore,
     val eventCodec: EventCodec,
     val expire: Boolean = false,
-) : Pipeline(id, envConfig) {
+) : Pipeline(id) {
 
     /**
      * Returns `true` when the unit of work represents a collected event record that can be correlated.
@@ -138,7 +137,7 @@ class CorrelatePipeline(
                 sk = eventId,
                 discriminator = CORREL,
                 timeStamp = uow.event.timestamp,
-                awsRegion = envConfig.awsRegion(),
+                awsRegion = envConfig().awsRegion(),
                 sequenceNumber = uow.meta?.get("sequenceNumber"),
                 ttl = uow.meta?.get("ttl")?.toLongOrNull(),
                 expire = expire,

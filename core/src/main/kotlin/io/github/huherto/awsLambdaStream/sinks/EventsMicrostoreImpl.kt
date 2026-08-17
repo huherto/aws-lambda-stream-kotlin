@@ -4,6 +4,7 @@ import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.GlobalRegistry
+import io.github.huherto.awsLambdaStream.GlobalRegistry.envConfig
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.DynamoDbClientFactory
 import io.github.huherto.awsLambdaStream.extensions.putRequest
@@ -64,24 +65,22 @@ import kotlinx.coroutines.flow.buffer
  * skipped or handled according to the configured fault manager behavior. DynamoDB operations are
  * buffered using [bufferCapacity], which defaults to [Channel.BUFFERED].
  *
- * @param envConfig Provides environment configuration, including the DynamoDB table name.
  * @param dynamoDbClientFactory A factory to create AWS SDK DynamoDB client used for `PutItem` and `Query` calls.
  * @param faultManager Fault handling strategy used while processing flows.
  * @param bufferCapacity Coroutine flow buffer capacity between request-building and DynamoDB calls.
  */
 open class EventsMicrostoreImpl(
-    envConfig: EnvironmentConfig,
     private val dynamoDbClientFactory: DynamoDbClientFactory,
     faultManager: FaultManager = GlobalRegistry.faultManager(),
     bufferCapacity: Int = Channel.BUFFERED,
-): BaseEventsMicrostore(faultManager, bufferCapacity, envConfig.tableName() ?: "events") {
+): BaseEventsMicrostore(faultManager, bufferCapacity, envConfig().tableName() ?: "events") {
 
     override fun save(flow: Flow<UnitOfWork>) : Flow<UnitOfWork> {
         with(faultManager) {
             return flow.mapNotFaulty{ uow -> putRequest(uow) }
                 .buffer(bufferCapacity)
                 .mapNotFaulty { uow ->
-                    uow.withStepMetrics("save", envConfig) { uowWithMetrics ->
+                    uow.withStepMetrics("save") { uowWithMetrics ->
                         putDynamoDb(uowWithMetrics)
                     }
                 }
@@ -93,7 +92,7 @@ open class EventsMicrostoreImpl(
             return flow.mapNotFaulty{ uow -> toQueryRequest(uow) }
                 .buffer(bufferCapacity)
                 .mapNotFaulty { uow ->
-                    uow.withStepMetrics("query", envConfig) { uowWithMetrics ->
+                    uow.withStepMetrics("query") { uowWithMetrics ->
                         queryDynamoDb(uowWithMetrics)
                     }
                 }

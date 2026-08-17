@@ -59,8 +59,6 @@ class KinesisBatchStreamTest {
      */
     class KinesisBatchHandler : RequestHandler<KinesisEvent, StreamsEventResponse> {
 
-        val log = logger {}
-
         override fun handleRequest(event: KinesisEvent, context: Context): StreamsEventResponse {
             val failures = mutableListOf<BatchItemFailure>()
 
@@ -97,7 +95,6 @@ class KinesisBatchStreamTest {
         }
 
         val faultManager = FaultManager(
-            envConfig = envConfig,
             eventPublisher = EventPublisherInMemory(),
             skipErrorLogging = true,
             isItemLevelRetryEnabled = true,
@@ -113,7 +110,7 @@ class KinesisBatchStreamTest {
         override fun handleRequest(event: KinesisEvent, context: Context): StreamsEventResponse = runBlocking {
             val headFlow = kinesisAdapter.fromKinesis(event)
             with(faultManager) {
-                headFlow.mapNotFaulty { uow ->
+                headFlow.mapNotFaulty {
                     processRecord()
                 }
                 .collect() {}

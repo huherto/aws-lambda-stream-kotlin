@@ -3,7 +3,6 @@ package io.github.huherto.awsLambdaStream.flavors
 import aws.sdk.kotlin.services.s3.model.DeleteObjectRequest
 import aws.sdk.kotlin.services.s3.model.GetObjectRequest
 import aws.sdk.kotlin.services.s3.model.PutObjectRequest
-import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.S3Connector
@@ -17,7 +16,6 @@ import kotlinx.coroutines.flow.onEach
 
 class MaterializeS3Pipeline(
     pipelineId: String,
-    envConfig: EnvironmentConfig,
     private val eventFilter: EventFilter = EventFilter.Any,
     private val onContentType: (UnitOfWork) -> Boolean = { true },
     private val splitObject: (Flow<UnitOfWork>) -> Flow<UnitOfWork> = { it },
@@ -25,10 +23,10 @@ class MaterializeS3Pipeline(
     private val toGetRequest: ((UnitOfWork) -> GetObjectRequest?)? = null,
     private val toPutRequest: ((UnitOfWork) -> PutObjectRequest?)? = null,
     private val toDeleteRequest: ((UnitOfWork) -> DeleteObjectRequest?)? = null,
-) : Pipeline(pipelineId, envConfig) {
+) : Pipeline(pipelineId) {
 
     private val s3Query: S3Query = S3Query(s3Connector)
-    private val s3Sink: S3Sink = S3Sink(envConfig, s3Connector)
+    private val s3Sink: S3Sink = S3Sink(s3Connector)
 
     override fun connect(
         fm: FaultManager,

@@ -6,17 +6,16 @@ import aws.sdk.kotlin.services.s3.model.*
 import aws.smithy.kotlin.runtime.content.ByteStream
 import aws.smithy.kotlin.runtime.content.toByteArray
 import aws.smithy.kotlin.runtime.net.url.Url
-import io.github.huherto.awsLambdaStream.EnvironmentConfig
+import io.github.huherto.awsLambdaStream.GlobalRegistry.envConfig
 import io.github.huherto.awsLambdaStream.UnitOfWork
 
 interface S3ClientFactory : ClientFactory<S3Client>
 
 class DefaultS3ClientFactory(
-    private val envConfig: EnvironmentConfig,
 ) : S3ClientFactory, AbstractClientFactory<S3Client>() {
     override fun create(): S3Client {
-        val endpointUrl = envConfig.endPointUrl()
-        val region = envConfig.awsRegion()
+        val endpointUrl = envConfig().endPointUrl()
+        val region = envConfig().awsRegion()
 
         return S3Client {
             this.region = region

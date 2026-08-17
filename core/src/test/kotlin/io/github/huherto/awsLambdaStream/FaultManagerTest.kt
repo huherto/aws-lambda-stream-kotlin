@@ -22,7 +22,7 @@ class FaultManagerTest {
     fun `faulty should return block result when no exception occurs`(): Unit = runBlocking {
         // Arrange
         val eventPublisher = EventPublisherInMemory()
-        val faultManager = FaultManager(envConfig, eventPublisher)
+        val faultManager = FaultManager(eventPublisher)
         val uow = UnitOfWork()
 
         // Act
@@ -41,7 +41,7 @@ class FaultManagerTest {
         every { envConfig.streamRetryEnabled() } returns false
 
         val eventPublisher = EventPublisherInMemory()
-        val faultManager = spyk(FaultManager(envConfig, eventPublisher))
+        val faultManager = spyk(FaultManager(eventPublisher))
         every { faultManager.logError(any()) } returns Unit
 
         val uow = UnitOfWork()
@@ -65,7 +65,7 @@ class FaultManagerTest {
         every { envConfig.streamRetryEnabled() } returns false
 
         val eventPublisher = EventPublisherInMemory()
-        val faultManager = spyk(FaultManager(envConfig, eventPublisher))
+        val faultManager = spyk(FaultManager(eventPublisher))
         every { faultManager.logError(any()) } returns Unit
 
         val uow = UnitOfWork()
@@ -85,9 +85,10 @@ class FaultManagerTest {
         val envConfig = spyk<EnvironmentConfig>()
         every { envConfig.awsLambdaFunctionName() } returns "test-function"
         every { envConfig.streamRetryEnabled() } returns true
+        GlobalRegistry.setEnvConfig(envConfig)
 
         val eventPublisher = EventPublisherInMemory()
-        val faultManager = spyk(FaultManager(envConfig, eventPublisher))
+        val faultManager = spyk(FaultManager(eventPublisher))
         every { faultManager.logError(any()) } returns Unit
 
         val uow = UnitOfWork()
@@ -110,7 +111,7 @@ class FaultManagerTest {
         every { envConfig.streamRetryEnabled() } returns true
 
         val eventPublisher = EventPublisherInMemory()
-        val faultManager = spyk(FaultManager(envConfig, eventPublisher))
+        val faultManager = spyk(FaultManager(eventPublisher))
         every { faultManager.logError(any()) } returns Unit
 
         val uow = UnitOfWork()
@@ -132,7 +133,7 @@ class FaultManagerTest {
         every { envConfig.awsLambdaFunctionName() } returns "test-function"
         every { envConfig.streamRetryEnabled() } returns false
         val eventPublisher = EventPublisherInMemory()
-        val faultManager = spyk(FaultManager(envConfig, eventPublisher))
+        val faultManager = spyk(FaultManager(eventPublisher))
         every { faultManager.logError(any()) } returns Unit
 
         val uow1 = UnitOfWork(key = "uow1")
@@ -164,7 +165,7 @@ class FaultManagerTest {
         every { envConfig.streamRetryEnabled() } returns false
 
         val eventPublisher = EventPublisherInMemory()
-        val faultManager = spyk(FaultManager(envConfig, eventPublisher))
+        val faultManager = spyk(FaultManager(eventPublisher))
         every { faultManager.logError(any()) } returns Unit
 
         val uow = UnitOfWork()
@@ -190,7 +191,7 @@ class FaultManagerTest {
     fun `logError should not throw exceptions`() {
         // Arrange
         val eventPublisher = EventPublisherInMemory()
-        val faultManager = FaultManager(envConfig, eventPublisher)
+        val faultManager = FaultManager(eventPublisher)
 
         // Act & Assert
         // Ensuring it doesn't crash the execution

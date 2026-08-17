@@ -57,7 +57,6 @@ class EvaluatePipelineTest {
     ): EvaluatePipeline {
         return EvaluatePipeline(
             id = pipelineId,
-            envConfig = envConfig,
             eventPublisher = eventPublisher,
             eventsMicrostore = eventsMicrostore,
             correlationKeySuffix = correlationKeySuffix,

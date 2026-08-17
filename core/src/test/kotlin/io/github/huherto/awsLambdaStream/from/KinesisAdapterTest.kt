@@ -23,7 +23,6 @@ class KinesisAdapterTest {
         every { serializationStrategy() } returns "jackson"
     }
     private val faultManager = FaultManager(
-        envConfig = envConfig,
         eventPublisher = EventPublisherInMemory(),
         skipErrorLogging = true,
     )

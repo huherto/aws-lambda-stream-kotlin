@@ -37,12 +37,12 @@ class DynamoDbSinkTest {
     private val envConfig = mockk<EnvironmentConfig>(relaxed = true)
     private val connector = mockk<DynamoDbConnector>()
     private val eventPublisher = mockk<EventPublisher>()
-    private val fm = FaultManager(envConfig, eventPublisher, skipErrorLogging = true)
+    private val fm = FaultManager(eventPublisher, skipErrorLogging = true)
 
     @Test
     fun `update returns original unit of work when update request is missing`() = runTest {
         // arrange
-        val sink = DynamoDbSink(envConfig, connector, parallel = 1)
+        val sink = DynamoDbSink(connector, parallel = 1)
         val uow = UnitOfWork(key = "without-update-request")
 
         // act
@@ -56,7 +56,7 @@ class DynamoDbSinkTest {
     @Test
     fun `put returns original unit of work when put request is missing`() = runTest {
         // arrange
-        val sink = DynamoDbSink(envConfig, connector, parallel = 1)
+        val sink = DynamoDbSink(connector, parallel = 1)
         val uow = UnitOfWork(key = "without-put-request")
 
         // act
@@ -70,7 +70,7 @@ class DynamoDbSinkTest {
     @Test
     fun `update calls connector and stores update response`() = runTest {
         // arrange
-        val sink = DynamoDbSink(envConfig, connector, parallel = 1)
+        val sink = DynamoDbSink(connector, parallel = 1)
         val request = UpdateItemRequest {}
         val response = UpdateItemResponse {}
         val uow = UnitOfWork(key = "update-item")
@@ -90,7 +90,7 @@ class DynamoDbSinkTest {
     @Test
     fun `put calls connector and stores put response`() = runTest {
         // arrange
-        val sink = DynamoDbSink(envConfig, connector, parallel = 1)
+        val sink = DynamoDbSink(connector, parallel = 1)
         val request = PutItemRequest {}
         val response = PutItemResponse {}
         val uow = UnitOfWork(key = "put-item").withPutRequest(request)
@@ -109,7 +109,7 @@ class DynamoDbSinkTest {
     @Test
     fun `update and put propagate connector failures through rejectWithFault`() = runTest {
         // arrange
-        val sink = DynamoDbSink(envConfig, connector, parallel = 1)
+        val sink = DynamoDbSink(connector, parallel = 1)
 
         val updateRequest = UpdateItemRequest {}
         val updateUow = UnitOfWork(key = "failing-update")

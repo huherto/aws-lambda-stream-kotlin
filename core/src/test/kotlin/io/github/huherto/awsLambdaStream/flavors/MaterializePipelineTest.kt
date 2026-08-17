@@ -25,8 +25,7 @@ class MaterializePipelineTest {
     @Test
     fun `connect filters compacts creates update request and updates dynamodb`() = runTest {
         // arrange
-        val envConfig = EnvironmentConfig()
-        val faultManager = faultManager(envConfig)
+        val faultManager = faultManager()
         val connector = mockk<DynamoDbConnector>()
         val skippedByCompact = UnitOfWork(event = event("PackageCreated"), key = "skip")
         val materialized = UnitOfWork(event = event("PackageCreated"), key = "keep")
@@ -38,7 +37,6 @@ class MaterializePipelineTest {
 
         val pipeline = MaterializePipeline(
             pipelineId = "materialize-packages",
-            envConfig = envConfig,
             compact = { flow: Flow<UnitOfWork> -> flow.filter {
                     it.key == "keep"
                 } },
@@ -68,8 +66,7 @@ class MaterializePipelineTest {
     @Test
     fun `connect drops units of work before update creation when event or content filters do not match`() = runTest {
         // arrange
-        val envConfig = EnvironmentConfig()
-        val faultManager = faultManager(envConfig)
+        val faultManager = faultManager()
         val connector = mockk<DynamoDbConnector>()
         val matching = UnitOfWork(event = event("PackageCreated"), key = "keep")
         val wrongEvent = UnitOfWork(event = event("PackageCancelled"), key = "keep")
@@ -81,7 +78,6 @@ class MaterializePipelineTest {
 
         val pipeline = MaterializePipeline(
             pipelineId = "materialize-packages",
-            envConfig = envConfig,
             eventFilter = EventFilter.ByName("PackageCreated"),
             onContentType = { it.key == "keep" },
             toUpdateRequest = {
@@ -106,8 +102,7 @@ class MaterializePipelineTest {
     @Test
     fun `connect records fault and continues when update request creation fails`() = runTest {
         // arrange
-        val envConfig = EnvironmentConfig()
-        val faultManager = faultManager(envConfig)
+        val faultManager = faultManager()
         val connector = mockk<DynamoDbConnector>()
         val failing = UnitOfWork(event = event("PackageCreated"), key = "fail")
         val passing = UnitOfWork(event = event("PackageCreated"), key = "pass")
@@ -117,7 +112,6 @@ class MaterializePipelineTest {
 
         val pipeline = MaterializePipeline(
             pipelineId = "materialize-packages",
-            envConfig = envConfig,
             toUpdateRequest = {
                 if (it.key == "fail") error("cannot materialize")
                 updateRequest
@@ -138,11 +132,11 @@ class MaterializePipelineTest {
         coVerify(exactly = 1) { connector.update(updateRequest, any()) }
     }
 
-    private fun faultManager(envConfig: EnvironmentConfig): FaultManager {
-        val spy = spyk(envConfig)
+    private fun faultManager(): FaultManager {
+        val spy = spyk(EnvironmentConfig())
         every { spy.serializationStrategy() } returns "jackson"
+        GlobalRegistry.setEnvConfig(spy)
         return FaultManager(
-            envConfig = spy,
             eventPublisher = mockk<EventPublisher>(relaxed = true),
             skipErrorLogging = true,
         )

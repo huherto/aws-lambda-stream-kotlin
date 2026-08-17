@@ -20,7 +20,6 @@ import java.util.concurrent.ConcurrentLinkedQueue
  * processor can retry the batch. Non-retryable exceptions are converted into fault events and held
  * in an in-memory queue until flushed.
  *
- * @param envConfig Environment-backed configuration used to determine retry behavior and function name.
  * @param eventPublisher Publisher used to emit generated [FaultEvent]s.
  * @param skipErrorLogging When `true`, suppresses error logging. Useful for tests.
  * @param isStreamRetryEnabled Whether retryable stream-processing failures should be rethrown.
@@ -28,12 +27,11 @@ import java.util.concurrent.ConcurrentLinkedQueue
  * @param awsLambdaFunctionName Lambda function name attached to generated fault-event tags.
  */
 class FaultManager(
-    val envConfig: EnvironmentConfig,
     private val eventPublisher: EventPublisher,
     private val skipErrorLogging: Boolean = false,
-    private val isStreamRetryEnabled: Boolean = envConfig.streamRetryEnabled(),
-    private val isItemLevelRetryEnabled: Boolean = envConfig.itemLevelRetryEnabled(),
-    private val awsLambdaFunctionName: String = envConfig.awsLambdaFunctionName()?:"undefined",
+    private val isStreamRetryEnabled: Boolean = envConfig().streamRetryEnabled(),
+    private val isItemLevelRetryEnabled: Boolean = envConfig().itemLevelRetryEnabled(),
+    private val awsLambdaFunctionName: String = envConfig().awsLambdaFunctionName()?:"undefined",
     private val faultEventFactory: FaultEventFactory = FaultEventFactory(awsLambdaFunctionName = awsLambdaFunctionName)
 ) {
 
@@ -49,7 +47,7 @@ class FaultManager(
      * Fault events are emitted as [UnitOfWork] instances and therefore need an associated [Pipeline].
      * This pipeline is not intended to process regular application events.
      */
-    class FaultManagerPipeline(id: String, envConfig: EnvironmentConfig) : Pipeline(id, envConfig) {
+    class FaultManagerPipeline(id: String) : Pipeline(id) {
         override fun connect(
             fm: FaultManager,
             fromFlow: Flow<UnitOfWork>
@@ -59,7 +57,7 @@ class FaultManager(
         }
     }
 
-    private val faultManagerPipeline = FaultManagerPipeline("fault1", envConfig)
+    private val faultManagerPipeline = FaultManagerPipeline("fault1")
 
     /**
      * Returns a snapshot of currently queued fault events.

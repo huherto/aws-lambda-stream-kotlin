@@ -4,7 +4,10 @@ import aws.sdk.kotlin.services.dynamodb.model.BatchGetItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.QueryRequest
 import aws.sdk.kotlin.services.dynamodb.model.UpdateItemRequest
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
-import io.github.huherto.awsLambdaStream.*
+import io.github.huherto.awsLambdaStream.Event
+import io.github.huherto.awsLambdaStream.EventCodec
+import io.github.huherto.awsLambdaStream.FaultManager
+import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
 import io.github.huherto.awsLambdaStream.extensions.queryResponse
 import io.github.huherto.awsLambdaStream.extensions.withBatchGetRequest
@@ -30,7 +33,6 @@ import kotlinx.coroutines.flow.onEach
  */
 class UpdatePipeline(
     id: String,
-    envConfig: EnvironmentConfig,
     private val dynamoDbConnector: DynamoDbConnector? = null,
     private val eventCodec: EventCodec,
     private val eventFilter: EventFilter = EventFilter.Any,
@@ -39,10 +41,10 @@ class UpdatePipeline(
     private val toQueryRequest: ((UnitOfWork) -> QueryRequest?)? = null,
     private val toGetRequest: ((UnitOfWork) -> BatchGetItemRequest?)? = null,
     private val toUpdateRequest: suspend (UnitOfWork) -> UpdateItemRequest?,
-) : Pipeline(id, envConfig) {
+) : Pipeline(id) {
 
-    val dynamoDbSink by lazy { DynamoDbSink(envConfig, dynamoDbConnector) }
-    val dynamoDbQuery by lazy { DynamoDbQuery(envConfig, dynamoDbConnector) }
+    val dynamoDbSink by lazy { DynamoDbSink(dynamoDbConnector) }
+    val dynamoDbQuery by lazy { DynamoDbQuery(dynamoDbConnector) }
 
     /**
      * Returns `true` when the unit of work represents a collected event record that should be

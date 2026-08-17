@@ -19,7 +19,6 @@ class CognitoAdapterTest {
     }
 
     private fun faultManager() = FaultManager(
-        envConfig = envConfig,
         eventPublisher = EventPublisherInMemory(),
         skipErrorLogging = true,
     )

@@ -1,7 +1,6 @@
 package io.github.huherto.awsLambdaStream.queries
 
 import aws.sdk.kotlin.services.dynamodb.model.*
-import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.DefaultDynamoDbClientFactory
@@ -26,7 +25,6 @@ data class QueryRule(
 )
 
 class DynamoDbQuery(
-    private val envConfig: EnvironmentConfig,
     private val connector: DynamoDbConnector? = null,
     private val decrypt: MapDecryptFunc? = null
 ) {
@@ -37,7 +35,7 @@ class DynamoDbQuery(
         if (connector != null) {
             return connector
         }
-        return DynamoDbConnector(dynamoDbClientFactory = DefaultDynamoDbClientFactory(envConfig))
+        return DynamoDbConnector(dynamoDbClientFactory = DefaultDynamoDbClientFactory())
     }
 
     fun queryAllDynamoDB(

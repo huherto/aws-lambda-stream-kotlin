@@ -1,7 +1,5 @@
 package org.myorg.sut
 
-import io.github.huherto.awsLambdaStream.EnvironmentConfig
-import io.github.huherto.awsLambdaStream.GlobalRegistry
 import io.github.huherto.awsLambdaStream.PipelineAssembler
 import io.github.huherto.awsLambdaStream.connectors.DefaultDynamoDbClientFactory
 import io.github.huherto.awsLambdaStream.filters.EventFilters
@@ -12,20 +10,16 @@ import io.github.huherto.awsLambdaStream.sinks.EventsMicrostore
 import io.github.huherto.awsLambdaStream.sinks.EventsMicrostoreImpl
 
 class ListenerContainer(
-    val envConfig: EnvironmentConfig,
     val eventsMicrostore: EventsMicrostore,
 ) {
 
     companion object {
         fun build() : ListenerContainer {
-            val envConfig = GlobalRegistry.envConfig()
-            val dynamoDbClientFactory = DynamoDBClientWrapperFactory(DefaultDynamoDbClientFactory(envConfig))
+            val dynamoDbClientFactory = DynamoDBClientWrapperFactory(DefaultDynamoDbClientFactory())
             val eventsMicrostore = EventsMicrostoreImpl(
-                envConfig = envConfig,
                 dynamoDbClientFactory = dynamoDbClientFactory,
             )
             return ListenerContainer(
-                envConfig = envConfig,
                 eventsMicrostore = eventsMicrostore,
             )
         }
@@ -38,7 +32,6 @@ class ListenerContainer(
     private val collectPipeline: Pipeline by lazy {
         CollectPipeline(
             pipelineId = "coll1",
-            envConfig = envConfig,
             eventsMicrostore = eventsMicrostore,
             eventFilter = EventFilters.classes(TrackedUnitEvent::class)
         )

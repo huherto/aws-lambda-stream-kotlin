@@ -4,10 +4,7 @@ import aws.sdk.kotlin.services.s3.S3Client
 import aws.sdk.kotlin.services.s3.model.PutObjectRequest
 import aws.sdk.kotlin.services.s3.model.PutObjectResponse
 import aws.smithy.kotlin.runtime.content.toByteArray
-import io.github.huherto.awsLambdaStream.EnvironmentConfig
-import io.github.huherto.awsLambdaStream.FaultManager
-import io.github.huherto.awsLambdaStream.MyEventA
-import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.*
 import io.github.huherto.awsLambdaStream.connectors.S3ClientFactory
 import io.github.huherto.awsLambdaStream.extensions.s3
 import io.kotest.assertions.throwables.shouldThrow
@@ -21,6 +18,7 @@ import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 class ClaimCheckStoreTest {
@@ -28,13 +26,20 @@ class ClaimCheckStoreTest {
     private val envConfig = spyk<EnvironmentConfig>()
     private val s3Client = mockk<S3Client>()
     private val s3ClientFactory = RecordingS3ClientFactory(s3Client)
-    private val faultManager = FaultManager(
-        envConfig = envConfig,
-        eventPublisher = EventPublisherInMemory(),
-        skipErrorLogging = true,
-    )
     private val clock = object : Clock {
         override fun now(): Instant = Instant.parse("2024-03-05T06:07:08Z")
+    }
+
+    @BeforeEach
+    fun beforeEach() {
+        GlobalRegistry.reset()
+        GlobalRegistry.setEnvConfig(envConfig)
+        val faultManager = FaultManager(
+            eventPublisher = EventPublisherInMemory(),
+            skipErrorLogging = true,
+        )
+        GlobalRegistry.setFaultManager(faultManager)
+        GlobalRegistry.setEventPublisher(EventPublisherInMemory())
     }
 
     @Test
@@ -243,9 +248,7 @@ class ClaimCheckStoreTest {
 
     private fun claimCheckStore(bucket: String? = "claim-check-bucket"): ClaimCheckStore {
         return ClaimCheckStore(
-            envConfig = envConfig,
             s3ClientFactory = s3ClientFactory,
-            faultManager = faultManager,
             claimCheckBucketName = bucket,
             clock = clock,
             bufferCapacity = 1,

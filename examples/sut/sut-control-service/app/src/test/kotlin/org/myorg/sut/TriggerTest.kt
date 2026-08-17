@@ -2,7 +2,6 @@ package org.myorg.sut
 
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.StreamRecord
-import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.GlobalRegistry
 import io.github.huherto.awsLambdaStream.PipelineAssembler
@@ -10,22 +9,19 @@ import io.github.huherto.awsLambdaStream.from.DynamodbAdapter
 import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
 import io.github.huherto.awsLambdaStream.sinks.EventsMicrostoreInMemory
 import io.github.huherto.awsLambdaStream.testsupport.TestContext
-
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
-import io.mockk.spyk
 import org.junit.jupiter.api.Test
 
 class TriggerTest {
 
     fun createContainer(): TriggerContainer {
-        val envConfig = spyk<EnvironmentConfig>()
         val eventPublisher = EventPublisherInMemory()
-        val faultManager = FaultManager(envConfig, eventPublisher, skipErrorLogging = true)
+        val faultManager = FaultManager(eventPublisher, skipErrorLogging = true)
         GlobalRegistry.setFaultManager(faultManager)
         val eventsMicrostore = EventsMicrostoreInMemory(faultManager)
-        val container = TriggerContainer(envConfig, eventPublisher, eventsMicrostore)
+        val container = TriggerContainer(eventPublisher, eventsMicrostore)
         
         return container
     }

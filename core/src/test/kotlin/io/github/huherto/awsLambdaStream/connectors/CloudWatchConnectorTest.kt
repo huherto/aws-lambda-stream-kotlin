@@ -31,7 +31,6 @@ class CloudWatchConnectorTest {
 
         val connector = CloudWatchConnector(
             pipelineId = "pipeline-1",
-            envConfig = mockk(relaxed = true),
             clientFactory = clientFactory
         )
 
@@ -56,7 +55,6 @@ class CloudWatchConnectorTest {
 
         val connector = CloudWatchConnector(
             pipelineId = "pipeline-1",
-            envConfig = mockk(relaxed = true),
             clientFactory = clientFactory
         )
 

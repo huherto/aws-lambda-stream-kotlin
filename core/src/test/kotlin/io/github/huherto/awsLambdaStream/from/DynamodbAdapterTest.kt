@@ -16,7 +16,7 @@ import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeVal
 class DynamodbAdapterTest {
 
     private val envConfig = spyk(EnvironmentConfig())
-    private val faultManager = FaultManager(envConfig = envConfig, eventPublisher = EventPublisherInMemory())
+    private val faultManager = FaultManager(eventPublisher = EventPublisherInMemory())
     private val adapter = DynamodbAdapter(faultManager)
 
     // ============================================================================

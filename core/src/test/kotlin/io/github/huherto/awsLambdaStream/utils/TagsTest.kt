@@ -2,6 +2,7 @@ package io.github.huherto.awsLambdaStream.utils
 
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.FaultManager
+import io.github.huherto.awsLambdaStream.GlobalRegistry
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.faults.FaultEvent
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
@@ -16,14 +17,14 @@ class TagsTest {
     @Test
     fun `envTags should return configured environment tags`() {
         val envConfig = mockk<EnvironmentConfig>()
-
         every { envConfig.accountName() } returns "test-account"
         every { envConfig.region() } returns "eu-west-1"
         every { envConfig.stage() } returns "dev"
         every { envConfig.service() } returns "test-service"
         every { envConfig.awsLambdaFunctionName() } returns "test-function"
+        GlobalRegistry.setEnvConfig(envConfig)
 
-        envTags(envConfig, "test-pipeline") shouldBe mapOf(
+        envTags("test-pipeline") shouldBe mapOf(
             "account" to "test-account",
             "region" to "eu-west-1",
             "stage" to "dev",
@@ -45,8 +46,9 @@ class TagsTest {
         every { envConfig.project() } returns null
         every { envConfig.serverlessProject() } returns null
         every { envConfig.awsLambdaFunctionName() } returns null
+        GlobalRegistry.setEnvConfig(envConfig)
 
-        envTags(envConfig, null) shouldBe mapOf(
+        envTags(null) shouldBe mapOf(
             "account" to "undefined",
             "region" to "undefined",
             "stage" to "undefined",
@@ -59,7 +61,7 @@ class TagsTest {
     @Test
     fun `adornStandardTags should add environment skip and pipeline tags to event`() {
         val envConfig = mockk<EnvironmentConfig>()
-        val pipeline = object : Pipeline("test-pipeline", envConfig) {
+        val pipeline = object : Pipeline("test-pipeline") {
             override fun connect(fm: FaultManager, fromFlow: Flow<UnitOfWork>): Flow<UnitOfWork> = fromFlow
         }
         val event = FaultEvent(
@@ -76,8 +78,9 @@ class TagsTest {
         every { envConfig.service() } returns "test-service"
         every { envConfig.awsLambdaFunctionName() } returns "test-function"
         every { envConfig.skip() } returns true
+        GlobalRegistry.setEnvConfig(envConfig)
 
-        val result = adornStandardTags(envConfig, uow)
+        val result = adornStandardTags(uow)
 
         result.fault?.tags shouldBe mapOf(
             "account" to "test-account",
@@ -95,8 +98,9 @@ class TagsTest {
     fun `adornStandardTags should return unchanged unit of work when event is missing`() {
         val envConfig = mockk<EnvironmentConfig>()
         val uow = UnitOfWork()
+        GlobalRegistry.setEnvConfig(envConfig)
 
-        adornStandardTags(envConfig, uow) shouldBe uow
+        adornStandardTags(uow) shouldBe uow
     }
 
 }

@@ -1,31 +1,23 @@
 package org.myorg.sut
 
-import io.github.huherto.awsLambdaStream.EnvironmentConfig
-import io.github.huherto.awsLambdaStream.GlobalRegistry
 import io.github.huherto.awsLambdaStream.PipelineAssembler
 import io.github.huherto.awsLambdaStream.connectors.DefaultS3ClientFactory
 import io.github.huherto.awsLambdaStream.connectors.S3Connector
 import io.github.huherto.awsLambdaStream.flavors.MaterializeS3Pipeline
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import io.github.huherto.awsLambdaStream.from.DynamodbAdapter
-import mu.KotlinLogging.logger
 
 class DynamoDbTriggerContainer (
-    val envConfig: EnvironmentConfig,
     val s3Connector: S3Connector,
 ) {
 
     companion object {
 
-        private val logger = logger {}
-
         fun build() : DynamoDbTriggerContainer {
-            val envConfig = GlobalRegistry.envConfig()
-            val defaultS3ClientFactory = DefaultS3ClientFactory(envConfig)
+            val defaultS3ClientFactory = DefaultS3ClientFactory()
             val s3Connector = S3Connector(defaultS3ClientFactory)
 
             return DynamoDbTriggerContainer(
-                envConfig = envConfig,
                 s3Connector = s3Connector,
             )
         }
@@ -34,7 +26,6 @@ class DynamoDbTriggerContainer (
     private  val materializeS3Pipeline: Pipeline by lazy {
         MaterializeS3Pipeline(
             pipelineId = "t1",
-            envConfig = envConfig,
             s3Connector = s3Connector,
             toPutRequest = ::toS3PutRequest
         )

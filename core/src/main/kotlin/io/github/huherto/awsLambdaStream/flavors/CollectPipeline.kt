@@ -1,8 +1,8 @@
 package io.github.huherto.awsLambdaStream.flavors
 
-import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.Event
 import io.github.huherto.awsLambdaStream.FaultManager
+import io.github.huherto.awsLambdaStream.GlobalRegistry.envConfig
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.extensions.withSaveOptions
 import io.github.huherto.awsLambdaStream.filters.EventFilter
@@ -26,7 +26,6 @@ import kotlinx.coroutines.flow.onEach
  * - `data`: the value returned by [correlationKey]
  *
  * @param pipelineId Unique identifier for this pipeline.
- * @param envConfig Environment-backed configuration used for AWS region and default TTL lookup.
  * @param onContentType Predicate used to accept or reject a [UnitOfWork] after event filtering.
  * @param eventFilter Event-level filter applied before the pipeline-specific processing starts.
  * @param correlationKey Function used to derive the value saved as microstore `data`.
@@ -39,7 +38,6 @@ import kotlinx.coroutines.flow.onEach
  */
 class CollectPipeline(
     pipelineId: String,
-    envConfig: EnvironmentConfig,
     private val onContentType: (UnitOfWork) -> Boolean = {  true },
     private val eventFilter: EventFilter = EventFilter.Any,
     private val correlationKey: (UnitOfWork) -> String? = { uow -> uow.event?.partitionKey },
@@ -47,7 +45,7 @@ class CollectPipeline(
     private val includeRaw: Boolean = true,
     private val expire: Boolean = false,
     private val eventsMicrostore: EventsMicrostore,
-) : Pipeline(pipelineId, envConfig) {
+) : Pipeline(pipelineId) {
 
     /**
      * Builds save options for each valid event and delegates persistence to [eventsMicrostore].
@@ -57,7 +55,7 @@ class CollectPipeline(
      */
     internal fun Flow<UnitOfWork>.save(): Flow<UnitOfWork> {
 
-        val awsRegion = envConfig.awsRegion()
+        val awsRegion = envConfig().awsRegion()
         val flow = this.map { uow ->
             val event: Event = uow.event ?: return@map uow
             val eventId = event.id ?: return@map uow
@@ -99,7 +97,7 @@ class CollectPipeline(
      * unit of work has no event timestamp, `0` is returned.
      */
     private fun ttlRule(uow: UnitOfWork): Long {
-        val ttl = this.ttlDays ?: envConfig.ttl() ?: 33
+        val ttl = this.ttlDays ?: envConfig().ttl() ?: 33
         return uow.event?.timestamp?.let { it / 1000 + daysInSecs(ttl) } ?: 0
     }
 

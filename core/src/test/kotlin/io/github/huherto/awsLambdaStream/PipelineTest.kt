@@ -202,17 +202,14 @@ class PipelineTest {
 
     private fun buildTestContainer(): TestListenerContainer {
         val eventPublisher = EventBridgePublisher(
-            envConfig = envConfig,
             clientFactory = eventBridgeClientFactory,
             parallel = 1,
             batchSize = 10,
         )
         val faultManager = FaultManager(
-            envConfig = envConfig,
             eventPublisher = eventPublisher,
         )
         val eventsMicrostore = EventsMicrostoreImpl(
-            envConfig = envConfig,
             dynamoDbClientFactory = dynamoDbClientFactory,
             faultManager = faultManager,
         )
@@ -239,7 +236,6 @@ class PipelineTest {
         private val collectPipeline: Pipeline by lazy {
             CollectPipeline(
                 pipelineId = "coll1",
-                envConfig = envConfig,
                 eventsMicrostore = eventsMicrostore,
                 eventFilter = EventFilters.classes(MyEvent::class),
             )

@@ -1,7 +1,7 @@
 package io.github.huherto.awsLambdaStream.filters
 
-import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.FaultManager
+import io.github.huherto.awsLambdaStream.GlobalRegistry.envConfig
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.from.RecordPair
 import kotlinx.coroutines.flow.Flow
@@ -25,9 +25,9 @@ fun Flow<UnitOfWork>.filterEvents(
     }
 }
 
-fun outSourceIsSelf(envConfig: EnvironmentConfig, uow: UnitOfWork) : Boolean {
+fun outSourceIsSelf(uow: UnitOfWork) : Boolean {
     val source = uow.event?.tags?.get("source") ?: return true
-    val project = envConfig.project() ?: envConfig.serverlessProject()
+    val project = envConfig().project() ?: envConfig().serverlessProject()
     return source != project
 }
 

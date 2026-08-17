@@ -8,27 +8,29 @@ import io.mockk.spyk
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 class PipelineAssemblerTest {
 
-    private val envConfig : EnvironmentConfig by lazy {
+
+    @BeforeEach
+    fun beforeEach() {
         val spy = spyk<EnvironmentConfig>()
         every { spy.awsRegion() } returns "us-east-1"
         every { spy.isMetricEnabled(match { true }) } returns true
-        //every { spy.tableName() } returns "test-table"
-        spy
+        GlobalRegistry.setEnvConfig(spy)
     }
 
     // A mock pipeline to test how the assembler routes flows
-    class MockPipeline(id: String, envConfig: EnvironmentConfig) : Pipeline(id, envConfig = envConfig) {
+    class MockPipeline(id: String) : Pipeline(id) {
         override fun connect(fm: FaultManager, fromFlow: Flow<UnitOfWork>): Flow<UnitOfWork> {
             return fromFlow.map { it.copy(key = "processed_by_$id") }
         }
     }
 
     // A mock pipeline that intentionally throws a FailureException to test error handling
-    class FailingPipeline(id: String, envConfig: EnvironmentConfig) : Pipeline(id, envConfig = envConfig) {
+    class FailingPipeline(id: String) : Pipeline(id) {
         override fun connect(fm: FaultManager, fromFlow: Flow<UnitOfWork>): Flow<UnitOfWork> {
             with(fm) {
                 return fromFlow.mapNotNull {
@@ -44,11 +46,11 @@ class PipelineAssemblerTest {
 
     @Test
     fun `test builder creates assembler with added pipelines`() {
-        val pipeline1 = MockPipeline("p1", envConfig)
-        val pipeline2 = MockPipeline("p2", envConfig)
+        val pipeline1 = MockPipeline("p1")
+        val pipeline2 = MockPipeline("p2")
 
         val assembler = PipelineAssembler.builder()
-            .faultManager(FaultManager(envConfig = envConfig, eventPublisher = EventPublisherInMemory()))
+            .faultManager(FaultManager(eventPublisher = EventPublisherInMemory()))
             .addPipeline(pipeline1)
             .addPipeline(pipeline2)
             .build()
@@ -58,11 +60,11 @@ class PipelineAssemblerTest {
 
     @Test
     fun `test assemble routes UnitOfWork through all pipelines`() = runBlocking {
-        val pipeline1 = MockPipeline("p1", envConfig)
-        val pipeline2 = MockPipeline("p2", envConfig)
+        val pipeline1 = MockPipeline("p1")
+        val pipeline2 = MockPipeline("p2")
 
         val assembler = PipelineAssembler.builder()
-            .faultManager(FaultManager(envConfig = envConfig, eventPublisher = EventPublisherInMemory()))
+            .faultManager(FaultManager(eventPublisher = EventPublisherInMemory()))
             .addPipeline(pipeline1)
             .addPipeline(pipeline2)
             .build()
@@ -91,10 +93,10 @@ class PipelineAssemblerTest {
 
     @Test
     fun `test assemble with includeFaultHandler set to true`() = runBlocking {
-        val pipeline1 = MockPipeline("p1", envConfig)
+        val pipeline1 = MockPipeline("p1")
 
         val assembler = PipelineAssembler.builder()
-            .faultManager(FaultManager(envConfig = envConfig, eventPublisher = EventPublisherInMemory()))
+            .faultManager(FaultManager(eventPublisher = EventPublisherInMemory()))
             .addPipeline(pipeline1)
             .build()
 
@@ -111,11 +113,10 @@ class PipelineAssemblerTest {
 
     @Test
     fun `test assemble handles FailureException and publishes FailureEvent`() = runBlocking {
-        val failingPipeline = FailingPipeline("fail1", envConfig)
+        val failingPipeline = FailingPipeline("fail1")
 
         val eventPublisher = EventPublisherInMemory()
         val fm = FaultManager(
-            envConfig = envConfig,
             eventPublisher = eventPublisher,
         )
 
@@ -149,7 +150,7 @@ class PipelineAssemblerTest {
     @Test
     fun `test startPipeline and endPipeline add metrics`() {
         val assembler = PipelineAssembler.builder()
-            .faultManager(FaultManager(envConfig = envConfig, eventPublisher = EventPublisherInMemory()))
+            .faultManager(FaultManager(eventPublisher = EventPublisherInMemory()))
             .build()
         val uow = UnitOfWork(key = "test")
 
@@ -164,7 +165,7 @@ class PipelineAssemblerTest {
     @Test
     fun `test build uses GlobalRegistry defaults`() {
         GlobalRegistry.reset()
-        val customFm = FaultManager(envConfig = envConfig, eventPublisher = EventPublisherInMemory())
+        val customFm = FaultManager(eventPublisher = EventPublisherInMemory())
         GlobalRegistry.setFaultManager(customFm)
         
         val assembler = PipelineAssembler.builder().build()

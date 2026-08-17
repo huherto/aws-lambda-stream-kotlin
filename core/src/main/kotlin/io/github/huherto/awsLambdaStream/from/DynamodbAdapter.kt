@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import io.github.huherto.awsLambdaStream.DynamodbRaw
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.GlobalRegistry
+import io.github.huherto.awsLambdaStream.GlobalRegistry.envConfig
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.metrics.PipelineMetrics
 import io.github.huherto.awsLambdaStream.metrics.Timer
@@ -15,8 +16,6 @@ import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeVal
 
 class DynamodbAdapter (private val faultManager: FaultManager = GlobalRegistry.faultManager()) {
 
-    private val logger = mu.KotlinLogging.logger {  }
-
     private val pkFn = "pk"
 
     private val preferApproximateTimestamp = true
@@ -27,7 +26,7 @@ class DynamodbAdapter (private val faultManager: FaultManager = GlobalRegistry.f
 
     fun fromDynamoDB(dynamodbEvent: DynamodbEvent) : Flow<UnitOfWork> {
         with(faultManager) {
-            val batchUtilization = dynamodbEvent.records.size.toDouble() / (envConfig.batchSize() ?: 100)
+            val batchUtilization = dynamodbEvent.records.size.toDouble() / (envConfig().batchSize() ?: 100)
             return dynamodbEvent.records.asFlow()
                 .mapNotNull { dynamodbRecord -> UnitOfWork().copy(record = dynamodbRecord) }
                 .mapNotFaulty { uow ->

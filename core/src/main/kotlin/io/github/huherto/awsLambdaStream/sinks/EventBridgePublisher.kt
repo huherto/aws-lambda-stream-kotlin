@@ -2,8 +2,8 @@ package io.github.huherto.awsLambdaStream.sinks
 
 import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequest
 import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequestEntry
-import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.EventCodec
+import io.github.huherto.awsLambdaStream.GlobalRegistry.envConfig
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.DefaultEventBridgeClientFactory
 import io.github.huherto.awsLambdaStream.connectors.EventBridgeClientFactory
@@ -34,25 +34,24 @@ class EventPublisherInMemory : EventPublisher {
 }
 
 class EventBridgePublisher(
-    val envConfig: EnvironmentConfig,
-    val busName: String = envConfig.busName()?: "undefined",
-    val source: String = envConfig.busSource() ?: "custom",
-    val maxPublishRequestSize: Int = envConfig.maxPublishRequestSize()
-        ?: envConfig.maxRequestSize() ?: (256 * 1024),
-    val batchSize: Int = envConfig.publishBatchSize() ?: envConfig.batchSize() ?: 10,
-    val parallel: Int = (envConfig.publishParallel() ?: envConfig.parallel()?: 8),
-    val endpointId: String? = envConfig.busEndPointId(),
+    val busName: String = envConfig().busName()?: "undefined",
+    val source: String = envConfig().busSource() ?: "custom",
+    val maxPublishRequestSize: Int = envConfig().maxPublishRequestSize()
+        ?: envConfig().maxRequestSize() ?: (256 * 1024),
+    val batchSize: Int = envConfig().publishBatchSize() ?: envConfig().batchSize() ?: 10,
+    val parallel: Int = (envConfig().publishParallel() ?: envConfig().parallel()?: 8),
+    val endpointId: String? = envConfig().busEndPointId(),
     val handleErrors: Boolean = true,
-    val clientFactory: EventBridgeClientFactory = DefaultEventBridgeClientFactory(envConfig = envConfig),
+    val clientFactory: EventBridgeClientFactory = DefaultEventBridgeClientFactory(),
     val claimCheckStore: ClaimCheckStore? = null,
     private val eventCodec: EventCodec? = null,
-    private val serializationStrategy: SerializationStrategy = SerializationStrategyResolver(envConfig).resolve(),
+    private val serializationStrategy: SerializationStrategy = SerializationStrategyResolver().resolve(),
 ) : EventPublisher {
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun publish(flow: Flow<UnitOfWork>): Flow<UnitOfWork> {
         return flow
-            .map { adornStandardTags(envConfig, it) }
+            .map { adornStandardTags(it) }
             .map { toPublishRequestEntry(it) }
             .chunked(batchSize)
             .map { batchedList -> UnitOfWork(pipeline = batchedList.first().pipeline, batch = batchedList) }
@@ -118,12 +117,11 @@ class EventBridgePublisher(
 
     internal suspend fun putEvents(batchUow: UnitOfWork): UnitOfWork {
         if (batchUow.publishRequest != null) {
-            return batchUow.withStepMetrics("publish", envConfig) { uow ->
+            return batchUow.withStepMetrics("publish") { uow ->
                 val connector = EventBridgeConnector(
                     pipelineId = uow.pipeline?.id ?: "undefined",
-                    envConfig = envConfig,
                     retryConfig = RetryConfig(),
-                    timeout = envConfig.timeout()?.milliseconds ?: 1000.milliseconds,
+                    timeout = envConfig().timeout()?.milliseconds ?: 1000.milliseconds,
                     clientFactory = clientFactory
                 )
                 val publishResponse = connector.putEvents(uow.publishRequest!!)

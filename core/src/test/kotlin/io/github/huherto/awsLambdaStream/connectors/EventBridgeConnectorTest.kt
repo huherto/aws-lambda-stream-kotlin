@@ -44,7 +44,6 @@ class EventBridgeConnectorTest {
 
         val connector = EventBridgeConnector(
             pipelineId = "pipeline-1",
-            envConfig = mockk(relaxed = true),
             timeout = timeout,
             retryConfig = retryConfig,
             opt = ConnectorOptions(metrics = metrics),
@@ -74,7 +73,6 @@ class EventBridgeConnectorTest {
 
         val connector = EventBridgeConnector(
             pipelineId = "pipeline-1",
-            envConfig = mockk(relaxed = true),
             timeout = timeout,
             retryConfig = retryConfig,
             opt = ConnectorOptions(metrics = metrics),
@@ -104,7 +102,6 @@ class EventBridgeConnectorTest {
 
         val connector = EventBridgeConnector(
             pipelineId = "pipeline-1",
-            envConfig = mockk(relaxed = true),
             timeout = timeout,
             retryConfig = retryConfig,
             opt = ConnectorOptions(),

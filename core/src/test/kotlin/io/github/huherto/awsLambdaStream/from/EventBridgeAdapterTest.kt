@@ -21,7 +21,6 @@ class EventBridgeAdapterTest {
     }
 
     private fun faultManager() = FaultManager(
-        envConfig = envConfig,
         eventPublisher = EventPublisherInMemory(),
         skipErrorLogging = true,
     )

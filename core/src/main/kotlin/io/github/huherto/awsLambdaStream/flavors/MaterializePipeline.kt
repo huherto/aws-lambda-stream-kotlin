@@ -1,7 +1,6 @@
 package io.github.huherto.awsLambdaStream.flavors
 
 import aws.sdk.kotlin.services.dynamodb.model.UpdateItemRequest
-import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
@@ -15,15 +14,14 @@ import kotlinx.coroutines.flow.onEach
 
 class MaterializePipeline(
     pipelineId: String,
-    envConfig: EnvironmentConfig,
     private val eventFilter: EventFilter = EventFilter.Any,
     private val onContentType: (UnitOfWork) -> Boolean = { true },
     private val compact: (Flow<UnitOfWork>) -> Flow<UnitOfWork> = { it },
     private val toUpdateRequest: suspend (UnitOfWork) -> UpdateItemRequest?,
     private val dynamoDbConnector: DynamoDbConnector,
-) : Pipeline(pipelineId, envConfig) {
+) : Pipeline(pipelineId) {
 
-    private val dynamoDbSink: DynamoDbSink by lazy { DynamoDbSink(envConfig, dynamoDbConnector) }
+    private val dynamoDbSink: DynamoDbSink by lazy { DynamoDbSink(dynamoDbConnector) }
 
     override fun connect(
         fm: FaultManager,
@@ -33,7 +31,7 @@ class MaterializePipeline(
 
         with(fm) {
             return fromFlow
-                .filterNotFaulty { uow -> outSourceIsSelf(envConfig, uow) }
+                .filterNotFaulty { uow -> outSourceIsSelf(uow) }
                 .filterEvents(fm, eventFilter)
                 .onEach { uow -> printStartPipeline(uow) }
                 .filterNotFaulty { uow -> onContentType(uow) }

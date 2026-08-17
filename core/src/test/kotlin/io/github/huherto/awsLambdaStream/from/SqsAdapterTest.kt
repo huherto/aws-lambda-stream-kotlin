@@ -20,7 +20,6 @@ class SqsAdapterTest {
 
     private fun faultManager(): FaultManager {
         return FaultManager(
-            envConfig = envConfig,
             eventPublisher = EventPublisherInMemory(),
             skipErrorLogging = true,
         )

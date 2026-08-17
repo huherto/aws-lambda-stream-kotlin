@@ -1,8 +1,10 @@
 package io.github.huherto.awsLambdaStream.serialization
 
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
+import io.github.huherto.awsLambdaStream.GlobalRegistry
 import io.mockk.every
 import io.mockk.mockk
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import kotlin.test.assertTrue
@@ -10,6 +12,11 @@ import kotlin.test.assertTrue
 class SerializationStrategyResolverTest {
 
     private val envConfig = mockk<EnvironmentConfig>()
+
+    @BeforeEach
+    fun beforeEach() {
+        GlobalRegistry.setEnvConfig(envConfig)
+    }
 
     @Test
     fun `explicit Jackson config selects Jackson`() {
@@ -32,7 +39,7 @@ class SerializationStrategyResolverTest {
     @Test
     fun `env variable selects Jackson`() {
         every { envConfig.serializationStrategy() } returns "jackson"
-        val resolver = SerializationStrategyResolver(envConfig = envConfig)
+        val resolver = SerializationStrategyResolver()
         val strategy = resolver.resolve()
         assertTrue(strategy is JacksonSerializationStrategy)
     }
@@ -40,7 +47,7 @@ class SerializationStrategyResolverTest {
     @Test
     fun `env variable selects kotlinx`() {
         every { envConfig.serializationStrategy() } returns "kotlinx"
-        val resolver = SerializationStrategyResolver(envConfig = envConfig)
+        val resolver = SerializationStrategyResolver()
         val strategy = resolver.resolve()
         assertTrue(strategy is KotlinxSerializationStrategy)
     }

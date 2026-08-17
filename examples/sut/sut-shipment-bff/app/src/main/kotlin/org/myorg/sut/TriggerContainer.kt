@@ -1,6 +1,5 @@
 package org.myorg.sut
 
-import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.GlobalRegistry
 import io.github.huherto.awsLambdaStream.PipelineAssembler
 import io.github.huherto.awsLambdaStream.connectors.DefaultDynamoDbClientFactory
@@ -11,7 +10,6 @@ import io.github.huherto.awsLambdaStream.from.DynamodbAdapter
 import io.github.huherto.awsLambdaStream.sinks.EventPublisher
 
 class TriggerContainer(
-    val envConfig: EnvironmentConfig,
     val dynamoDbConnector: DynamoDbConnector,
     val eventPublisher: EventPublisher,
 ) {
@@ -20,12 +18,11 @@ class TriggerContainer(
 
         fun build() : TriggerContainer {
             val envConfig = GlobalRegistry.envConfig()
-            val dynamoDbClientFactory = DefaultDynamoDbClientFactory(envConfig)
+            val dynamoDbClientFactory = DefaultDynamoDbClientFactory()
             val dynamoDbConnector = DynamoDbConnector(dynamoDbClientFactory = dynamoDbClientFactory)
             val faultManager = GlobalRegistry.faultManager()
 
             return TriggerContainer(
-                envConfig = envConfig,
                 eventPublisher = GlobalRegistry.eventPublisher(),
                 dynamoDbConnector = dynamoDbConnector,
             )
@@ -35,7 +32,6 @@ class TriggerContainer(
     private val cdcPipeline: Pipeline by lazy {
         CdcPipeline(
             id = "cdc1",
-            envConfig = envConfig,
             dynamoDbConnector = dynamoDbConnector,
             eventPublisher = eventPublisher,
             toEvent = ::toEvent,

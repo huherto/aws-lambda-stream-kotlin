@@ -20,10 +20,6 @@ import org.junit.jupiter.api.assertThrows
 
 class EventsMicrostoreImplTest {
 
-    private val envConfig : EnvironmentConfig by lazy {
-        val spy = spyk(EnvironmentConfig())
-        spy
-    }
     private val dynamoDbClient = mockk<DynamoDbClient>()
     private val faultManager = mockk<FaultManager>()
     private val dynamoDbClientFactory by lazy {
@@ -32,7 +28,7 @@ class EventsMicrostoreImplTest {
         factory
     }
 
-    private val eventMicrostore = EventsMicrostoreImpl(envConfig, dynamoDbClientFactory, faultManager)
+    private val eventMicrostore = EventsMicrostoreImpl(dynamoDbClientFactory, faultManager)
 
     @Test
     fun `putRequest should correctly populate PutItemRequest based on UnitOfWork, Event, and EnvironmentConfig`() {
