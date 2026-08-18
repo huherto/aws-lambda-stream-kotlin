@@ -4,6 +4,7 @@ import aws.sdk.kotlin.services.s3.model.DeleteObjectRequest
 import aws.sdk.kotlin.services.s3.model.GetObjectRequest
 import aws.sdk.kotlin.services.s3.model.PutObjectRequest
 import io.github.huherto.awsLambdaStream.FaultManager
+import io.github.huherto.awsLambdaStream.GlobalRegistry
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.S3Connector
 import io.github.huherto.awsLambdaStream.extensions.copyS3
@@ -19,7 +20,7 @@ class MaterializeS3Pipeline(
     private val eventFilter: EventFilter = EventFilter.Any,
     private val onContentType: (UnitOfWork) -> Boolean = { true },
     private val splitObject: (Flow<UnitOfWork>) -> Flow<UnitOfWork> = { it },
-    s3Connector: S3Connector,
+    private val s3Connector: S3Connector = GlobalRegistry.s3Connector(),
     private val toGetRequest: ((UnitOfWork) -> GetObjectRequest?)? = null,
     private val toPutRequest: ((UnitOfWork) -> PutObjectRequest?)? = null,
     private val toDeleteRequest: ((UnitOfWork) -> DeleteObjectRequest?)? = null,

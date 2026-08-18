@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.Flow
 typealias ClaimCheck = io.github.huherto.awsLambdaStream.ClaimCheck
 
 class ClaimCheckRedeemer(
-    s3Connector: S3Connector,
+    s3Connector: S3Connector = GlobalRegistry.s3Connector(),
     private val faultManager: FaultManager = GlobalRegistry.faultManager(),
     private val eventCodec: EventCodec,
     private val claimCheck: (UnitOfWork) -> ClaimCheck? = { uow ->

@@ -11,8 +11,7 @@ import io.github.huherto.awsLambdaStream.UnitOfWork
 
 interface S3ClientFactory : ClientFactory<S3Client>
 
-class DefaultS3ClientFactory(
-) : S3ClientFactory, AbstractClientFactory<S3Client>() {
+class DefaultS3ClientFactory() : S3ClientFactory, AbstractClientFactory<S3Client>() {
     override fun create(): S3Client {
         val endpointUrl = envConfig().endPointUrl()
         val region = envConfig().awsRegion()

@@ -33,10 +33,9 @@ class DynamoDbTriggerContainerTest {
         val envConfig = mockEnvConfig()
         GlobalRegistry.setEnvConfig(envConfig)
         GlobalRegistry.setFaultManager(faultManager)
+        GlobalRegistry.setS3Connector(s3Connector)
 
-        val container = DynamoDbTriggerContainer(
-            s3Connector = s3Connector,
-        )
+        val container = DynamoDbTriggerContainer()
 
         // Act
         val dynamoDbAdapter = container.dynamoDbAdapter
@@ -52,10 +51,10 @@ class DynamoDbTriggerContainerTest {
     fun `lazy properties should return the same instances when accessed repeatedly`() {
         // Arrange
         val envConfig = mockEnvConfig()
+        val s3Connector : S3Connector = mockk(relaxed = true)
         GlobalRegistry.setEnvConfig(envConfig)
-        val container = DynamoDbTriggerContainer(
-            s3Connector = mockk(relaxed = true),
-        )
+        GlobalRegistry.setS3Connector(s3Connector)
+        val container = DynamoDbTriggerContainer()
 
         // Act
         val firstAssembler = container.assembler

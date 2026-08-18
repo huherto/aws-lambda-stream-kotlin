@@ -39,14 +39,12 @@ class DynamoDbTriggerTest {
         // Arrange
         val putRequestSlot = slot<PutObjectRequest>()
         val s3Connector: S3Connector = mockk(relaxed = true)
-        val envConfig = GlobalRegistry.envConfig()
+        GlobalRegistry.setS3Connector(s3Connector)
         coEvery {
             s3Connector.putObject(capture(putRequestSlot), any())
         } returns PutObjectResponse {}
 
-        val container = DynamoDbTriggerContainer(
-            s3Connector = s3Connector,
-        )
+        val container = DynamoDbTriggerContainer()
 
         val trigger = DynamoDbTrigger({ container })
         val context: Context = mockk(relaxed = true)
@@ -84,10 +82,8 @@ class DynamoDbTriggerTest {
     fun `handleRequest should not put anything in S3 when there are no dynamodb records`() {
         // Arrange
         val s3Connector: S3Connector = mockk(relaxed = true)
-
-        val container = DynamoDbTriggerContainer(
-            s3Connector = s3Connector,
-        )
+        GlobalRegistry.setS3Connector(s3Connector)
+        val container = DynamoDbTriggerContainer()
 
         val trigger = DynamoDbTrigger({ container})
         val context: Context = mockk(relaxed = true)

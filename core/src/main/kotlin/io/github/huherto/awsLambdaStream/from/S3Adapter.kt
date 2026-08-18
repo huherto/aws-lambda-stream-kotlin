@@ -18,7 +18,7 @@ import kotlinx.serialization.json.Json
 class S3Adapter(
     private val faultManager: FaultManager = GlobalRegistry.faultManager(),
     private val eventCodec: EventCodec,
-    private val s3Connector: S3Connector,
+    private val s3Connector: S3Connector = GlobalRegistry.s3Connector(),
 ) {
     private val json = Json {
         ignoreUnknownKeys = true
