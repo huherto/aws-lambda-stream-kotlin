@@ -1,5 +1,7 @@
 package io.github.huherto.awsLambdaStream
 
+import io.github.huherto.awsLambdaStream.connectors.DefaultDynamoDbClientFactory
+import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
 import io.github.huherto.awsLambdaStream.sinks.EventBridgePublisher
 import io.github.huherto.awsLambdaStream.sinks.EventPublisher
 
@@ -118,11 +120,33 @@ object GlobalRegistry {
         faultManagerSingleton.setFactory(factory)
     }
 
+    private val dynamoDbConnectorSingleton = RegistrySingleton(
+        lock = lock,
+        defaultFactory = { DynamoDbConnector(
+            {},
+            false,
+            DefaultDynamoDbClientFactory() )
+        }
+    )
+
+    fun dynamoDbConnector() : DynamoDbConnector {
+        return dynamoDbConnectorSingleton.get()
+    }
+
+    fun setDynamoDbConnector(dynamoDbConnector: DynamoDbConnector) {
+        dynamoDbConnectorSingleton.set(dynamoDbConnector)
+    }
+
+    fun setDynamoDbConnectorFactory(factory: () -> DynamoDbConnector) {
+        dynamoDbConnectorSingleton.setFactory(factory)
+    }
+
     fun reset() {
         synchronized(lock) {
             envConfigSingleton.reset()
             eventPublisherSingleton.reset()
             faultManagerSingleton.reset()
+            dynamoDbConnectorSingleton.reset()
         }
     }
 

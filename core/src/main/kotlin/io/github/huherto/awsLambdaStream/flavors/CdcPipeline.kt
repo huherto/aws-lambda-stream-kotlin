@@ -4,6 +4,7 @@ import aws.sdk.kotlin.services.dynamodb.model.BatchGetItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.QueryRequest
 import io.github.huherto.awsLambdaStream.Event
 import io.github.huherto.awsLambdaStream.FaultManager
+import io.github.huherto.awsLambdaStream.GlobalRegistry
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
 import io.github.huherto.awsLambdaStream.extensions.withBatchGetRequest
@@ -57,7 +58,7 @@ import kotlinx.coroutines.flow.onEach
  */
 class CdcPipeline(
     id: String,
-    private val dynamoDbConnector: DynamoDbConnector? = null,
+    private val dynamoDbConnector: DynamoDbConnector = GlobalRegistry.dynamoDbConnector(),
     private val eventPublisher: EventPublisher,
     private val eventFilter: EventFilter = EventFilter.Any,
     private val onContentType: (UnitOfWork) -> Boolean = { true },

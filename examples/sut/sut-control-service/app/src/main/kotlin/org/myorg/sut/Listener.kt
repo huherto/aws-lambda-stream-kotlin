@@ -29,7 +29,7 @@ class Listener(
             .fromKinesis(kinesisEvent)
 
         assembler
-            .assemble(headFlow, true)
+            .assemble(headFlow)
             .map { uow ->
                 uow.updateMetrics { it.gauge("custom.metric", 1.0) }
             }
