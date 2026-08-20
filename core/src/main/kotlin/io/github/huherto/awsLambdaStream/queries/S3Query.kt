@@ -7,12 +7,16 @@ import io.github.huherto.awsLambdaStream.extensions.copyS3
 import io.github.huherto.awsLambdaStream.extensions.s3
 import kotlinx.coroutines.flow.Flow
 
-class S3Query(val s3Connector: S3Connector) {
+class S3Query(val s3ConnectorOptions: S3Connector.Options) {
+
+    fun getConnector() : S3Connector {
+        return S3Connector(s3ConnectorOptions)
+    }
 
     fun getObjectAsByteArray(fm: FaultManager, source: Flow<UnitOfWork>) : Flow<UnitOfWork> {
         return fm.mapNotFaultyFrom(source) { uow ->
-            val request = uow.s3?.getRequest ?: return@mapNotFaultyFrom uow
-            val response = s3Connector.getObjectAsByteArray(request, uow)
+            val request = uow.s3.getRequest ?: return@mapNotFaultyFrom uow
+            val response = getConnector().getObjectAsByteArray(request, uow)
 
             uow.copyS3 {
                 copy(getResponseBytes = response)
@@ -22,8 +26,8 @@ class S3Query(val s3Connector: S3Connector) {
 
     fun getObject(fm: FaultManager, source:  Flow<UnitOfWork>): Flow<UnitOfWork> {
         return fm.mapNotFaultyFrom(source) { uow ->
-            val request = uow.s3?.getRequest ?: return@mapNotFaultyFrom uow
-            val response = s3Connector.getObject(request, uow)
+            val request = uow.s3.getRequest ?: return@mapNotFaultyFrom uow
+            val response = getConnector().getObject(request, uow)
 
             uow.copyS3 {
                 copy(getResponse = response)

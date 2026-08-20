@@ -45,13 +45,13 @@ class ClaimCheckRedeemerTest {
         val s3ClientFactory = object : S3ClientFactory {
             override fun getClient(pipelineId: String): S3Client = s3Client
         }
-        val s3Connector = S3Connector(clientFactory = s3ClientFactory)
+        val s3ConnectorOptions = S3Connector.Options(clientFactory = s3ClientFactory)
         val eventCodec = MyEventCodec()
         val claimedEvent = MyEventA(foo = "claimed-foo", bar = "claimed-bar", id = "claimed-event-id")
         val claimCheckEvent = MyEventA(raw = ClaimCheck(bucket = "claim-bucket", key = "events/claimed-event.json"))
         val originalUow = UnitOfWork(event = claimCheckEvent)
         val redeemer = ClaimCheckRedeemer(
-            s3Connector = s3Connector,
+            s3ConnectorOptions = s3ConnectorOptions,
             faultManager = faultManager(),
             eventCodec = eventCodec,
         )
@@ -100,12 +100,12 @@ class ClaimCheckRedeemerTest {
         val s3ClientFactory = object : S3ClientFactory {
             override fun getClient(pipelineId: String): S3Client = s3Client
         }
-        val s3Connector = S3Connector(clientFactory = s3ClientFactory)
+        val s3ConnectorOptions = S3Connector.Options(clientFactory = s3ClientFactory)
         val eventCodec = MyEventCodec()
         val originalEvent = MyEventA(foo = "original-foo", bar = "original-bar")
         val originalUow = UnitOfWork(event = originalEvent)
         val redeemer = ClaimCheckRedeemer(
-            s3Connector = s3Connector,
+            s3ConnectorOptions = s3ConnectorOptions,
             faultManager = faultManager(),
             eventCodec = eventCodec,
         )

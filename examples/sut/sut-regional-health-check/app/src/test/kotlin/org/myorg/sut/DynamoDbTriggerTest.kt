@@ -1,5 +1,6 @@
 package org.myorg.sut
 
+import aws.sdk.kotlin.services.s3.S3Client
 import aws.sdk.kotlin.services.s3.model.PutObjectRequest
 import aws.sdk.kotlin.services.s3.model.PutObjectResponse
 import com.amazonaws.services.lambda.runtime.Context
@@ -8,7 +9,7 @@ import com.amazonaws.services.lambda.runtime.events.models.dynamodb.StreamRecord
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.GlobalRegistry
-import io.github.huherto.awsLambdaStream.connectors.S3Connector
+import io.github.huherto.awsLambdaStream.connectors.S3ClientFactory
 import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
 import io.kotest.matchers.shouldBe
 import io.mockk.*
@@ -38,10 +39,12 @@ class DynamoDbTriggerTest {
     fun `handleRequest should process dynamodb records through real container and put materialized events in S3`() {
         // Arrange
         val putRequestSlot = slot<PutObjectRequest>()
-        val s3Connector: S3Connector = mockk(relaxed = true)
-        GlobalRegistry.setS3Connector(s3Connector)
+        val s3Client: S3Client = mockk(relaxed = true)
+        val s3ClientFactory: S3ClientFactory = mockk()
+        every { s3ClientFactory.getClient(any()) } returns s3Client
+        GlobalRegistry.setS3ClientFactory(s3ClientFactory)
         coEvery {
-            s3Connector.putObject(capture(putRequestSlot), any())
+            s3Client.putObject(capture(putRequestSlot))
         } returns PutObjectResponse {}
 
         val container = DynamoDbTriggerContainer()
@@ -74,15 +77,17 @@ class DynamoDbTriggerTest {
         result shouldBe "Done"
 
         coVerify(exactly = 1) {
-            s3Connector.putObject(any(), any())
+            s3Client.putObject(any())
         }
     }
 
     @Test
     fun `handleRequest should not put anything in S3 when there are no dynamodb records`() {
         // Arrange
-        val s3Connector: S3Connector = mockk(relaxed = true)
-        GlobalRegistry.setS3Connector(s3Connector)
+        val s3Client: S3Client = mockk(relaxed = true)
+        val s3ClientFactory: S3ClientFactory = mockk()
+        every { s3ClientFactory.getClient(any()) } returns s3Client
+        GlobalRegistry.setS3ClientFactory(s3ClientFactory)
         val container = DynamoDbTriggerContainer()
 
         val trigger = DynamoDbTrigger({ container})
@@ -96,7 +101,7 @@ class DynamoDbTriggerTest {
         result shouldBe "Done"
 
         coVerify(exactly = 0) {
-            s3Connector.putObject(any(), any())
+            s3Client.putObject(any())
         }
     }
 

@@ -6,6 +6,7 @@ import aws.sdk.kotlin.services.s3.model.*
 import aws.smithy.kotlin.runtime.content.ByteStream
 import aws.smithy.kotlin.runtime.content.toByteArray
 import aws.smithy.kotlin.runtime.net.url.Url
+import io.github.huherto.awsLambdaStream.GlobalRegistry
 import io.github.huherto.awsLambdaStream.GlobalRegistry.envConfig
 import io.github.huherto.awsLambdaStream.UnitOfWork
 
@@ -24,14 +25,28 @@ class DefaultS3ClientFactory() : S3ClientFactory, AbstractClientFactory<S3Client
     }
 }
 
-class S3Connector(
-    private val clientFactory: S3ClientFactory,
-    val debug: (Any?) -> Unit = {},
-) {
+/**
+ * S3Connector provides a wrapper around the AWS S3 client with debugging support
+ * and pipeline-aware client management.
+ *
+ * @property options Configuration options for the connector.
+ */
+class S3Connector(private val options: S3Connector.Options) {
+
+    /**
+     * Configuration options for [S3Connector].
+     *
+     * @property clientFactory The factory used to create [S3Client] instances.
+     * @property debug A callback for debugging responses and errors.
+     */
+    data class Options(
+        val clientFactory: S3ClientFactory = GlobalRegistry.s3ClientFactory(),
+        val debug: (Any?) -> Unit = {},
+    )
 
     fun getClient(uow: UnitOfWork): S3Client {
         val pipelineId = uow.pipeline?.id ?: "unknown"
-        return clientFactory.getClient(pipelineId)
+        return options.clientFactory.getClient(pipelineId)
     }
 
     suspend fun getObject(
@@ -140,10 +155,10 @@ class S3Connector(
     ): T {
         return try {
             val response = block()
-            debug(response)
+            options.debug(response)
             response
         } catch (error: Throwable) {
-            debug(error)
+            options.debug(error)
             throw error
         }
     }

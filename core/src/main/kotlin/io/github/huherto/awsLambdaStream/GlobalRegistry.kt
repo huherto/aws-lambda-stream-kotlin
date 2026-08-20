@@ -3,7 +3,7 @@ package io.github.huherto.awsLambdaStream
 import io.github.huherto.awsLambdaStream.connectors.DefaultDynamoDbClientFactory
 import io.github.huherto.awsLambdaStream.connectors.DefaultS3ClientFactory
 import io.github.huherto.awsLambdaStream.connectors.DynamoDbClientFactory
-import io.github.huherto.awsLambdaStream.connectors.S3Connector
+import io.github.huherto.awsLambdaStream.connectors.S3ClientFactory
 import io.github.huherto.awsLambdaStream.sinks.EventBridgePublisher
 import io.github.huherto.awsLambdaStream.sinks.EventPublisher
 
@@ -137,25 +137,21 @@ object GlobalRegistry {
         dynamoDbClientFactorySingleton.setFactory(factory)
     }
 
-    private val s3ConnectorSingleton = RegistrySingleton(
+    private val s3ClientFactorySingleton = RegistrySingleton(
         lock = lock,
-        defaultFactory = {
-            S3Connector(
-            clientFactory = DefaultS3ClientFactory(),
-                debug = {} )
-        }
+        defaultFactory = { DefaultS3ClientFactory() as S3ClientFactory }
     )
 
-    fun s3Connector() : S3Connector {
-        return s3ConnectorSingleton.get()
+    fun s3ClientFactory() : S3ClientFactory {
+        return s3ClientFactorySingleton.get()
     }
 
-    fun setS3Connector(s3Connector: S3Connector) {
-        s3ConnectorSingleton.set(s3Connector)
+    fun setS3ClientFactory(s3ClientFactory: S3ClientFactory) {
+        s3ClientFactorySingleton.set(s3ClientFactory)
     }
 
-    fun setS3ConnectorFactory(factory: () -> S3Connector) {
-        s3ConnectorSingleton.setFactory(factory)
+    fun setS3ClientFactory(factory: () -> S3ClientFactory) {
+        s3ClientFactorySingleton.setFactory(factory)
     }
 
     fun reset() {
@@ -164,7 +160,7 @@ object GlobalRegistry {
             eventPublisherSingleton.reset()
             faultManagerSingleton.reset()
             dynamoDbClientFactorySingleton.reset()
-            s3ConnectorSingleton.reset()
+            s3ClientFactorySingleton.reset()
         }
     }
 

@@ -10,9 +10,13 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 class S3Sink(
-    private val s3Connector: S3Connector,
+    private val s3ConnectorOptions: S3Connector.Options,
     private val bucketName: String = envConfig().bucketName() ?: error("bucketName is not set"),
 ) {
+
+    private fun getConnector() : S3Connector {
+        return S3Connector(s3ConnectorOptions)
+    }
 
     fun Flow<UnitOfWork>.rateLimit(): Flow<UnitOfWork> = this
 
@@ -55,7 +59,7 @@ class S3Sink(
             .map { uow ->
                 val putRequest = uow.s3.putRequest ?: return@map uow
                 uow.withStepMetrics("save") { uowWithMetrics ->
-                    val response = s3Connector.putObject(putRequest, uowWithMetrics)
+                    val response = getConnector().putObject(putRequest, uowWithMetrics)
                     uowWithMetrics.copyS3 {
                         copy(putResponse = response)
                     }
@@ -69,7 +73,7 @@ class S3Sink(
             .map { uow ->
                 val deleteRequest = uow.s3.deleteRequest ?: return@map uow
                 uow.withStepMetrics("delete") { uowWithMetrics ->
-                    val response = s3Connector.deleteObject(uowWithMetrics.s3.deleteRequest!!, uowWithMetrics)
+                    val response = getConnector().deleteObject(uowWithMetrics.s3.deleteRequest!!, uowWithMetrics)
                     uowWithMetrics.copyS3 {
                         copy(deleteResponse = response)
                     }
@@ -83,7 +87,7 @@ class S3Sink(
             .map { uow ->
                 val request = uow.s3.copyRequest ?: return@map uow
                 uow.withStepMetrics("copy") { uowWithMetrics ->
-                    val response = s3Connector.copyObject(uowWithMetrics.s3.copyRequest!!, uowWithMetrics)
+                    val response = getConnector().copyObject(uowWithMetrics.s3.copyRequest!!, uowWithMetrics)
                     uowWithMetrics.copyS3 {
                         copy(copyResponse = response)
                     }

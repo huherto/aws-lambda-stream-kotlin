@@ -17,15 +17,24 @@ import kotlinx.coroutines.flow.Flow
  */
 typealias ClaimCheck = io.github.huherto.awsLambdaStream.ClaimCheck
 
+/**
+ * `ClaimCheckRedeemer` implements the Claim-Check pattern by fetching the full event
+ * payload from S3 when a [ClaimCheck] is present in the record.
+ *
+ * @param s3ConnectorOptions Options for the [S3Connector] used to fetch the payload.
+ * @param faultManager The [FaultManager] used to handle errors during redemption.
+ * @param eventCodec The [EventCodec] used to decode the fetched payload.
+ * @param claimCheck A function that extracts the [ClaimCheck] from a [UnitOfWork].
+ */
 class ClaimCheckRedeemer(
-    s3Connector: S3Connector = GlobalRegistry.s3Connector(),
+    s3ConnectorOptions: S3Connector.Options = S3Connector.Options(),
     private val faultManager: FaultManager = GlobalRegistry.faultManager(),
     private val eventCodec: EventCodec,
     private val claimCheck: (UnitOfWork) -> ClaimCheck? = { uow ->
         uow.event?.raw as? ClaimCheck
     }) {
 
-    private val s3Query = S3Query(s3Connector)
+    private val s3Query = S3Query(s3ConnectorOptions)
 
     fun Flow<UnitOfWork>.redeemClaimCheck(): Flow<UnitOfWork> {
         return with(faultManager) {

@@ -18,7 +18,7 @@ import kotlinx.serialization.json.Json
 class S3Adapter(
     private val faultManager: FaultManager = GlobalRegistry.faultManager(),
     private val eventCodec: EventCodec,
-    private val s3Connector: S3Connector = GlobalRegistry.s3Connector(),
+    private val s3ConnectorOptions: S3Connector.Options = S3Connector.Options(),
 ) {
     private val json = Json {
         ignoreUnknownKeys = true
@@ -150,6 +150,10 @@ class S3Adapter(
         }
     }
 
+    private fun getConnector() : S3Connector {
+        return S3Connector(s3ConnectorOptions)
+    }
+
     fun fromS3Event(
         event: SQSEvent,
     ): Flow<UnitOfWork> {
@@ -168,14 +172,14 @@ class S3Adapter(
                     }
                 }
                 .mapNotFaulty { uow ->
-                    val request = uow.s3?.getRequest ?: return@mapNotFaulty uow
-                    val responseText = s3Connector.getObjectAsText(request, uow)
+                    val request = uow.s3.getRequest ?: return@mapNotFaulty uow
+                    val responseText = getConnector().getObjectAsText(request, uow)
                     uow.copyS3 {
                         copy(getResponseText = responseText)
                     }
                 }
                 .mapNotFaulty { uow ->
-                    val eventAsString = uow.s3?.getResponseText ?: return@mapNotFaulty uow
+                    val eventAsString = uow.s3.getResponseText ?: return@mapNotFaulty uow
                     val event = eventCodec.decode(eventAsString)
                     uow.copy(
                         event = event,

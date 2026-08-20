@@ -4,7 +4,7 @@ import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.GlobalRegistry
 import io.github.huherto.awsLambdaStream.PipelineAssembler
-import io.github.huherto.awsLambdaStream.connectors.S3Connector
+import io.github.huherto.awsLambdaStream.connectors.S3ClientFactory
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import io.github.huherto.awsLambdaStream.from.DynamodbAdapter
 import io.kotest.matchers.types.shouldBeInstanceOf
@@ -29,11 +29,11 @@ class DynamoDbTriggerContainerTest {
     fun `container should initialize adapter and assembler with provided dependencies`() {
         // Arrange
         val faultManager: FaultManager = mockk(relaxed = true)
-        val s3Connector: S3Connector = mockk(relaxed = true)
+        val s3ClientFactory: S3ClientFactory = mockk(relaxed = true)
         val envConfig = mockEnvConfig()
         GlobalRegistry.setEnvConfig(envConfig)
         GlobalRegistry.setFaultManager(faultManager)
-        GlobalRegistry.setS3Connector(s3Connector)
+        GlobalRegistry.setS3ClientFactory(s3ClientFactory)
 
         val container = DynamoDbTriggerContainer()
 
@@ -51,9 +51,9 @@ class DynamoDbTriggerContainerTest {
     fun `lazy properties should return the same instances when accessed repeatedly`() {
         // Arrange
         val envConfig = mockEnvConfig()
-        val s3Connector : S3Connector = mockk(relaxed = true)
+        val s3ClientFactory : S3ClientFactory = mockk(relaxed = true)
         GlobalRegistry.setEnvConfig(envConfig)
-        GlobalRegistry.setS3Connector(s3Connector)
+        GlobalRegistry.setS3ClientFactory(s3ClientFactory)
         val container = DynamoDbTriggerContainer()
 
         // Act
