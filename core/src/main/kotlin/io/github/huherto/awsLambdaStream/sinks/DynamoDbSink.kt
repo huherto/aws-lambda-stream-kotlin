@@ -18,10 +18,13 @@ import kotlinx.coroutines.flow.Flow
  *
  * Each [UnitOfWork] may contain a DynamoDB request to execute. If the expected request is not present,
  * the item is passed through unchanged. When a request is present, this sink delegates execution to the
- * configured [DynamoDbConnector] and returns a copyEvent of the [UnitOfWork] containing the DynamoDB response.
+ * configured [DynamoDbConnector] and returns a copy of the [UnitOfWork] containing the DynamoDB response.
  *
  * Operations are executed with bounded concurrency. The default parallelism is read from [EnvironmentConfig],
  * falling back to `4` when no value is configured.
+ *
+ * @param connector Connector used to execute DynamoDB requests.
+ * @param parallel Bounded concurrency for DynamoDB operations.
  */
 class DynamoDbSink(
     private val connector: DynamoDbConnector,

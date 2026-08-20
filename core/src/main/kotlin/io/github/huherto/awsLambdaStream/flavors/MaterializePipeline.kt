@@ -12,6 +12,19 @@ import io.github.huherto.awsLambdaStream.sinks.DynamoDbSink
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.onEach
 
+/**
+ * Pipeline flavor for materializing events into DynamoDB records.
+ *
+ * A `MaterializePipeline` receives incoming [UnitOfWork] items, filters them, optionally compacts
+ * the stream, builds an update request, and applies the update to DynamoDB.
+ *
+ * @param pipelineId Unique identifier for this pipeline.
+ * @param eventFilter Event-level filter applied before pipeline-specific processing starts.
+ * @param onContentType Predicate used to accept or reject a [UnitOfWork] after event filtering.
+ * @param compact Optional stream compaction function.
+ * @param toUpdateRequest Function used to build the DynamoDB update request.
+ * @param dynamoDbConnectorOptions Options for the DynamoDB connector used for the update stage.
+ */
 class MaterializePipeline(
     pipelineId: String,
     private val eventFilter: EventFilter = EventFilter.Any,

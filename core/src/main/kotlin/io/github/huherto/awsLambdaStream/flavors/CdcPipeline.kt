@@ -43,7 +43,7 @@ import kotlinx.coroutines.flow.onEach
  * 12. Log pipeline completion.
  *
  * @param id Unique identifier for this pipeline.
- * @param dynamoDbConnector Connector used for query and batch-get stages.
+ * @param dynamoDbConnectorOptions Options for the DynamoDB connector used for query and batch-get stages.
  * @param eventPublisher Sink responsible for publishing final events.
  * @param eventFilter Event-level filter applied before pipeline-specific processing starts.
  * @param onContentType Predicate used to accept or reject a [UnitOfWork] after event filtering.

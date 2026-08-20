@@ -30,6 +30,16 @@ import kotlinx.coroutines.flow.onEach
 /**
  * Pipeline flavor that reacts to incoming events, queries related DynamoDB records, loads those
  * records, builds update requests, and applies the updates.
+ *
+ * @param id Unique identifier for this pipeline.
+ * @param dynamoDbConnectorOptions Options for the DynamoDB connector used for query and batch-get stages.
+ * @param eventCodec Codec used to decode collected event payloads.
+ * @param eventFilter Event-level filter applied before pipeline-specific processing starts.
+ * @param onContentType Predicate used to accept or reject a [UnitOfWork] after event filtering.
+ * @param compactRule Optional stream compaction rule.
+ * @param toQueryRequest Function used to build the DynamoDB query request.
+ * @param toGetRequest Function used to build the DynamoDB batch-get request.
+ * @param toUpdateRequest Function used to build the final DynamoDB update request.
  */
 class UpdatePipeline(
     id: String,

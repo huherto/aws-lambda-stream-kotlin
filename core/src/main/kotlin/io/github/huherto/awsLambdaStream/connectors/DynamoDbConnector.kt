@@ -25,6 +25,17 @@ class DefaultDynamoDbClientFactory() : DynamoDbClientFactory, AbstractClientFact
     }
 }
 
+/**
+ * Connector responsible for executing DynamoDB operations.
+ *
+ * This connector manages the interaction with the AWS SDK DynamoDB client, providing high-level
+ * methods for common operations like queryAll, update, put, and batch-get. It supports automatic
+ * pagination for queries, conditional failure handling, and retry strategies for batch operations.
+ *
+ * The connector is configured via [Options].
+ *
+ * @param options Configuration options for the connector.
+ */
 class DynamoDbConnector(private val options: Options) {
 
     data class Options(

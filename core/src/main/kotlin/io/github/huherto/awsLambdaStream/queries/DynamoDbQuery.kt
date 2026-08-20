@@ -23,6 +23,15 @@ data class QueryRule(
     val tableName: String = ""
 )
 
+/**
+ * Component responsible for executing DynamoDB queries and batch-get operations for a pipeline.
+ *
+ * It uses a [DynamoDbConnector] to perform the operations and provides a simple in-memory cache
+ * for responses to avoid redundant requests within the same execution context.
+ *
+ * @param connectorOptions Options for the underlying DynamoDB connector.
+ * @param decrypt Optional decryption function for DynamoDB items.
+ */
 class DynamoDbQuery(
     private val connectorOptions: DynamoDbConnector.Options,
     private val decrypt: MapDecryptFunc? = null
