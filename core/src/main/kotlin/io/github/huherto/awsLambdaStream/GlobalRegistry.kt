@@ -73,9 +73,7 @@ object GlobalRegistry {
 
     private val eventPublisherSingleton = RegistrySingleton(
         lock = lock,
-        defaultFactory = {
-            val ep : EventPublisher = EventBridgePublisher()
-            ep },
+        defaultFactory = { EventBridgePublisher() as EventPublisher },
         onChange = {
             faultManagerSingleton.clear()
         },
