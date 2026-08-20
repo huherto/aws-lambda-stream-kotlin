@@ -4,7 +4,6 @@ import aws.sdk.kotlin.services.dynamodb.model.BatchGetItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.QueryRequest
 import io.github.huherto.awsLambdaStream.Event
 import io.github.huherto.awsLambdaStream.FaultManager
-import io.github.huherto.awsLambdaStream.GlobalRegistry
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
 import io.github.huherto.awsLambdaStream.extensions.withBatchGetRequest
@@ -58,7 +57,7 @@ import kotlinx.coroutines.flow.onEach
  */
 class CdcPipeline(
     id: String,
-    private val dynamoDbConnector: DynamoDbConnector = GlobalRegistry.dynamoDbConnector(),
+    private val dynamoDbConnectorOptions: DynamoDbConnector.Options = DynamoDbConnector.Options(),
     private val eventPublisher: EventPublisher,
     private val eventFilter: EventFilter = EventFilter.Any,
     private val onContentType: (UnitOfWork) -> Boolean = { true },
@@ -72,7 +71,7 @@ class CdcPipeline(
 ) : Pipeline(id) {
 
 
-    val dynamoDbQuery by lazy { DynamoDbQuery(dynamoDbConnector) }
+    val dynamoDbQuery by lazy { DynamoDbQuery(dynamoDbConnectorOptions) }
 
     /**
      * Builds the DynamoDB query request for the current unit of work.
@@ -133,6 +132,8 @@ class CdcPipeline(
     ): Flow<UnitOfWork> {
         logger.info { "CdcPipeline.connect: id=$id" }
 
+        val usesDynamoDb = queryRule != null || toQueryRequest != null || toBatchGetRequest != null
+
         with(fm) {
             val filteredFlow = fromFlow
                 .filterNotFaulty { uow -> outLatched(uow) }
@@ -141,13 +142,14 @@ class CdcPipeline(
                 .filterNotFaulty { uow -> onContentType(uow) }
                 .compact(compactRule)
 
-            val enrichedFlow = dynamoDbConnector?.let { connector ->
+            val enrichedFlow = if (usesDynamoDb)  {
                 filteredFlow
                     .mapNotFaulty { uow -> addQueryRequest(uow) }
                     .let{ dynamoDbQuery.queryAllDynamoDB(fm, it) }
                     .mapNotFaulty { uow -> addBatchGetRequest(uow) }
                     .let { dynamoDbQuery.batchGetDynamoDB(fm, it) }
-            } ?: filteredFlow
+            }
+            else filteredFlow
 
             return enrichedFlow
                 .mapNotFaulty { uow -> addEvent(uow) }

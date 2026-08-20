@@ -2,7 +2,7 @@ package io.github.huherto.awsLambdaStream
 
 import io.github.huherto.awsLambdaStream.connectors.DefaultDynamoDbClientFactory
 import io.github.huherto.awsLambdaStream.connectors.DefaultS3ClientFactory
-import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
+import io.github.huherto.awsLambdaStream.connectors.DynamoDbClientFactory
 import io.github.huherto.awsLambdaStream.connectors.S3Connector
 import io.github.huherto.awsLambdaStream.sinks.EventBridgePublisher
 import io.github.huherto.awsLambdaStream.sinks.EventPublisher
@@ -120,25 +120,21 @@ object GlobalRegistry {
         faultManagerSingleton.setFactory(factory)
     }
 
-    private val dynamoDbConnectorSingleton = RegistrySingleton(
+    private val dynamoDbClientFactorySingleton = RegistrySingleton(
         lock = lock,
-        defaultFactory = { DynamoDbConnector(
-            {},
-            false,
-            DefaultDynamoDbClientFactory() )
-        }
+        defaultFactory = { DefaultDynamoDbClientFactory() as DynamoDbClientFactory }
     )
 
-    fun dynamoDbConnector() : DynamoDbConnector {
-        return dynamoDbConnectorSingleton.get()
+    fun dynamoDbClientFactory() : DynamoDbClientFactory {
+        return dynamoDbClientFactorySingleton.get()
     }
 
-    fun setDynamoDbConnector(dynamoDbConnector: DynamoDbConnector) {
-        dynamoDbConnectorSingleton.set(dynamoDbConnector)
+    fun setDynamoDbClientFactory(dynamoDbClientFactory: DynamoDbClientFactory) {
+        dynamoDbClientFactorySingleton.set(dynamoDbClientFactory)
     }
 
-    fun setDynamoDbConnectorFactory(factory: () -> DynamoDbConnector) {
-        dynamoDbConnectorSingleton.setFactory(factory)
+    fun setDynamoDbClientFactory(factory: () -> DynamoDbClientFactory) {
+        dynamoDbClientFactorySingleton.setFactory(factory)
     }
 
     private val s3ConnectorSingleton = RegistrySingleton(
@@ -167,7 +163,7 @@ object GlobalRegistry {
             envConfigSingleton.reset()
             eventPublisherSingleton.reset()
             faultManagerSingleton.reset()
-            dynamoDbConnectorSingleton.reset()
+            dynamoDbClientFactorySingleton.reset()
             s3ConnectorSingleton.reset()
         }
     }

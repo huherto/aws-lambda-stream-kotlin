@@ -4,6 +4,7 @@ import aws.sdk.kotlin.runtime.auth.credentials.EnvironmentCredentialsProvider
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.*
 import aws.smithy.kotlin.runtime.net.url.Url
+import io.github.huherto.awsLambdaStream.GlobalRegistry
 import io.github.huherto.awsLambdaStream.GlobalRegistry.envConfig
 import io.github.huherto.awsLambdaStream.UnitOfWork
 
@@ -24,16 +25,18 @@ class DefaultDynamoDbClientFactory() : DynamoDbClientFactory, AbstractClientFact
     }
 }
 
-class DynamoDbConnector(
-    val debug: (Any?) -> Unit = {},
-    val throwConditionFailure: Boolean = false,
-    private val dynamoDbClientFactory: DynamoDbClientFactory,
-    private val retryConfig: RetryConfig = RetryConfig(),
-) {
+class DynamoDbConnector(private val options: Options) {
+
+    data class Options(
+        val debug: (Any?) -> Unit = {},
+        val throwConditionFailure: Boolean = false,
+        val dynamoDbClientFactory: DynamoDbClientFactory = GlobalRegistry.dynamoDbClientFactory(),
+        val retryConfig: RetryConfig = RetryConfig(),
+    )
 
     fun getClient(uow: UnitOfWork): DynamoDbClient {
         val pipelineId = uow.pipeline?.id ?: "unknown"
-        return dynamoDbClientFactory.getClient(pipelineId)
+        return options.dynamoDbClientFactory.getClient(pipelineId)
     }
 
     suspend fun queryAll(
@@ -89,7 +92,7 @@ class DynamoDbConnector(
                 client.updateItem(updateRequest)
             }
         } catch (error: ConditionalCheckFailedException) {
-            if (throwConditionFailure) {
+            if (options.throwConditionFailure) {
                 throw error
             }
             null
@@ -114,7 +117,7 @@ class DynamoDbConnector(
         val client = getClient(uow)
 
         return RetryExecutor(
-            retryConfig = retryConfig,
+            retryConfig = options.retryConfig,
             strategy = DynamoDbBatchGetRetryStrategy(),
             send = { request ->
                 sendCommand {
@@ -130,10 +133,10 @@ class DynamoDbConnector(
 
         return try {
             val response = block()
-            debug(response)
+            options.debug(response)
             response
         } catch (error: Throwable) {
-            debug(error)
+            options.debug(error)
             throw error
         }
     }

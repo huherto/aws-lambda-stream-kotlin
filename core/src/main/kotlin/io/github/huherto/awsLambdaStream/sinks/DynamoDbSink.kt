@@ -2,7 +2,6 @@ package io.github.huherto.awsLambdaStream.sinks
 
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.FaultManager
-import io.github.huherto.awsLambdaStream.GlobalRegistry
 import io.github.huherto.awsLambdaStream.GlobalRegistry.envConfig
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
@@ -25,7 +24,7 @@ import kotlinx.coroutines.flow.Flow
  * falling back to `4` when no value is configured.
  */
 class DynamoDbSink(
-    private val connector: DynamoDbConnector = GlobalRegistry.dynamoDbConnector(),
+    private val connector: DynamoDbConnector,
     private val parallel: Int = envConfig().parallel() ?: 4,
 ) {
 

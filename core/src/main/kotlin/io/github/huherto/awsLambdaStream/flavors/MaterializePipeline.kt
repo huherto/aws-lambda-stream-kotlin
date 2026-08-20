@@ -2,7 +2,6 @@ package io.github.huherto.awsLambdaStream.flavors
 
 import aws.sdk.kotlin.services.dynamodb.model.UpdateItemRequest
 import io.github.huherto.awsLambdaStream.FaultManager
-import io.github.huherto.awsLambdaStream.GlobalRegistry
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
 import io.github.huherto.awsLambdaStream.extensions.withUpdateRequest
@@ -19,10 +18,10 @@ class MaterializePipeline(
     private val onContentType: (UnitOfWork) -> Boolean = { true },
     private val compact: (Flow<UnitOfWork>) -> Flow<UnitOfWork> = { it },
     private val toUpdateRequest: suspend (UnitOfWork) -> UpdateItemRequest?,
-    private val dynamoDbConnector: DynamoDbConnector = GlobalRegistry.dynamoDbConnector(),
+    private val dynamoDbConnectorOptions: DynamoDbConnector.Options = DynamoDbConnector.Options(),
 ) : Pipeline(pipelineId) {
 
-    private val dynamoDbSink: DynamoDbSink by lazy { DynamoDbSink(dynamoDbConnector) }
+    private val dynamoDbSink: DynamoDbSink by lazy { DynamoDbSink(DynamoDbConnector(dynamoDbConnectorOptions)) }
 
     override fun connect(
         fm: FaultManager,
