@@ -22,7 +22,6 @@ dependencies {
 
     implementation(libs.aws.java.core)
     implementation(libs.aws.java.events)
-    implementation(libs.aws.java.serial)
 
     compileOnly(libs.aws.sdk.dynamodb)
     compileOnly(libs.aws.sdk.cloudwatch)

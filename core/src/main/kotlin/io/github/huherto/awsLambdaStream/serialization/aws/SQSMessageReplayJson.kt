@@ -1,26 +1,18 @@
 package io.github.huherto.awsLambdaStream.serialization.aws
 
 import com.amazonaws.services.lambda.runtime.events.SQSEvent
-import com.amazonaws.services.lambda.runtime.serialization.events.LambdaEventSerializers
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
+import io.github.huherto.awsLambdaStream.serialization.aws.snapshots.AwsJson
+import io.github.huherto.awsLambdaStream.serialization.aws.snapshots.SQSMessageSnapshot
+import io.github.huherto.awsLambdaStream.serialization.aws.snapshots.toRecord
+import io.github.huherto.awsLambdaStream.serialization.aws.snapshots.toSnapshot
 
 object SQSMessageReplayJson {
-    private val serializer =
-        LambdaEventSerializers.serializerFor(
-            SQSEvent.SQSMessage::class.java,
-            Thread.currentThread().contextClassLoader
-        )
 
     fun encode(message: SQSEvent.SQSMessage): String {
-        val out = ByteArrayOutputStream()
-        serializer.toJson(message, out)
-        return out.toString(Charsets.UTF_8)
+        return AwsJson.encodeToString(message.toSnapshot())
     }
 
     fun decode(json: String): SQSEvent.SQSMessage {
-        return serializer.fromJson(
-            ByteArrayInputStream(json.toByteArray())
-        )
+        return AwsJson.decodeFromString<SQSMessageSnapshot>(json).toRecord()
     }
 }

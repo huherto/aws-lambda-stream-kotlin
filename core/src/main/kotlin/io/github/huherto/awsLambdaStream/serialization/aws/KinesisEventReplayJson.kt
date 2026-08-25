@@ -1,26 +1,18 @@
 package io.github.huherto.awsLambdaStream.serialization.aws
 
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
-import com.amazonaws.services.lambda.runtime.serialization.events.LambdaEventSerializers
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
+import io.github.huherto.awsLambdaStream.serialization.aws.snapshots.AwsJson
+import io.github.huherto.awsLambdaStream.serialization.aws.snapshots.KinesisEventSnapshot
+import io.github.huherto.awsLambdaStream.serialization.aws.snapshots.toRecord
+import io.github.huherto.awsLambdaStream.serialization.aws.snapshots.toSnapshot
 
 object KinesisEventReplayJson {
-    private val serializer =
-        LambdaEventSerializers.serializerFor(
-            KinesisEvent::class.java,
-            Thread.currentThread().contextClassLoader
-        )
 
     fun encode(event: KinesisEvent): String {
-        val out = ByteArrayOutputStream()
-        serializer.toJson(event, out)
-        return out.toString(Charsets.UTF_8)
+        return AwsJson.encodeToString(event.toSnapshot())
     }
 
     fun decode(json: String): KinesisEvent {
-        return serializer.fromJson(
-            ByteArrayInputStream(json.toByteArray())
-        )
+        return AwsJson.decodeFromString<KinesisEventSnapshot>(json).toRecord()
     }
 }
