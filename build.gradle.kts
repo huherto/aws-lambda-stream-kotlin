@@ -20,3 +20,30 @@ tasks.withType<Test> {
     // systemProperty("org.slf4j.simpleLogger.log.io.github.huherto.awsLambdaStream", "debug")
     jvmArgs("-XX:+EnableDynamicAgentLoading")
 }
+
+allprojects {
+    tasks.register("dependencySizeReport") {
+        group = "help"
+        description = "Reports the sizes of runtime dependencies."
+        doLast {
+            val configuration = configurations.findByName("runtimeClasspath")
+            if (configuration != null && configuration.isCanBeResolved) {
+                val artifacts = configuration.resolvedConfiguration.resolvedArtifacts
+                if (artifacts.isNotEmpty()) {
+                    logger.lifecycle("\n============================================================")
+                    logger.lifecycle("Dependency sizes for project ${project.path}")
+                    val totalSize = artifacts
+                        .sortedByDescending { it.file.length() }
+                        .map { artifact ->
+                            val size = artifact.file.length()
+                            logger.lifecycle("${"%,d".format(size / 1024).padStart(10)} KB  ${artifact.moduleVersion.id.group}:${artifact.name}:${artifact.moduleVersion.id.version}")
+                            size
+                        }.sum()
+                    logger.lifecycle("------------------------------------------------------------")
+                    logger.lifecycle("${"%,d".format(totalSize / 1024).padStart(10)} KB  TOTAL (uncompressed)")
+                    logger.lifecycle("============================================================\n")
+                }
+            }
+        }
+    }
+}

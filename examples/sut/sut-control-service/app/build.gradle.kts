@@ -54,6 +54,9 @@ tasks.shadowJar {
     archiveBaseName.set("sut-control-service")
     archiveClassifier.set("")
     archiveVersion.set("")
+//    minimize {
+//        exclude(dependency("org.jetbrains.kotlin:kotlin-reflect:.*"))
+//    }
 }
 
 kotlin {
