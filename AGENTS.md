@@ -17,12 +17,13 @@ This project provides Kotlin utilities and pipeline abstractions for AWS Lambda 
 - Use arrange-act-assert style.
 - Use kotest assertions.
 - Use regular Junit tests annotations.
-- test internal function in isolation.
+- test internal functions in isolation.
 
 ## Serialization
 - Events need to be fully serializable/deserializable since they are used to communicat with other apps.
 - UnitOfWork.record should be an instance of 
 - UnitOfWork should be serializable with snapshots for diagnostic purposes.
+- The framework uses kotlinx.serialization but consumers can choose to use other libraries.
 
-Use the Mac OS "say" command when tasks are complete or you need me to act.
+Use the Mac OS "say" command to inform e when tasks are complete or you need me to act.
 
