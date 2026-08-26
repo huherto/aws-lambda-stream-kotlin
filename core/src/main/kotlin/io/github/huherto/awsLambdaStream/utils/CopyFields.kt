@@ -26,19 +26,7 @@ import kotlin.reflect.jvm.isAccessible
  * @param to The target object whose mutable properties should be updated.
  */
 fun copyCommonFields(from: Any, to: Any) {
-    val sourceProps = from::class.memberProperties.associateBy { it.name }
-
-    for (targetProp in to::class.memberProperties) {
-        val sourceProp = sourceProps[targetProp.name] ?: continue
-
-        sourceProp.isAccessible = true
-        targetProp.isAccessible = true
-
-        val sourceValue = sourceProp.getter.call(from) ?: continue
-
-        val targetMutable = targetProp as? KMutableProperty1<*, *>
-        targetMutable?.setter?.call(to, sourceValue)
-    }
+    ReflectionStrategy.copyCommonFields(from, to)
 }
 
 /**
@@ -71,123 +59,175 @@ fun <T : Any> createFromCommonValues(
     targetClass: KClass<out T>,
     factory: (() -> T)? = null
 ): T {
-    val ctor = targetClass.primaryConstructor
-
-    val instance = when {
-        factory != null -> factory()
-        ctor != null && ctor.visibility == KVisibility.PUBLIC -> instantiateFromPrimaryConstructor(from, targetClass)
-        else -> throw IllegalArgumentException(
-            "Target class ${targetClass.qualifiedName} must have a public primary constructor or a factory"
-        )
-    }
-
-    copyMutableKotlinProperties(from, instance)
-    return instance
+    return ReflectionStrategy.createFromCommonValues(from, targetClass, factory)
 }
 
 /**
- * Creates a copyEvent of [from] with the provided overrides.
+ * Creates a copy of [from] with the provided overrides.
  *
  * This function uses the primary constructor of [from]'s class. Any overrides that match
  * constructor parameter names will be used instead of the values from [from].
  *
- * @param from The source object to copyEvent.
+ * @param from The source object to copy.
  * @param overrides A map of property names to new values.
  * @return A new instance of the same class as [from].
  */
 fun <T : Any> copyWithOverrides(from: T, overrides: Map<String, Any?>): T {
-    val targetClass = from::class
-    val ctor = targetClass.primaryConstructor
-        ?: throw IllegalArgumentException("Class ${targetClass.qualifiedName} must have a primary constructor")
+    return ReflectionStrategy.copyWithOverrides(from, overrides)
+}
 
-    val sourceProps = targetClass.memberProperties.associateBy { it.name }
-    val args = mutableMapOf<KParameter, Any?>()
-
-    for (param in ctor.parameters) {
-        val name = param.name ?: continue
-        if (overrides.containsKey(name)) {
-            val value = overrides[name]
-            if (value == null && !param.type.isMarkedNullable) continue
-            args[param] = value
-        } else {
-            val sourceProp = sourceProps[name] ?: continue
-            sourceProp.isAccessible = true
-            val value = sourceProp.getter.call(from)
-            if (value == null && !param.type.isMarkedNullable) continue
-            args[param] = value
+private object ReflectionStrategy {
+    private val isKotlinReflectAvailable: Boolean by lazy {
+        try {
+            Class.forName("kotlin.reflect.full.KClasses")
+            true
+        } catch (e: Exception) {
+            false
         }
     }
 
-    val instance = ctor.callBy(args)
-    copyMutableKotlinProperties(from, instance) // Copy other properties if mutable
-    return instance
-}
-
-/**
- * Instantiates [targetClass] by calling its primary constructor with values from [from].
- *
- * Constructor parameters are matched to source properties by name. Only matching source
- * properties are included in the constructor argument map.
- *
- * If a source value is `null` and the matching constructor parameter is not nullable, the
- * argument is omitted. This allows `callBy` to use the constructor parameter's default value,
- * if one exists.
- *
- * @param from The source object to read constructor argument values from.
- * @param targetClass The target class to instantiate.
- * @return A new instance of [targetClass].
- * @throws IllegalArgumentException If [targetClass] does not have a primary constructor.
- */
-private fun <T : Any> instantiateFromPrimaryConstructor(
-    from: Any,
-    targetClass: KClass<T>
-): T {
-    val ctor = targetClass.primaryConstructor
-        ?: throw IllegalArgumentException("Target class ${targetClass.qualifiedName} must have a primary constructor")
-
-    val sourceProps = from::class.memberProperties.associateBy { it.name }
-    val args = mutableMapOf<KParameter, Any?>()
-
-    for (param in ctor.parameters) {
-        val name = param.name ?: continue
-        val sourceProp = sourceProps[name] ?: continue
-
-        sourceProp.isAccessible = true
-        val value = sourceProp.getter.call(from)
-
-        if (value == null && !param.type.isMarkedNullable) continue
-        args[param] = value
+    private fun checkAvailable() {
+        if (!isKotlinReflectAvailable) {
+            throw IllegalStateException(
+                "Kotlin reflection (kotlin-reflect.jar) is required for this operation. " +
+                "Please add 'org.jetbrains.kotlin:kotlin-reflect' to your runtime dependencies."
+            )
+        }
     }
 
-    return ctor.callBy(args)
+    fun copyCommonFields(from: Any, to: Any) {
+        checkAvailable()
+        KotlinReflectionImpl.copyCommonFields(from, to)
+    }
+
+    fun <T : Any> createFromCommonValues(
+        from: Any,
+        targetClass: KClass<out T>,
+        factory: (() -> T)? = null
+    ): T {
+        if (factory != null) {
+            val instance = factory()
+            copyMutableProperties(from, instance)
+            return instance
+        }
+        checkAvailable()
+        val instance = KotlinReflectionImpl.createFromCommonValues(from, targetClass)
+        copyMutableProperties(from, instance)
+        return instance
+    }
+
+    fun <T : Any> copyWithOverrides(from: T, overrides: Map<String, Any?>): T {
+        checkAvailable()
+        val instance = KotlinReflectionImpl.copyWithOverrides(from, overrides)
+        copyMutableProperties(from, instance)
+        return instance
+    }
+
+    private fun copyMutableProperties(from: Any, to: Any) {
+        if (isKotlinReflectAvailable) {
+            KotlinReflectionImpl.copyMutableKotlinProperties(from, to)
+        }
+    }
 }
 
 /**
- * Copies property values from [from] to mutable Kotlin properties on [to] when property names match.
- *
- * This function copies both null and non-null values. It only writes to properties that are
- * represented as [KMutableProperty1]. Read-only target properties are ignored.
- *
- * Private or otherwise non-public properties can be read or written because the reflected
- * properties are marked accessible.
- *
- * Properties are matched by name only. Type compatibility is not checked before assignment,
- *so incompatible source and target property types may cause a reflection exception at runtime.
- *
- * @param from The source object to read property values from.
- * @param to The target object whose mutable properties should be updated.
+ * Isolated implementation that uses kotlin-reflect extension functions.
+ * This object will only be loaded if kotlin-reflect is present on the classpath.
  */
-private fun copyMutableKotlinProperties(from: Any, to: Any) {
-    val sourceProps = from::class.memberProperties.associateBy { it.name }
+private object KotlinReflectionImpl {
 
-    for (targetProp in to::class.memberProperties) {
-        val sourceProp = sourceProps[targetProp.name] ?: continue
-        val targetMutable = targetProp as? KMutableProperty1<*, *> ?: continue
+    fun copyCommonFields(from: Any, to: Any) {
+        val sourceProps = from::class.memberProperties.associateBy { it.name }
 
-        sourceProp.isAccessible = true
-        targetProp.isAccessible = true
+        for (targetProp in to::class.memberProperties) {
+            val sourceProp = sourceProps[targetProp.name] ?: continue
 
-        val value = sourceProp.getter.call(from)
-        targetMutable.setter.call(to, value)
+            sourceProp.isAccessible = true
+            targetProp.isAccessible = true
+
+            val sourceValue = sourceProp.getter.call(from) ?: continue
+
+            val targetMutable = targetProp as? KMutableProperty1<*, *>
+            targetMutable?.setter?.call(to, sourceValue)
+        }
+    }
+
+    fun <T : Any> createFromCommonValues(
+        from: Any,
+        targetClass: KClass<out T>
+    ): T {
+        val ctor = targetClass.primaryConstructor
+
+        return when {
+            ctor != null && ctor.visibility == KVisibility.PUBLIC -> instantiateFromPrimaryConstructor(from, targetClass)
+            else -> throw IllegalArgumentException(
+                "Target class ${targetClass.qualifiedName} must have a public primary constructor or a factory"
+            )
+        }
+    }
+
+    fun <T : Any> copyWithOverrides(from: T, overrides: Map<String, Any?>): T {
+        val targetClass = from::class
+        val ctor = targetClass.primaryConstructor
+            ?: throw IllegalArgumentException("Class ${targetClass.qualifiedName} must have a primary constructor")
+
+        val sourceProps = targetClass.memberProperties.associateBy { it.name }
+        val args = mutableMapOf<KParameter, Any?>()
+
+        for (param in ctor.parameters) {
+            val name = param.name ?: continue
+            if (overrides.containsKey(name)) {
+                val value = overrides[name]
+                if (value == null && !param.type.isMarkedNullable) continue
+                args[param] = value
+            } else {
+                val sourceProp = sourceProps[name] ?: continue
+                sourceProp.isAccessible = true
+                val value = sourceProp.getter.call(from)
+                if (value == null && !param.type.isMarkedNullable) continue
+                args[param] = value
+            }
+        }
+
+        return ctor.callBy(args)
+    }
+
+    private fun <T : Any> instantiateFromPrimaryConstructor(
+        from: Any,
+        targetClass: KClass<T>
+    ): T {
+        val ctor = targetClass.primaryConstructor
+            ?: throw IllegalArgumentException("Target class ${targetClass.qualifiedName} must have a primary constructor")
+
+        val sourceProps = from::class.memberProperties.associateBy { it.name }
+        val args = mutableMapOf<KParameter, Any?>()
+
+        for (param in ctor.parameters) {
+            val name = param.name ?: continue
+            val sourceProp = sourceProps[name] ?: continue
+
+            sourceProp.isAccessible = true
+            val value = sourceProp.getter.call(from)
+
+            if (value == null && !param.type.isMarkedNullable) continue
+            args[param] = value
+        }
+
+        return ctor.callBy(args)
+    }
+
+    fun copyMutableKotlinProperties(from: Any, to: Any) {
+        val sourceProps = from::class.memberProperties.associateBy { it.name }
+
+        for (targetProp in to::class.memberProperties) {
+            val sourceProp = sourceProps[targetProp.name] ?: continue
+            val targetMutable = targetProp as? KMutableProperty1<*, *> ?: continue
+
+            sourceProp.isAccessible = true
+            targetProp.isAccessible = true
+
+            val value = sourceProp.getter.call(from)
+            targetMutable.setter.call(to, value)
+        }
     }
 }

@@ -33,7 +33,8 @@ dependencies {
     compileOnly(libs.aws.sdk.sqs)
 
     implementation(libs.kotlin.logging)
-    implementation(libs.kotlin.reflect)
+    compileOnly(libs.kotlin.reflect)
+
     implementation(libs.kotlinx.coroutines)
     implementation(libs.kotlinx.datetime)
     implementation(libs.uuid.generator)
@@ -54,6 +55,7 @@ dependencies {
     testImplementation(libs.kotest.assertions)
     testImplementation(libs.kotest.property)
     testImplementation(libs.kotest.runner)
+    testImplementation(libs.kotlin.reflect)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.kotlinx.serialization.json)
     testImplementation(libs.mockk)
