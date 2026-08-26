@@ -23,7 +23,6 @@ aws-sdk-s3 = { module = "aws.sdk.kotlin:s3" }
 aws-sdk-sns = { module = "aws.sdk.kotlin:sns" }
 aws-sdk-sqs = { module = "aws.sdk.kotlin:sqs" }
 
-jackson-kotlin = { module="com.fasterxml.jackson.module:jackson-module-kotlin", version="2.18.6" }
 kotest-assertions = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
 kotest-property = { module = "io.kotest:kotest-property", version.ref = "kotest" }
 kotest-runner = { module = "io.kotest:kotest-runner-junit5", version.ref = "kotest" }

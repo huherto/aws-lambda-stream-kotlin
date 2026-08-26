@@ -53,7 +53,7 @@ sealed class TrackedUnitEvent : Event {
         return TrackedUnitEventCodec.encode(this)
     }
 
-    override fun copyEvent(
+    abstract override fun copyEvent(
         id: String?,
         timestamp: Long?,
         partitionKey: String?,
@@ -61,20 +61,7 @@ sealed class TrackedUnitEvent : Event {
         raw: RawRecord?,
         eem: Any?,
         triggers: List<EventReference>?
-    ): Event {
-        return io.github.huherto.awsLambdaStream.utils.copyWithOverrides(
-            this,
-            mapOf(
-                "id" to id,
-                "timestamp" to timestamp,
-                "partitionKey" to partitionKey,
-                "tags" to tags,
-                "raw" to raw,
-                "eem" to eem,
-                "triggers" to triggers
-            )
-        )
-    }
+    ): Event
 }
 
 @Serializable
@@ -92,6 +79,24 @@ data class ShipmentCreatedEvent(
     override val result: String? = null
 ) : TrackedUnitEvent() {
     override fun toString() = super.toString()
+
+    override fun copyEvent(
+        id: String?,
+        timestamp: Long?,
+        partitionKey: String?,
+        tags: Map<String, String>?,
+        raw: RawRecord?,
+        eem: Any?,
+        triggers: List<EventReference>?
+    ): Event = copy(
+        id = id,
+        timestamp = timestamp,
+        partitionKey = partitionKey,
+        tags = tags,
+        raw = raw,
+        eem = eem,
+        triggers = triggers
+    )
 }
 
 @Serializable
@@ -110,6 +115,24 @@ data class ShipmentPickedUpEvent(
     override val result: String? = null
 ) : TrackedUnitEvent() {
     override fun toString() = super.toString()
+
+    override fun copyEvent(
+        id: String?,
+        timestamp: Long?,
+        partitionKey: String?,
+        tags: Map<String, String>?,
+        raw: RawRecord?,
+        eem: Any?,
+        triggers: List<EventReference>?
+    ): Event = copy(
+        id = id,
+        timestamp = timestamp,
+        partitionKey = partitionKey,
+        tags = tags,
+        raw = raw,
+        eem = eem,
+        triggers = triggers
+    )
 }
 
 @Serializable
@@ -127,6 +150,24 @@ data class ShipmentInTransitEvent(
     override val result: String? = null
 ) : TrackedUnitEvent() {
     override fun toString() = super.toString()
+
+    override fun copyEvent(
+        id: String?,
+        timestamp: Long?,
+        partitionKey: String?,
+        tags: Map<String, String>?,
+        raw: RawRecord?,
+        eem: Any?,
+        triggers: List<EventReference>?
+    ): Event = copy(
+        id = id,
+        timestamp = timestamp,
+        partitionKey = partitionKey,
+        tags = tags,
+        raw = raw,
+        eem = eem,
+        triggers = triggers
+    )
 }
 
 @Serializable
@@ -145,6 +186,24 @@ data class ArrivalAtHubEvent(
     override val result: String? = null
 ) : TrackedUnitEvent() {
     override fun toString() = super.toString()
+
+    override fun copyEvent(
+        id: String?,
+        timestamp: Long?,
+        partitionKey: String?,
+        tags: Map<String, String>?,
+        raw: RawRecord?,
+        eem: Any?,
+        triggers: List<EventReference>?
+    ): Event = copy(
+        id = id,
+        timestamp = timestamp,
+        partitionKey = partitionKey,
+        tags = tags,
+        raw = raw,
+        eem = eem,
+        triggers = triggers
+    )
 }
 
 @Serializable
@@ -163,6 +222,24 @@ data class DepartureFromHubEvent(
     override val result: String? = null
 ) : TrackedUnitEvent() {
     override fun toString() = super.toString()
+
+    override fun copyEvent(
+        id: String?,
+        timestamp: Long?,
+        partitionKey: String?,
+        tags: Map<String, String>?,
+        raw: RawRecord?,
+        eem: Any?,
+        triggers: List<EventReference>?
+    ): Event = copy(
+        id = id,
+        timestamp = timestamp,
+        partitionKey = partitionKey,
+        tags = tags,
+        raw = raw,
+        eem = eem,
+        triggers = triggers
+    )
 }
 
 @Serializable
@@ -181,6 +258,24 @@ data class CustomsClearedEvent(
     override val result: String? = null
 ) : TrackedUnitEvent() {
     override fun toString() = super.toString()
+
+    override fun copyEvent(
+        id: String?,
+        timestamp: Long?,
+        partitionKey: String?,
+        tags: Map<String, String>?,
+        raw: RawRecord?,
+        eem: Any?,
+        triggers: List<EventReference>?
+    ): Event = copy(
+        id = id,
+        timestamp = timestamp,
+        partitionKey = partitionKey,
+        tags = tags,
+        raw = raw,
+        eem = eem,
+        triggers = triggers
+    )
 }
 
 @Serializable
@@ -199,6 +294,24 @@ data class OutForDeliveryEvent(
     override val result: String? = null
 ) : TrackedUnitEvent() {
     override fun toString() = super.toString()
+
+    override fun copyEvent(
+        id: String?,
+        timestamp: Long?,
+        partitionKey: String?,
+        tags: Map<String, String>?,
+        raw: RawRecord?,
+        eem: Any?,
+        triggers: List<EventReference>?
+    ): Event = copy(
+        id = id,
+        timestamp = timestamp,
+        partitionKey = partitionKey,
+        tags = tags,
+        raw = raw,
+        eem = eem,
+        triggers = triggers
+    )
 }
 
 @Serializable
@@ -217,6 +330,24 @@ data class DeliveryAttemptedEvent(
     override val result: String? = null
 ) : TrackedUnitEvent() {
     override fun toString() = super.toString()
+
+    override fun copyEvent(
+        id: String?,
+        timestamp: Long?,
+        partitionKey: String?,
+        tags: Map<String, String>?,
+        raw: RawRecord?,
+        eem: Any?,
+        triggers: List<EventReference>?
+    ): Event = copy(
+        id = id,
+        timestamp = timestamp,
+        partitionKey = partitionKey,
+        tags = tags,
+        raw = raw,
+        eem = eem,
+        triggers = triggers
+    )
 }
 
 @Serializable
@@ -235,6 +366,24 @@ data class ShipmentDeliveredEvent(
     override val result: String? = null
 ) : TrackedUnitEvent() {
     override fun toString() = super.toString()
+
+    override fun copyEvent(
+        id: String?,
+        timestamp: Long?,
+        partitionKey: String?,
+        tags: Map<String, String>?,
+        raw: RawRecord?,
+        eem: Any?,
+        triggers: List<EventReference>?
+    ): Event = copy(
+        id = id,
+        timestamp = timestamp,
+        partitionKey = partitionKey,
+        tags = tags,
+        raw = raw,
+        eem = eem,
+        triggers = triggers
+    )
 }
 
 @Serializable
@@ -254,6 +403,24 @@ data class ShipmentExceptionEvent(
     override val result: String? = null
 ) : TrackedUnitEvent() {
     override fun toString() = super.toString()
+
+    override fun copyEvent(
+        id: String?,
+        timestamp: Long?,
+        partitionKey: String?,
+        tags: Map<String, String>?,
+        raw: RawRecord?,
+        eem: Any?,
+        triggers: List<EventReference>?
+    ): Event = copy(
+        id = id,
+        timestamp = timestamp,
+        partitionKey = partitionKey,
+        tags = tags,
+        raw = raw,
+        eem = eem,
+        triggers = triggers
+    )
 }
 
 @Serializable
@@ -271,6 +438,24 @@ data class VerifyTargetAddressEvent(
     override val result: String? = null
 ) : TrackedUnitEvent() {
     override fun toString() = super.toString()
+
+    override fun copyEvent(
+        id: String?,
+        timestamp: Long?,
+        partitionKey: String?,
+        tags: Map<String, String>?,
+        raw: RawRecord?,
+        eem: Any?,
+        triggers: List<EventReference>?
+    ): Event = copy(
+        id = id,
+        timestamp = timestamp,
+        partitionKey = partitionKey,
+        tags = tags,
+        raw = raw,
+        eem = eem,
+        triggers = triggers
+    )
 }
 
 @Serializable
@@ -288,6 +473,24 @@ data class ContactCustomerEvent(
     override val result: String? = null
 ) : TrackedUnitEvent() {
     override fun toString() = super.toString()
+
+    override fun copyEvent(
+        id: String?,
+        timestamp: Long?,
+        partitionKey: String?,
+        tags: Map<String, String>?,
+        raw: RawRecord?,
+        eem: Any?,
+        triggers: List<EventReference>?
+    ): Event = copy(
+        id = id,
+        timestamp = timestamp,
+        partitionKey = partitionKey,
+        tags = tags,
+        raw = raw,
+        eem = eem,
+        triggers = triggers
+    )
 }
 
 @Serializable
@@ -305,4 +508,22 @@ data class PoisonPillEvent(
     override val result: String? = null
 ) : TrackedUnitEvent() {
     override fun toString() = super.toString()
+
+    override fun copyEvent(
+        id: String?,
+        timestamp: Long?,
+        partitionKey: String?,
+        tags: Map<String, String>?,
+        raw: RawRecord?,
+        eem: Any?,
+        triggers: List<EventReference>?
+    ): Event = copy(
+        id = id,
+        timestamp = timestamp,
+        partitionKey = partitionKey,
+        tags = tags,
+        raw = raw,
+        eem = eem,
+        triggers = triggers
+    )
 }
