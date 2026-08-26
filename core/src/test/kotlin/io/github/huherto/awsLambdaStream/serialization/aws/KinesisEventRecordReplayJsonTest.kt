@@ -1,9 +1,11 @@
 package io.github.huherto.awsLambdaStream.serialization.aws
 
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
-import com.fasterxml.jackson.databind.ObjectMapper
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
 import org.junit.jupiter.api.Test
 import java.nio.ByteBuffer
 import java.util.*
@@ -109,10 +111,9 @@ class KinesisEventRecordReplayJsonTest {
             )
         }
 
-        val recordJson = ObjectMapper()
-            .readTree(KinesisEventReplayJson.encode(event))
-            .get("Records")
-            .get(0)
+        val recordJson = Json.parseToJsonElement(KinesisEventReplayJson.encode(event))
+            .jsonObject["Records"]!!
+            .jsonArray[0]
             .toString()
 
         val decoded = KinesisEventRecordReplayJson.decode(recordJson)

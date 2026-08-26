@@ -20,11 +20,9 @@ data class FaultEvent(
     val uow: UnitOfWorkSnapshot? = null,
 
     @kotlinx.serialization.Transient
-    @com.fasterxml.jackson.annotation.JsonIgnore
     val runtimeUow: io.github.huherto.awsLambdaStream.UnitOfWork? = null,
 
     @kotlinx.serialization.Transient
-    @com.fasterxml.jackson.annotation.JsonIgnore
     val faultException: io.github.huherto.awsLambdaStream.FaultException? = null
 ) {
     override fun toString(): String {

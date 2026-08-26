@@ -1,7 +1,6 @@
 package io.github.huherto.awsLambdaStream.from
 
 import com.amazonaws.services.lambda.runtime.events.ScheduledEvent
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.github.huherto.awsLambdaStream.*
 import io.github.huherto.awsLambdaStream.metrics.PipelineMetrics
 import io.github.huherto.awsLambdaStream.metrics.Timer
@@ -13,7 +12,6 @@ class EventBridgeAdapter(
     private val faultManager: FaultManager = GlobalRegistry.faultManager(),
     private val eventCodec: EventCodec
 ) {
-    private val mapper = jacksonObjectMapper()
 
     fun fromEventBridge(event: ScheduledEvent): Flow<UnitOfWork> {
         val timestamp = event.time?.millis ?: System.currentTimeMillis()
@@ -30,7 +28,7 @@ class EventBridgeAdapter(
             )
                 .mapNotFaulty { uow ->
                     val record = uow.record as ScheduledEvent
-                    val detailJson = mapper.writeValueAsString(record.detail)
+                    val detailJson = record.detail.toJsonElement().toString()
                     val eventObj = eventCodec.decode(detailJson).let {
                         if (it.id == null) it.copyEvent(id = record.id) else it
                     }
@@ -41,7 +39,7 @@ class EventBridgeAdapter(
 
     fun fromScheduledEvent(event: ScheduledEvent): Flow<UnitOfWork> {
         // ScheduledEvent is already the event itself in this case
-        val eventJson = mapper.writeValueAsString(event)
+        val eventJson = event.toJsonElement().toString()
         val eventObj = JsonEventCodec.decode(eventJson)
         val timestamp = event.time?.millis ?: System.currentTimeMillis()
         return flowOf(

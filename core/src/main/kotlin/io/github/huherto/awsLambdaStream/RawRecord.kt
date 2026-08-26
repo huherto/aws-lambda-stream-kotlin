@@ -1,11 +1,5 @@
 package io.github.huherto.awsLambdaStream
 
-import com.fasterxml.jackson.annotation.JsonSubTypes
-import com.fasterxml.jackson.annotation.JsonTypeInfo
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import io.github.huherto.awsLambdaStream.serialization.JsonElementJacksonDeserializer
-import io.github.huherto.awsLambdaStream.serialization.JsonElementSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -14,8 +8,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * Type discriminators for [RawRecord]. Shared by the kotlinx `@SerialName` and the Jackson
- * `@JsonSubTypes` mappings so both formats agree on the wire.
+ * Type discriminators for [RawRecord]. Shared by the kotlinx `@SerialName` mappings.
  */
 const val RAW_DYNAMODB = "dynamodb"
 const val RAW_IMAGES = "images"
@@ -28,23 +21,13 @@ const val RAW_JSON = "json"
  * The source record an [Event] was derived from.
  *
  * This is a closed hierarchy so that `Event.raw` serializes without `@Contextual` guesswork:
- * kotlinx resolves the variant from the `type` discriminator, and Jackson does the same through
- * [JsonTypeInfo]. Variants that wrap an AWS Lambda event record keep that record whole and
- * encode it with the AWS serializers, so a serialized event carries the exact payload Lambda
+ * kotlinx resolves the variant from the `type` discriminator. Variants that wrap an AWS Lambda
+ * event record keep that record whole so a serialized event carries the exact payload Lambda
  * delivered rather than a lossy projection of it.
  *
  * [JsonRaw] is the escape hatch for payloads that have no dedicated variant.
  */
 @Serializable
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
-@JsonSubTypes(
-    JsonSubTypes.Type(value = DynamodbRaw::class, name = RAW_DYNAMODB),
-    JsonSubTypes.Type(value = ImagesRaw::class, name = RAW_IMAGES),
-    JsonSubTypes.Type(value = KinesisRaw::class, name = RAW_KINESIS),
-    JsonSubTypes.Type(value = SqsRaw::class, name = RAW_SQS),
-    JsonSubTypes.Type(value = ClaimCheck::class, name = RAW_CLAIM_CHECK),
-    JsonSubTypes.Type(value = JsonRaw::class, name = RAW_JSON),
-)
 sealed interface RawRecord
 
 /**
@@ -53,8 +36,6 @@ sealed interface RawRecord
 @Serializable
 @SerialName(RAW_JSON)
 data class JsonRaw(
-    @field:JsonSerialize(using = JsonElementSerializer::class)
-    @field:JsonDeserialize(using = JsonElementJacksonDeserializer::class)
     val value: JsonElement,
 ) : RawRecord
 

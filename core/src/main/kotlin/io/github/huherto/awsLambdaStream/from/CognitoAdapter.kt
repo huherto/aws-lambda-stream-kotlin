@@ -1,29 +1,28 @@
 package io.github.huherto.awsLambdaStream.from
 
-import com.fasterxml.jackson.module.kotlin.convertValue
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.github.huherto.awsLambdaStream.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.datetime.Clock
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 import java.util.*
 
 class CognitoAdapter(private val faultManager: FaultManager = GlobalRegistry.faultManager()) {
-    private val mapper = jacksonObjectMapper()
 
     fun fromCognito(event: Any, eventTypePrefix: String = "aws-cognito"): Flow<UnitOfWork> {
         with(faultManager) {
             return flowOf(UnitOfWork(record = event))
                 .mapNotFaulty { uow ->
-                    val recordMap: Map<String, Any?> = mapper.convertValue(uow.record!!)
+                    val recordElement = uow.record.toJsonElement()
+                    val recordMap = recordElement as? JsonObject ?: JsonObject(emptyMap())
 
-                    val triggerSource = recordMap["triggerSource"] as? String ?: ""
-                    val userName = recordMap["userName"] as? String
-                    val region = recordMap["region"] as? String
-                    val userPoolId = recordMap["userPoolId"] as? String
-                    val request = recordMap["request"] as? Map<String, Any?>
+                    val triggerSource = recordMap["triggerSource"]?.jsonPrimitive?.contentOrNull ?: ""
+                    val userName = recordMap["userName"]?.jsonPrimitive?.contentOrNull
+                    val region = recordMap["region"]?.jsonPrimitive?.contentOrNull
+                    val userPoolId = recordMap["userPoolId"]?.jsonPrimitive?.contentOrNull
+                    val request = recordMap["request"] as? JsonObject
 
                     val type = "$eventTypePrefix-${toKebabCase(triggerSource)}"
 
@@ -36,8 +35,7 @@ class CognitoAdapter(private val faultManager: FaultManager = GlobalRegistry.fau
                             userPoolId?.let { put("source", it) }
                         },
                         raw = request?.let {
-                            val jsonString = mapper.writeValueAsString(it)
-                            JsonRaw(value = Json.decodeFromString<JsonElement>(jsonString))
+                            JsonRaw(value = it)
                         }
                     )
                     uow.copy(event = eventObj)

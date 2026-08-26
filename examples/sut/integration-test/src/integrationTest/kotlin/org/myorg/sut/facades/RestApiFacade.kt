@@ -7,20 +7,21 @@ import aws.sdk.kotlin.services.lambda.model.InvokeRequest
 import aws.smithy.kotlin.runtime.net.url.Url
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
-import com.fasterxml.jackson.databind.DeserializationFeature
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import io.github.huherto.awsLambdaStream.toJsonElement
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.*
 import org.myorg.sut.TrackedUnit
 
 class RestApiFacade {
-    private val objectMapper = jacksonObjectMapper()
-        .disable(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES)
+    private val json = Json {
+        ignoreUnknownKeys = true
+    }
 
     private val lambdaClient: LambdaClient by lazy {
-        LambdaClient.Companion {
+        LambdaClient {
             region = "us-east-1"
             endpointUrl = Url.parse("http://localhost:4566")
-            credentialsProvider = StaticCredentialsProvider.Companion {
+            credentialsProvider = StaticCredentialsProvider {
                 accessKeyId = "test"
                 secretAccessKey = "test"
             }
@@ -34,13 +35,13 @@ class RestApiFacade {
             .withHttpMethod("POST")
             .withResource("/shipment")
             .withPath("/shipment")
-            .withBody(objectMapper.writeValueAsString(shipment))
+            .withBody(shipment.toJson())
             .withIsBase64Encoded(false)
 
-        val response = lambdaClient.invoke(InvokeRequest.Companion {
+        val response = lambdaClient.invoke(InvokeRequest {
             functionName = lambdaFunctionName
             invocationType = InvocationType.RequestResponse
-            payload = objectMapper.writeValueAsBytes(request)
+            payload = request.toJsonElement().toString().encodeToByteArray()
         })
 
         val payload = response.payload
@@ -51,7 +52,7 @@ class RestApiFacade {
             error("RestApi Lambda invocation failed: ${response.functionError}. Payload: $payload")
         }
 
-        return objectMapper.readValue(payload, APIGatewayProxyResponseEvent::class.java)
+        return json.parseToJsonElement(payload).jsonObject.toAPIGatewayProxyResponseEvent()
     }
 
     fun get(shipmentId: String): TrackedUnit? = runBlocking {
@@ -62,10 +63,10 @@ class RestApiFacade {
             .withPathParameters(mapOf("id" to shipmentId))
             .withIsBase64Encoded(false)
 
-        val response = lambdaClient.invoke(InvokeRequest.Companion {
+        val response = lambdaClient.invoke(InvokeRequest {
             functionName = lambdaFunctionName
             invocationType = InvocationType.RequestResponse
-            payload = objectMapper.writeValueAsBytes(request)
+            payload = request.toJsonElement().toString().encodeToByteArray()
         })
 
         val payload = response.payload
@@ -76,12 +77,24 @@ class RestApiFacade {
             error("RestApi Lambda invocation failed: ${response.functionError}. Payload: $payload")
         }
 
-        val apiResponse = objectMapper.readValue(payload, APIGatewayProxyResponseEvent::class.java)
+        val apiResponse = json.parseToJsonElement(payload).jsonObject.toAPIGatewayProxyResponseEvent()
 
         when (apiResponse.statusCode) {
-            200 -> objectMapper.readValue(apiResponse.body, TrackedUnit::class.java)
+            200 -> json.decodeFromString<TrackedUnit>(apiResponse.body)
             404 -> null
             else -> error("RestApi GET /shipment/$shipmentId failed with status ${apiResponse.statusCode}. Body: ${apiResponse.body}")
+        }
+    }
+
+    private fun JsonObject.toAPIGatewayProxyResponseEvent(): APIGatewayProxyResponseEvent {
+        return APIGatewayProxyResponseEvent().apply {
+            statusCode = this@toAPIGatewayProxyResponseEvent["statusCode"]?.jsonPrimitive?.int
+            body = this@toAPIGatewayProxyResponseEvent["body"]?.jsonPrimitive?.contentOrNull
+            isBase64Encoded = this@toAPIGatewayProxyResponseEvent["isBase64Encoded"]?.jsonPrimitive?.booleanOrNull ?: false
+            headers = this@toAPIGatewayProxyResponseEvent["headers"]?.jsonObject?.mapValues { it.value.jsonPrimitive.content }
+            multiValueHeaders = this@toAPIGatewayProxyResponseEvent["multiValueHeaders"]?.jsonObject?.mapValues {
+                it.value.jsonArray.map { item -> item.jsonPrimitive.content }
+            }
         }
     }
 }

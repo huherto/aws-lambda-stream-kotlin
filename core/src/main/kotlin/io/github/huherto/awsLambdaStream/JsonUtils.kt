@@ -1,122 +1,118 @@
 package io.github.huherto.awsLambdaStream
 
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue
-import com.fasterxml.jackson.annotation.JsonAutoDetect
-import com.fasterxml.jackson.annotation.JsonInclude
-import com.fasterxml.jackson.annotation.PropertyAccessor
-import com.fasterxml.jackson.core.JsonGenerator
-import com.fasterxml.jackson.databind.JsonSerializer
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.SerializationFeature
-import com.fasterxml.jackson.databind.SerializerProvider
-import com.fasterxml.jackson.databind.module.SimpleModule
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
+import kotlinx.serialization.json.*
 import java.nio.ByteBuffer
 import java.util.*
+import kotlin.reflect.full.memberProperties
+import kotlin.reflect.jvm.isAccessible
 
-class ByteBufferSerializer : JsonSerializer<ByteBuffer>() {
-    override fun serialize(value: ByteBuffer?, gen: JsonGenerator, serializers: SerializerProvider) {
-        if (value == null) {
-            gen.writeNull()
-        } else {
-            val duplicate = value.duplicate()
+/**
+ * Extension function to convert any object to a [JsonElement] using reflection.
+ * This provides a "zero-fail" serialization for logging arbitrary objects.
+ */
+fun Any?.toJsonElement(visited: MutableSet<Int> = mutableSetOf()): JsonElement {
+    if (this == null) return JsonNull
+
+    // Handle circular references
+    val id = System.identityHashCode(this)
+    if (id in visited) {
+        return JsonPrimitive("[Circular Reference to ${this::class.simpleName}]")
+    }
+    visited.add(id)
+
+    // Basic types
+    when (this) {
+        is JsonElement -> return this
+        is String -> return JsonPrimitive(this)
+        is Number -> return JsonPrimitive(this)
+        is Boolean -> return JsonPrimitive(this)
+        is Char -> return JsonPrimitive(this.toString())
+        is Enum<*> -> return JsonPrimitive(this.name)
+    }
+
+    // Special cases
+    when (this) {
+        is ByteBuffer -> {
+            val duplicate = this.duplicate()
             val bytes = ByteArray(duplicate.remaining())
             duplicate.get(bytes)
-            gen.writeString(Base64.getEncoder().encodeToString(bytes))
+            return JsonPrimitive(Base64.getEncoder().encodeToString(bytes))
+        }
+        is AttributeValue -> {
+            return when {
+                s != null -> JsonPrimitive(s)
+                n != null -> n.toJsonNumber()
+                b != null -> b.toJsonElement(visited)
+                getBOOL() != null -> JsonPrimitive(getBOOL())
+                getNULL() == true -> JsonNull
+                m != null -> m.toJsonElement(visited)
+                l != null -> l.toJsonElement(visited)
+                getSS() != null -> JsonArray(getSS().map { JsonPrimitive(it) })
+                getNS() != null -> JsonArray(getNS().map { it.toJsonNumber() })
+                getBS() != null -> JsonArray(getBS().map { it.toJsonElement(visited) })
+                else -> JsonNull
+            }
+        }
+        is Pipeline -> {
+            return buildJsonObject {
+                put("id", id)
+            }
         }
     }
-}
 
-class PipelineSerializer : JsonSerializer<Pipeline>() {
-    override fun serialize(value: Pipeline?, gen: JsonGenerator, serializers: SerializerProvider) {
-        if (value == null) {
-            gen.writeNull()
-            return
-        }
-
-        gen.writeStartObject()
-        gen.writeObjectField("id", value.id)
-        gen.writeEndObject()
+    // Iterables & Arrays
+    if (this is Iterable<*>) {
+        return JsonArray(this.map { it.toJsonElement(visited) })
     }
-}
-
-class AttributeValueSerializer : JsonSerializer<AttributeValue>() {
-
-    override fun serialize(value: AttributeValue?, gen: JsonGenerator, serializers: SerializerProvider) {
-        if (value == null) {
-            gen.writeNull()
-            return
+    if (this::class.java.isArray) {
+        val list = mutableListOf<JsonElement>()
+        for (i in 0 until java.lang.reflect.Array.getLength(this)) {
+            list.add(java.lang.reflect.Array.get(this, i).toJsonElement(visited))
         }
+        return JsonArray(list)
+    }
 
-        // Unwraps the AWS AttributeValue into standard JSON types for cleaner logging
-        when {
-            value.s != null -> gen.writeString(value.s)
-            value.n != null -> gen.writeNumber(value.n) // Jackson safely writes the string representation as a raw JSON number
-            value.b != null -> gen.writeString(encodeByteBuffer(value.b))
-            value.getBOOL() != null -> gen.writeBoolean(value.getBOOL())
-            value.getNULL() == true -> gen.writeNull()
-            value.m != null -> {
-                gen.writeStartObject()
-                value.m.forEach { (key, attrValue) ->
-                    gen.writeFieldName(key)
-                    // Recursively serialize nested maps
-                    serialize(attrValue, gen, serializers)
+    // Maps
+    if (this is Map<*, *>) {
+        return buildJsonObject {
+            this@toJsonElement.forEach { (key, value) ->
+                put(key.toString(), value.toJsonElement(visited))
+            }
+        }
+    }
+
+    // Generic objects via reflection
+    return try {
+        val properties = this::class.memberProperties
+        buildJsonObject {
+            properties.forEach { prop ->
+                try {
+                    prop.isAccessible = true
+                    val value = prop.call(this@toJsonElement)
+                    put(prop.name, value.toJsonElement(visited))
+                } catch (e: Exception) {
+                    // Skip properties that can't be accessed or called
                 }
-                gen.writeEndObject()
             }
-            value.l != null -> {
-                gen.writeStartArray()
-                value.l.forEach { attrValue -> serialize(attrValue, gen, serializers) }
-                gen.writeEndArray()
-            }
-            value.getSS() != null -> {
-                gen.writeStartArray()
-                value.getSS().forEach { gen.writeString(it) }
-                gen.writeEndArray()
-            }
-            value.getNS() != null -> {
-                gen.writeStartArray()
-                value.getNS().forEach { gen.writeNumber(it) }
-                gen.writeEndArray()
-            }
-            value.getBS() != null -> {
-                gen.writeStartArray()
-                value.getBS().forEach { gen.writeString(encodeByteBuffer(it)) }
-                gen.writeEndArray()
-            }
-            else -> gen.writeNull() // Fallback if the AttributeValue is completely empty
         }
-    }
-
-    private fun encodeByteBuffer(bb: ByteBuffer): String {
-        val duplicate = bb.duplicate()
-        val bytes = ByteArray(duplicate.remaining())
-        duplicate.get(bytes)
-        return Base64.getEncoder().encodeToString(bytes)
+    } catch (e: Exception) {
+        // Fallback to toString for objects that fail reflection
+        JsonPrimitive(this.toString())
     }
 }
 
-private val jacksonMapper = jacksonObjectMapper().apply {
-    enable(SerializationFeature.INDENT_OUTPUT) // Pretty print
-    disable(SerializationFeature.FAIL_ON_EMPTY_BEANS) // Prevent crashes on objects with no public properties
-    setSerializationInclusion(JsonInclude.Include.NON_NULL);
-
-    val module = SimpleModule()
-    module.addSerializer(ByteBuffer::class.java, ByteBufferSerializer())
-    module.addSerializer(AttributeValue::class.java, AttributeValueSerializer())
-    module.addSerializer(Pipeline::class.java, PipelineSerializer())
-    registerModule(module)
+private fun String.toJsonNumber(): JsonPrimitive {
+    return this.toLongOrNull()?.let { JsonPrimitive(it) }
+        ?: this.toDoubleOrNull()?.let { JsonPrimitive(it) }
+        ?: JsonPrimitive(this)
 }
 
 object SafeLogger {
-    // Jackson module for Kotlin adds support for data classes and nullability
-    private val mapper: ObjectMapper = jacksonObjectMapper().apply {
-        // 1. Don't crash on empty/proxy objects
-        disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
-
-        // 2. Allow access to private fields (important for non-data classes)
-        setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY)
+    private val json = Json {
+        prettyPrint = true
+        encodeDefaults = true
     }
 
     /**
@@ -126,13 +122,12 @@ object SafeLogger {
     fun toJson(obj: Any?): String {
         if (obj == null) return "null"
 
-        // Use Kotlin's runCatching for a clean "zero-fail" flow
-        return runCatching {
-            mapper.writeValueAsString(obj)
-        }.getOrElse { throwable ->
+        return try {
+            json.encodeToString(JsonElement.serializer(), obj.toJsonElement())
+        } catch (throwable: Throwable) {
             // FALLBACK: Return a JSON-safe error descriptor
             val className = obj::class.java.name
-            val toStringVal = runCatching { obj.toString() }.getOrDefault("[toString() failed]")
+            val toStringVal = try { obj.toString() } catch (e: Exception) { "[toString() failed]" }
 
             """{"log_error": "Serialization failed", "class": "$className", "toString": "${toStringVal.escapeJson()}", "message": "${throwable.message?.escapeJson()}"}"""
         }

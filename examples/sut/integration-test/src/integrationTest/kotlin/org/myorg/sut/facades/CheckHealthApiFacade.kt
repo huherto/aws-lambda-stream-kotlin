@@ -5,10 +5,11 @@ import aws.sdk.kotlin.services.lambda.LambdaClient
 import aws.sdk.kotlin.services.lambda.model.InvocationType
 import aws.sdk.kotlin.services.lambda.model.InvokeRequest
 import aws.smithy.kotlin.runtime.net.url.Url
-import com.fasterxml.jackson.databind.DeserializationFeature
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.*
 
+@Serializable
 data class Tracer (
     val awsRegion: String,
     val roundedTimestamp: Long,
@@ -17,10 +18,11 @@ data class Tracer (
     val status: String,
 )
 
+@Serializable
 data class HealthCheckResponse(
     val statusCode: Int,
     val timestamp: Long,
-    val region: String?,
+    val region: String? = null,
     val incomplete: Boolean? = null,
     val elapsed: Double? = null,
     val tracers: List<Tracer>? = null,
@@ -28,8 +30,9 @@ data class HealthCheckResponse(
 )
 
 class CheckHealthApiFacade {
-    private val objectMapper = jacksonObjectMapper()
-        .disable(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES)
+    private val json = Json {
+        ignoreUnknownKeys = true
+    }
 
     private val lambdaClient: LambdaClient by lazy {
         LambdaClient {
@@ -45,16 +48,16 @@ class CheckHealthApiFacade {
     private val lambdaFunctionName = "sut-regional-health-check-local-checkHealthApi"
 
     fun check(): HealthCheckResponse = runBlocking {
-        val request = mapOf<String, Any?>(
-            "routeKey" to "GET /check",
-            "httpMethod" to "GET",
-            "path" to "/check",
-        )
+        val request = buildJsonObject {
+            put("routeKey", "GET /check")
+            put("httpMethod", "GET")
+            put("path", "/check")
+        }
 
         val response = lambdaClient.invoke(InvokeRequest {
             functionName = lambdaFunctionName
             invocationType = InvocationType.RequestResponse
-            payload = objectMapper.writeValueAsBytes(request)
+            payload = request.toString().encodeToByteArray()
         })
 
         val payload = response.payload
@@ -65,14 +68,18 @@ class CheckHealthApiFacade {
             error("CheckHealthApi Lambda invocation failed: ${response.functionError}. Payload: $payload")
         }
 
-        val apiResponse = objectMapper.readValue(payload, Map::class.java)
-        val statusCode = apiResponse["statusCode"] as? Int
+        val apiResponse = json.parseToJsonElement(payload).jsonObject
+        val statusCode = apiResponse["statusCode"]?.jsonPrimitive?.int
             ?: error("CheckHealthApi response did not contain a statusCode. Payload: $payload")
 
-        val body = apiResponse["body"]
+        val bodyElement = apiResponse["body"]
             ?: error("CheckHealthApi response did not contain a body. Payload: $payload")
 
-        val healthCheckResponse = objectMapper.convertValue(body, HealthCheckResponse::class.java)
+        val healthCheckResponse = if (bodyElement is JsonPrimitive && bodyElement.isString) {
+            json.decodeFromString<HealthCheckResponse>(bodyElement.content)
+        } else {
+            json.decodeFromJsonElement<HealthCheckResponse>(bodyElement)
+        }
 
         if (statusCode != healthCheckResponse.statusCode) {
             error("CheckHealthApi returned mismatched status codes. Response status: $statusCode. Body status: ${healthCheckResponse.statusCode}")

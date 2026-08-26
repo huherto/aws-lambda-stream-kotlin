@@ -17,8 +17,7 @@ dependencies {
 
     implementation(platform(libs.aws.sdk.bom))
 
-    compileOnly(libs.jackson.kotlin)
-    compileOnly(libs.kotlinx.serialization.json)
+    implementation(libs.kotlinx.serialization.json)
 
     implementation(libs.aws.java.core)
     implementation(libs.aws.java.events)
@@ -33,7 +32,7 @@ dependencies {
     compileOnly(libs.aws.sdk.sqs)
 
     implementation(libs.kotlin.logging)
-    compileOnly(libs.kotlin.reflect)
+    implementation(libs.kotlin.reflect)
 
     implementation(libs.kotlinx.coroutines)
     implementation(libs.kotlinx.datetime)
@@ -51,7 +50,6 @@ dependencies {
     testImplementation(libs.aws.sdk.sqs)
 
     testImplementation(libs.aws.lambda.java.tests)
-    testImplementation(libs.jackson.kotlin)
     testImplementation(libs.kotest.assertions)
     testImplementation(libs.kotest.property)
     testImplementation(libs.kotest.runner)

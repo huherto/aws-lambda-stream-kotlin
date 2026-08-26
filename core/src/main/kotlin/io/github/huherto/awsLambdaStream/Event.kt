@@ -65,7 +65,6 @@ abstract class BaseEvent : Event {
 class FaultException : RuntimeException {
 
     @kotlinx.serialization.Transient
-    @com.fasterxml.jackson.annotation.JsonIgnore
     var uow: UnitOfWork? = null
 
     constructor(uow: UnitOfWork?, cause: Throwable?) : super(cause) {

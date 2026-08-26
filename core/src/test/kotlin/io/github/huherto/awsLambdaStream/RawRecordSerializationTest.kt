@@ -4,7 +4,6 @@ import com.amazonaws.services.lambda.runtime.events.KinesisEvent
 import com.amazonaws.services.lambda.runtime.events.SQSEvent
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue
 import io.github.huherto.awsLambdaStream.from.RecordImage
-import io.github.huherto.awsLambdaStream.serialization.JacksonSerializationStrategy
 import io.github.huherto.awsLambdaStream.serialization.aws.DynamodbStreamRecordReplayJsonTest
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
@@ -17,11 +16,9 @@ import java.util.*
 /**
  * The point of the sealed [RawRecord] hierarchy is that both serialization strategies dispatch on
  * the same `type` discriminator without `@Contextual` guesswork. These tests pin that down for
- * kotlinx and for Jackson, since the two resolve polymorphism through entirely different machinery.
+ * kotlinx.
  */
 class RawRecordSerializationTest {
-
-    private val mapper = JacksonSerializationStrategy.defaultMapper()
 
     @Test
     fun `kotlinx should round trip a dynamodb raw record`() {
@@ -31,22 +28,12 @@ class RawRecordSerializationTest {
     }
 
     @Test
-    fun `jackson should round trip a dynamodb raw record`() {
-        val original = DynamodbRaw(DynamodbStreamRecordReplayJsonTest.streamRecord())
-
-        jacksonRoundTrip(original) shouldBe original
-    }
-
-    @Test
-    fun `both strategies should tag a dynamodb raw record the same way`() {
+    fun `a dynamodb raw record should be tagged correctly`() {
         val original = DynamodbRaw(DynamodbStreamRecordReplayJsonTest.streamRecord())
 
         val fromKotlinx = Json.encodeToJsonElement(RawRecord.serializer(), original).jsonObject
-        val fromJackson = Json.parseToJsonElement(mapper.writeValueAsString(original)).jsonObject
 
         fromKotlinx["type"] shouldBe JsonPrimitive(RAW_DYNAMODB)
-        fromJackson["type"] shouldBe JsonPrimitive(RAW_DYNAMODB)
-        fromJackson["record"] shouldBe fromKotlinx["record"]
     }
 
     @Test
@@ -78,7 +65,6 @@ class RawRecordSerializationTest {
         val raw = DynamodbRaw(DynamodbStreamRecordReplayJsonTest.streamRecord())
 
         Json.encodeToJsonElement(RawRecord.serializer(), raw).jsonObject.keys shouldBe setOf("type", "record")
-        Json.parseToJsonElement(mapper.writeValueAsString(raw)).jsonObject.keys shouldBe setOf("type", "record")
     }
 
     @Test
@@ -86,13 +72,6 @@ class RawRecordSerializationTest {
         val original = imagesRaw()
 
         kotlinxRoundTrip(original) shouldBe original
-    }
-
-    @Test
-    fun `jackson should round trip images raw`() {
-        val original = imagesRaw()
-
-        jacksonRoundTrip(original) shouldBe original
     }
 
     @Test
@@ -114,24 +93,10 @@ class RawRecordSerializationTest {
     }
 
     @Test
-    fun `jackson should round trip kinesis raw`() {
-        val original = KinesisRaw(kinesisRecord())
-
-        jacksonRoundTrip(original) shouldBe original
-    }
-
-    @Test
     fun `kotlinx should round trip sqs raw`() {
         val original = SqsRaw(sqsMessage())
 
         kotlinxRoundTrip(original) shouldBe original
-    }
-
-    @Test
-    fun `jackson should round trip sqs raw`() {
-        val original = SqsRaw(sqsMessage())
-
-        jacksonRoundTrip(original) shouldBe original
     }
 
     @Test
@@ -142,24 +107,10 @@ class RawRecordSerializationTest {
     }
 
     @Test
-    fun `jackson should round trip a claim check`() {
-        val original = ClaimCheck(bucket = "bucket-1", key = "key-1")
-
-        jacksonRoundTrip(original) shouldBe original
-    }
-
-    @Test
     fun `kotlinx should round trip arbitrary json`() {
         val original = JsonRaw(buildJsonObject { put("anything", "goes") })
 
         kotlinxRoundTrip(original) shouldBe original
-    }
-
-    @Test
-    fun `jackson should round trip arbitrary json`() {
-        val original = JsonRaw(buildJsonObject { put("anything", "goes") })
-
-        jacksonRoundTrip(original) shouldBe original
     }
 
     @Test
@@ -196,9 +147,6 @@ class RawRecordSerializationTest {
 
     private fun kotlinxRoundTrip(value: RawRecord): RawRecord =
         Json.decodeFromString(RawRecord.serializer(), Json.encodeToString(RawRecord.serializer(), value))
-
-    private fun jacksonRoundTrip(value: RawRecord): RawRecord =
-        mapper.readValue(mapper.writeValueAsString(value), RawRecord::class.java)
 
     private fun imagesRaw() = ImagesRaw(
         new = RecordImage(

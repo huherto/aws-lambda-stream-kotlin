@@ -1,11 +1,7 @@
 package io.github.huherto.awsLambdaStream.from
 
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import io.github.huherto.awsLambdaStream.DynamodbRaw
 import io.github.huherto.awsLambdaStream.ImagesRaw
-import io.github.huherto.awsLambdaStream.serialization.RecordImageJacksonDeserializer
-import io.github.huherto.awsLambdaStream.serialization.RecordImageJacksonSerializer
 import io.github.huherto.awsLambdaStream.serialization.RecordImageSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json.Default.decodeFromString
@@ -30,8 +26,6 @@ interface RecordPair {
 fun RecordPair(new: RecordImage?, old: RecordImage?): ImagesRaw = ImagesRaw(new, old)
 
 @Serializable(with = RecordImageSerializer::class)
-@JsonSerialize(using = RecordImageJacksonSerializer::class)
-@JsonDeserialize(using = RecordImageJacksonDeserializer::class)
 class RecordImage(val map: Map<String, EventAV?>) : Map<String, EventAV?> by map {
 
     fun getPk(): String? = map["pk"]?.s

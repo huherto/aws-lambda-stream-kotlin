@@ -32,7 +32,6 @@ dependencies {
     implementation(libs.aws.sdk.dynamodb)
     implementation(libs.aws.sdk.lambda)
     implementation(libs.aws.sdk.s3)
-    implementation(libs.jackson.kotlin)
     implementation(libs.kotlin.logging)
     implementation(libs.kotlinx.coroutines)
     implementation(libs.kotlinx.datetime)

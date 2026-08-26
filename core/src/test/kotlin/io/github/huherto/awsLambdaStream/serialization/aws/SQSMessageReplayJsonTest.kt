@@ -1,9 +1,11 @@
 package io.github.huherto.awsLambdaStream.serialization.aws
 
 import com.amazonaws.services.lambda.runtime.events.SQSEvent
-import com.fasterxml.jackson.databind.ObjectMapper
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
 import org.junit.jupiter.api.Test
 import java.nio.ByteBuffer
 
@@ -123,10 +125,9 @@ class SQSMessageReplayJsonTest {
             )
         }
 
-        val messageJson = ObjectMapper()
-            .readTree(SQSEventReplayJson.encode(event))
-            .get("Records")
-            .get(0)
+        val messageJson = Json.parseToJsonElement(SQSEventReplayJson.encode(event))
+            .jsonObject["Records"]!!
+            .jsonArray[0]
             .toString()
 
         SQSMessageReplayJson.decode(messageJson) shouldBe event.records.single()

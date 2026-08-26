@@ -3,12 +3,11 @@ package io.github.huherto.awsLambdaStream
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
 import com.amazonaws.services.lambda.runtime.events.SQSEvent
-import com.fasterxml.jackson.annotation.JsonIgnore
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import io.github.huherto.awsLambdaStream.from.RecordImage
 import io.github.huherto.awsLambdaStream.from.RecordPair
-import io.github.huherto.awsLambdaStream.serialization.aws.*
+import io.github.huherto.awsLambdaStream.serialization.aws.DynamodbStreamRecordSerializer
+import io.github.huherto.awsLambdaStream.serialization.aws.KinesisEventRecordSerializer
+import io.github.huherto.awsLambdaStream.serialization.aws.SQSMessageSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -22,15 +21,11 @@ import kotlinx.serialization.Serializable
 @SerialName(RAW_DYNAMODB)
 data class DynamodbRaw(
     @Serializable(with = DynamodbStreamRecordSerializer::class)
-    @field:JsonSerialize(using = DynamodbStreamRecordJacksonSerializer::class)
-    @field:JsonDeserialize(using = DynamodbStreamRecordJacksonDeserializer::class)
     val record: DynamodbEvent.DynamodbStreamRecord,
 ) : RawRecord, RecordPair {
 
-    @get:JsonIgnore
     override val new: RecordImage? by lazy { record.dynamodb?.newImage?.let(::RecordImage) }
 
-    @get:JsonIgnore
     override val old: RecordImage? by lazy { record.dynamodb?.oldImage?.let(::RecordImage) }
 }
 
@@ -49,8 +44,6 @@ data class ImagesRaw(
 @SerialName(RAW_KINESIS)
 data class KinesisRaw(
     @Serializable(with = KinesisEventRecordSerializer::class)
-    @field:JsonSerialize(using = KinesisEventRecordJacksonSerializer::class)
-    @field:JsonDeserialize(using = KinesisEventRecordJacksonDeserializer::class)
     val record: KinesisEvent.KinesisEventRecord,
 ) : RawRecord
 
@@ -59,8 +52,6 @@ data class KinesisRaw(
 @SerialName(RAW_SQS)
 data class SqsRaw(
     @Serializable(with = SQSMessageSerializer::class)
-    @field:JsonSerialize(using = SQSMessageJacksonSerializer::class)
-    @field:JsonDeserialize(using = SQSMessageJacksonDeserializer::class)
     val message: SQSEvent.SQSMessage,
 ) : RawRecord
 
