@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.flowOf
 
 class EventBridgeAdapter(
     private val faultManager: FaultManager = GlobalRegistry.faultManager(),
-    private val eventCodec: EventCodec
+    private val toEvent: (Map<String, Any>) -> Event
 ) {
 
     fun fromEventBridge(event: ScheduledEvent): Flow<UnitOfWork> {
@@ -28,10 +28,11 @@ class EventBridgeAdapter(
             )
                 .mapNotFaulty { uow ->
                     val record = uow.record as ScheduledEvent
-                    val detailJson = record.detail.toJsonElement().toString()
-                    val eventObj = eventCodec.decode(detailJson).let {
+
+                    val eventObj = toEvent(record.detail).let {
                         if (it.id == null) it.copyEvent(id = record.id) else it
                     }
+
                     uow.copy(event = eventObj)
                 }
         }
