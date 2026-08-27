@@ -25,5 +25,11 @@ This project provides Kotlin utilities and pipeline abstractions for AWS Lambda 
 - UnitOfWork should be serializable with snapshots for diagnostic purposes.
 - The framework uses kotlinx.serialization but consumers can choose to use other libraries.
 
+## Implementing the Event interface
+val raw: RawRecord?
+val eem: EnvelopeEncryptionMetadata?
+- If you need to implement Event subclasses follow advice in docs/EventImplementation.md
+
+
 Use the Mac OS "say" command to inform e when tasks are complete or you need me to act.
 

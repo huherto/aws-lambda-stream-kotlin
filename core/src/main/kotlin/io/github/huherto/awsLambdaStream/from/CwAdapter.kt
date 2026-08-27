@@ -25,6 +25,24 @@ data class AlarmEvent(
     override val raw: RawRecord? = null,
     override val eem: EnvelopeEncryptionMetadata? = null,
     override val triggers: List<EventReference>? = null
-) : BaseEvent() {
+) : Event {
     override fun eventType(): String = "aws-cloudwatch-alarm"
+
+    override fun copyEvent(
+        id: String?,
+        timestamp: Long?,
+        partitionKey: String?,
+        tags: Map<String, String>?,
+        raw: RawRecord?,
+        eem: EnvelopeEncryptionMetadata?,
+        triggers: List<EventReference>?
+    ): Event = copy(
+        id = id,
+        timestamp = timestamp,
+        partitionKey = partitionKey,
+        tags = tags,
+        raw = raw,
+        eem = eem,
+        triggers = triggers
+    )
 }

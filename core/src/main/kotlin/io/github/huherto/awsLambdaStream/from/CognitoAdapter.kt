@@ -61,6 +61,24 @@ data class CognitoEvent(
     override val timestamp: Long? = Clock.System.now().toEpochMilliseconds(),
     override val eem: EnvelopeEncryptionMetadata? = null,
     override val triggers: List<EventReference>? = null
-) : BaseEvent() {
+) : Event {
     override fun eventType(): String = type
+
+    override fun copyEvent(
+        id: String?,
+        timestamp: Long?,
+        partitionKey: String?,
+        tags: Map<String, String>?,
+        raw: RawRecord?,
+        eem: EnvelopeEncryptionMetadata?,
+        triggers: List<EventReference>?
+    ): Event = copy(
+        id = id,
+        timestamp = timestamp,
+        partitionKey = partitionKey,
+        tags = tags,
+        raw = raw,
+        eem = eem,
+        triggers = triggers
+    )
 }

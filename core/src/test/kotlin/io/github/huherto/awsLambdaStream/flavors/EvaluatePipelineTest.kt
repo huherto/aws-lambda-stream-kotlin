@@ -76,9 +76,27 @@ class EvaluatePipelineTest {
         override val eem: EnvelopeEncryptionMetadata? = null,
         override val triggers: List<EventReference>? = null,
         val type: String = "TestEvent",
-    ) : BaseEvent() {
+    ) : Event {
         override fun eventType() = type
         override fun toString() = """{"id":"$id","type":"$type"}"""
+
+        override fun copyEvent(
+            id: String?,
+            timestamp: Long?,
+            partitionKey: String?,
+            tags: Map<String, String>?,
+            raw: RawRecord?,
+            eem: EnvelopeEncryptionMetadata?,
+            triggers: List<EventReference>?
+        ): Event = copy(
+            id = id,
+            timestamp = timestamp,
+            partitionKey = partitionKey,
+            tags = tags,
+            raw = raw,
+            eem = eem,
+            triggers = triggers
+        )
     }
 
     private fun createEvent(
@@ -265,7 +283,7 @@ class EvaluatePipelineTest {
         override val raw: RawRecord? = null,
         override val eem: EnvelopeEncryptionMetadata? = null,
         override val triggers: List<EventReference>? = null
-    ) : BaseEvent() {
+    ) : Event {
         override fun eventType(): String {
             return "HigherType"
         }
@@ -273,6 +291,24 @@ class EvaluatePipelineTest {
         override fun toString(): String {
             TODO("Not yet implemented")
         }
+
+        override fun copyEvent(
+            id: String?,
+            timestamp: Long?,
+            partitionKey: String?,
+            tags: Map<String, String>?,
+            raw: RawRecord?,
+            eem: EnvelopeEncryptionMetadata?,
+            triggers: List<EventReference>?
+        ): Event = copy(
+            id = id,
+            timestamp = timestamp,
+            partitionKey = partitionKey,
+            tags = tags,
+            raw = raw,
+            eem = eem,
+            triggers = triggers
+        )
     }
 
     @Test

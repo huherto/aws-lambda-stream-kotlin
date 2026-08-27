@@ -44,7 +44,7 @@ class CorrelatePipelineTest {
      * Concrete Fake Event to avoid issues with Kotlin reflection (KClass) on anonymous objects
      * inside the filterEventTypes stage of the pipeline.
      */
-    class FakeEvent(
+    data class FakeEvent(
         override val id: String? = "event-1",
         override val timestamp: Long? = TIMESTAMP,
         override val partitionKey: String? = null,
@@ -53,9 +53,26 @@ class CorrelatePipelineTest {
         override val eem: EnvelopeEncryptionMetadata? = null,
         override val triggers: List<EventReference>? = null,
         val encodedStr: String = "{}"
-    ) : BaseEvent() {
+    ) : Event {
         override fun eventType() = "TestEvent"
         override fun toString() = encodedStr
+        override fun copyEvent(
+            id: String?,
+            timestamp: Long?,
+            partitionKey: String?,
+            tags: Map<String, String>?,
+            raw: RawRecord?,
+            eem: EnvelopeEncryptionMetadata?,
+            triggers: List<EventReference>?
+        ): Event = copy(
+            id = id,
+            timestamp = timestamp,
+            partitionKey = partitionKey,
+            tags = tags,
+            raw = raw,
+            eem = eem,
+            triggers = triggers
+        )
     }
 
     class FakeEventCodec : EventCodec {

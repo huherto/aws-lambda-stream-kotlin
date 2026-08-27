@@ -39,32 +39,6 @@ data class EnvelopeEncryptionMetadata(val something: String?) {
     // Envelope Encryption Metadata. See SAP4SS page 347
 }
 
-abstract class BaseEvent : Event {
-
-    override fun copyEvent(
-        id: String?,
-        timestamp: Long?,
-        partitionKey: String?,
-        tags: Map<String, String>?,
-        raw: RawRecord?,
-        eem: EnvelopeEncryptionMetadata?,
-        triggers: List<EventReference>?
-    ): Event {
-        return io.github.huherto.awsLambdaStream.utils.copyWithOverrides(
-            this,
-            mapOf(
-                "id" to id,
-                "timestamp" to timestamp,
-                "partitionKey" to partitionKey,
-                "tags" to tags,
-                "raw" to raw,
-                "eem" to eem,
-                "triggers" to triggers
-            )
-        )
-    }
-}
-
 @Serializable
 class FaultException : RuntimeException {
 

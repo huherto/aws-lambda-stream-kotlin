@@ -39,7 +39,7 @@ class EventsMicrostoreImplTest {
         val awsRegion = "eu-west-1"
         val expectedTableName = "events"
 
-        val mockEvent = object : BaseEvent() {
+        val mockEvent = object : Event {
             override val id = eventId
             override val timestamp = eventTimestamp
             override val partitionKey = null
@@ -49,6 +49,17 @@ class EventsMicrostoreImplTest {
             override val triggers = null
             override fun eventType() = "TEST_EVENT"
             override fun toString() = eventEncoded
+            override fun copyEvent(
+                id: String?,
+                timestamp: Long?,
+                partitionKey: String?,
+                tags: Map<String, String>?,
+                raw: RawRecord?,
+                eem: EnvelopeEncryptionMetadata?,
+                triggers: List<EventReference>?
+            ): Event {
+                TODO("Not needed for this test")
+            }
         }
 
         val savedOptions = EventsMicrostore.SaveOptions(

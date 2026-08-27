@@ -10,7 +10,7 @@ import kotlinx.serialization.serializerOrNull
 data class MyThing(val id: String? = null)
 
 @Serializable
-sealed class MyEvent : BaseEvent() {
+sealed class MyEvent : Event {
     override val id: String? get() = null
     override val timestamp: Long? get() = null
     override val partitionKey: String? get() = null
@@ -28,6 +28,16 @@ sealed class MyEvent : BaseEvent() {
     override fun toString(): String {
         return sutJson.encodeToString(MyEvent.serializer(), this)
     }
+
+    abstract override fun copyEvent(
+        id: String?,
+        timestamp: Long?,
+        partitionKey: String?,
+        tags: Map<String, String>?,
+        raw: RawRecord?,
+        eem: EnvelopeEncryptionMetadata?,
+        triggers: List<EventReference>?
+    ): MyEvent
 }
 
 @SerialName("MY_EVENT_A")
@@ -45,6 +55,24 @@ data class MyEventA(
     override val entity: MyThing? = null
 ) : MyEvent() {
     override fun toString() = super.toString()
+
+    override fun copyEvent(
+        id: String?,
+        timestamp: Long?,
+        partitionKey: String?,
+        tags: Map<String, String>?,
+        raw: RawRecord?,
+        eem: EnvelopeEncryptionMetadata?,
+        triggers: List<EventReference>?
+    ): MyEvent = copy(
+        id = id,
+        timestamp = timestamp,
+        partitionKey = partitionKey,
+        tags = tags,
+        raw = raw,
+        eem = eem,
+        triggers = triggers
+    )
 }
 
 @SerialName("MY_EVENT_B")
@@ -62,6 +90,24 @@ data class MyEventB(
     override val entity: MyThing? = null
 ) : MyEvent() {
     override fun toString() = super.toString()
+
+    override fun copyEvent(
+        id: String?,
+        timestamp: Long?,
+        partitionKey: String?,
+        tags: Map<String, String>?,
+        raw: RawRecord?,
+        eem: EnvelopeEncryptionMetadata?,
+        triggers: List<EventReference>?
+    ): MyEvent = copy(
+        id = id,
+        timestamp = timestamp,
+        partitionKey = partitionKey,
+        tags = tags,
+        raw = raw,
+        eem = eem,
+        triggers = triggers
+    )
 }
 
 @SerialName("MY_EVENT_C")
@@ -79,6 +125,24 @@ data class MyEventC(
     override val entity: MyThing? = null
 ) : MyEvent() {
     override fun toString() = super.toString()
+
+    override fun copyEvent(
+        id: String?,
+        timestamp: Long?,
+        partitionKey: String?,
+        tags: Map<String, String>?,
+        raw: RawRecord?,
+        eem: EnvelopeEncryptionMetadata?,
+        triggers: List<EventReference>?
+    ): MyEvent = copy(
+        id = id,
+        timestamp = timestamp,
+        partitionKey = partitionKey,
+        tags = tags,
+        raw = raw,
+        eem = eem,
+        triggers = triggers
+    )
 }
 
 class MyEventCodec : EventCodec {

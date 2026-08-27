@@ -48,9 +48,27 @@ class ClaimCheckStore(
         override val eem: EnvelopeEncryptionMetadata? = null,
         override val triggers: List<EventReference>? = null,
         val s3: ClaimCheck,
-    ) : BaseEvent() {
+    ) : Event {
 
         override fun eventType(): String = type
+
+        override fun copyEvent(
+            id: String?,
+            timestamp: Long?,
+            partitionKey: String?,
+            tags: Map<String, String>?,
+            raw: RawRecord?,
+            eem: EnvelopeEncryptionMetadata?,
+            triggers: List<EventReference>?
+        ): Event = copy(
+            id = id,
+            timestamp = timestamp,
+            partitionKey = partitionKey,
+            tags = tags,
+            raw = raw,
+            eem = eem,
+            triggers = triggers
+        )
 
         override fun toString(): String {
             return """

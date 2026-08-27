@@ -55,16 +55,40 @@ class CollectionPipelineTest {
         id: String = "event-1",
         timestamp: Long = Clock.System.now().toEpochMilliseconds(),
         partitionKey: String? = "partition-1",
-    ): Event = object : BaseEvent() {
-        override val id: String? = id
-        override val timestamp: Long? = timestamp
-        override val partitionKey: String? = partitionKey
-        override val tags: Map<String, String>? = null
-        override val raw: RawRecord? = null
-        override val eem: EnvelopeEncryptionMetadata? = null
-        override val triggers: List<EventReference>? = null
+    ): Event = TestEvent(
+        id = id,
+        timestamp = timestamp,
+        partitionKey = partitionKey,
+    )
+
+    data class TestEvent(
+        override val id: String?,
+        override val timestamp: Long?,
+        override val partitionKey: String?,
+        override val tags: Map<String, String>? = null,
+        override val raw: RawRecord? = null,
+        override val eem: EnvelopeEncryptionMetadata? = null,
+        override val triggers: List<EventReference>? = null,
+    ) : Event {
         override fun eventType() = "TestEvent"
         override fun toString() = """{"id":"$id"}"""
+        override fun copyEvent(
+            id: String?,
+            timestamp: Long?,
+            partitionKey: String?,
+            tags: Map<String, String>?,
+            raw: RawRecord?,
+            eem: EnvelopeEncryptionMetadata?,
+            triggers: List<EventReference>?
+        ): Event = copy(
+            id = id,
+            timestamp = timestamp,
+            partitionKey = partitionKey,
+            tags = tags,
+            raw = raw,
+            eem = eem,
+            triggers = triggers
+        )
     }
 
     @Test

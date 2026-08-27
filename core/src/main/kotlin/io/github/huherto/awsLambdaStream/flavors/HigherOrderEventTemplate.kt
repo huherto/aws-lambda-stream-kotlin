@@ -1,6 +1,5 @@
 package io.github.huherto.awsLambdaStream.flavors
 
-import io.github.huherto.awsLambdaStream.BaseEvent
 import io.github.huherto.awsLambdaStream.EnvelopeEncryptionMetadata
 import io.github.huherto.awsLambdaStream.Event
 
@@ -15,10 +14,28 @@ data class HigherOrderEventTemplate (
     @kotlinx.serialization.Contextual
     override val eem: EnvelopeEncryptionMetadata? = null,
     override val triggers: List<io.github.huherto.awsLambdaStream.EventReference>? = null
-) : BaseEvent() {
+) : Event {
     override fun eventType(): String = "Not used"
 
     override fun toString(): String = "Not used"
+
+    override fun copyEvent(
+        id: String?,
+        timestamp: Long?,
+        partitionKey: String?,
+        tags: Map<String, String>?,
+        raw: io.github.huherto.awsLambdaStream.RawRecord?,
+        eem: EnvelopeEncryptionMetadata?,
+        triggers: List<io.github.huherto.awsLambdaStream.EventReference>?
+    ): Event = copy(
+        id = id,
+        timestamp = timestamp,
+        partitionKey = partitionKey,
+        tags = tags,
+        raw = raw,
+        eem = eem,
+        triggers = triggers
+    )
 
     fun createEvent(clazz: kotlin.reflect.KClass<out Event>): Event {
         val instance = io.github.huherto.awsLambdaStream.utils.createFromCommonValues(baseEvent, clazz)
