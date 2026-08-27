@@ -73,8 +73,7 @@ class EvaluatePipelineTest {
         override val partitionKey: String? = null,
         override val tags: Map<String, String>? = null,
         override val raw: RawRecord? = null,
-        @kotlinx.serialization.Contextual
-        override val eem: Any? = null,
+        override val eem: EnvelopeEncryptionMetadata? = null,
         override val triggers: List<EventReference>? = null,
         val type: String = "TestEvent",
     ) : BaseEvent() {
@@ -88,7 +87,7 @@ class EvaluatePipelineTest {
         partitionKey: String? = "partition-1",
         tags: Map<String, String>? = null,
         raw: RawRecord? = null,
-        eem: Any? = null,
+        eem: EnvelopeEncryptionMetadata? = null,
         type: String = "TestEvent",
     ): Event = TestEvent(
         id = id,
@@ -264,8 +263,7 @@ class EvaluatePipelineTest {
         override val partitionKey: String? = null,
         override val tags: Map<String, String>? = null,
         override val raw: RawRecord? = null,
-        @kotlinx.serialization.Contextual
-        override val eem: Any? = null,
+        override val eem: EnvelopeEncryptionMetadata? = null,
         override val triggers: List<EventReference>? = null
     ) : BaseEvent() {
         override fun eventType(): String {
@@ -285,7 +283,7 @@ class EvaluatePipelineTest {
             timestamp = 1_700_000_000_000L,
             tags = mapOf("region" to "eu-west-1", "source" to "app", "team" to "core", "env" to "test"),
             raw = JsonRaw(JsonPrimitive("raw-value")),
-            eem = mapOf("key" to "value"),
+            eem = EnvelopeEncryptionMetadata("something"),
             type = "BaseType"
         )
         val trigger = createEvent(id = "trigger-1", timestamp = 1_700_000_000_123L, type = "TriggerType")
@@ -318,7 +316,7 @@ class EvaluatePipelineTest {
         basicEvent.triggers?.shouldHaveSize(2)
         // basicEvent.base shouldBe baseEvent
         basicEvent.raw shouldBe JsonRaw(JsonPrimitive("raw-value"))
-        basicEvent.eem shouldBe mapOf("key" to "value")
+        basicEvent.eem shouldBe EnvelopeEncryptionMetadata("something")
     }
 
     @Test
@@ -329,7 +327,7 @@ class EvaluatePipelineTest {
             timestamp = 1_700_000_000_000L,
             tags = mapOf("region" to "eu-west-1", "source" to "app", "team" to "core", "env" to "test"),
             raw = JsonRaw(JsonPrimitive("raw-value")),
-            eem = mapOf("key" to "value"),
+            eem = EnvelopeEncryptionMetadata("something"),
             type = "BaseType"
         )
         val trigger = createEvent(id = "trigger-1", timestamp = 1_700_000_000_123L, type = "TriggerType")

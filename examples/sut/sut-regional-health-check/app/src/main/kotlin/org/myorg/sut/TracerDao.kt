@@ -44,8 +44,7 @@ data class TracerEvent(
     override val partitionKey: String? = null,
     override val tags: Map<String, String>? = null,
     override val raw: RawRecord? = null,
-    @kotlinx.serialization.Contextual
-    override val eem: Any? = null,
+    override val eem: EnvelopeEncryptionMetadata? = null,
     override val triggers: List<EventReference>? = null,
     val type : String = "tracer"
 ) : Event {
@@ -60,7 +59,7 @@ data class TracerEvent(
         partitionKey: String?,
         tags: Map<String, String>?,
         raw: RawRecord?,
-        eem: Any?,
+        eem: EnvelopeEncryptionMetadata?,
         triggers: List<EventReference>?
     ): Event = copy(
         id = id,

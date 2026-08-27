@@ -40,8 +40,10 @@ class JsonEvent(jsonString: String) : Event {
         get() = jsonObject.stringMapOrNull("tags")
     override val raw: RawRecord?
         get() = jsonObject["raw"]?.takeUnless { it is JsonNull }?.toRawRecord()
-    override val eem: Any?
-        get() = jsonObject.stringMapOrNull("eem")
+    override val eem: EnvelopeEncryptionMetadata?
+        get() = jsonObject["eem"]
+            ?.takeUnless { it is JsonNull }
+            ?.let { Json.decodeFromJsonElement<EnvelopeEncryptionMetadata>(it) }
     override val triggers: List<EventReference>?
         get() = (jsonObject["triggers"] as? JsonArray)
             ?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
@@ -61,7 +63,7 @@ class JsonEvent(jsonString: String) : Event {
         partitionKey: String?,
         tags: Map<String, String>?,
         raw: RawRecord?,
-        eem: Any?,
+        eem: EnvelopeEncryptionMetadata?,
         triggers: List<EventReference>?
     ): Event {
         val map = jsonObject.toMutableMap()
@@ -73,7 +75,7 @@ class JsonEvent(jsonString: String) : Event {
         }
         // eem and triggers are still loosely typed, so they need runtime checks.
         if (raw != null) map["raw"] = raw.toJsonElement()
-        if (eem is JsonObject) map["eem"] = eem
+        if (eem != null) map["eem"] = eem.toJsonElement()
         if (triggers != null) {
             map["triggers"] = JsonArray(triggers.map { JsonPrimitive(it.id) }) // Simplified
         }

@@ -1,9 +1,6 @@
 package io.github.huherto.awsLambdaStream.from
 
-import io.github.huherto.awsLambdaStream.BaseEvent
-import io.github.huherto.awsLambdaStream.EventReference
-import io.github.huherto.awsLambdaStream.RawRecord
-import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.datetime.Clock
@@ -26,7 +23,7 @@ data class AlarmEvent(
     override val partitionKey: String? = null,
     override val tags: Map<String, String>? = null,
     override val raw: RawRecord? = null,
-    override val eem: Any? = null,
+    override val eem: EnvelopeEncryptionMetadata? = null,
     override val triggers: List<EventReference>? = null
 ) : BaseEvent() {
     override fun eventType(): String = "aws-cloudwatch-alarm"

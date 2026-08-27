@@ -1,6 +1,8 @@
 package io.github.huherto.awsLambdaStream.from
 
 import io.github.huherto.awsLambdaStream.BaseEvent
+import io.github.huherto.awsLambdaStream.EnvelopeEncryptionMetadata
+import io.github.huherto.awsLambdaStream.EventReference
 import io.github.huherto.awsLambdaStream.RawRecord
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json.Default.encodeToString
@@ -13,8 +15,8 @@ data class TableChangeEvent(
     override val tags: Map<String, String>? = null,
     override val raw: RawRecord? = null,
     @kotlinx.serialization.Contextual
-    override val eem: Any? = null,
-    override val triggers: List<io.github.huherto.awsLambdaStream.EventReference>? = null,
+    override val eem: EnvelopeEncryptionMetadata? = null,
+    override val triggers: List<EventReference>? = null,
     val type: String? = null,
 ) : BaseEvent() {
 

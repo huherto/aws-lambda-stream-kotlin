@@ -3,7 +3,6 @@ package io.github.huherto.awsLambdaStream.faults
 import io.github.huherto.awsLambdaStream.*
 import io.github.huherto.awsLambdaStream.serialization.snapshots.ErrorSnapshot
 import io.github.huherto.awsLambdaStream.serialization.snapshots.UnitOfWorkSnapshot
-import kotlinx.serialization.Contextual
 import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
@@ -19,9 +18,7 @@ data class FaultEvent(
     override val partitionKey: String? = null,
     override val tags: Map<String, String>? = null,
     override val raw: RawRecord? = null,
-
-    @Contextual
-    override val eem: Any? = null,
+    override val eem: EnvelopeEncryptionMetadata? = null,
     override val triggers: List<EventReference>? = null,
 
     val err: ErrorSnapshot? = null,
@@ -46,7 +43,7 @@ data class FaultEvent(
         partitionKey: String?,
         tags: Map<String, String>?,
         raw: RawRecord?,
-        eem: Any?,
+        eem: EnvelopeEncryptionMetadata?,
         triggers: List<EventReference>?
     ): Event = copy(
         id = id,

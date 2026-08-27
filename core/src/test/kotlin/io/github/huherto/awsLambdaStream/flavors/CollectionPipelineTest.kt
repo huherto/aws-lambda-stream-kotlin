@@ -61,7 +61,7 @@ class CollectionPipelineTest {
         override val partitionKey: String? = partitionKey
         override val tags: Map<String, String>? = null
         override val raw: RawRecord? = null
-        override val eem: Any? = null
+        override val eem: EnvelopeEncryptionMetadata? = null
         override val triggers: List<EventReference>? = null
         override fun eventType() = "TestEvent"
         override fun toString() = """{"id":"$id"}"""

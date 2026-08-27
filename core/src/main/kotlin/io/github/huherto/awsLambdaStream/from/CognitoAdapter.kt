@@ -59,7 +59,7 @@ data class CognitoEvent(
     override val tags: Map<String, String>?,
     override val raw: RawRecord?,
     override val timestamp: Long? = Clock.System.now().toEpochMilliseconds(),
-    override val eem: Any? = null,
+    override val eem: EnvelopeEncryptionMetadata? = null,
     override val triggers: List<EventReference>? = null
 ) : BaseEvent() {
     override fun eventType(): String = type

@@ -50,7 +50,7 @@ class CorrelatePipelineTest {
         override val partitionKey: String? = null,
         override val tags: Map<String, String>? = null,
         override val raw: RawRecord? = null,
-        override val eem: Any? = null,
+        override val eem: EnvelopeEncryptionMetadata? = null,
         override val triggers: List<EventReference>? = null,
         val encodedStr: String = "{}"
     ) : BaseEvent() {

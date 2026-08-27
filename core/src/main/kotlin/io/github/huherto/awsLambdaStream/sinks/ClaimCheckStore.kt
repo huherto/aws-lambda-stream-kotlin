@@ -45,7 +45,7 @@ class ClaimCheckStore(
         override val timestamp: Long?,
         override val tags: Map<String, String>?,
         override val raw: RawRecord? = null,
-        override val eem: Any? = null,
+        override val eem: EnvelopeEncryptionMetadata? = null,
         override val triggers: List<EventReference>? = null,
         val s3: ClaimCheck,
     ) : BaseEvent() {

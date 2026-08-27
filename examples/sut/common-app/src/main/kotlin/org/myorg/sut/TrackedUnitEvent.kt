@@ -1,10 +1,11 @@
 package org.myorg.sut
 
+import io.github.huherto.awsLambdaStream.EnvelopeEncryptionMetadata
 import io.github.huherto.awsLambdaStream.Event
 import io.github.huherto.awsLambdaStream.EventReference
 import io.github.huherto.awsLambdaStream.RawRecord
-import kotlinx.serialization.Contextual
 import kotlinx.serialization.InternalSerializationApi
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.serializerOrNull
 
@@ -34,8 +35,7 @@ sealed class TrackedUnitEvent : Event {
 
     abstract override val raw: RawRecord?
 
-    @Contextual
-    abstract override val eem: Any?
+    abstract override val eem: EnvelopeEncryptionMetadata?
 
     @Serializable(with = EventReferenceListSerializer::class)
     abstract override val triggers: List<EventReference>?
@@ -59,20 +59,20 @@ sealed class TrackedUnitEvent : Event {
         partitionKey: String?,
         tags: Map<String, String>?,
         raw: RawRecord?,
-        eem: Any?,
+        eem: EnvelopeEncryptionMetadata?,
         triggers: List<EventReference>?
     ): Event
 }
 
 @Serializable
-@kotlinx.serialization.SerialName(TrackedUnitEvent.SHIPMENT_CREATED)
+@SerialName(TrackedUnitEvent.SHIPMENT_CREATED)
 data class ShipmentCreatedEvent(
     override val id: String? = null,
     override val timestamp: Long? = null,
     override val partitionKey: String? = null,
     override val tags: Map<String, String>? = null,
     override val raw: RawRecord? = null,
-    @Contextual override val eem: Any? = null,
+    override val eem: EnvelopeEncryptionMetadata? = null,
     override val triggers: List<EventReference>? = null,
     override val entity: TrackedUnit? = null,
     override val location: String? = null,
@@ -86,7 +86,7 @@ data class ShipmentCreatedEvent(
         partitionKey: String?,
         tags: Map<String, String>?,
         raw: RawRecord?,
-        eem: Any?,
+        eem: EnvelopeEncryptionMetadata?,
         triggers: List<EventReference>?
     ): Event = copy(
         id = id,
@@ -100,7 +100,7 @@ data class ShipmentCreatedEvent(
 }
 
 @Serializable
-@kotlinx.serialization.SerialName(TrackedUnitEvent.SHIPMENT_PICKED_UP)
+@SerialName(TrackedUnitEvent.SHIPMENT_PICKED_UP)
 data class ShipmentPickedUpEvent(
     val carrierName: String? = null,
     override val id: String? = null,
@@ -108,7 +108,7 @@ data class ShipmentPickedUpEvent(
     override val partitionKey: String? = null,
     override val tags: Map<String, String>? = null,
     override val raw: RawRecord? = null,
-    @Contextual override val eem: Any? = null,
+    override val eem: EnvelopeEncryptionMetadata? = null,
     override val triggers: List<EventReference>? = null,
     override val entity: TrackedUnit? = null,
     override val location: String? = null,
@@ -122,7 +122,7 @@ data class ShipmentPickedUpEvent(
         partitionKey: String?,
         tags: Map<String, String>?,
         raw: RawRecord?,
-        eem: Any?,
+        eem: EnvelopeEncryptionMetadata?,
         triggers: List<EventReference>?
     ): Event = copy(
         id = id,
@@ -136,14 +136,14 @@ data class ShipmentPickedUpEvent(
 }
 
 @Serializable
-@kotlinx.serialization.SerialName(TrackedUnitEvent.SHIPMENT_IN_TRANSIT)
+@SerialName(TrackedUnitEvent.SHIPMENT_IN_TRANSIT)
 data class ShipmentInTransitEvent(
     override val id: String? = null,
     override val timestamp: Long? = null,
     override val partitionKey: String? = null,
     override val tags: Map<String, String>? = null,
     override val raw: RawRecord? = null,
-    @Contextual override val eem: Any? = null,
+    override val eem: EnvelopeEncryptionMetadata? = null,
     override val triggers: List<EventReference>? = null,
     override val entity: TrackedUnit? = null,
     override val location: String? = null,
@@ -157,7 +157,7 @@ data class ShipmentInTransitEvent(
         partitionKey: String?,
         tags: Map<String, String>?,
         raw: RawRecord?,
-        eem: Any?,
+        eem: EnvelopeEncryptionMetadata?,
         triggers: List<EventReference>?
     ): Event = copy(
         id = id,
@@ -171,7 +171,7 @@ data class ShipmentInTransitEvent(
 }
 
 @Serializable
-@kotlinx.serialization.SerialName(TrackedUnitEvent.ARRIVAL_AT_HUB)
+@SerialName(TrackedUnitEvent.ARRIVAL_AT_HUB)
 data class ArrivalAtHubEvent(
     val hubId: String? = null,
     override val id: String? = null,
@@ -179,7 +179,7 @@ data class ArrivalAtHubEvent(
     override val partitionKey: String? = null,
     override val tags: Map<String, String>? = null,
     override val raw: RawRecord? = null,
-    @Contextual override val eem: Any? = null,
+    override val eem: EnvelopeEncryptionMetadata? = null,
     override val triggers: List<EventReference>? = null,
     override val entity: TrackedUnit? = null,
     override val location: String? = null,
@@ -193,7 +193,7 @@ data class ArrivalAtHubEvent(
         partitionKey: String?,
         tags: Map<String, String>?,
         raw: RawRecord?,
-        eem: Any?,
+        eem: EnvelopeEncryptionMetadata?,
         triggers: List<EventReference>?
     ): Event = copy(
         id = id,
@@ -207,7 +207,7 @@ data class ArrivalAtHubEvent(
 }
 
 @Serializable
-@kotlinx.serialization.SerialName(TrackedUnitEvent.DEPARTURE_FROM_HUB)
+@SerialName(TrackedUnitEvent.DEPARTURE_FROM_HUB)
 data class DepartureFromHubEvent(
     val nextDestination: String? = null,
     override val id: String? = null,
@@ -215,7 +215,7 @@ data class DepartureFromHubEvent(
     override val partitionKey: String? = null,
     override val tags: Map<String, String>? = null,
     override val raw: RawRecord? = null,
-    @Contextual override val eem: Any? = null,
+    override val eem: EnvelopeEncryptionMetadata? = null,
     override val triggers: List<EventReference>? = null,
     override val entity: TrackedUnit? = null,
     override val location: String? = null,
@@ -229,7 +229,7 @@ data class DepartureFromHubEvent(
         partitionKey: String?,
         tags: Map<String, String>?,
         raw: RawRecord?,
-        eem: Any?,
+        eem: EnvelopeEncryptionMetadata?,
         triggers: List<EventReference>?
     ): Event = copy(
         id = id,
@@ -243,7 +243,7 @@ data class DepartureFromHubEvent(
 }
 
 @Serializable
-@kotlinx.serialization.SerialName(TrackedUnitEvent.CUSTOMS_CLEARED)
+@SerialName(TrackedUnitEvent.CUSTOMS_CLEARED)
 data class CustomsClearedEvent(
     val countryCode: String? = null,
     override val id: String? = null,
@@ -251,7 +251,7 @@ data class CustomsClearedEvent(
     override val partitionKey: String? = null,
     override val tags: Map<String, String>? = null,
     override val raw: RawRecord? = null,
-    @Contextual override val eem: Any? = null,
+    override val eem: EnvelopeEncryptionMetadata? = null,
     override val triggers: List<EventReference>? = null,
     override val entity: TrackedUnit? = null,
     override val location: String? = null,
@@ -265,7 +265,7 @@ data class CustomsClearedEvent(
         partitionKey: String?,
         tags: Map<String, String>?,
         raw: RawRecord?,
-        eem: Any?,
+        eem: EnvelopeEncryptionMetadata?,
         triggers: List<EventReference>?
     ): Event = copy(
         id = id,
@@ -279,7 +279,7 @@ data class CustomsClearedEvent(
 }
 
 @Serializable
-@kotlinx.serialization.SerialName(TrackedUnitEvent.OUT_FOR_DELIVERY)
+@SerialName(TrackedUnitEvent.OUT_FOR_DELIVERY)
 data class OutForDeliveryEvent(
     val estimatedArrival: String? = null,
     override val id: String? = null,
@@ -287,7 +287,7 @@ data class OutForDeliveryEvent(
     override val partitionKey: String? = null,
     override val tags: Map<String, String>? = null,
     override val raw: RawRecord? = null,
-    @Contextual override val eem: Any? = null,
+    override val eem: EnvelopeEncryptionMetadata? = null,
     override val triggers: List<EventReference>? = null,
     override val entity: TrackedUnit? = null,
     override val location: String? = null,
@@ -301,7 +301,7 @@ data class OutForDeliveryEvent(
         partitionKey: String?,
         tags: Map<String, String>?,
         raw: RawRecord?,
-        eem: Any?,
+        eem: EnvelopeEncryptionMetadata?,
         triggers: List<EventReference>?
     ): Event = copy(
         id = id,
@@ -315,7 +315,7 @@ data class OutForDeliveryEvent(
 }
 
 @Serializable
-@kotlinx.serialization.SerialName(TrackedUnitEvent.DELIVERY_ATTEMPTED)
+@SerialName(TrackedUnitEvent.DELIVERY_ATTEMPTED)
 data class DeliveryAttemptedEvent(
     val reason: String? = null,
     override val id: String? = null,
@@ -323,7 +323,7 @@ data class DeliveryAttemptedEvent(
     override val partitionKey: String? = null,
     override val tags: Map<String, String>? = null,
     override val raw: RawRecord? = null,
-    @Contextual override val eem: Any? = null,
+    override val eem: EnvelopeEncryptionMetadata? = null,
     override val triggers: List<EventReference>? = null,
     override val entity: TrackedUnit? = null,
     override val location: String? = null,
@@ -337,7 +337,7 @@ data class DeliveryAttemptedEvent(
         partitionKey: String?,
         tags: Map<String, String>?,
         raw: RawRecord?,
-        eem: Any?,
+        eem: EnvelopeEncryptionMetadata?,
         triggers: List<EventReference>?
     ): Event = copy(
         id = id,
@@ -351,7 +351,7 @@ data class DeliveryAttemptedEvent(
 }
 
 @Serializable
-@kotlinx.serialization.SerialName(TrackedUnitEvent.SHIPMENT_DELIVERED)
+@SerialName(TrackedUnitEvent.SHIPMENT_DELIVERED)
 data class ShipmentDeliveredEvent(
     val signedBy: String? = null,
     override val id: String? = null,
@@ -359,7 +359,7 @@ data class ShipmentDeliveredEvent(
     override val partitionKey: String? = null,
     override val tags: Map<String, String>? = null,
     override val raw: RawRecord? = null,
-    @Contextual override val eem: Any? = null,
+    override val eem: EnvelopeEncryptionMetadata? = null,
     override val triggers: List<EventReference>? = null,
     override val entity: TrackedUnit? = null,
     override val location: String? = null,
@@ -373,7 +373,7 @@ data class ShipmentDeliveredEvent(
         partitionKey: String?,
         tags: Map<String, String>?,
         raw: RawRecord?,
-        eem: Any?,
+        eem: EnvelopeEncryptionMetadata?,
         triggers: List<EventReference>?
     ): Event = copy(
         id = id,
@@ -387,7 +387,7 @@ data class ShipmentDeliveredEvent(
 }
 
 @Serializable
-@kotlinx.serialization.SerialName(TrackedUnitEvent.SHIPMENT_EXCEPTION)
+@SerialName(TrackedUnitEvent.SHIPMENT_EXCEPTION)
 data class ShipmentExceptionEvent(
     val exceptionType: String? = null,
     val description: String? = null,
@@ -396,7 +396,7 @@ data class ShipmentExceptionEvent(
     override val partitionKey: String? = null,
     override val tags: Map<String, String>? = null,
     override val raw: RawRecord? = null,
-    @Contextual override val eem: Any? = null,
+    override val eem: EnvelopeEncryptionMetadata? = null,
     override val triggers: List<EventReference>? = null,
     override val entity: TrackedUnit? = null,
     override val location: String? = null,
@@ -410,7 +410,7 @@ data class ShipmentExceptionEvent(
         partitionKey: String?,
         tags: Map<String, String>?,
         raw: RawRecord?,
-        eem: Any?,
+        eem: EnvelopeEncryptionMetadata?,
         triggers: List<EventReference>?
     ): Event = copy(
         id = id,
@@ -424,14 +424,14 @@ data class ShipmentExceptionEvent(
 }
 
 @Serializable
-@kotlinx.serialization.SerialName(TrackedUnitEvent.VERIFY_TARGET_ADDRESS)
+@SerialName(TrackedUnitEvent.VERIFY_TARGET_ADDRESS)
 data class VerifyTargetAddressEvent(
     override val id: String? = null,
     override val timestamp: Long? = null,
     override val partitionKey: String? = null,
     override val tags: Map<String, String>? = null,
     override val raw: RawRecord? = null,
-    @Contextual override val eem: Any? = null,
+    override val eem: EnvelopeEncryptionMetadata? = null,
     override val triggers: List<EventReference>? = null,
     override val entity: TrackedUnit? = null,
     override val location: String? = null,
@@ -445,7 +445,7 @@ data class VerifyTargetAddressEvent(
         partitionKey: String?,
         tags: Map<String, String>?,
         raw: RawRecord?,
-        eem: Any?,
+        eem: EnvelopeEncryptionMetadata?,
         triggers: List<EventReference>?
     ): Event = copy(
         id = id,
@@ -459,14 +459,14 @@ data class VerifyTargetAddressEvent(
 }
 
 @Serializable
-@kotlinx.serialization.SerialName(TrackedUnitEvent.CONTACT_CUSTOMER)
+@SerialName(TrackedUnitEvent.CONTACT_CUSTOMER)
 data class ContactCustomerEvent(
     override val id: String? = null,
     override val timestamp: Long? = null,
     override val partitionKey: String? = null,
     override val tags: Map<String, String>? = null,
     override val raw: RawRecord? = null,
-    @Contextual override val eem: Any? = null,
+    override val eem: EnvelopeEncryptionMetadata? = null,
     override val triggers: List<EventReference>? = null,
     override val entity: TrackedUnit? = null,
     override val location: String? = null,
@@ -480,7 +480,7 @@ data class ContactCustomerEvent(
         partitionKey: String?,
         tags: Map<String, String>?,
         raw: RawRecord?,
-        eem: Any?,
+        eem: EnvelopeEncryptionMetadata?,
         triggers: List<EventReference>?
     ): Event = copy(
         id = id,
@@ -494,14 +494,14 @@ data class ContactCustomerEvent(
 }
 
 @Serializable
-@kotlinx.serialization.SerialName(TrackedUnitEvent.POISON_PILL_EVENT)
+@SerialName(TrackedUnitEvent.POISON_PILL_EVENT)
 data class PoisonPillEvent(
     override val id: String? = null,
     override val timestamp: Long? = null,
     override val partitionKey: String? = null,
     override val tags: Map<String, String>? = null,
     override val raw: RawRecord? = null,
-    @Contextual override val eem: Any? = null,
+    override val eem: EnvelopeEncryptionMetadata? = null,
     override val triggers: List<EventReference>? = null,
     override val entity: TrackedUnit? = null,
     override val location: String? = null,
@@ -515,7 +515,7 @@ data class PoisonPillEvent(
         partitionKey: String?,
         tags: Map<String, String>?,
         raw: RawRecord?,
-        eem: Any?,
+        eem: EnvelopeEncryptionMetadata?,
         triggers: List<EventReference>?
     ): Event = copy(
         id = id,

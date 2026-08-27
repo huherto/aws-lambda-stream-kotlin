@@ -16,8 +16,7 @@ sealed class MyEvent : BaseEvent() {
     override val partitionKey: String? get() = null
     override val tags: Map<String, String>? get() = null
     override val raw: RawRecord? get() = null
-    @kotlinx.serialization.Contextual
-    override val eem: Any? get() = null
+    override val eem: EnvelopeEncryptionMetadata? get() = null
     override val triggers: List<EventReference>? get() = null
     abstract val entity: MyThing?
 
@@ -41,8 +40,7 @@ data class MyEventA(
     override val partitionKey: String? = null,
     override val tags: Map<String, String>? = null,
     override val raw: RawRecord? = null,
-    @kotlinx.serialization.Contextual
-    override val eem: Any? = null,
+    override val eem: EnvelopeEncryptionMetadata? = null,
     override val triggers: List<EventReference>? = null,
     override val entity: MyThing? = null
 ) : MyEvent() {
@@ -59,8 +57,7 @@ data class MyEventB(
     override val partitionKey: String? = null,
     override val tags: Map<String, String>? = null,
     override val raw: RawRecord? = null,
-    @kotlinx.serialization.Contextual
-    override val eem: Any? = null,
+    override val eem: EnvelopeEncryptionMetadata? = null,
     override val triggers: List<EventReference>? = null,
     override val entity: MyThing? = null
 ) : MyEvent() {
@@ -77,8 +74,7 @@ data class MyEventC(
     override val partitionKey: String? = null,
     override val tags: Map<String, String>? = null,
     override val raw: RawRecord? = null,
-    @kotlinx.serialization.Contextual
-    override val eem: Any? = null,
+    override val eem: EnvelopeEncryptionMetadata? = null,
     override val triggers: List<EventReference>? = null,
     override val entity: MyThing? = null
 ) : MyEvent() {

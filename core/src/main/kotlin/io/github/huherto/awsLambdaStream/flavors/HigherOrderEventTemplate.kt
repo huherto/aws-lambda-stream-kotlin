@@ -1,6 +1,7 @@
 package io.github.huherto.awsLambdaStream.flavors
 
 import io.github.huherto.awsLambdaStream.BaseEvent
+import io.github.huherto.awsLambdaStream.EnvelopeEncryptionMetadata
 import io.github.huherto.awsLambdaStream.Event
 
 // A concrete implementation of Event to create Higher Order Events
@@ -12,7 +13,7 @@ data class HigherOrderEventTemplate (
     override val tags: Map<String, String>? = null,
     override val raw: io.github.huherto.awsLambdaStream.RawRecord? = null,
     @kotlinx.serialization.Contextual
-    override val eem: Any? = null,
+    override val eem: EnvelopeEncryptionMetadata? = null,
     override val triggers: List<io.github.huherto.awsLambdaStream.EventReference>? = null
 ) : BaseEvent() {
     override fun eventType(): String = "Not used"

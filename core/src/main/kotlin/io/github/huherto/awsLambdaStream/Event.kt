@@ -9,8 +9,7 @@ interface Event {
     val tags: Map<String, String>?
     val raw: RawRecord?
 
-    // Envelope Encryption Metadata. See SAP4SS page 347
-    val eem: Any?
+    val eem: EnvelopeEncryptionMetadata?
 
     // References to the events that triggered this event. Useful for diagnostics.
     val triggers: List<EventReference>?
@@ -23,7 +22,7 @@ interface Event {
         partitionKey: String? = this.partitionKey,
         tags: Map<String, String>? = this.tags,
         raw: RawRecord? = this.raw,
-        eem: Any? = this.eem,
+        eem: EnvelopeEncryptionMetadata? = this.eem,
         triggers: List<EventReference>? = this.triggers
     ): Event
 }
@@ -35,6 +34,11 @@ data class EventReference(
     val timestamp: Long? = null,
 )
 
+@Serializable
+data class EnvelopeEncryptionMetadata(val something: String?) {
+    // Envelope Encryption Metadata. See SAP4SS page 347
+}
+
 abstract class BaseEvent : Event {
 
     override fun copyEvent(
@@ -43,7 +47,7 @@ abstract class BaseEvent : Event {
         partitionKey: String?,
         tags: Map<String, String>?,
         raw: RawRecord?,
-        eem: Any?,
+        eem: EnvelopeEncryptionMetadata?,
         triggers: List<EventReference>?
     ): Event {
         return io.github.huherto.awsLambdaStream.utils.copyWithOverrides(
