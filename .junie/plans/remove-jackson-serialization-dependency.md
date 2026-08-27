@@ -95,3 +95,11 @@ Update example project integration tests.
 
 - Replace Jackson usage in `examples/sut/integration-test/src/integrationTest/kotlin/org/myorg/sut/facades/CheckHealthApiFacade.kt` with Kotlinx Serialization.
 - Ensure all tests in the project still pass.
+
+### ✓ Step 6: Make kotlin-reflect optional
+Make `kotlin-reflect` a `compileOnly` dependency and add a runtime fallback.
+
+- Implement `ReflectionSupport` in `JsonUtils.kt` to detect `kotlin-reflect` availability.
+- Implement a Java reflection fallback in `toJsonElement` for when `kotlin-reflect` is missing.
+- Update `core/build.gradle.kts` to change `implementation(libs.kotlin.reflect)` to `compileOnly(libs.kotlin.reflect)`.
+- Verify that `SafeLogger` and adapters still work (either with reflection or the fallback).

@@ -48,11 +48,29 @@ data class TracerEvent(
     override val eem: Any? = null,
     override val triggers: List<EventReference>? = null,
     val type : String = "tracer"
-) : BaseEvent() {
+) : Event {
 
     override fun eventType(): String = "tracer"
 
     override fun toString(): String = TracerEventCodec.encode(this)
+
+    override fun copyEvent(
+        id: String?,
+        timestamp: Long?,
+        partitionKey: String?,
+        tags: Map<String, String>?,
+        raw: RawRecord?,
+        eem: Any?,
+        triggers: List<EventReference>?
+    ): Event = copy(
+        id = id,
+        timestamp = timestamp,
+        partitionKey = partitionKey,
+        tags = tags,
+        raw = raw,
+        eem = eem,
+        triggers = triggers
+    )
 }
 
 object TracerEventCodec : EventCodec {

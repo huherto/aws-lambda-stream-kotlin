@@ -32,7 +32,7 @@ dependencies {
     compileOnly(libs.aws.sdk.sqs)
 
     implementation(libs.kotlin.logging)
-    implementation(libs.kotlin.reflect)
+    compileOnly(libs.kotlin.reflect)
 
     implementation(libs.kotlinx.coroutines)
     implementation(libs.kotlinx.datetime)

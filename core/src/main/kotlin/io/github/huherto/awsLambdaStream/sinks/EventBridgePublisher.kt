@@ -83,6 +83,8 @@ class EventBridgePublisher(
         if (event != null) {
             val logger = KotlinLogging.logger { }
             logger.info{"Busname: $busName, Source: $source"}
+            logger.info{ "eventCodec=$eventCodec, event=${event.javaClass}" }
+
             val entry = PutEventsRequestEntry.Companion {
                 eventBusName = busName
                 source = this@EventBridgePublisher.source
