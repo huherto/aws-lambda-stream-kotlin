@@ -44,7 +44,10 @@ class FaultEventFactory(
                 redactor.redact(snapshot)
             },
             runtimeUow = uow,
-            faultException = faultException
+            faultException = faultException,
+            raw = null,
+            eem = null,
+            triggers = null,
         )
     }
 }

@@ -2,7 +2,6 @@ package io.github.huherto.awsLambdaStream.sinks
 
 import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequest
 import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequestEntry
-import io.github.huherto.awsLambdaStream.EventCodec
 import io.github.huherto.awsLambdaStream.GlobalRegistry.envConfig
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.DefaultEventBridgeClientFactory
@@ -11,12 +10,9 @@ import io.github.huherto.awsLambdaStream.connectors.EventBridgeConnector
 import io.github.huherto.awsLambdaStream.connectors.RetryConfig
 import io.github.huherto.awsLambdaStream.extensions.*
 import io.github.huherto.awsLambdaStream.metrics.withStepMetrics
-import io.github.huherto.awsLambdaStream.serialization.SerializationStrategy
-import io.github.huherto.awsLambdaStream.serialization.SerializationStrategyResolver
 import io.github.huherto.awsLambdaStream.utils.adornStandardTags
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
-import mu.KotlinLogging
 import kotlin.time.Duration.Companion.milliseconds
 
 interface EventPublisher {
@@ -44,8 +40,6 @@ class EventBridgePublisher(
     val handleErrors: Boolean = true,
     val clientFactory: EventBridgeClientFactory = DefaultEventBridgeClientFactory(),
     val claimCheckStore: ClaimCheckStore? = null,
-    private val eventCodec: EventCodec? = null,
-    private val serializationStrategy: SerializationStrategy = SerializationStrategyResolver().resolve(),
 ) : EventPublisher {
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -81,25 +75,20 @@ class EventBridgePublisher(
         val fault = uow.fault
 
         if (event != null) {
-            val logger = KotlinLogging.logger { }
-            logger.info{"Busname: $busName, Source: $source"}
-            logger.info{ "eventCodec=$eventCodec, event=${event.javaClass}" }
 
             val entry = PutEventsRequestEntry.Companion {
                 eventBusName = busName
                 source = this@EventBridgePublisher.source
                 detailType = event.eventType()
-                detail = eventCodec?.encode(event) ?: event.toString()
+                detail = event.toString()
             }
             return uow.withPublishRequestEntry(entry)
         } else if (fault != null) {
-            val logger = KotlinLogging.logger { }
-            logger.info{"Busname: $busName, Source: $source"}
             val entry = PutEventsRequestEntry.Companion {
                 eventBusName = busName
                 source = this@EventBridgePublisher.source
                 detailType = fault.type
-                detail = serializationStrategy.serialize(fault)
+                detail = fault.toString()
             }
             return uow.withPublishRequestEntry(entry)
         }
