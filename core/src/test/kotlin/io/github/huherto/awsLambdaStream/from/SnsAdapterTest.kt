@@ -3,8 +3,8 @@ package io.github.huherto.awsLambdaStream.from
 import com.amazonaws.services.lambda.runtime.events.SNSEvent
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.EventCodec
-import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.MyEventCodec
+import io.github.huherto.awsLambdaStream.faults.FaultManager
 import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe

@@ -9,6 +9,7 @@ import io.github.huherto.awsLambdaStream.connectors.DynamoDbClientFactory
 import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
 import io.github.huherto.awsLambdaStream.extensions.updateRequest
 import io.github.huherto.awsLambdaStream.extensions.updateResponse
+import io.github.huherto.awsLambdaStream.faults.FaultManager
 import io.github.huherto.awsLambdaStream.filters.EventFilter
 import io.github.huherto.awsLambdaStream.sinks.EventPublisher
 import io.kotest.matchers.collections.shouldContainExactly

@@ -1,10 +1,10 @@
 package io.github.huherto.awsLambdaStream.utils
 
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
-import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.GlobalRegistry
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.faults.FaultEvent
+import io.github.huherto.awsLambdaStream.faults.FaultManager
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import io.kotest.matchers.shouldBe
 import io.mockk.every

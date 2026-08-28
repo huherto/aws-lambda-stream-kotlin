@@ -1,5 +1,6 @@
 package io.github.huherto.awsLambdaStream
 
+import io.github.huherto.awsLambdaStream.faults.FaultManager
 import io.github.huherto.awsLambdaStream.filters.EventFilters
 import io.github.huherto.awsLambdaStream.filters.filterEvents
 import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory

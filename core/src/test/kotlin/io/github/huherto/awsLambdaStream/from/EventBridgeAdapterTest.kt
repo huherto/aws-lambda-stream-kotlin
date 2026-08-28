@@ -2,8 +2,8 @@ package io.github.huherto.awsLambdaStream.from
 
 import com.amazonaws.services.lambda.runtime.events.ScheduledEvent
 import io.github.huherto.awsLambdaStream.Event
-import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.MyEventA
+import io.github.huherto.awsLambdaStream.faults.FaultManager
 import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe

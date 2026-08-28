@@ -10,6 +10,7 @@ import io.github.huherto.awsLambdaStream.connectors.DynamoDbClientFactory
 import io.github.huherto.awsLambdaStream.extensions.putRequest
 import io.github.huherto.awsLambdaStream.extensions.putResponse
 import io.github.huherto.awsLambdaStream.extensions.saveOptions
+import io.github.huherto.awsLambdaStream.faults.FaultManager
 import io.github.huherto.awsLambdaStream.filters.EventFilters
 import io.github.huherto.awsLambdaStream.from.RecordImage
 import io.github.huherto.awsLambdaStream.from.RecordPair

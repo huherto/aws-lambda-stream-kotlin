@@ -1,7 +1,7 @@
 package io.github.huherto.awsLambdaStream.flavors
 
-import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.faults.FaultManager
 import io.github.huherto.awsLambdaStream.serialization.UnitOfWorkSnapshotSerializer
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.json.Json

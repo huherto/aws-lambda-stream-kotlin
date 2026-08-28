@@ -1,7 +1,6 @@
 package io.github.huherto.awsLambdaStream.sinks
 
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
-import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.GlobalRegistry.envConfig
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
@@ -9,6 +8,7 @@ import io.github.huherto.awsLambdaStream.extensions.putRequest
 import io.github.huherto.awsLambdaStream.extensions.updateRequest
 import io.github.huherto.awsLambdaStream.extensions.withPutResponse
 import io.github.huherto.awsLambdaStream.extensions.withUpdateResponse
+import io.github.huherto.awsLambdaStream.faults.FaultManager
 import io.github.huherto.awsLambdaStream.metrics.withStepMetrics
 import io.github.huherto.awsLambdaStream.utils.mapParallel
 import kotlinx.coroutines.flow.Flow

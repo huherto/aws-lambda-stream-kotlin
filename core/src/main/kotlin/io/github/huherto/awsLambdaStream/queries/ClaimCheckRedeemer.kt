@@ -1,10 +1,14 @@
 package io.github.huherto.awsLambdaStream.queries
 
 import aws.sdk.kotlin.services.s3.model.GetObjectRequest
-import io.github.huherto.awsLambdaStream.*
+import io.github.huherto.awsLambdaStream.EventCodec
+import io.github.huherto.awsLambdaStream.GlobalRegistry
+import io.github.huherto.awsLambdaStream.RawRecord
+import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.S3Connector
 import io.github.huherto.awsLambdaStream.extensions.copyS3
 import io.github.huherto.awsLambdaStream.extensions.s3
+import io.github.huherto.awsLambdaStream.faults.FaultManager
 import kotlinx.coroutines.flow.Flow
 
 // claim-check pattern support
@@ -22,7 +26,7 @@ typealias ClaimCheck = io.github.huherto.awsLambdaStream.ClaimCheck
  * payload from S3 when a [ClaimCheck] is present in the record.
  *
  * @param s3ConnectorOptions Options for the [S3Connector] used to fetch the payload.
- * @param faultManager The [FaultManager] used to handle errors during redemption.
+ * @param faultManager The [io.github.huherto.awsLambdaStream.faults.FaultManager] used to handle errors during redemption.
  * @param eventCodec The [EventCodec] used to decode the fetched payload.
  * @param claimCheck A function that extracts the [ClaimCheck] from a [UnitOfWork].
  */

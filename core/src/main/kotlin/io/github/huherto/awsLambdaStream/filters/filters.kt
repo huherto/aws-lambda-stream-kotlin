@@ -1,8 +1,8 @@
 package io.github.huherto.awsLambdaStream.filters
 
-import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.GlobalRegistry.envConfig
 import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.faults.FaultManager
 import io.github.huherto.awsLambdaStream.from.RecordPair
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filter

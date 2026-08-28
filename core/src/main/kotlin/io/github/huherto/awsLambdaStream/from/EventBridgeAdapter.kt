@@ -2,6 +2,7 @@ package io.github.huherto.awsLambdaStream.from
 
 import com.amazonaws.services.lambda.runtime.events.ScheduledEvent
 import io.github.huherto.awsLambdaStream.*
+import io.github.huherto.awsLambdaStream.faults.FaultManager
 import io.github.huherto.awsLambdaStream.metrics.PipelineMetrics
 import io.github.huherto.awsLambdaStream.metrics.Timer
 import io.github.huherto.awsLambdaStream.metrics.withMetrics
@@ -13,6 +14,7 @@ class EventBridgeAdapter(
     private val toEvent: (Map<String, Any>) -> Event
 ) {
 
+    // Use this when it is an event sent through EventBridge from another service
     fun fromEventBridge(event: ScheduledEvent): Flow<UnitOfWork> {
         val timestamp = event.time?.millis ?: System.currentTimeMillis()
         with(faultManager) {
@@ -38,6 +40,7 @@ class EventBridgeAdapter(
         }
     }
 
+    // Use this when it is a timer firing
     fun fromScheduledEvent(event: ScheduledEvent): Flow<UnitOfWork> {
         // ScheduledEvent is already the event itself in this case
         val eventJson = event.toJsonElement().toString()

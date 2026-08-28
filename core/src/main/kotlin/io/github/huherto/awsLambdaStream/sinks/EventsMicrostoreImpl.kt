@@ -2,7 +2,6 @@ package io.github.huherto.awsLambdaStream.sinks
 
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
-import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.GlobalRegistry
 import io.github.huherto.awsLambdaStream.GlobalRegistry.envConfig
 import io.github.huherto.awsLambdaStream.UnitOfWork
@@ -11,6 +10,7 @@ import io.github.huherto.awsLambdaStream.extensions.putRequest
 import io.github.huherto.awsLambdaStream.extensions.queryRequest
 import io.github.huherto.awsLambdaStream.extensions.withPutResponse
 import io.github.huherto.awsLambdaStream.extensions.withQueryResponse
+import io.github.huherto.awsLambdaStream.faults.FaultManager
 import io.github.huherto.awsLambdaStream.metrics.withStepMetrics
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow

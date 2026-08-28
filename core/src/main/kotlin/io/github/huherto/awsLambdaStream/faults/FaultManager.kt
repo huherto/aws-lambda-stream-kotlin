@@ -1,12 +1,14 @@
-package io.github.huherto.awsLambdaStream
+package io.github.huherto.awsLambdaStream.faults
 
 import aws.smithy.kotlin.runtime.SdkBaseException
-import com.amazonaws.services.lambda.runtime.events.StreamsEventResponse.BatchItemFailure
-import io.github.huherto.awsLambdaStream.faults.FaultEvent
-import io.github.huherto.awsLambdaStream.faults.FaultEventFactory
+import com.amazonaws.services.lambda.runtime.events.StreamsEventResponse
+import io.github.huherto.awsLambdaStream.FaultException
+import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.envConfig
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import io.github.huherto.awsLambdaStream.sinks.EventPublisher
 import kotlinx.coroutines.flow.*
+import mu.KotlinLogging
 import java.util.concurrent.ConcurrentLinkedQueue
 
 /**
@@ -23,7 +25,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
  * @param eventPublisher Publisher used to emit generated [FaultEvent]s.
  * @param skipErrorLogging When `true`, suppresses error logging. Useful for tests.
  * @param isStreamRetryEnabled Whether retryable stream-processing failures should be rethrown.
- * Defaults to [EnvironmentConfig.streamRetryEnabled].
+ * Defaults to [io.github.huherto.awsLambdaStream.EnvironmentConfig.streamRetryEnabled].
  * @param awsLambdaFunctionName Lambda function name attached to generated fault-event tags.
  */
 class FaultManager(
@@ -35,7 +37,7 @@ class FaultManager(
     private val faultEventFactory: FaultEventFactory = FaultEventFactory(awsLambdaFunctionName = awsLambdaFunctionName)
 ) {
 
-    private val logger = mu.KotlinLogging.logger { }
+    private val logger = KotlinLogging.logger { }
 
     private val theFaults = ConcurrentLinkedQueue<FaultEvent>()
 
@@ -44,7 +46,7 @@ class FaultManager(
     /**
      * Internal placeholder pipeline used when publishing fault events.
      *
-     * Fault events are emitted as [UnitOfWork] instances and therefore need an associated [Pipeline].
+     * Fault events are emitted as [UnitOfWork] instances and therefore need an associated [io.github.huherto.awsLambdaStream.flavors.Pipeline].
      * This pipeline is not intended to process regular application events.
      */
     class FaultManagerPipeline(id: String) : Pipeline(id) {
@@ -139,12 +141,12 @@ class FaultManager(
         return false
     }
 
-    fun kinesisRetryableFailures(): List<BatchItemFailure> {
-        val retryableBatchFailures = mutableListOf<BatchItemFailure>()
+    fun kinesisRetryableFailures(): List<StreamsEventResponse.BatchItemFailure> {
+        val retryableBatchFailures = mutableListOf<StreamsEventResponse.BatchItemFailure>()
 
         while (true) {
             val uow = retryableItems.poll() ?: break
-            retryableBatchFailures.add(BatchItemFailure(uow.sequenceNumber))
+            retryableBatchFailures.add(StreamsEventResponse.BatchItemFailure(uow.sequenceNumber))
         }
 
         return retryableBatchFailures

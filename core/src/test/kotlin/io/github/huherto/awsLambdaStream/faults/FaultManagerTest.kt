@@ -1,6 +1,10 @@
-package io.github.huherto.awsLambdaStream
+package io.github.huherto.awsLambdaStream.faults
 
 import aws.smithy.kotlin.runtime.SdkBaseException
+import io.github.huherto.awsLambdaStream.EnvironmentConfig
+import io.github.huherto.awsLambdaStream.FaultException
+import io.github.huherto.awsLambdaStream.GlobalRegistry
+import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldBeEmpty

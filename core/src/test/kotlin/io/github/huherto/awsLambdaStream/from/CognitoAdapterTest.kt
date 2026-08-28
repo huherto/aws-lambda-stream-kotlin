@@ -1,8 +1,8 @@
 package io.github.huherto.awsLambdaStream.from
 
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
-import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.JsonRaw
+import io.github.huherto.awsLambdaStream.faults.FaultManager
 import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe

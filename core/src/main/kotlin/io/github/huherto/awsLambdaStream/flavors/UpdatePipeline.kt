@@ -6,13 +6,13 @@ import aws.sdk.kotlin.services.dynamodb.model.UpdateItemRequest
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import io.github.huherto.awsLambdaStream.Event
 import io.github.huherto.awsLambdaStream.EventCodec
-import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
 import io.github.huherto.awsLambdaStream.extensions.queryResponse
 import io.github.huherto.awsLambdaStream.extensions.withBatchGetRequest
 import io.github.huherto.awsLambdaStream.extensions.withQueryRequest
 import io.github.huherto.awsLambdaStream.extensions.withUpdateRequest
+import io.github.huherto.awsLambdaStream.faults.FaultManager
 import io.github.huherto.awsLambdaStream.filters.EventFilter
 import io.github.huherto.awsLambdaStream.filters.filterEvents
 import io.github.huherto.awsLambdaStream.from.RecordImage

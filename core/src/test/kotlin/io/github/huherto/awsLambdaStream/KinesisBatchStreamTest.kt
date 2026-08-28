@@ -9,6 +9,7 @@ import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
 import com.amazonaws.services.lambda.runtime.events.StreamsEventResponse
 import com.amazonaws.services.lambda.runtime.events.StreamsEventResponse.BatchItemFailure
+import io.github.huherto.awsLambdaStream.faults.FaultManager
 import io.github.huherto.awsLambdaStream.from.KinesisAdapter
 import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
 import io.github.huherto.awsLambdaStream.testsupport.TestContext

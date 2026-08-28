@@ -1,5 +1,6 @@
 package io.github.huherto.awsLambdaStream
 
+import io.github.huherto.awsLambdaStream.faults.FaultManager
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import io.github.huherto.awsLambdaStream.metrics.updateMetrics
 import kotlinx.coroutines.flow.Flow
@@ -14,7 +15,7 @@ import kotlinx.coroutines.flow.onCompletion
  * pipeline to each emitted [UnitOfWork], connects the pipeline stages, and then merges all resulting
  * downstream flows into a single output flow.
  *
- * The assembler also owns the shared [FaultManager] used by all connected pipelines. When fault
+ * The assembler also owns the shared [io.github.huherto.awsLambdaStream.faults.FaultManager] used by all connected pipelines. When fault
  * handling is enabled in [assemble], queued fault events are flushed after the merged flow completes.
  *
  * Create instances through [builder].
@@ -30,7 +31,7 @@ class PipelineAssembler private constructor(builder : Builder) {
     private val faultManager = builder.faultManager?: throw RuntimeException("faultManager is required")
 
     /**
-     * Returns the shared [FaultManager] used when connecting pipelines.
+     * Returns the shared [io.github.huherto.awsLambdaStream.faults.FaultManager] used when connecting pipelines.
      */
     fun getFaultManager(): FaultManager {
         return faultManager

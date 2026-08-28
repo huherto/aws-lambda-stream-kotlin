@@ -1,13 +1,13 @@
 package io.github.huherto.awsLambdaStream.queries
 
 import aws.sdk.kotlin.services.dynamodb.model.*
-import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
 import io.github.huherto.awsLambdaStream.extensions.batchGetRequest
 import io.github.huherto.awsLambdaStream.extensions.queryRequest
 import io.github.huherto.awsLambdaStream.extensions.withBatchGetResponse
 import io.github.huherto.awsLambdaStream.extensions.withQueryResponse
+import io.github.huherto.awsLambdaStream.faults.FaultManager
 import io.github.huherto.awsLambdaStream.from.RecordPair
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll

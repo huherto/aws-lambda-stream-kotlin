@@ -1,6 +1,5 @@
 package io.github.huherto.awsLambdaStream.faults
 
-import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import io.github.huherto.awsLambdaStream.serialization.snapshots.DefaultUnitOfWorkSnapshotter

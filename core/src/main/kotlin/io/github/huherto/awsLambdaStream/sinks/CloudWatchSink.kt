@@ -1,6 +1,5 @@
 package io.github.huherto.awsLambdaStream.sinks
 
-import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.GlobalRegistry.envConfig
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.CloudWatchClientFactory
@@ -8,6 +7,7 @@ import io.github.huherto.awsLambdaStream.connectors.CloudWatchConnector
 import io.github.huherto.awsLambdaStream.connectors.DefaultCloudWatchClientFactory
 import io.github.huherto.awsLambdaStream.extensions.copyCloudWatch
 import io.github.huherto.awsLambdaStream.extensions.putMetricDataRequest
+import io.github.huherto.awsLambdaStream.faults.FaultManager
 import io.github.huherto.awsLambdaStream.metrics.withStepMetrics
 import io.github.huherto.awsLambdaStream.utils.mapParallel
 import kotlinx.coroutines.flow.Flow

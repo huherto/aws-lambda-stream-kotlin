@@ -3,11 +3,11 @@ package io.github.huherto.awsLambdaStream.sinks
 import aws.sdk.kotlin.services.cloudwatch.model.PutMetricDataRequest
 import aws.sdk.kotlin.services.cloudwatch.model.PutMetricDataResponse
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
-import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.CloudWatchConnector
 import io.github.huherto.awsLambdaStream.extensions.putMetricDataResponse
 import io.github.huherto.awsLambdaStream.extensions.withPutMetricDataRequest
+import io.github.huherto.awsLambdaStream.faults.FaultManager
 import io.kotest.matchers.shouldBe
 import io.mockk.*
 import kotlinx.coroutines.flow.flowOf

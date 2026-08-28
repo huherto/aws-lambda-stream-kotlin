@@ -1,8 +1,8 @@
 package org.myorg.sut
 
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
-import io.github.huherto.awsLambdaStream.FaultManager
 import io.github.huherto.awsLambdaStream.GlobalRegistry
+import io.github.huherto.awsLambdaStream.faults.FaultManager
 import io.github.huherto.awsLambdaStream.from.KinesisAdapter
 import io.github.huherto.awsLambdaStream.sinks.EventsMicrostore
 import io.kotest.matchers.nulls.shouldNotBeNull
