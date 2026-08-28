@@ -4,10 +4,13 @@ import com.amazonaws.services.lambda.runtime.events.SQSEvent
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
 import org.junit.jupiter.api.Test
 import java.nio.ByteBuffer
 
-class SQSEventReplayJsonTest {
+class SqsSerializationTest {
 
     @Test
     fun `should round trip serialize and deserialize a single sqs message`() {
@@ -154,6 +157,64 @@ class SQSEventReplayJsonTest {
         val decoded = SQSEventReplayJson.decode(json)
 
         decoded.records shouldHaveSize 0
+    }
+
+    @Test
+    fun `should round trip serialize and deserialize a bare sqs message`() {
+        val body = """{"id":"event-1","type":"example"}"""
+        val original = sqsMessage(
+            messageId = "059f36b4-87a3-44ab-83d2-661975830a7d",
+            receiptHandle = "AQEBwJnKyrHigUMZj6rYigCgxlaS3SLy0a",
+            body = body,
+        )
+
+        val json = SQSMessageReplayJson.encode(original)
+        val decoded = SQSMessageReplayJson.decode(json)
+
+        decoded.messageId shouldBe original.messageId
+        decoded.receiptHandle shouldBe original.receiptHandle
+        decoded.body shouldBe body
+        decoded.md5OfBody shouldBe original.md5OfBody
+        decoded.md5OfMessageAttributes shouldBe original.md5OfMessageAttributes
+        decoded.eventSource shouldBe original.eventSource
+        decoded.eventSourceArn shouldBe original.eventSourceArn
+        decoded.awsRegion shouldBe original.awsRegion
+        decoded.attributes shouldBe original.attributes
+    }
+
+    @Test
+    fun `should serialize a bare message without a Records wrapper`() {
+        val original = sqsMessage(
+            messageId = "message-1",
+            receiptHandle = "receipt-1",
+            body = """{"id":"1"}""",
+        )
+
+        val json = SQSMessageReplayJson.encode(original)
+
+        json shouldContain """"messageId":"message-1""""
+        json shouldContain """"eventSourceARN""""
+        json.contains(""""Records"""") shouldBe false
+    }
+
+    @Test
+    fun `should decode a message lifted verbatim out of sqs event json`() {
+        val event = SQSEvent().apply {
+            records = listOf(
+                sqsMessage(
+                    messageId = "message-1",
+                    receiptHandle = "receipt-1",
+                    body = """{"id":"1"}""",
+                )
+            )
+        }
+
+        val messageJson = Json.parseToJsonElement(SQSEventReplayJson.encode(event))
+            .jsonObject["Records"]!!
+            .jsonArray[0]
+            .toString()
+
+        SQSMessageReplayJson.decode(messageJson) shouldBe event.records.single()
     }
 
     private fun sqsMessage(

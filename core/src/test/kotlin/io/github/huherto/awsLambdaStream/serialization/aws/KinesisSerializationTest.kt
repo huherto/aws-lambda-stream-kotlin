@@ -4,11 +4,14 @@ import com.amazonaws.services.lambda.runtime.events.KinesisEvent
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
 import org.junit.jupiter.api.Test
 import java.nio.ByteBuffer
 import java.util.*
 
-class KinesisEventReplayJsonTest {
+class KinesisSerializationTest {
 
     @Test
     fun `should round trip serialize and deserialize a single kinesis record`() {
@@ -130,6 +133,82 @@ class KinesisEventReplayJsonTest {
         decoded.records shouldHaveSize 0
     }
 
+    @Test
+    fun `should round trip serialize and deserialize a bare kinesis event record`() {
+        val payload = """{"id":"event-1","type":"example"}"""
+        val original = kinesisRecord(
+            eventId = "shardId-000000000000:49590338271490256608559692538361571095921575989136588898",
+            sequenceNumber = "49590338271490256608559692538361571095921575989136588898",
+            partitionKey = "partition-1",
+            payload = payload,
+        )
+
+        val json = KinesisEventRecordReplayJson.encode(original)
+        val decoded = KinesisEventRecordReplayJson.decode(json)
+
+        decoded.eventID shouldBe original.eventID
+        decoded.eventName shouldBe original.eventName
+        decoded.eventSource shouldBe original.eventSource
+        decoded.eventSourceARN shouldBe original.eventSourceARN
+        decoded.invokeIdentityArn shouldBe original.invokeIdentityArn
+        decoded.awsRegion shouldBe original.awsRegion
+        decoded.eventVersion shouldBe original.eventVersion
+
+        decoded.kinesis.sequenceNumber shouldBe original.kinesis.sequenceNumber
+        decoded.kinesis.partitionKey shouldBe original.kinesis.partitionKey
+        decoded.kinesis.kinesisSchemaVersion shouldBe original.kinesis.kinesisSchemaVersion
+        decoded.kinesis.encryptionType shouldBe original.kinesis.encryptionType
+        decoded.kinesis.approximateArrivalTimestamp shouldBe original.kinesis.approximateArrivalTimestamp
+
+        decoded.kinesis.data.asUtf8String() shouldBe payload
+    }
+
+    @Test
+    fun `should serialize kinesis data as base64 without a Records wrapper`() {
+        val payload = """{"id":"event-with-base64-check"}"""
+        val expectedBase64Payload = Base64.getEncoder()
+            .encodeToString(payload.toByteArray())
+
+        val original = kinesisRecord(
+            eventId = "event-1",
+            sequenceNumber = "sequence-1",
+            partitionKey = "partition-1",
+            payload = payload,
+        )
+
+        val json = KinesisEventRecordReplayJson.encode(original)
+
+        json shouldContain """"kinesis""""
+        json shouldContain """"data""""
+        json shouldContain expectedBase64Payload
+        json.contains(""""Records"""") shouldBe false
+    }
+
+    @Test
+    fun `should decode a record lifted verbatim out of kinesis event json`() {
+        val payload = """{"id":"1"}"""
+        val event = KinesisEvent().apply {
+            records = listOf(
+                kinesisRecord(
+                    eventId = "event-1",
+                    sequenceNumber = "sequence-1",
+                    partitionKey = "partition-1",
+                    payload = payload,
+                )
+            )
+        }
+
+        val recordJson = Json.parseToJsonElement(KinesisEventReplayJson.encode(event))
+            .jsonObject["Records"]!!
+            .jsonArray[0]
+            .toString()
+
+        val decoded = KinesisEventRecordReplayJson.decode(recordJson)
+
+        decoded shouldBe event.records.single()
+        decoded.kinesis.data.asUtf8String() shouldBe payload
+    }
+
     private fun kinesisRecord(
         eventId: String,
         sequenceNumber: String,
@@ -141,6 +220,7 @@ class KinesisEventReplayJsonTest {
             eventName = "aws:kinesis:record"
             eventSource = "aws:kinesis"
             eventSourceARN = "arn:aws:kinesis:us-east-1:123456789012:stream/example-stream"
+            invokeIdentityArn = "arn:aws:iam::123456789012:role/example-role"
             awsRegion = "us-east-1"
             eventVersion = "1.0"
 

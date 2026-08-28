@@ -9,7 +9,7 @@ import io.kotest.matchers.string.shouldContain
 import org.junit.jupiter.api.Test
 import java.util.*
 
-class DynamodbStreamRecordReplayJsonTest {
+class DynamodbSerializationTest {
 
     @Test
     fun `should round trip a dynamodb stream record`() {

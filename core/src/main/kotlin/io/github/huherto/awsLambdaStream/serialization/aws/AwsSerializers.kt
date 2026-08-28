@@ -1,4 +1,4 @@
-package io.github.huherto.awsLambdaStream.serialization.aws.snapshots
+package io.github.huherto.awsLambdaStream.serialization.aws
 
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.descriptors.PrimitiveKind

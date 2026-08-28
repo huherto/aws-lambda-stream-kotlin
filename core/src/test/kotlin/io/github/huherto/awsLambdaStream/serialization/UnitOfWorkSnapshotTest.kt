@@ -5,8 +5,8 @@ import io.github.huherto.awsLambdaStream.RAW_DYNAMODB
 import io.github.huherto.awsLambdaStream.RawRecord
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.from.TableChangeEvent
+import io.github.huherto.awsLambdaStream.serialization.aws.DynamodbSerializationTest
 import io.github.huherto.awsLambdaStream.serialization.aws.DynamodbStreamRecordReplayJson
-import io.github.huherto.awsLambdaStream.serialization.aws.DynamodbStreamRecordReplayJsonTest
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import kotlinx.serialization.json.Json
@@ -22,7 +22,7 @@ class UnitOfWorkSnapshotTest {
 
     @Test
     fun `should encode the source record as replayable json`() {
-        val record = DynamodbStreamRecordReplayJsonTest.streamRecord()
+        val record = DynamodbSerializationTest.streamRecord()
 
         val snapshot = UnitOfWork(record = record).toSnapshot()
 
@@ -34,7 +34,7 @@ class UnitOfWorkSnapshotTest {
 
     @Test
     fun `should encode event raw as a discriminated raw record`() {
-        val record = DynamodbStreamRecordReplayJsonTest.streamRecord()
+        val record = DynamodbSerializationTest.streamRecord()
         val event = TableChangeEvent(id = "event-1", raw = DynamodbRaw(record))
 
         val snapshot = UnitOfWork(event = event).toSnapshot()

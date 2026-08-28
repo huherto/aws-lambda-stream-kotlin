@@ -89,7 +89,7 @@ class AwsSerializationCompatibilityTest {
 
     @Test
     fun `DynamodbStreamRecord should be compatible with official AWS serializer`() {
-        val record = DynamodbStreamRecordReplayJsonTest.streamRecord()
+        val record = DynamodbSerializationTest.streamRecord()
         val event = DynamodbEvent().apply { records = listOf(record) }
 
         // Custom -> AWS
@@ -110,7 +110,7 @@ class AwsSerializationCompatibilityTest {
 
     @Test
     fun `DynamodbStreamRecordSerializer should work correctly in kotlinx serialization`() {
-        val record = DynamodbStreamRecordReplayJsonTest.streamRecord()
+        val record = DynamodbSerializationTest.streamRecord()
         val wrapper = DynamodbWrapper(record)
         val json = Json.encodeToString(wrapper)
 

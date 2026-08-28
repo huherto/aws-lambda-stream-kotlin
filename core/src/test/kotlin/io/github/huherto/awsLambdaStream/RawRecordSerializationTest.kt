@@ -4,7 +4,7 @@ import com.amazonaws.services.lambda.runtime.events.KinesisEvent
 import com.amazonaws.services.lambda.runtime.events.SQSEvent
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue
 import io.github.huherto.awsLambdaStream.from.RecordImage
-import io.github.huherto.awsLambdaStream.serialization.aws.DynamodbStreamRecordReplayJsonTest
+import io.github.huherto.awsLambdaStream.serialization.aws.DynamodbSerializationTest
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeInstanceOf
@@ -22,14 +22,14 @@ class RawRecordSerializationTest {
 
     @Test
     fun `kotlinx should round trip a dynamodb raw record`() {
-        val original = DynamodbRaw(DynamodbStreamRecordReplayJsonTest.streamRecord())
+        val original = DynamodbRaw(DynamodbSerializationTest.streamRecord())
 
         kotlinxRoundTrip(original) shouldBe original
     }
 
     @Test
     fun `a dynamodb raw record should be tagged correctly`() {
-        val original = DynamodbRaw(DynamodbStreamRecordReplayJsonTest.streamRecord())
+        val original = DynamodbRaw(DynamodbSerializationTest.streamRecord())
 
         val fromKotlinx = Json.encodeToJsonElement(RawRecord.serializer(), original).jsonObject
 
@@ -38,7 +38,7 @@ class RawRecordSerializationTest {
 
     @Test
     fun `a serialized dynamodb raw record should carry the whole lambda payload`() {
-        val record = DynamodbStreamRecordReplayJsonTest.streamRecord()
+        val record = DynamodbSerializationTest.streamRecord()
 
         val json = Json.encodeToString(RawRecord.serializer(), DynamodbRaw(record))
 
@@ -51,7 +51,7 @@ class RawRecordSerializationTest {
 
     @Test
     fun `derived images should read through to the original record`() {
-        val raw = DynamodbRaw(DynamodbStreamRecordReplayJsonTest.streamRecord())
+        val raw = DynamodbRaw(DynamodbSerializationTest.streamRecord())
 
         raw.new?.getPk() shouldBe "shipment-1"
         raw.old?.getPk() shouldBe "shipment-1"
@@ -62,7 +62,7 @@ class RawRecordSerializationTest {
 
     @Test
     fun `derived images should not be written to json`() {
-        val raw = DynamodbRaw(DynamodbStreamRecordReplayJsonTest.streamRecord())
+        val raw = DynamodbRaw(DynamodbSerializationTest.streamRecord())
 
         Json.encodeToJsonElement(RawRecord.serializer(), raw).jsonObject.keys shouldBe setOf("type", "record")
     }
@@ -115,7 +115,7 @@ class RawRecordSerializationTest {
 
     @Test
     fun `toRawRecord should restore the variant a discriminator names`() {
-        val original: RawRecord = DynamodbRaw(DynamodbStreamRecordReplayJsonTest.streamRecord())
+        val original: RawRecord = DynamodbRaw(DynamodbSerializationTest.streamRecord())
 
         original.toJsonElement().toRawRecord() shouldBe original
     }
@@ -140,7 +140,7 @@ class RawRecordSerializationTest {
 
     @Test
     fun `a dynamodb raw record should still be usable as a record pair`() {
-        val raw: RawRecord = DynamodbRaw(DynamodbStreamRecordReplayJsonTest.streamRecord())
+        val raw: RawRecord = DynamodbRaw(DynamodbSerializationTest.streamRecord())
 
         raw.shouldBeInstanceOf<io.github.huherto.awsLambdaStream.from.RecordPair>()
     }
