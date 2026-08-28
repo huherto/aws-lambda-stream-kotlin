@@ -10,15 +10,16 @@ kotest = "6.1.7"
 aws-cdk = { module="software.amazon.awscdk:aws-cdk-lib", version.ref = "cdkVersion" }
 aws-java-core = { module="com.amazonaws:aws-lambda-java-core", version="1.2.1" }
 aws-java-events = { module="com.amazonaws:aws-lambda-java-events", version="3.11.0" }
+aws-lambda-java-serialization = { module="com.amazonaws:aws-lambda-java-serialization", version="1.1.5" }
 aws-lambda-java-tests = { module="com.amazonaws:aws-lambda-java-tests", version="1.1.2" }
 aws-sdk-bom = { module="aws.sdk.kotlin:bom", version.ref="awsSdk" }
+aws-sdk-cloudwatch = { module = "aws.sdk.kotlin:cloudwatch" }
 aws-sdk-dynamodb = { module = "aws.sdk.kotlin:dynamodb" }
 aws-sdk-eventbridge = { module = "aws.sdk.kotlin:eventbridge" }
 aws-sdk-firehose = { module = "aws.sdk.kotlin:firehose" }
 aws-sdk-kinesis = { module = "aws.sdk.kotlin:kinesis" }
 aws-sdk-lambda = { module = "aws.sdk.kotlin:lambda" }
 aws-sdk-route53 = { module = "aws.sdk.kotlin:route53" }
-aws-sdk-cloudwatch = { module = "aws.sdk.kotlin:cloudwatch" }
 aws-sdk-s3 = { module = "aws.sdk.kotlin:s3" }
 aws-sdk-sns = { module = "aws.sdk.kotlin:sns" }
 aws-sdk-sqs = { module = "aws.sdk.kotlin:sqs" }

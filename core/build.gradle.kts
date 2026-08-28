@@ -50,6 +50,7 @@ dependencies {
     testImplementation(libs.aws.sdk.sqs)
 
     testImplementation(libs.aws.lambda.java.tests)
+    testImplementation(libs.aws.lambda.java.serialization)
     testImplementation(libs.kotest.assertions)
     testImplementation(libs.kotest.property)
     testImplementation(libs.kotest.runner)
