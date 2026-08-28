@@ -25,7 +25,6 @@ class EventBridgePublisherTest {
     fun mockEnvConfig() : EnvironmentConfig {
         val spy = spyk(EnvironmentConfig())
         every { spy.awsRegion() } returns "us-east-1"
-        every { spy.serializationStrategy() } returns "jackson"
         return spy
     }
 

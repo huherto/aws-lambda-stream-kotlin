@@ -7,7 +7,6 @@ import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
-import io.mockk.every
 import io.mockk.spyk
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
@@ -16,7 +15,6 @@ import org.junit.jupiter.api.Test
 class SqsAdapterTest {
 
     private val envConfig = spyk(EnvironmentConfig()).apply {
-        every { serializationStrategy() } returns "jackson"
     }
 
     private fun faultManager(): FaultManager {

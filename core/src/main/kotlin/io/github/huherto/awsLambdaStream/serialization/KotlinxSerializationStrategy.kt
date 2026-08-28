@@ -8,7 +8,7 @@ import kotlinx.serialization.serializerOrNull
 
 class KotlinxSerializationStrategy(
     private val json: Json = defaultJson()
-) : SerializationStrategy {
+) {
 
     companion object {
         fun defaultJson(): Json = Json {
@@ -21,7 +21,7 @@ class KotlinxSerializationStrategy(
 
     @Suppress("UNCHECKED_CAST")
     @OptIn(InternalSerializationApi::class)
-    override fun serialize(value: Any?): String {
+    fun serialize(value: Any?): String {
         if (value == null) return "null"
         val serializer = value::class.serializerOrNull() ?: serializer(value::class.java)
         return json.encodeToString(serializer as KSerializer<Any>, value)
@@ -29,7 +29,7 @@ class KotlinxSerializationStrategy(
 
     @Suppress("UNCHECKED_CAST")
     @OptIn(InternalSerializationApi::class)
-    override fun <T : Any> deserialize(payload: String, targetType: Class<T>): T {
+    fun <T : Any> deserialize(payload: String, targetType: Class<T>): T {
         val serializer = targetType.kotlin.serializerOrNull() ?: serializer(targetType)
         return json.decodeFromString(serializer as KSerializer<T>, payload)
     }

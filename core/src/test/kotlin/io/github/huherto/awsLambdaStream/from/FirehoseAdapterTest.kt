@@ -23,7 +23,6 @@ import java.nio.ByteBuffer
 class FirehoseAdapterTest {
 
     private val envConfig = spyk(EnvironmentConfig()).apply {
-        every { serializationStrategy() } returns "jackson"
     }
 
     private fun faultManager() = FaultManager(

@@ -21,7 +21,6 @@ import java.nio.ByteBuffer
 class KinesisAdapterTest {
 
     private val envConfig = spyk(EnvironmentConfig()).apply {
-        every { serializationStrategy() } returns "jackson"
     }
     private val faultManager = FaultManager(
         eventPublisher = EventPublisherInMemory(),

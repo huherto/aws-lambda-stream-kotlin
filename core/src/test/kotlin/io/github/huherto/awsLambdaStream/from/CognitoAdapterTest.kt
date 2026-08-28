@@ -6,7 +6,6 @@ import io.github.huherto.awsLambdaStream.faults.FaultManager
 import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import io.mockk.every
 import io.mockk.spyk
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
@@ -15,7 +14,6 @@ import org.junit.jupiter.api.Test
 class CognitoAdapterTest {
 
     private val envConfig = spyk(EnvironmentConfig()).apply {
-        every { serializationStrategy() } returns "jackson"
     }
 
     private fun faultManager() = FaultManager(

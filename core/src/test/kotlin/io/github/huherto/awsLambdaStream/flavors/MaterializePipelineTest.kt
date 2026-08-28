@@ -149,7 +149,6 @@ class MaterializePipelineTest {
 
     private fun faultManager(): FaultManager {
         val spy = spyk(EnvironmentConfig())
-        every { spy.serializationStrategy() } returns "jackson"
         GlobalRegistry.setEnvConfig(spy)
         return FaultManager(
             eventPublisher = mockk<EventPublisher>(relaxed = true),

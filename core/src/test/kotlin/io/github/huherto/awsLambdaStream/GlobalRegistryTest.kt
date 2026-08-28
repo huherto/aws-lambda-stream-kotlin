@@ -12,7 +12,6 @@ import org.junit.jupiter.api.Test
 class GlobalRegistryTest {
 
     class TestEnvironmentConfig : EnvironmentConfig() {
-        override fun serializationStrategy(): String? = "jackson"
         override fun awsLambdaFunctionName(): String? = "test-function"
     }
 

@@ -150,9 +150,6 @@ open class EnvironmentConfig {
         return System.getenv("BUCKET_NAME")
     }
 
-    open fun serializationStrategy() : String? {
-        return System.getenv("SERIALIZATION_STRATEGY")
-    }
 
     open fun metrics(): String? {
         return System.getenv("METRICS")
