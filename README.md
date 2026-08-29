@@ -23,7 +23,7 @@ choice for this framework. In particular, support for coroutines and the Flow fr
 
 ## Documentation Contents
 
-* [Framework Features](FEATURES.md)
+* [Framework Features](docs/Features.md)
 * [Architectural Approach](docs/ArchitecturalApproach.md)
 * [Understanding Events and Event Types](docs/Events.md)
 * [Autonomous Service Patterns](docs/AutonomousServicePatterns.md)
