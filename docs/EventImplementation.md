@@ -101,27 +101,13 @@ data class OrderPlacedEvent(
 ```
 
 ### 8. Event Codec
-For every family of events create an `EventCodec` object and `Json` object to be used for serialization.
+For every family of events, use the framework's `KotlinxEventCodec` to handle serialization.
 
 ```kotlin
-object OrdersEventCodec : EventCodec {
+import io.github.huherto.awsLambdaStream.serialization.KotlinxEventCodec
+import io.github.huherto.awsLambdaStream.serialization.KotlinxSerializationStrategy
 
-    override fun decode(eventAsString: String): Event {
-        return ordersJson.decodeFromString(OrderPlacedEvent.serializer(), eventAsString)
-    }
+val ordersJson = KotlinxSerializationStrategy.defaultJson()
 
-    override fun encode(event: Event): String {
-        require(event is OrderPlacedEvent) {
-            "OrdersEventCodec can only encode OrderPlacedEvent instances, but received ${event::class.qualifiedName}"
-        }
-
-        return ordersJson.encodeToString(OrderPlacedEvent.serializer(), event)
-    }
-}
-
-val ordersJson: Json = Json {
-    ignoreUnknownKeys = true
-    prettyPrint = true
-    isLenient = true
-}
+object OrdersEventCodec : EventCodec by KotlinxEventCodec(OrderPlacedEvent.serializer(), ordersJson)
 ```

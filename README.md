@@ -31,6 +31,8 @@ choice for this framework. In particular, support for coroutines and the Flow fr
 * [How Claim Check works](docs/ClaimCheck.md)
 * [How the Events Microstore works](docs/EventsMicrostore.md)
 * [How the Regional Health Check works](docs/RegionalHealthCheck.md)
+* [How Fault Re-submission works](docs/FaultResubmission.md)
+* [Implementing Events](docs/EventImplementation.md)
 
 ## High Level Project Structure
 

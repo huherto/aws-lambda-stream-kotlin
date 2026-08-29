@@ -63,4 +63,8 @@ BFFs provide APIs to the outside world.  They expose client-specific interfaces 
 
 ## Fault Monitoring Services
 
+Fault Monitoring Services capture and persist failed events (faults) for later investigation and recovery. For more information, see [Fault Re-submission](FaultResubmission.md).
+
 ## Regional Health Check
+
+The Regional Health Check provides a high-level health signal for a deployed regional service stack. For more information, see [Regional Health Check](RegionalHealthCheck.md).

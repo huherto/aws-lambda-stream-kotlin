@@ -85,7 +85,7 @@ This final calculated health check is the main regional health signal.
 
 ## Infrastructure Diagram
 
-For a visual representation of the stack, including the Tracer Flow and monitoring layers, see the 
+For a visual representation of the stack, including the Tracer Flow and monitoring layers, see the [Regional Health Check diagram](diagrams/RegionalHealthCheck.png).
 
 ## Data Flow
 
@@ -125,8 +125,10 @@ DynamoDB SystemErrors alarm
 DynamoDB Route 53 health check
 ```
 
-The two health-check paths are then combined:
+The two health-check paths are then combined into a single calculated health check.
 
+1. API Gateway health check
+2. DynamoDB health check
 
 The calculated health check becomes the regional health status for the stack.
 
@@ -162,7 +164,15 @@ This allows events placed on the regional event bus to be forwarded to a Kinesis
 
 The DynamoDB entities table can also emit stream records:
 
-```text DynamoDB entities table | v DynamoDB stream | v Lambda consumer```
+```text
+DynamoDB entities table
+     |
+     v
+DynamoDB stream
+     |
+     v
+Lambda consumer
+```
 
 
 This supports reactive processing when entity records are inserted, modified, or removed.

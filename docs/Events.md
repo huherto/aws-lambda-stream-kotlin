@@ -60,3 +60,7 @@ Change Events are:
 
 The distinction between Domain Events and Change Events helps maintain clean separation between business logic and
 technical implementation concerns.
+
+## Implementing Events
+
+For guidance on how to implement events and event codecs in Kotlin, see [Implementing Events](EventImplementation.md).

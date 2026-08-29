@@ -30,17 +30,17 @@ The store is intentionally narrow in scope. It is not the system of record for b
 # How does it work?
 
 Given that an event arrives, coming from a Kinesis stream, SQS queue, or other event source.
-```
+```json
 {
-    id: "ev-001",
-    timestamp: 1775658343,
-    partitionKey: "thing-005",
-    tags: { 
-        awsregion: "us-east-1", 
-    }
-    eventType: 'thing-created',
-    entity: {
-        id: "thing-005"
+    "id": "ev-001",
+    "timestamp": 1775658343,
+    "partitionKey": "thing-005",
+    "tags": { 
+        "awsregion": "us-east-1"
+    },
+    "eventType": "thing-created",
+    "entity": {
+        "id": "thing-005"
     }
 }
 ```
@@ -88,13 +88,13 @@ Both, the collected event and the correlated event are processed by the evaluate
 After an event is inserted in the Events Microstore, the evaluate pipeline queries the events microstore.
 
 In the case of a 'CORREL' event, it finds all correlated events that share the same partition key.
-```
+```sql
 # pseudo sql
-select * from events where pk = 'thing-005'  
+select * from events where pk = 'thing-005'
 ```
 
 In the case of 'EVENT' event, it finds all the events with the same data field. (It also can use an optional index)
-```
+```sql
 # pseudo sql
 select * from events where data = 'thing-005'
 ```
