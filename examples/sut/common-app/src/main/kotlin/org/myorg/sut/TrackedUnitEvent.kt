@@ -36,8 +36,6 @@ sealed class TrackedUnitEvent : Event {
     abstract override val raw: RawRecord?
 
     abstract override val eem: EnvelopeEncryptionMetadata?
-
-    @Serializable(with = EventReferenceListSerializer::class)
     abstract override val triggers: List<EventReference>?
 
     abstract val entity: TrackedUnit?

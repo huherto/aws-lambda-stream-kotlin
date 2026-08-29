@@ -1,5 +1,6 @@
 package org.myorg.sut
 
+import io.github.huherto.awsLambdaStream.EventReference
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import kotlin.test.Test
@@ -22,7 +23,11 @@ class TrackedUnitEventCodecTest {
                 trackingNumber = "TRACK-123"
             },
             location = "Berlin",
-            result = "picked up"
+            result = "picked up",
+            triggers = listOf(
+                EventReference(id = "trigger-1", type = "trigger-type-1", timestamp = 111L),
+                EventReference(id = "trigger-2", type = "trigger-type-2", timestamp = 222L)
+            )
         )
 
         val encoded = codec.encode(original)
@@ -38,6 +43,7 @@ class TrackedUnitEventCodecTest {
         decoded.entity?.id shouldBe original.entity?.id
         decoded.entity?.senderFullName shouldBe original.entity?.senderFullName
         decoded.entity?.trackingNumber shouldBe original.entity?.trackingNumber
+        decoded.triggers shouldBe original.triggers
     }
 
     @Test
