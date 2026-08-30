@@ -8,7 +8,7 @@ Fault re-submission provides a reliable mechanism for handling non-retryable fai
 
 1.  **Fault Capture**: The `FaultManager` interceptor wraps pipeline operations.
 2.  **State Snapshot**: If a non-retryable exception is caught, the framework creates a `FaultEvent`. This event contains a snapshot of the `UnitOfWork` including the original raw record (e.g., Kinesis record or DynamoDB stream record).
-3.  **Fault Persistence**: The `FaultEvent` is published to the configured event sink (typically an EventBridge event bus). From there, it is usually routed to S3 for long-term storage and auditing.
+3.  **Fault Persistence**: The `FaultEvent` is published to the configured event sink (typically an EventBridge event bus). From there, it is routed to a **dedicated S3 bucket** (managed by a [Fault Monitoring Service](AutonomousServicePatterns.md#fault-monitoring-services)) for long-term storage and auditing.
 4.  **Resubmission**: An external tool (`resubmit-events`) scans the stored fault events in S3, extracts the original payloads, and re-invokes the target Lambda function with a synthetic batch of these records.
 
 ## Data Flow

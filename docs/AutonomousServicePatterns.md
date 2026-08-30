@@ -9,6 +9,8 @@
   - [Egress Gateways]( #egress-gateways)
 - [Backends for Frontends (BFFs)](#backends-for-frontends-bffs)
 - [Fault Monitoring Services](#fault-monitoring-services)
+- [Regional Health Check](#regional-health-check)
+- [Event Lake](#event-lake)
 
 ## Control Services
 
@@ -68,3 +70,13 @@ Fault Monitoring Services capture and persist failed events (faults) for later i
 ## Regional Health Check
 
 The Regional Health Check provides a high-level health signal for a deployed regional service stack. For more information, see [Regional Health Check](RegionalHealthCheck.md).
+
+## Event Lake
+
+Event Lakes provide long-term, immutable storage for all events flowing through a subsystem. For more information, see [Event Lake](EventLake.md).
+
+Event Lakes are typically composed of:
+
+- AWS EventBridge Rule (configured to exclude technical `fault` events)
+- Amazon Kinesis Data Firehose
+- Amazon S3 Bucket
