@@ -54,7 +54,7 @@ class EvaluatePipelineTest {
         correlationKeySuffix: String = "",
         index: String? = null,
         expression: ((UnitOfWork) -> Boolean)? = null,
-        higherOrderEmit: EmitOption? = null,
+        emit: ((UnitOfWork) -> List<Event>)? = null,
     ): EvaluatePipeline {
         return EvaluatePipeline(
             id = pipelineId,
@@ -64,7 +64,7 @@ class EvaluatePipelineTest {
             index = index,
             eventCodec = eventCodec,
             expression = expression,
-            higherOrderEmit = higherOrderEmit,
+            emit = emit,
         )
     }
 
@@ -313,7 +313,7 @@ class EvaluatePipelineTest {
     }
 
     @Test
-    fun `toHigherOrderEvents should create basic higher order event`() {
+    fun `toHigherOrderEvents should create simple higher order event`() {
         // Arrange
         val baseEvent = createEvent(
             id = "base-event",
@@ -327,37 +327,37 @@ class EvaluatePipelineTest {
         val uow = UnitOfWork(
             event = baseEvent,
             meta = mapOf(
-                "eventId" to "uow-1.pipeline-basic",
+                "eventId" to "uow-1.pipeline-simple",
                 "partitionKey" to "partition-1"
             ),
             triggers = listOf(trigger, baseEvent)
         )
 
-        val basicPipeline = createPipeline(
-            pipelineId = "pipeline-basic",
+        val pipeline = createPipeline(
+            pipelineId = "pipeline-simple",
             correlationKeySuffix = "suffix-a",
-            higherOrderEmit = EmitOption.Basic(clazz = HigherType::class.java)
+            emit = { listOf(HigherType()) }
         )
 
         // Act
-        val basicResult = basicPipeline.toHigherOrderEvents(uow)
+        val result = pipeline.toHigherOrderEvents(uow)
 
         // Assert
-        basicResult shouldHaveSize 1
-        val basicEvent = basicResult.first().event.shouldNotBeNull()
-        basicEvent.shouldBeTypeOf<HigherType>()
-        basicEvent.id shouldBe "uow-1.pipeline-basic"
-        basicEvent.eventType() shouldBe "HigherType"
-        basicEvent.partitionKey shouldBe "partition-1"
-        basicEvent.tags shouldBe mapOf("team" to "core", "env" to "test")
-        basicEvent.triggers?.shouldHaveSize(2)
-        // basicEvent.base shouldBe baseEvent
-        basicEvent.raw shouldBe JsonRaw(JsonPrimitive("raw-value"))
-        basicEvent.eem shouldBe EnvelopeEncryptionMetadata("something")
+        result shouldHaveSize 1
+        val event = result.first().event.shouldNotBeNull()
+        event.shouldBeTypeOf<HigherType>()
+        event.id shouldBe "uow-1.pipeline-simple"
+        event.eventType() shouldBe "HigherType"
+        event.partitionKey shouldBe "partition-1"
+        event.tags shouldBe mapOf("team" to "core", "env" to "test")
+        event.triggers?.shouldHaveSize(2)
+        event.raw shouldBe JsonRaw(JsonPrimitive("raw-value"))
+        event.eem shouldBe EnvelopeEncryptionMetadata("something")
     }
 
+
     @Test
-    fun `toHigherOrderEvents should create custom emit events`() {
+    fun `toHigherOrderEvents should create multiple events`() {
         // Arrange
         val baseEvent = createEvent(
             id = "base-event",
@@ -377,44 +377,41 @@ class EvaluatePipelineTest {
             triggers = listOf(trigger, baseEvent)
         )
 
-        val customPipeline = createPipeline(
+        val pipeline = createPipeline(
             pipelineId = "pipeline-custom",
             correlationKeySuffix = "suffix-a",
-            higherOrderEmit = EmitOption.Custom { _, template ->
-                val t1 = template.createEvent(HigherType::class.java.kotlin)
-                val t2 = template.createEvent(HigherType::class.java.kotlin)
+            emit = { _ ->
                 listOf(
-                    t1,
-                    t2
+                    HigherType(),
+                    HigherType()
                 )
             }
         )
 
         // Act
-        val customResult = customPipeline.toHigherOrderEvents(uow)
+        val result = pipeline.toHigherOrderEvents(uow)
 
         // Assert
-        customResult shouldHaveSize 2
-        customResult[0].event.shouldNotBeNull().shouldBeTypeOf<HigherType>()
-        customResult[1].event.shouldNotBeNull().shouldBeTypeOf<HigherType>()
-        // fix this. It is failing.
-        //customResult[1].event!!.id shouldBe "second-template"
+        result shouldHaveSize 2
+        result[0].event.shouldNotBeNull().shouldBeTypeOf<HigherType>()
+        result[1].event.shouldNotBeNull().shouldBeTypeOf<HigherType>()
     }
 
     @Test
-    fun `toHigherOrderEvents should throw when higherOrderEmit is missing`() {
+    fun `toHigherOrderEvents should return empty when emit is missing`() {
         // Arrange
         val pipeline = createPipeline(
-            higherOrderEmit = null
+            emit = null
         )
         val uow = UnitOfWork(
             event = createEvent(),
             meta = mapOf("id" to "uow-1", "correlationKey" to "key")
         )
 
-        // Act & Assert
-        shouldThrow<IllegalArgumentException> {
-            pipeline.toHigherOrderEvents(uow)
-        }
+        // Act
+        val result = pipeline.toHigherOrderEvents(uow)
+
+        // Assert
+        result shouldBe emptyList()
     }
 }

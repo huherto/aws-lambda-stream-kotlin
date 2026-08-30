@@ -6,7 +6,9 @@ import io.github.huherto.awsLambdaStream.PipelineAssembler
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.DefaultDynamoDbClientFactory
 import io.github.huherto.awsLambdaStream.filters.EventFilters
-import io.github.huherto.awsLambdaStream.flavors.*
+import io.github.huherto.awsLambdaStream.flavors.CorrelatePipeline
+import io.github.huherto.awsLambdaStream.flavors.EvaluatePipeline
+import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import io.github.huherto.awsLambdaStream.from.DynamodbAdapter
 import io.github.huherto.awsLambdaStream.sinks.EventPublisher
 import io.github.huherto.awsLambdaStream.sinks.EventsMicrostore
@@ -55,20 +57,21 @@ class TriggerContainer(
             eventsMicrostore = eventsMicrostore,
             eventCodec = TrackedUnitEventCodec,
             eventFilter = EventFilters.name(TrackedUnitEvent.SHIPMENT_CREATED),
-            higherOrderEmit = EmitOption.Basic(clazz = VerifyTargetAddressEvent::class.java),
+            emit = { uow ->
+                val base = uow.event as ShipmentCreatedEvent
+                listOf(VerifyTargetAddressEvent(entity = base.entity))
+            },
         )
     }
 
     fun contactCustomer(
-        uow: UnitOfWork,
-        template: HigherOrderEventTemplate
+        uow: UnitOfWork
     ) : List<Event> {
-        val deliveryAttempts = uow.correlated?.filter { it is DeliveryAttemptedEvent }
+        val deliveryAttempts = uow.correlated?.filterIsInstance<DeliveryAttemptedEvent>()
         deliveryAttempts?.let {
             if (it.size == 1) return emptyList()
             val baseEvent = uow.event as? TrackedUnitEvent ?: return emptyList()
-            val e1 = template.applyTemplate(ContactCustomerEvent(entity = baseEvent.entity))
-            return listOf(e1)
+            return listOf(ContactCustomerEvent(entity = baseEvent.entity))
         }
         return emptyList()
     }
@@ -80,7 +83,7 @@ class TriggerContainer(
             eventsMicrostore = eventsMicrostore,
             eventCodec = TrackedUnitEventCodec,
             eventFilter = EventFilters.name(TrackedUnitEvent.DELIVERY_ATTEMPTED),
-            higherOrderEmit = EmitOption.Custom(::contactCustomer),
+            emit = ::contactCustomer,
             expression = { uow -> true },
         )
     }

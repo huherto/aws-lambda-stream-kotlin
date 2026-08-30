@@ -18,21 +18,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 
-/**
- * Configures how an [EvaluatePipeline] emits higher-order events after an evaluation succeeds.
- */
-sealed interface EmitOption {
-    /**
-     * Emits a single event by instantiating [clazz] from a [HigherOrderEventTemplate].
-     */
-    data class Basic(val clazz: Class<out Event>) : EmitOption
-
-    /**
-     * Emits one or more custom events from the current [UnitOfWork] and generated
-     * [HigherOrderEventTemplate].
-     */
-    data class Custom(val emit: (UnitOfWork, HigherOrderEventTemplate) -> List<Event>) : EmitOption
-}
 
 /**
  * Pipeline flavor that evaluates collected and correlated events and publishes higher-order events.
@@ -48,7 +33,6 @@ sealed interface EmitOption {
  *   from [eventsMicrostore] before the expression is evaluated.
  *
  * @param id Unique identifier for this pipeline.
- * @param envConfig Environment-backed configuration available to the pipeline.
  * @param eventPublisher Sink responsible for publishing emitted higher-order events.
  * @param eventsMicrostore Store used to query collected or correlated events.
  * @param onContentType Predicate used to accept or reject a [UnitOfWork] after event filtering.
@@ -59,7 +43,7 @@ sealed interface EmitOption {
  * @param eventCodec Codec used to deserialize stored event payloads.
  * @param expression Optional predicate evaluated against a normalized/correlated [UnitOfWork].
  * When `null`, every filtered event is treated as a successful match.
- * @param higherOrderEmit Strategy used to create emitted higher-order events.
+ * @param emit Optional function used to create emitted higher-order events.
  */
 class EvaluatePipeline (
     id: String,
@@ -72,7 +56,7 @@ class EvaluatePipeline (
     val bufferCapacity: Int = Channel.BUFFERED,
     val eventCodec: EventCodec,
     val expression: ((UnitOfWork) -> Boolean)? = null,
-    val higherOrderEmit: EmitOption? = null,
+    val emit: ((UnitOfWork) -> (List<Event>))? = null,
 ) : Pipeline(id) {
 
     /**
@@ -187,57 +171,37 @@ class EvaluatePipeline (
     /**
      * Creates emitted higher-order event units of work from a successfully evaluated unit of work.
      *
-     * The emitted event list is produced according to [higherOrderEmit], then each event is wrapped
-     * back into a copyEvent of the original unit of work.
-     *
-     * @throws IllegalArgumentException when [higherOrderEmit] is not configured.
+     * The emitted event list is produced by the [emit] function, then each event is wrapped
+     * back into a copy of the original unit of work with standard metadata applied.
      */
     internal fun toHigherOrderEvents(uow: UnitOfWork): List<UnitOfWork> {
+        val emit = this.emit ?: return emptyList()
+        val triggeringEvent = uow.event ?: return emptyList()
 
-        val template = toHigherOrderEventTemplate(uow)
-
-        val resultEvents: List<Event> = when (higherOrderEmit) {
-            is EmitOption.Basic -> listOf(template.createEvent(higherOrderEmit.clazz.kotlin))
-            is EmitOption.Custom -> higherOrderEmit.emit(uow, template)
-            null -> throw IllegalArgumentException("higherOrderEmit must be a String or a function")
-        }
-
-        // Maps results back to a ReplayUnitOfWork (replacing the current event with the emitted one)
-        return resultEvents.map { emit ->
-            uow.copy(event = emit)
-        }
-    }
-
-    /**
-     * Builds the [HigherOrderEventTemplate] used by [toHigherOrderEvents].
-     *
-     * The template carries identity, partition key, timestamp, trigger references, and aggregated
-     * tags from the evaluated unit of work.
-     */
-    internal fun toHigherOrderEventTemplate(uow: UnitOfWork): HigherOrderEventTemplate {
-        val basic = higherOrderEmit is EmitOption.Basic
+        val eventId = uow.meta?.get("eventId")
+        val partitionKey = uow.meta?.get("partitionKey")
         val trigger = uow.triggers?.lastOrNull()
-        val baseEvent = uow.event ?: throw IllegalArgumentException("Event is null")
-
         val aggregatedTags = aggregateTags(uow)
-
         val mappedTriggers = uow.triggers?.map {
             EventReference(it.id, it.eventType(), it.timestamp)
         }
 
-        val template = HigherOrderEventTemplate(
-            baseEvent = baseEvent,
-            id = uow.meta?.get("eventId"),
-            partitionKey = uow.meta?.get("partitionKey"),
-            timestamp = trigger?.timestamp,
-            tags = aggregatedTags,
-            triggers = mappedTriggers,
-            raw = if (basic) baseEvent.raw else null,
-            eem = if (basic) baseEvent.eem else null
-        )
+        val resultEvents: List<Event> = emit(uow)
 
-        return template
+        return resultEvents.map { e ->
+            val event = e.copyEvent(
+                id = eventId,
+                timestamp = trigger?.timestamp,
+                partitionKey = partitionKey,
+                tags = aggregatedTags,
+                triggers = mappedTriggers,
+                raw = e.raw ?: triggeringEvent.raw,
+                eem = e.eem ?: triggeringEvent.eem
+            )
+            uow.copy(event = event)
+        }
     }
+
 
     /**
      * Merges trigger tags into a single tag map for the emitted higher-order event.

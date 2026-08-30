@@ -10,6 +10,7 @@
     - [6. The `copyEvent` Mechanism](#6-the-copyevent-mechanism)
     - [7. Recommended Pattern](#7-recommended-pattern)
     - [8. Event Codec](#8-event-codec)
+    - [9. Higher Order Events](#9-higher-order-events)
 
 
 ## Implementation Details
@@ -110,4 +111,44 @@ import io.github.huherto.awsLambdaStream.serialization.KotlinxSerializationStrat
 val ordersJson = KotlinxSerializationStrategy.defaultJson()
 
 object OrdersEventCodec : EventCodec by KotlinxEventCodec(OrderPlacedEvent.serializer(), ordersJson)
+```
+
+### 9. Higher Order Events
+Higher order events are events emitted as a result of evaluating one or more upstream events. The framework automatically copies standard metadata (id, timestamp, triggers, partitionKey, etc.) from the evaluation context to the new event.
+
+Use the `emit` lambda in `EvaluatePipeline` to instantiate your events. The framework will apply the appropriate metadata after the lambda returns.
+
+```kotlin
+EvaluatePipeline(
+    // ...
+    emit = { uow ->
+        val base = uow.event as ShipmentCreatedEvent
+        // Standard metadata is applied automatically by the pipeline
+        // You only need to initialize domain fields here:
+        listOf(VerifyTargetAddressEvent(entity = base.entity))
+    }
+)
+```
+
+If you need to emit multiple events:
+
+```kotlin
+emit = { uow ->
+    val base = uow.event as ShipmentCreatedEvent
+    listOf(
+        EventA(entity = base.entity),
+        EventB(entity = base.entity)
+    )
+}
+```
+
+Standard metadata (id, timestamp, tags, triggers, raw, and eem) are propagated from the triggering unit of work automatically. If you want to override these fields on a specific event, you can call `copyEvent` within your lambda:
+
+```kotlin
+emit = { uow ->
+    val base = uow.event as ShipmentCreatedEvent
+    listOf(
+        VerifyTargetAddressEvent(entity = base.entity).copyEvent(partitionKey = "custom-key")
+    )
+}
 ```
