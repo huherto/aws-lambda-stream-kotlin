@@ -32,10 +32,7 @@ dependencies {
     implementation(libs.aws.sdk.dynamodb)
     implementation(libs.aws.sdk.lambda)
     implementation(libs.kotlin.logging)
-    implementation(libs.kotlin.reflect)
-    implementation(libs.kotlin.stdlib)
     implementation(libs.kotlinx.coroutines)
-    implementation(libs.kotlinx.serialization.json)
     implementation(libs.lambda.json.logger)
     implementation(libs.slf4j.api)
 
@@ -55,9 +52,6 @@ tasks.shadowJar {
     archiveBaseName.set("sut-control-service")
     archiveClassifier.set("")
     archiveVersion.set("")
-//    minimize {
-//        exclude(dependency("org.jetbrains.kotlin:kotlin-reflect:.*"))
-//    }
 }
 
 kotlin {
