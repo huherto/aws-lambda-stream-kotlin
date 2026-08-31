@@ -61,7 +61,7 @@ kotlin {
 // Taken from https://docs.gradle.org/current/userguide/jvm_test_suite_plugin.html#sec:declare_an_additional_test_suite
 testing {
     suites {
-        val test by getting(JvmTestSuite::class) {
+        getByName<JvmTestSuite>("test") {
             useJUnitJupiter()
         }
     }

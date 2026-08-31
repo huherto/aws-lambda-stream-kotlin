@@ -73,7 +73,7 @@ kotlin {
 
 testing {
     suites {
-        val test by getting(JvmTestSuite::class) {
+        getByName<JvmTestSuite>("test") {
             useJUnitJupiter()
         }
     }
