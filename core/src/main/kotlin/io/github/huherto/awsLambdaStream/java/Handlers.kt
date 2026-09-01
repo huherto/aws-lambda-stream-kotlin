@@ -5,6 +5,7 @@ import io.github.huherto.awsLambdaStream.EventCodec
 import io.github.huherto.awsLambdaStream.PipelineAssembler
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.filters.EventFilter
+import io.github.huherto.awsLambdaStream.flavors.CdcPipeline
 import io.github.huherto.awsLambdaStream.flavors.CollectPipeline
 import io.github.huherto.awsLambdaStream.flavors.CorrelatePipeline
 import io.github.huherto.awsLambdaStream.flavors.EvaluatePipeline
@@ -28,6 +29,23 @@ object Handlers {
     @JvmStatic
     fun assemblerBuilder(): PipelineAssembler.Builder =
         PipelineAssembler.builder()
+
+    /**
+     * Creates a [CdcPipeline] with Java-friendly defaults.
+     */
+    @JvmStatic
+    @JvmOverloads
+    fun cdcPipeline(
+        id: String,
+        eventPublisher: EventPublisher,
+        toEvent: (UnitOfWork) -> Event?,
+        eventFilter: EventFilter = EventFilter.Any
+    ): CdcPipeline = CdcPipeline(
+        id = id,
+        eventPublisher = eventPublisher,
+        toEvent = { uow -> toEvent(uow) },
+        eventFilter = eventFilter
+    )
 
     /**
      * Creates a [CollectPipeline] with Java-friendly defaults.
