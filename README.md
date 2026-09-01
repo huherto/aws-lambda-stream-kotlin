@@ -1,6 +1,6 @@
-# AWS Lambda Stream for Kotlin
+# AWS Lambda Stream for Kotlin (and Java)
 
-A Kotlin-first framework for building reliable, serverless, event-driven applications on AWS.
+A Kotlin-first (and java-friendly) framework for building reliable, serverless, event-driven applications on AWS.
 
 ## Value Proposition
 

@@ -35,6 +35,7 @@ High-level abstractions (Connectors and Sinks) for interacting with core AWS ser
 
 ## Developer Experience
 - **Kotlin-First Design**: Built from the ground up to leverage Kotlin Coroutines and Flow for efficient, non-blocking event processing.
+- **Java Interoperability**: First-class support for Java projects through dedicated utilities and runners, ensuring a smooth experience for teams working in Java.
 - **Modular Design**: Extensible `UnitOfWork` allows adding custom metadata and service-specific extensions without bloating the core.
 
 ## Tooling
