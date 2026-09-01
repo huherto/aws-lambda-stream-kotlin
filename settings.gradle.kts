@@ -14,7 +14,7 @@ include("core")
 include(":tools:resubmit-events")
 include(":tools:replay-events")
 
-include("examples:common-infra")
+include("examples:sut:common-infra")
 include("examples:sut:common-app")
 include("examples:sut:sut-event-hub")
 include("examples:sut:sut-event-hub:app")
