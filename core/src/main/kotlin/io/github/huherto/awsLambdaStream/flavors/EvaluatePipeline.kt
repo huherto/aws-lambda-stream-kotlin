@@ -45,7 +45,7 @@ import kotlinx.coroutines.flow.*
  * When `null`, every filtered event is treated as a successful match.
  * @param emit Optional function used to create emitted higher-order events.
  */
-class EvaluatePipeline (
+class EvaluatePipeline @JvmOverloads constructor(
     id: String,
     val eventPublisher: EventPublisher,
     val eventsMicrostore: EventsMicrostore,

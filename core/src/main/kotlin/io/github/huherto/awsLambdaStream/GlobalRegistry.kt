@@ -85,38 +85,47 @@ object GlobalRegistry {
         defaultFactory = { FaultManager(eventPublisher()) },
     )
 
+    @JvmStatic
     fun envConfig(): EnvironmentConfig {
         return envConfigSingleton.get()
     }
 
+    @JvmStatic
     fun setEnvConfig(config: EnvironmentConfig) {
         envConfigSingleton.set(config)
     }
 
+    @JvmStatic
     fun setEnvConfigFactory(factory: () -> EnvironmentConfig) {
         envConfigSingleton.setFactory(factory)
     }
 
+    @JvmStatic
     fun eventPublisher(): EventPublisher {
         return eventPublisherSingleton.get()
     }
 
+    @JvmStatic
     fun setEventPublisher(publisher: EventPublisher) {
         eventPublisherSingleton.set(publisher)
     }
 
+    @JvmStatic
     fun setEventPublisherFactory(factory: () -> EventPublisher) {
         eventPublisherSingleton.setFactory(factory)
     }
 
+    @JvmStatic
     fun faultManager(): FaultManager {
         return faultManagerSingleton.get()
     }
 
+    @JvmStatic
     fun setFaultManager(manager: FaultManager) {
         faultManagerSingleton.set(manager)
     }
 
+    @JvmStatic
     fun setFaultManagerFactory(factory: () -> FaultManager) {
         faultManagerSingleton.setFactory(factory)
     }
@@ -126,14 +135,17 @@ object GlobalRegistry {
         defaultFactory = { DefaultDynamoDbClientFactory() as DynamoDbClientFactory }
     )
 
+    @JvmStatic
     fun dynamoDbClientFactory() : DynamoDbClientFactory {
         return dynamoDbClientFactorySingleton.get()
     }
 
+    @JvmStatic
     fun setDynamoDbClientFactory(dynamoDbClientFactory: DynamoDbClientFactory) {
         dynamoDbClientFactorySingleton.set(dynamoDbClientFactory)
     }
 
+    @JvmStatic
     fun setDynamoDbClientFactory(factory: () -> DynamoDbClientFactory) {
         dynamoDbClientFactorySingleton.setFactory(factory)
     }
@@ -143,18 +155,22 @@ object GlobalRegistry {
         defaultFactory = { DefaultS3ClientFactory() as S3ClientFactory }
     )
 
+    @JvmStatic
     fun s3ClientFactory() : S3ClientFactory {
         return s3ClientFactorySingleton.get()
     }
 
+    @JvmStatic
     fun setS3ClientFactory(s3ClientFactory: S3ClientFactory) {
         s3ClientFactorySingleton.set(s3ClientFactory)
     }
 
+    @JvmStatic
     fun setS3ClientFactory(factory: () -> S3ClientFactory) {
         s3ClientFactorySingleton.setFactory(factory)
     }
 
+    @JvmStatic
     fun reset() {
         synchronized(lock) {
             envConfigSingleton.reset()

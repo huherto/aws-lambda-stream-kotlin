@@ -12,11 +12,14 @@ import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.mapNotNull
 
-class KinesisAdapter(
+class KinesisAdapter constructor(
     private val faultManager: FaultManager = GlobalRegistry.faultManager(),
     private val eventCodec: EventCodec,
     private val claimCheckRedeemer: ClaimCheckRedeemer? = null
 ) {
+
+    /** Java-friendly constructor. */
+    constructor(eventCodec: EventCodec) : this(GlobalRegistry.faultManager(), eventCodec)
 
     fun  fromKinesis(kinesisEvent: KinesisEvent): Flow<UnitOfWork> {
         if (kinesisEvent.records.isNullOrEmpty()) {

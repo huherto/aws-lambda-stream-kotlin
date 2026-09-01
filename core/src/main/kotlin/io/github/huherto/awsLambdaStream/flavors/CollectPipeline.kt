@@ -36,7 +36,7 @@ import kotlinx.coroutines.flow.onEach
  * @param expire Whether the microstore record should be written as expirable.
  * @param eventsMicrostore Sink responsible for persisting collected event records.
  */
-class CollectPipeline(
+class CollectPipeline @JvmOverloads constructor(
     pipelineId: String,
     private val onContentType: (UnitOfWork) -> Boolean = {  true },
     private val eventFilter: EventFilter = EventFilter.Any,

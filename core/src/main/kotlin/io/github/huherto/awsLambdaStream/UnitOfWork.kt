@@ -3,7 +3,7 @@ package io.github.huherto.awsLambdaStream
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import kotlin.reflect.KClass
 
-data class UnitOfWork(
+data class UnitOfWork @JvmOverloads constructor(
     val pipeline: Pipeline? = null,
     val record: Any? = null,
     val event: Event? = null,

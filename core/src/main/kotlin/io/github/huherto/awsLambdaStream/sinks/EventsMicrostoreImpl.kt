@@ -69,7 +69,7 @@ import kotlinx.coroutines.flow.buffer
  * @param faultManager Fault handling strategy used while processing flows.
  * @param bufferCapacity Coroutine flow buffer capacity between request-building and DynamoDB calls.
  */
-open class EventsMicrostoreImpl(
+open class EventsMicrostoreImpl @JvmOverloads constructor(
     private val dynamoDbClientFactory: DynamoDbClientFactory,
     faultManager: FaultManager = GlobalRegistry.faultManager(),
     bufferCapacity: Int = Channel.BUFFERED,

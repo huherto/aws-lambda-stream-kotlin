@@ -46,7 +46,7 @@ const val CORREL = "CORREL"
  * @param eventCodec Optional event deserializer. When `null`, events are parsed as [JsonEvent].
  * @param expire Whether the microstore record should be written as expirable.
  */
-class CorrelatePipeline(
+class CorrelatePipeline @JvmOverloads constructor(
     id: String,
     val onContentType: (UnitOfWork) -> Boolean = { true },
     val eventFilter: EventFilter = EventFilter.Any,

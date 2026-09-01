@@ -99,6 +99,7 @@ class PipelineAssembler private constructor(builder : Builder) {
         /**
          * Creates a new [Builder].
          */
+        @JvmStatic
         fun builder(): Builder {
             return Builder()
         }
@@ -121,6 +122,7 @@ class PipelineAssembler private constructor(builder : Builder) {
      * @param includeFaultHandler Whether to flush queued fault events when the merged flow completes.
      * @return A merged flow containing units of work emitted by all configured pipelines.
      */
+    @JvmOverloads
     fun assemble(headFlow: Flow<UnitOfWork>, includeFaultHandler: Boolean = true): Flow<UnitOfWork> {
 
         val headFlow = headFlow
