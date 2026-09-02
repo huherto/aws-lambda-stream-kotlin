@@ -21,11 +21,11 @@ class TriggerContainer(
     }
 
     private val cdcPipeline: Pipeline by lazy {
-        CdcPipeline(
-            id = "cdc1",
-            eventPublisher = eventPublisher,
-            toEvent = ::toEvent,
-        )
+        CdcPipeline.builder()
+            .id("cdc1")
+            .eventPublisher(eventPublisher)
+            .toEvent(::toEvent)
+            .build()
     }
 
     val assembler: PipelineAssembler by lazy {

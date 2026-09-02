@@ -1,10 +1,7 @@
 package io.github.huherto.awsLambdaStream.flavors
 
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
-import io.github.huherto.awsLambdaStream.Event
-import io.github.huherto.awsLambdaStream.EventCodec
-import io.github.huherto.awsLambdaStream.UnitOfWork
-import io.github.huherto.awsLambdaStream.envConfig
+import io.github.huherto.awsLambdaStream.*
 import io.github.huherto.awsLambdaStream.extensions.withSaveOptions
 import io.github.huherto.awsLambdaStream.faults.FaultManager
 import io.github.huherto.awsLambdaStream.filters.EventFilter
@@ -19,15 +16,15 @@ import kotlinx.coroutines.flow.onEach
 const val CORREL = "CORREL"
 
 /** Pipeline flavor that correlates previously collected events and persists correlation records. */
-class CorrelatePipeline @JvmOverloads constructor(
+class CorrelatePipeline(
     id: String,
-    val onContentType: (UnitOfWork) -> Boolean = { true },
-    val eventFilter: EventFilter = EventFilter.Any,
+    val onContentType: (UnitOfWork) -> Boolean,
+    val eventFilter: EventFilter,
     val correlationKeySupplier: ((UnitOfWork) -> String),
-    val correlationKeySuffix: String = "",
+    val correlationKeySuffix: String,
     var eventsMicrostore: EventsMicrostore,
     val eventCodec: EventCodec,
-    val expire: Boolean = false,
+    val expire: Boolean,
 ) : Pipeline(id) {
 
     internal fun forCollectedEvents(uow: UnitOfWork) : Boolean {
@@ -107,6 +104,44 @@ class CorrelatePipeline @JvmOverloads constructor(
                 .save()
                 .onEach { uow -> printEndPipeline(uow) }
             return flow
+        }
+    }
+
+    companion object {
+        @JvmStatic
+        fun builder() = Builder()
+    }
+
+    class Builder : PipelineBuilder<CorrelatePipeline, Builder>() {
+        private var onContentType: (UnitOfWork) -> Boolean = { true }
+        private var eventFilter: EventFilter = EventFilter.Any
+        private var correlationKeySupplier: ((UnitOfWork) -> String)? = null
+        private var correlationKeySuffix: String = ""
+        private var eventsMicrostore: EventsMicrostore? = null
+        private var eventCodec: EventCodec? = null
+        private var expire: Boolean = false
+
+        fun onContentType(onContentType: (UnitOfWork) -> Boolean) = apply { this.onContentType = onContentType }
+        fun onContentTypeJava(onContentType: java.util.function.Predicate<UnitOfWork>) = apply { this.onContentType = { uow -> onContentType.test(uow) } }
+        fun eventFilter(eventFilter: EventFilter) = apply { this.eventFilter = eventFilter }
+        fun correlationKeySupplier(correlationKeySupplier: (UnitOfWork) -> String) = apply { this.correlationKeySupplier = correlationKeySupplier }
+        fun correlationKeySupplierJava(correlationKeySupplier: java.util.function.Function<UnitOfWork, String>) = apply { this.correlationKeySupplier = { uow -> correlationKeySupplier.apply(uow) } }
+        fun correlationKeySuffix(correlationKeySuffix: String) = apply { this.correlationKeySuffix = correlationKeySuffix }
+        fun eventsMicrostore(eventsMicrostore: EventsMicrostore) = apply { this.eventsMicrostore = eventsMicrostore }
+        fun eventCodec(eventCodec: EventCodec) = apply { this.eventCodec = eventCodec }
+        fun expire(expire: Boolean) = apply { this.expire = expire }
+
+        override fun build(): CorrelatePipeline {
+            return CorrelatePipeline(
+                id = id ?: throw IllegalArgumentException("id is required"),
+                onContentType = onContentType,
+                eventFilter = eventFilter,
+                correlationKeySupplier = correlationKeySupplier ?: throw IllegalArgumentException("correlationKeySupplier is required"),
+                correlationKeySuffix = correlationKeySuffix,
+                eventsMicrostore = eventsMicrostore ?: throw IllegalArgumentException("eventsMicrostore is required"),
+                eventCodec = eventCodec ?: throw IllegalArgumentException("eventCodec is required"),
+                expire = expire
+            )
         }
     }
 }

@@ -1,10 +1,7 @@
 package io.github.huherto.awsLambdaStream.flavors
 
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
-import io.github.huherto.awsLambdaStream.Event
-import io.github.huherto.awsLambdaStream.EventCodec
-import io.github.huherto.awsLambdaStream.EventReference
-import io.github.huherto.awsLambdaStream.UnitOfWork
+import io.github.huherto.awsLambdaStream.*
 import io.github.huherto.awsLambdaStream.extensions.withQueryParams
 import io.github.huherto.awsLambdaStream.faults.FaultManager
 import io.github.huherto.awsLambdaStream.filters.EventFilter
@@ -20,18 +17,18 @@ import kotlinx.coroutines.flow.*
 
 
 /** Pipeline flavor that evaluates collected and correlated events and publishes higher-order events. */
-class EvaluatePipeline @JvmOverloads constructor(
+class EvaluatePipeline(
     id: String,
     val eventPublisher: EventPublisher,
     val eventsMicrostore: EventsMicrostore,
-    val onContentType: (UnitOfWork) -> Boolean = { true },
-    val eventFilter: EventFilter = EventFilter.Any,
-    val correlationKeySuffix: String = "",
-    val index: String? = null,
-    val bufferCapacity: Int = Channel.BUFFERED,
+    val onContentType: (UnitOfWork) -> Boolean,
+    val eventFilter: EventFilter,
+    val correlationKeySuffix: String,
+    val index: String?,
+    val bufferCapacity: Int,
     val eventCodec: EventCodec,
-    val expression: ((UnitOfWork) -> Boolean)? = null,
-    val emit: ((UnitOfWork) -> (List<Event>))? = null,
+    val expression: ((UnitOfWork) -> Boolean)?,
+    val emit: ((UnitOfWork) -> (List<Event>))?,
 ) : Pipeline(id) {
 
     internal fun forEvents(uow: UnitOfWork) : Boolean {
@@ -177,6 +174,54 @@ class EvaluatePipeline @JvmOverloads constructor(
                 .publish()
                 .onEach { uow -> printEndPipeline(uow) }
             return flow
+        }
+    }
+
+    companion object {
+        @JvmStatic
+        fun builder() = Builder()
+    }
+
+    class Builder : PipelineBuilder<EvaluatePipeline, Builder>() {
+        private var eventPublisher: EventPublisher? = null
+        private var eventsMicrostore: EventsMicrostore? = null
+        private var onContentType: (UnitOfWork) -> Boolean = { true }
+        private var eventFilter: EventFilter = EventFilter.Any
+        private var correlationKeySuffix: String = ""
+        private var index: String? = null
+        private var bufferCapacity: Int = Channel.BUFFERED
+        private var eventCodec: EventCodec? = null
+        private var expression: ((UnitOfWork) -> Boolean)? = null
+        private var emit: ((UnitOfWork) -> List<Event>)? = null
+
+        fun eventPublisher(eventPublisher: EventPublisher) = apply { this.eventPublisher = eventPublisher }
+        fun eventsMicrostore(eventsMicrostore: EventsMicrostore) = apply { this.eventsMicrostore = eventsMicrostore }
+        fun onContentType(onContentType: (UnitOfWork) -> Boolean) = apply { this.onContentType = onContentType }
+        fun onContentType(onContentType: java.util.function.Predicate<UnitOfWork>) = apply { this.onContentType = { uow -> onContentType.test(uow) } }
+        fun eventFilter(eventFilter: EventFilter) = apply { this.eventFilter = eventFilter }
+        fun correlationKeySuffix(correlationKeySuffix: String) = apply { this.correlationKeySuffix = correlationKeySuffix }
+        fun index(index: String?) = apply { this.index = index }
+        fun bufferCapacity(bufferCapacity: Int) = apply { this.bufferCapacity = bufferCapacity }
+        fun eventCodec(eventCodec: EventCodec) = apply { this.eventCodec = eventCodec }
+        fun expression(expression: (UnitOfWork) -> Boolean) = apply { this.expression = expression }
+        fun expressionJava(expression: java.util.function.Predicate<UnitOfWork>) = apply { this.expression = { uow -> expression.test(uow) } }
+        fun emit(emit: (UnitOfWork) -> List<Event>) = apply { this.emit = emit }
+        fun emitJava(emit: java.util.function.Function<UnitOfWork, List<Event>>) = apply { this.emit = { uow -> emit.apply(uow) } }
+
+        override fun build(): EvaluatePipeline {
+            return EvaluatePipeline(
+                id = id ?: throw IllegalArgumentException("id is required"),
+                eventPublisher = eventPublisher ?: throw IllegalArgumentException("eventPublisher is required"),
+                eventsMicrostore = eventsMicrostore ?: throw IllegalArgumentException("eventsMicrostore is required"),
+                onContentType = onContentType,
+                eventFilter = eventFilter,
+                correlationKeySuffix = correlationKeySuffix,
+                index = index,
+                bufferCapacity = bufferCapacity,
+                eventCodec = eventCodec ?: throw IllegalArgumentException("eventCodec is required"),
+                expression = expression,
+                emit = emit
+            )
         }
     }
 }

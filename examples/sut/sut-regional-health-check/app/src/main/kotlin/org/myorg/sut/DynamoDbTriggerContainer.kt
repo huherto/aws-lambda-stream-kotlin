@@ -15,10 +15,10 @@ class DynamoDbTriggerContainer() {
     }
 
     private  val materializeS3Pipeline: Pipeline by lazy {
-        MaterializeS3Pipeline(
-            pipelineId = "t1",
-            toPutRequest = ::toS3PutRequest
-        )
+        MaterializeS3Pipeline.builder()
+            .id("t1")
+            .toPutRequest(::toS3PutRequest)
+            .build()
     }
 
     val assembler: PipelineAssembler by lazy {

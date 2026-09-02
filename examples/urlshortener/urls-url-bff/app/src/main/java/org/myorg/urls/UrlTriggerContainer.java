@@ -4,10 +4,10 @@ import io.github.huherto.awsLambdaStream.Event;
 import io.github.huherto.awsLambdaStream.PipelineAssembler;
 import io.github.huherto.awsLambdaStream.UnitOfWork;
 import io.github.huherto.awsLambdaStream.connectors.DefaultEventBridgeClientFactory;
+import io.github.huherto.awsLambdaStream.flavors.CdcPipeline;
 import io.github.huherto.awsLambdaStream.from.DynamodbAdapter;
 import io.github.huherto.awsLambdaStream.from.RecordImage;
 import io.github.huherto.awsLambdaStream.from.RecordPair;
-import io.github.huherto.awsLambdaStream.java.Handlers;
 import io.github.huherto.awsLambdaStream.sinks.EventBridgePublisher;
 import io.github.huherto.awsLambdaStream.sinks.EventPublisher;
 
@@ -22,8 +22,15 @@ public class UrlTriggerContainer {
 
     public UrlTriggerContainer(EventPublisher eventPublisher) {
         this.eventPublisher = eventPublisher;
-        this.assembler = Handlers.assemblerBuilder()
-                .addPipeline(Handlers.cdcPipeline("cdc1", eventPublisher, UrlTriggerContainer::toEvent))
+        CdcPipeline cdcPipeline = CdcPipeline
+                .builder()
+                .id("cdc1")
+                .toEventJava(this::toEvent)
+                .build();
+
+        this.assembler = PipelineAssembler
+                .builder()
+                .addPipeline(cdcPipeline)
                 .build();
         this.dynamoDbAdapter = new DynamodbAdapter();
     }
@@ -46,7 +53,7 @@ public class UrlTriggerContainer {
         return new UrlTriggerContainer(eventPublisher);
     }
 
-    public static Event toEvent(UnitOfWork uow) {
+    public Event toEvent(UnitOfWork uow) {
         if (uow.getEvent() == null || !(uow.getEvent().getRaw() instanceof RecordPair raw)) {
             return null;
         }

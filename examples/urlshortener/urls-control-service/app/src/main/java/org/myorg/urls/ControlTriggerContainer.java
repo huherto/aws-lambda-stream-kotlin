@@ -2,18 +2,19 @@ package org.myorg.urls;
 
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient;
 import io.github.huherto.awsLambdaStream.Event;
+import io.github.huherto.awsLambdaStream.GlobalRegistry;
 import io.github.huherto.awsLambdaStream.PipelineAssembler;
 import io.github.huherto.awsLambdaStream.UnitOfWork;
 import io.github.huherto.awsLambdaStream.connectors.DefaultDynamoDbClientFactory;
 import io.github.huherto.awsLambdaStream.connectors.DynamoDbClientFactory;
-import io.github.huherto.awsLambdaStream.filters.EventFilter;
+import io.github.huherto.awsLambdaStream.flavors.CorrelatePipeline;
+import io.github.huherto.awsLambdaStream.flavors.EvaluatePipeline;
 import io.github.huherto.awsLambdaStream.from.DynamodbAdapter;
-import io.github.huherto.awsLambdaStream.java.Handlers;
-import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory;
 import io.github.huherto.awsLambdaStream.sinks.EventsMicrostore;
 import io.github.huherto.awsLambdaStream.sinks.EventsMicrostoreImpl;
 
 import java.util.List;
+import java.util.Objects;
 
 public class ControlTriggerContainer {
     public final PipelineAssembler assembler;
@@ -22,15 +23,35 @@ public class ControlTriggerContainer {
 
     public ControlTriggerContainer(EventsMicrostore eventsMicrostore, UrlDao urlDao) {
         this.urlDao = urlDao;
-        this.assembler = Handlers.assemblerBuilder()
-                .addPipeline(Handlers.correlatePipeline("correlate", eventsMicrostore, JacksonEventCodec.INSTANCE, uow -> uow.getEvent().getPartitionKey()))
-                .addPipeline(Handlers.evaluatePipeline("evaluate", new EventPublisherInMemory(), eventsMicrostore, JacksonEventCodec.INSTANCE,
-                        EventFilter.Any.INSTANCE,
-                        this::shouldProcess,
-                        this::processEvent
-                ))
+        CorrelatePipeline correlate = CorrelatePipeline
+                .builder()
+                .id("correlate")
+                .eventsMicrostore(eventsMicrostore)
+                .eventCodec(JacksonEventCodec.INSTANCE)
+                .correlationKeySupplierJava(this::correlationKey)
+                .build();
+
+        EvaluatePipeline evaluate = EvaluatePipeline
+                .builder()
+                .id("evaluate")
+                .eventsMicrostore(eventsMicrostore)
+                .eventCodec(JacksonEventCodec.INSTANCE)
+                .expression(this::shouldProcess)
+                .emit(this::processEvent)
+
+                .build();
+
+
+        this.assembler = PipelineAssembler.builder()
+                .addPipeline(correlate)
+                .addPipeline(evaluate)
                 .build();
         this.dynamoDbAdapter = new DynamodbAdapter();
+    }
+
+    private String correlationKey(UnitOfWork uow) {
+        Event event = Objects.requireNonNull(uow.getEvent(), "event is required");
+        return Objects.requireNonNull(event.getPartitionKey(), "event.partitionKey is required");
     }
 
     private Boolean shouldProcess(UnitOfWork uow) {
@@ -44,11 +65,8 @@ public class ControlTriggerContainer {
     }
 
     public static ControlTriggerContainer build() {
-        String eventsTableName = System.getenv("EVENTS_TABLE_NAME");
-        if (eventsTableName == null) eventsTableName = "urls-dev-events";
-        String urlsTableName = System.getenv("URLS_TABLE_NAME");
-        if (urlsTableName == null) urlsTableName = "urls-dev-table";
 
+        String urlsTableName = GlobalRegistry.envConfig().entityTableName();
         DynamoDbClientFactory factory = new DefaultDynamoDbClientFactory();
         DynamoDbClient client = factory.getClient("urls-control-service");
 

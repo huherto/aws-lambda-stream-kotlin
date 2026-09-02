@@ -42,17 +42,17 @@ class MaterializePipelineTest {
 
         coEvery { client.updateItem(updateRequest) } returns updateResponse
 
-        val pipeline = MaterializePipeline(
-            pipelineId = "materialize-packages",
-            compact = { flow: Flow<UnitOfWork> -> flow.filter {
+        val pipeline = MaterializePipeline.builder()
+            .id("materialize-packages")
+            .compact { flow: Flow<UnitOfWork> -> flow.filter {
                     it.key == "keep"
-                } },
-            toUpdateRequest = {
+                } }
+            .toUpdateRequest {
                 updateRequestCalls += it
                 updateRequest
-            },
-            dynamoDbConnectorOptions = options,
-        )
+            }
+            .dynamoDbConnectorOptions(options)
+            .build()
 
         // act
         val result = pipeline
@@ -87,16 +87,16 @@ class MaterializePipelineTest {
 
         coEvery { client.updateItem(updateRequest) } returns UpdateItemResponse {}
 
-        val pipeline = MaterializePipeline(
-            pipelineId = "materialize-packages",
-            eventFilter = EventFilter.ByName("PackageCreated"),
-            onContentType = { it.key == "keep" },
-            toUpdateRequest = {
+        val pipeline = MaterializePipeline.builder()
+            .id("materialize-packages")
+            .eventFilter(EventFilter.ByName("PackageCreated"))
+            .onContentType { it.key == "keep" }
+            .toUpdateRequest {
                 updateRequestCalls += it
                 updateRequest
-            },
-            dynamoDbConnectorOptions = options,
-        )
+            }
+            .dynamoDbConnectorOptions(options)
+            .build()
 
         // act
         val result = pipeline
@@ -125,14 +125,14 @@ class MaterializePipelineTest {
 
         coEvery { client.updateItem(updateRequest) } returns UpdateItemResponse {}
 
-        val pipeline = MaterializePipeline(
-            pipelineId = "materialize-packages",
-            toUpdateRequest = {
+        val pipeline = MaterializePipeline.builder()
+            .id("materialize-packages")
+            .toUpdateRequest {
                 if (it.key == "fail") error("cannot materialize")
                 updateRequest
-            },
-            dynamoDbConnectorOptions = options,
-        )
+            }
+            .dynamoDbConnectorOptions(options)
+            .build()
 
         // act
         val result = pipeline

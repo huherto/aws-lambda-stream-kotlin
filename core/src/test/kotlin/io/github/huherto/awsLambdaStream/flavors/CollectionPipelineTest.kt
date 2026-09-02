@@ -42,13 +42,15 @@ class CollectionPipelineTest {
         includeRaw: Boolean = true,
         expire: Boolean = false,
     ): CollectPipeline {
-        return CollectPipeline(
-            pipelineId = pipelineId,
-            eventsMicrostore = eventsMicrostore,
-            ttlDays = ttlDays,
-            includeRaw = includeRaw,
-            expire = expire,
-        )
+        return CollectPipeline.builder()
+            .id(pipelineId)
+            .eventsMicrostore(eventsMicrostore)
+            .apply {
+                ttlDays?.let { ttlDays(it) }
+                includeRaw(includeRaw)
+                expire(expire)
+            }
+            .build()
     }
 
     private fun createEvent(

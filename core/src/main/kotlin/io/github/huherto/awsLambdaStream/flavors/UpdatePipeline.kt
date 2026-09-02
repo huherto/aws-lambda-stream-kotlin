@@ -6,6 +6,7 @@ import aws.sdk.kotlin.services.dynamodb.model.UpdateItemRequest
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import io.github.huherto.awsLambdaStream.Event
 import io.github.huherto.awsLambdaStream.EventCodec
+import io.github.huherto.awsLambdaStream.PipelineBuilder
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
 import io.github.huherto.awsLambdaStream.extensions.queryResponse
@@ -30,13 +31,13 @@ import kotlinx.coroutines.flow.onEach
 /** Pipeline flavor that reacts to incoming events, queries related DynamoDB records, loads those records, builds update requests, and applies the updates. */
 class UpdatePipeline(
     id: String,
-    private val dynamoDbConnectorOptions: DynamoDbConnector.Options = DynamoDbConnector.Options(),
+    private val dynamoDbConnectorOptions: DynamoDbConnector.Options,
     private val eventCodec: EventCodec,
-    private val eventFilter: EventFilter = EventFilter.Any,
-    private val onContentType: (UnitOfWork) -> Boolean = { true },
-    private val compactRule: CompactRule? = null,
-    private val toQueryRequest: ((UnitOfWork) -> QueryRequest?)? = null,
-    private val toGetRequest: ((UnitOfWork) -> BatchGetItemRequest?)? = null,
+    private val eventFilter: EventFilter,
+    private val onContentType: (UnitOfWork) -> Boolean,
+    private val compactRule: CompactRule?,
+    private val toQueryRequest: ((UnitOfWork) -> QueryRequest?)?,
+    private val toGetRequest: ((UnitOfWork) -> BatchGetItemRequest?)?,
     private val toUpdateRequest: suspend (UnitOfWork) -> UpdateItemRequest?,
 ) : Pipeline(id) {
 
@@ -139,6 +140,49 @@ class UpdatePipeline(
                 .mapNotFaulty { uow -> toUpdateRequest(uow) }
                 .updateDynamoDB(fm)
                 .onEach { uow -> printEndPipeline(uow) }
+        }
+    }
+
+    companion object {
+        @JvmStatic
+        fun builder() = Builder()
+    }
+
+    class Builder : PipelineBuilder<UpdatePipeline, Builder>() {
+        private var dynamoDbConnectorOptions = DynamoDbConnector.Options()
+        private var eventCodec: EventCodec? = null
+        private var eventFilter: EventFilter = EventFilter.Any
+        private var onContentType: (UnitOfWork) -> Boolean = { true }
+        private var compactRule: CompactRule? = null
+        private var toQueryRequest: ((UnitOfWork) -> QueryRequest?)? = null
+        private var toGetRequest: ((UnitOfWork) -> BatchGetItemRequest?)? = null
+        private var toUpdateRequest: (suspend (UnitOfWork) -> UpdateItemRequest?)? = null
+
+        fun dynamoDbConnectorOptions(options: DynamoDbConnector.Options) = apply { this.dynamoDbConnectorOptions = options }
+        fun eventCodec(eventCodec: EventCodec) = apply { this.eventCodec = eventCodec }
+        fun eventFilter(eventFilter: EventFilter) = apply { this.eventFilter = eventFilter }
+        fun onContentType(onContentType: (UnitOfWork) -> Boolean) = apply { this.onContentType = onContentType }
+        fun onContentType(onContentType: java.util.function.Predicate<UnitOfWork>) = apply { this.onContentType = { uow -> onContentType.test(uow) } }
+        fun compactRule(compactRule: CompactRule) = apply { this.compactRule = compactRule }
+        fun toQueryRequest(toQueryRequest: (UnitOfWork) -> QueryRequest?) = apply { this.toQueryRequest = toQueryRequest }
+        fun toQueryRequest(toQueryRequest: java.util.function.Function<UnitOfWork, QueryRequest?>) = apply { this.toQueryRequest = { uow -> toQueryRequest.apply(uow) } }
+        fun toGetRequest(toGetRequest: (UnitOfWork) -> BatchGetItemRequest?) = apply { this.toGetRequest = toGetRequest }
+        fun toGetRequest(toGetRequest: java.util.function.Function<UnitOfWork, BatchGetItemRequest?>) = apply { this.toGetRequest = { uow -> toGetRequest.apply(uow) } }
+        fun toUpdateRequest(toUpdateRequest: suspend (UnitOfWork) -> UpdateItemRequest?) = apply { this.toUpdateRequest = toUpdateRequest }
+        fun toUpdateRequest(toUpdateRequest: java.util.function.Function<UnitOfWork, UpdateItemRequest?>) = apply { this.toUpdateRequest = { uow -> toUpdateRequest.apply(uow) } }
+
+        override fun build(): UpdatePipeline {
+            return UpdatePipeline(
+                id = id ?: throw IllegalArgumentException("id is required"),
+                dynamoDbConnectorOptions = dynamoDbConnectorOptions,
+                eventCodec = eventCodec ?: throw IllegalArgumentException("eventCodec is required"),
+                eventFilter = eventFilter,
+                onContentType = onContentType,
+                compactRule = compactRule,
+                toQueryRequest = toQueryRequest,
+                toGetRequest = toGetRequest,
+                toUpdateRequest = toUpdateRequest ?: throw IllegalArgumentException("toUpdateRequest is required")
+            )
         }
     }
 }

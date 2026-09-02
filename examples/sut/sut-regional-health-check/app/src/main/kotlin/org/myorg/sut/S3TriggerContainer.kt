@@ -23,11 +23,11 @@ class S3TriggerContainer(
     }
 
     private val cdcPipeline: Pipeline by lazy {
-        CdcPipeline(
-            id = "cdc",
-            eventPublisher = eventPublisher,
-            eventFilter = EventFilter.Any
-        )
+        CdcPipeline.builder()
+            .id("cdc")
+            .eventPublisher(eventPublisher)
+            .eventFilter(EventFilter.Any)
+            .build()
     }
 
     val assembler: PipelineAssembler by lazy {

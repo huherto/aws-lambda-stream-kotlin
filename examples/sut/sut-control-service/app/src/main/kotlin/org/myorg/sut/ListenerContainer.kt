@@ -30,11 +30,12 @@ class ListenerContainer(
     }
 
     private val collectPipeline: Pipeline by lazy {
-        CollectPipeline(
-            pipelineId = "coll1",
-            eventsMicrostore = eventsMicrostore,
-            eventFilter = EventFilters.classes(TrackedUnitEvent::class)
-        )
+        CollectPipeline
+            .builder()
+            .id("coll1")
+            .eventsMicrostore(eventsMicrostore)
+            .eventFilter(EventFilters.classes(TrackedUnitEvent::class))
+            .build()
     }
 
     val assembler: PipelineAssembler by lazy {

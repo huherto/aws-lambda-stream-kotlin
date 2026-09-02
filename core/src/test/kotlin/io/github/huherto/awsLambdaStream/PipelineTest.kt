@@ -229,11 +229,11 @@ class PipelineTest {
         }
 
         private val collectPipeline: Pipeline by lazy {
-            CollectPipeline(
-                pipelineId = "coll1",
-                eventsMicrostore = eventsMicrostore,
-                eventFilter = EventFilters.classes(MyEvent::class),
-            )
+            CollectPipeline.builder()
+                .id("coll1")
+                .eventsMicrostore(eventsMicrostore)
+                .eventFilter(EventFilters.classes(MyEvent::class))
+                .build()
         }
 
         val assembler: PipelineAssembler by lazy {

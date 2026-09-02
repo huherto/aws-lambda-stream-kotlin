@@ -16,11 +16,11 @@ class KinesisTriggerContainer () {
     }
 
     private  val updatePipeline: Pipeline by lazy {
-        UpdatePipeline(
-            id = "update",
-            eventCodec = JsonEventCodec, // NOOP, Should not be required.
-            toUpdateRequest = ::toUpdateRequest
-        )
+        UpdatePipeline.builder()
+            .id("update")
+            .eventCodec(JsonEventCodec) // NOOP, Should not be required.
+            .toUpdateRequest(::toUpdateRequest)
+            .build()
     }
 
     val assembler: PipelineAssembler by lazy {

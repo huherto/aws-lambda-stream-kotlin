@@ -2,6 +2,7 @@ package io.github.huherto.awsLambdaStream.flavors
 
 import io.github.huherto.awsLambdaStream.Event
 import io.github.huherto.awsLambdaStream.GlobalRegistry.envConfig
+import io.github.huherto.awsLambdaStream.PipelineBuilder
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.extensions.withSaveOptions
 import io.github.huherto.awsLambdaStream.faults.FaultManager
@@ -13,14 +14,14 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 
 /** Pipeline flavor that collects incoming events and persists them into an [EventsMicrostore]. */
-class CollectPipeline @JvmOverloads constructor(
+class CollectPipeline(
     pipelineId: String,
-    private val onContentType: (UnitOfWork) -> Boolean = {  true },
-    private val eventFilter: EventFilter = EventFilter.Any,
-    private val correlationKey: (UnitOfWork) -> String? = { uow -> uow.event?.partitionKey },
-    private val ttlDays: Int? = null,
-    private val includeRaw: Boolean = true,
-    private val expire: Boolean = false,
+    private val onContentType: (UnitOfWork) -> Boolean,
+    private val eventFilter: EventFilter,
+    private val correlationKey: (UnitOfWork) -> String?,
+    private val ttlDays: Int?,
+    private val includeRaw: Boolean,
+    private val expire: Boolean,
     private val eventsMicrostore: EventsMicrostore,
 ) : Pipeline(pipelineId) {
 
@@ -72,6 +73,43 @@ class CollectPipeline @JvmOverloads constructor(
                 .onEach { uow -> printEndPipeline(uow) }
             return flow
         }
+    }
 
+    companion object {
+        @JvmStatic
+        fun builder() = Builder()
+    }
+
+    class Builder : PipelineBuilder<CollectPipeline, Builder>() {
+        private var onContentType: (UnitOfWork) -> Boolean = { true }
+        private var eventFilter: EventFilter = EventFilter.Any
+        private var correlationKey: (UnitOfWork) -> String? = { uow -> uow.event?.partitionKey }
+        private var ttlDays: Int? = null
+        private var includeRaw: Boolean = true
+        private var expire: Boolean = false
+        private var eventsMicrostore: EventsMicrostore? = null
+
+        fun onContentType(onContentType: (UnitOfWork) -> Boolean) = apply { this.onContentType = onContentType }
+        fun onContentType(onContentType: java.util.function.Predicate<UnitOfWork>) = apply { this.onContentType = { uow -> onContentType.test(uow) } }
+        fun eventFilter(eventFilter: EventFilter) = apply { this.eventFilter = eventFilter }
+        fun correlationKey(correlationKey: (UnitOfWork) -> String?) = apply { this.correlationKey = correlationKey }
+        fun correlationKey(correlationKey: java.util.function.Function<UnitOfWork, String?>) = apply { this.correlationKey = { uow -> correlationKey.apply(uow) } }
+        fun ttlDays(ttlDays: Int) = apply { this.ttlDays = ttlDays }
+        fun includeRaw(includeRaw: Boolean) = apply { this.includeRaw = includeRaw }
+        fun expire(expire: Boolean) = apply { this.expire = expire }
+        fun eventsMicrostore(eventsMicrostore: EventsMicrostore) = apply { this.eventsMicrostore = eventsMicrostore }
+
+        override fun build(): CollectPipeline {
+            return CollectPipeline(
+                pipelineId = id ?: throw IllegalArgumentException("id is required"),
+                onContentType = onContentType,
+                eventFilter = eventFilter,
+                correlationKey = correlationKey,
+                ttlDays = ttlDays,
+                includeRaw = includeRaw,
+                expire = expire,
+                eventsMicrostore = eventsMicrostore ?: throw IllegalArgumentException("eventsMicrostore is required")
+            )
+        }
     }
 }

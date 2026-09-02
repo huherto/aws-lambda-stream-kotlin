@@ -37,31 +37,31 @@ class TriggerContainer(
     }
 
     private val correlatePipeline: Pipeline by lazy {
-        CorrelatePipeline(
-            id = "corre1",
-            correlationKeySupplier = { uow ->
+        CorrelatePipeline.builder()
+            .id("corre1")
+            .correlationKeySupplier { uow ->
                 val event = uow.event as? TrackedUnitEvent
                 event?.entity?.id ?: throw RuntimeException(
                     "Entity id is not set in TrackedUnitEvent"
                 )
-            },
-            eventCodec = TrackedUnitEventCodec,
-            eventsMicrostore = eventsMicrostore,
-        )
+            }
+            .eventCodec(TrackedUnitEventCodec)
+            .eventsMicrostore(eventsMicrostore)
+            .build()
     }
 
     private val evaluatePipeline1: Pipeline by lazy {
-        EvaluatePipeline(
-            id = "eval_vta",
-            eventPublisher = eventPublisher,
-            eventsMicrostore = eventsMicrostore,
-            eventCodec = TrackedUnitEventCodec,
-            eventFilter = EventFilters.name(TrackedUnitEvent.SHIPMENT_CREATED),
-            emit = { uow ->
+        EvaluatePipeline.builder()
+            .id("eval_vta")
+            .eventPublisher(eventPublisher)
+            .eventsMicrostore(eventsMicrostore)
+            .eventCodec(TrackedUnitEventCodec)
+            .eventFilter(EventFilters.name(TrackedUnitEvent.SHIPMENT_CREATED))
+            .emit { uow ->
                 val base = uow.event as ShipmentCreatedEvent
                 listOf(VerifyTargetAddressEvent(entity = base.entity))
-            },
-        )
+            }
+            .build()
     }
 
     fun contactCustomer(
@@ -77,15 +77,15 @@ class TriggerContainer(
     }
 
     private val evaluatePipeline2: Pipeline by lazy {
-        EvaluatePipeline(
-            id = "eval2",
-            eventPublisher = eventPublisher,
-            eventsMicrostore = eventsMicrostore,
-            eventCodec = TrackedUnitEventCodec,
-            eventFilter = EventFilters.name(TrackedUnitEvent.DELIVERY_ATTEMPTED),
-            emit = ::contactCustomer,
-            expression = { uow -> true },
-        )
+        EvaluatePipeline.builder()
+            .id("eval2")
+            .eventPublisher(eventPublisher)
+            .eventsMicrostore(eventsMicrostore)
+            .eventCodec(TrackedUnitEventCodec)
+            .eventFilter(EventFilters.name(TrackedUnitEvent.DELIVERY_ATTEMPTED))
+            .emit(::contactCustomer)
+            .expression { uow -> true }
+            .build()
     }
 
     val assembler: PipelineAssembler by lazy {

@@ -3,6 +3,7 @@ package io.github.huherto.awsLambdaStream.flavors
 import aws.sdk.kotlin.services.s3.model.DeleteObjectRequest
 import aws.sdk.kotlin.services.s3.model.GetObjectRequest
 import aws.sdk.kotlin.services.s3.model.PutObjectRequest
+import io.github.huherto.awsLambdaStream.PipelineBuilder
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.S3Connector
 import io.github.huherto.awsLambdaStream.extensions.copyS3
@@ -17,13 +18,13 @@ import kotlinx.coroutines.flow.onEach
 /** A pipeline that materializes events to S3. */
 class MaterializeS3Pipeline(
     pipelineId: String,
-    private val eventFilter: EventFilter = EventFilter.Any,
-    private val onContentType: (UnitOfWork) -> Boolean = { true },
-    private val splitObject: (Flow<UnitOfWork>) -> Flow<UnitOfWork> = { it },
-    private val s3ConnectorOptions: S3Connector.Options = S3Connector.Options(),
-    private val toGetRequest: ((UnitOfWork) -> GetObjectRequest?)? = null,
-    private val toPutRequest: ((UnitOfWork) -> PutObjectRequest?)? = null,
-    private val toDeleteRequest: ((UnitOfWork) -> DeleteObjectRequest?)? = null,
+    private val eventFilter: EventFilter,
+    private val onContentType: (UnitOfWork) -> Boolean,
+    private val splitObject: (Flow<UnitOfWork>) -> Flow<UnitOfWork>,
+    private val s3ConnectorOptions: S3Connector.Options,
+    private val toGetRequest: ((UnitOfWork) -> GetObjectRequest?)?,
+    private val toPutRequest: ((UnitOfWork) -> PutObjectRequest?)?,
+    private val toDeleteRequest: ((UnitOfWork) -> DeleteObjectRequest?)?,
 ) : Pipeline(pipelineId) {
 
     private val s3Query: S3Query = S3Query(s3ConnectorOptions)
@@ -78,6 +79,47 @@ class MaterializeS3Pipeline(
                 }
                 .let { flow -> s3Sink.deleteObject(flow) }
                 .onEach { uow -> printEndPipeline(uow) }
+        }
+    }
+
+    companion object {
+        @JvmStatic
+        fun builder() = Builder()
+    }
+
+    class Builder : PipelineBuilder<MaterializeS3Pipeline, Builder>() {
+        private var eventFilter: EventFilter = EventFilter.Any
+        private var onContentType: (UnitOfWork) -> Boolean = { true }
+        private var splitObject: (Flow<UnitOfWork>) -> Flow<UnitOfWork> = { it }
+        private var s3ConnectorOptions: S3Connector.Options = S3Connector.Options()
+        private var toGetRequest: ((UnitOfWork) -> GetObjectRequest?)? = null
+        private var toPutRequest: ((UnitOfWork) -> PutObjectRequest?)? = null
+        private var toDeleteRequest: ((UnitOfWork) -> DeleteObjectRequest?)? = null
+
+        fun eventFilter(eventFilter: EventFilter) = apply { this.eventFilter = eventFilter }
+        fun onContentType(onContentType: (UnitOfWork) -> Boolean) = apply { this.onContentType = onContentType }
+        fun onContentTypeJava(onContentType: java.util.function.Predicate<UnitOfWork>) = apply { this.onContentType = { uow -> onContentType.test(uow) } }
+        fun splitObject(splitObject: (Flow<UnitOfWork>) -> Flow<UnitOfWork>) = apply { this.splitObject = splitObject }
+        fun splitObjectJava(splitObject: java.util.function.Function<Flow<UnitOfWork>, Flow<UnitOfWork>>) = apply { this.splitObject = { flow -> splitObject.apply(flow) } }
+        fun s3ConnectorOptions(options: S3Connector.Options) = apply { this.s3ConnectorOptions = options }
+        fun toGetRequest(toGetRequest: (UnitOfWork) -> GetObjectRequest?) = apply { this.toGetRequest = toGetRequest }
+        fun toGetRequestJava(toGetRequest: java.util.function.Function<UnitOfWork, GetObjectRequest?>) = apply { this.toGetRequest = { uow -> toGetRequest.apply(uow) } }
+        fun toPutRequest(toPutRequest: (UnitOfWork) -> PutObjectRequest?) = apply { this.toPutRequest = toPutRequest }
+        fun toPutRequestJava(toPutRequest: java.util.function.Function<UnitOfWork, PutObjectRequest?>) = apply { this.toPutRequest = { uow -> toPutRequest.apply(uow) } }
+        fun toDeleteRequest(toDeleteRequest: (UnitOfWork) -> DeleteObjectRequest?) = apply { this.toDeleteRequest = toDeleteRequest }
+        fun toDeleteRequestJava(toDeleteRequest: java.util.function.Function<UnitOfWork, DeleteObjectRequest?>) = apply { this.toDeleteRequest = { uow -> toDeleteRequest.apply(uow) } }
+
+        override fun build(): MaterializeS3Pipeline {
+            return MaterializeS3Pipeline(
+                pipelineId = id ?: throw IllegalArgumentException("id is required"),
+                eventFilter = eventFilter,
+                onContentType = onContentType,
+                splitObject = splitObject,
+                s3ConnectorOptions = s3ConnectorOptions,
+                toGetRequest = toGetRequest,
+                toPutRequest = toPutRequest,
+                toDeleteRequest = toDeleteRequest
+            )
         }
     }
 }

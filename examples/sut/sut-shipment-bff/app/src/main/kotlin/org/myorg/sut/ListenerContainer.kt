@@ -31,11 +31,11 @@ class ListenerContainer() {
     }
 
     private val materializePipeline: Pipeline by lazy {
-        MaterializePipeline(
-            pipelineId = "m1",
-            eventFilter = EventFilters.classes(TrackedUnitEvent::class),
-            toUpdateRequest = ::toUpdateRequest,
-        )
+        MaterializePipeline.builder()
+            .id("m1")
+            .eventFilter(EventFilters.classes(TrackedUnitEvent::class))
+            .toUpdateRequest(::toUpdateRequest)
+            .build()
     }
 
     val assembler: PipelineAssembler by lazy {

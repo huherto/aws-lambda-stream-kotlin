@@ -3,6 +3,7 @@ package io.github.huherto.awsLambdaStream.flavors
 import aws.sdk.kotlin.services.dynamodb.model.BatchGetItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.QueryRequest
 import io.github.huherto.awsLambdaStream.Event
+import io.github.huherto.awsLambdaStream.PipelineBuilder
 import io.github.huherto.awsLambdaStream.UnitOfWork
 import io.github.huherto.awsLambdaStream.connectors.DynamoDbConnector
 import io.github.huherto.awsLambdaStream.extensions.withBatchGetRequest
@@ -24,17 +25,17 @@ import kotlinx.coroutines.flow.onEach
 /** Pipeline flavor for change-data-capture style processing. */
 class CdcPipeline(
     id: String,
-    private val dynamoDbConnectorOptions: DynamoDbConnector.Options = DynamoDbConnector.Options(),
+    private val dynamoDbConnectorOptions: DynamoDbConnector.Options,
     private val eventPublisher: EventPublisher,
-    private val eventFilter: EventFilter = EventFilter.Any,
-    private val onContentType: (UnitOfWork) -> Boolean = { true },
-    private val compactRule: CompactRule? = null,
-    private val queryRule: QueryRule? = null,
-    private val toQueryRequest: (suspend (UnitOfWork) -> QueryRequest?)? = null,
-    private val toBatchGetRequest: (suspend (UnitOfWork) -> BatchGetItemRequest?)? = null,
-    private val toEvent: (suspend (UnitOfWork) -> Event?)? = null,
-    private val encryptEvent: (suspend (UnitOfWork) -> UnitOfWork)? = null,
-    private val parallel: Int = System.getenv("PARALLEL")?.toIntOrNull() ?: 4,
+    private val eventFilter: EventFilter,
+    private val onContentType: (UnitOfWork) -> Boolean,
+    private val compactRule: CompactRule?,
+    private val queryRule: QueryRule?,
+    private val toQueryRequest: (suspend (UnitOfWork) -> QueryRequest?)?,
+    private val toBatchGetRequest: (suspend (UnitOfWork) -> BatchGetItemRequest?)?,
+    private val toEvent: (suspend (UnitOfWork) -> Event?)?,
+    private val encryptEvent: (suspend (UnitOfWork) -> UnitOfWork)?,
+    private val parallel: Int,
 ) : Pipeline(id) {
 
 
@@ -102,4 +103,56 @@ class CdcPipeline(
         }
     }
 
+    companion object {
+        @JvmStatic
+        fun builder() = Builder()
+    }
+
+    class Builder : PipelineBuilder<CdcPipeline, Builder>() {
+        private var dynamoDbConnectorOptions = DynamoDbConnector.Options()
+        private var eventPublisher: EventPublisher? = null
+        private var eventFilter: EventFilter = EventFilter.Any
+        private var onContentType: (UnitOfWork) -> Boolean = { true }
+        private var compactRule: CompactRule? = null
+        private var queryRule: QueryRule? = null
+        private var toQueryRequest: (suspend (UnitOfWork) -> QueryRequest?)? = null
+        private var toBatchGetRequest: (suspend (UnitOfWork) -> BatchGetItemRequest?)? = null
+        private var toEvent: (suspend (UnitOfWork) -> Event?)? = null
+        private var encryptEvent: (suspend (UnitOfWork) -> UnitOfWork)? = null
+        private var parallel: Int = System.getenv("PARALLEL")?.toIntOrNull() ?: 4
+
+        fun dynamoDbConnectorOptions(options: DynamoDbConnector.Options) = apply { this.dynamoDbConnectorOptions = options }
+        fun eventPublisher(eventPublisher: EventPublisher) = apply { this.eventPublisher = eventPublisher }
+        fun eventFilter(eventFilter: EventFilter) = apply { this.eventFilter = eventFilter }
+        fun onContentType(onContentType: (UnitOfWork) -> Boolean) = apply { this.onContentType = onContentType }
+        fun onContentType(onContentType: java.util.function.Predicate<UnitOfWork>) = apply { this.onContentType = { uow -> onContentType.test(uow) } }
+        fun compactRule(compactRule: CompactRule) = apply { this.compactRule = compactRule }
+        fun queryRule(queryRule: QueryRule) = apply { this.queryRule = queryRule }
+        fun toQueryRequest(toQueryRequest: suspend (UnitOfWork) -> QueryRequest?) = apply { this.toQueryRequest = toQueryRequest }
+        fun toQueryRequest(toQueryRequest: java.util.function.Function<UnitOfWork, QueryRequest?>) = apply { this.toQueryRequest = { uow -> toQueryRequest.apply(uow) } }
+        fun toBatchGetRequest(toBatchGetRequest: suspend (UnitOfWork) -> BatchGetItemRequest?) = apply { this.toBatchGetRequest = toBatchGetRequest }
+        fun toBatchGetRequest(toBatchGetRequest: java.util.function.Function<UnitOfWork, BatchGetItemRequest?>) = apply { this.toBatchGetRequest = { uow -> toBatchGetRequest.apply(uow) } }
+        fun toEvent(toEvent: suspend (UnitOfWork) -> Event?) = apply { this.toEvent = toEvent }
+        fun toEventJava(toEvent: java.util.function.Function<UnitOfWork, Event?>) = apply { this.toEvent = { uow -> toEvent.apply(uow) } }
+        fun encryptEvent(encryptEvent: suspend (UnitOfWork) -> UnitOfWork) = apply { this.encryptEvent = encryptEvent }
+        fun encryptEvent(encryptEvent: java.util.function.Function<UnitOfWork, UnitOfWork>) = apply { this.encryptEvent = { uow -> encryptEvent.apply(uow) } }
+        fun parallel(parallel: Int) = apply { this.parallel = parallel }
+
+        override fun build(): CdcPipeline {
+            return CdcPipeline(
+                id = id ?: throw IllegalArgumentException("id is required"),
+                dynamoDbConnectorOptions = dynamoDbConnectorOptions,
+                eventPublisher = eventPublisher ?: throw IllegalArgumentException("eventPublisher is required"),
+                eventFilter = eventFilter,
+                onContentType = onContentType,
+                compactRule = compactRule,
+                queryRule = queryRule,
+                toQueryRequest = toQueryRequest,
+                toBatchGetRequest = toBatchGetRequest,
+                toEvent = toEvent,
+                encryptEvent = encryptEvent,
+                parallel = parallel
+            )
+        }
+    }
 }

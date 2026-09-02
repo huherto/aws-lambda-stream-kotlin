@@ -17,7 +17,6 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeTypeOf
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.spyk
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
@@ -43,7 +42,6 @@ class EvaluatePipelineTest {
         }
     }
 
-    private val envConfig = spyk<EnvironmentConfig>()
     private val eventPublisher = mockk<EventPublisher>()
     private val eventsMicrostore = mockk<EventsMicrostore>()
     private val eventCodec = SimpleEventCodec()
@@ -56,16 +54,18 @@ class EvaluatePipelineTest {
         expression: ((UnitOfWork) -> Boolean)? = null,
         emit: ((UnitOfWork) -> List<Event>)? = null,
     ): EvaluatePipeline {
-        return EvaluatePipeline(
-            id = pipelineId,
-            eventPublisher = eventPublisher,
-            eventsMicrostore = eventsMicrostore,
-            correlationKeySuffix = correlationKeySuffix,
-            index = index,
-            eventCodec = eventCodec,
-            expression = expression,
-            emit = emit,
-        )
+        return EvaluatePipeline.builder()
+            .id(pipelineId)
+            .eventPublisher(eventPublisher)
+            .eventsMicrostore(eventsMicrostore)
+            .correlationKeySuffix(correlationKeySuffix)
+            .index(index)
+            .eventCodec(eventCodec)
+            .apply {
+                expression?.let { expression(it) }
+                emit?.let { emit(it) }
+            }
+            .build()
     }
 
     data class TestEvent(

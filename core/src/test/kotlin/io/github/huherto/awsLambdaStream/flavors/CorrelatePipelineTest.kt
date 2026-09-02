@@ -122,12 +122,12 @@ class CorrelatePipelineTest {
     @Test
     fun `forCollectedEvents should evaluate correctly based on record and event properties`() {
         // Arrange
-        val pipeline = CorrelatePipeline(
-            "test-pipeline",
-            correlationKeySupplier = { "test-correlation-key" },
-            eventCodec = FakeEventCodec(),
-            eventsMicrostore = createEventsMicrostore()
-        )
+        val pipeline = CorrelatePipeline.builder()
+            .id("test-pipeline")
+            .correlationKeySupplier { "test-correlation-key" }
+            .eventCodec(FakeEventCodec())
+            .eventsMicrostore(createEventsMicrostore())
+            .build()
         
         val skEventAttr = AttributeValue().apply { s = "EVENT" }
         val skOtherAttr = AttributeValue().apply { s = "OTHER" }
@@ -170,12 +170,12 @@ class CorrelatePipelineTest {
     @Test
     fun `normalize should extract metadata and populate JsonEvent from RecordPair`() {
         // Arrange
-        val pipeline = CorrelatePipeline(
-            "test-pipeline",
-            correlationKeySupplier = { "test-correlation-key" },
-            eventCodec = FakeEventCodec(),
-            eventsMicrostore = createEventsMicrostore()
-        )
+        val pipeline = CorrelatePipeline.builder()
+            .id("test-pipeline")
+            .correlationKeySupplier { "test-correlation-key" }
+            .eventCodec(FakeEventCodec())
+            .eventsMicrostore(createEventsMicrostore())
+            .build()
 
         val record = DynamodbEvent.DynamodbStreamRecord().apply {
             dynamodb = StreamRecord().apply {
@@ -203,14 +203,14 @@ class CorrelatePipelineTest {
     @Test
     fun `save should map UnitOfWork to include SaveOptions and call EventsMicrostore`() : Unit = runBlocking {
         // Arrange
-        val pipeline = CorrelatePipeline(
-            id = "test-pipeline",
-            eventsMicrostore = createEventsMicrostore(),
-            expire = true,
-            correlationKeySupplier = { "test-correlation-key" },
-            eventCodec = FakeEventCodec(),
-            correlationKeySuffix = "-suffix"
-        )
+        val pipeline = CorrelatePipeline.builder()
+            .id("test-pipeline")
+            .eventsMicrostore(createEventsMicrostore())
+            .expire(true)
+            .correlationKeySupplier { "test-correlation-key" }
+            .eventCodec(FakeEventCodec())
+            .correlationKeySuffix("-suffix")
+            .build()
 
         val event = createFakeEvent(eventId = "test-event-id", eventTimestamp = 12345L)
         val uow = UnitOfWork(
@@ -255,15 +255,15 @@ class CorrelatePipelineTest {
         coEvery { dynamoDbClientMock.putItem(any()) } returns PutItemResponse.invoke {}
 
         val faultManager = FaultManager(eventPublisher = EventPublisherInMemory())
-        val pipeline = CorrelatePipeline(
-            id = "test-pipeline",
-            correlationKeySupplier = { "test-correlation-key" },
-            eventFilter = EventFilters.classes(FakeEvent::class),
-            eventCodec = FakeEventCodec(),
-            eventsMicrostore = EventsMicrostoreImpl(
+        val pipeline = CorrelatePipeline.builder()
+            .id("test-pipeline")
+            .correlationKeySupplier { "test-correlation-key" }
+            .eventFilter(EventFilters.classes(FakeEvent::class))
+            .eventCodec(FakeEventCodec())
+            .eventsMicrostore(EventsMicrostoreImpl(
                 dynamoDbClientFactory = dynamoDbClientFactory,
-                faultManager = faultManager),
-        )
+                faultManager = faultManager))
+            .build()
 
         val skEventAttr = EventAV().apply { s = "EVENT" }
         val streamRecord = StreamRecord().apply {
@@ -296,12 +296,12 @@ class CorrelatePipelineTest {
     @Test
     fun `connect should filter out UnitOfWork when forCollectedEvents returns false`() : Unit = runBlocking {
         // Arrange
-        val pipeline = CorrelatePipeline(
-            id = "test-pipeline",
-            correlationKeySupplier = { "test-correlation-key" },
-            eventCodec = FakeEventCodec(),
-            eventsMicrostore = createEventsMicrostore(),
-        )
+        val pipeline = CorrelatePipeline.builder()
+            .id("test-pipeline")
+            .correlationKeySupplier { "test-correlation-key" }
+            .eventCodec(FakeEventCodec())
+            .eventsMicrostore(createEventsMicrostore())
+            .build()
 
         // Invalid record (wrong eventName)
         val invalidRecord = DynamodbEvent.DynamodbStreamRecord().apply {
@@ -326,13 +326,13 @@ class CorrelatePipelineTest {
     @Test
     fun `connect should filter out UnitOfWork when onContentType returns false`() : Unit = runBlocking {
         // Arrange
-        val pipeline = CorrelatePipeline(
-            id = "test-pipeline",
-            correlationKeySupplier = { "test-correlation-key" },
-            eventCodec = FakeEventCodec(),
-            onContentType = { false }, // This will cause the event to be filtered mid-pipeline
-            eventsMicrostore = createEventsMicrostore(),
-        )
+        val pipeline = CorrelatePipeline.builder()
+            .id("test-pipeline")
+            .correlationKeySupplier { "test-correlation-key" }
+            .eventCodec(FakeEventCodec())
+            .onContentType { false } // This will cause the event to be filtered mid-pipeline
+            .eventsMicrostore(createEventsMicrostore())
+            .build()
 
         val skEventAttr = EventAV().apply { s = "EVENT" }
         val streamRecord = StreamRecord().apply {

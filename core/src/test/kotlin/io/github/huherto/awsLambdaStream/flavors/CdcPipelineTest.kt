@@ -36,16 +36,18 @@ class CdcPipelineTest {
         toEvent: (suspend (UnitOfWork) -> Event?)? = null,
         encryptEvent: (suspend (UnitOfWork) -> UnitOfWork)? = null,
     ): CdcPipeline {
-        return CdcPipeline(
-            id = "cdc-pipeline",
-            dynamoDbConnectorOptions = dynamoDbConnectorOptions,
-            eventPublisher = eventPublisher,
-            toQueryRequest = toQueryRequest,
-            queryRule = queryRule,
-            toBatchGetRequest = toBatchGetRequest,
-            toEvent = toEvent,
-            encryptEvent = encryptEvent,
-        )
+        return CdcPipeline.builder()
+            .id("cdc-pipeline")
+            .dynamoDbConnectorOptions(dynamoDbConnectorOptions)
+            .eventPublisher(eventPublisher)
+            .apply {
+                toQueryRequest?.let { toQueryRequest(it) }
+                queryRule?.let { queryRule(it) }
+                toBatchGetRequest?.let { toBatchGetRequest(it) }
+                toEvent?.let { toEvent(it) }
+                encryptEvent?.let { encryptEvent(it) }
+            }
+            .build()
     }
 
     private fun createEvent(
