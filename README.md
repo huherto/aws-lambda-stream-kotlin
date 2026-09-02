@@ -2,43 +2,26 @@
 
 A Kotlin-first and Java-friendly framework for building reliable, serverless, event-driven applications on AWS.
 
-## Value Proposition
-
-Building event-driven systems is fundamentally different from building traditional applications. Without a disciplined framework, teams can end up with fragmented services, complex orchestration logic, and inconsistent handling of reliability concerns such as idempotency, retries, eventual consistency, and failure recovery.
-
-This framework provides a consistent foundation for serverless event-driven architecture on AWS. It helps backend developers implement proven patterns faster, while giving enterprise architects confidence that solutions are reliable, maintainable, and aligned with architectural standards.
-
 The project is currently a work in progress. Feedback, ideas, and experimental usage are welcome as the framework evolves.
+
+## Audience Guides
+
+Choose the guide that best fits your role to get started:
+
+- [**Kotlin Developers**](docs/KotlinDevelopers.md) — Deep dive into Kotlin features, coroutines, and Flow.
+- [**Java Developers**](docs/JavaDevelopers.md) — How to use the framework in Java projects.
+- [**Software Architects**](docs/SoftwareArchitects.md) — Value proposition and architectural patterns.
+
+## About the Framework
 
 This framework follows the serverless architecture patterns described by John Gilbert in his [book](https://a.co/d/0cgkIieB). This implementation uses his TypeScript framework as a reference and foundation.
 - [Blog](https://medium.com/@jgilbert001)
 - [TypeScript framework](https://github.com/jgilbert01/aws-lambda-stream)
 
-## Why Kotlin?
-
-Kotlin was chosen because it is a modern language with a strong type system, concise syntax, and excellent support for
-building reusable libraries and components. It is also a great fit for serverless applications, making it an ideal
-choice for this framework. In particular, support for coroutines and the Flow framework make it a natural fit for building
-[serverless pipelines](docs/KotlinCoRoutinesAndFlow.md)
-
-## Documentation Contents
-
-* [Framework Features](docs/Features.md)
-* [Architectural Approach](docs/ArchitecturalApproach.md)
-* [Understanding Events and Event Types](docs/Events.md)
-* [Autonomous Service Patterns](docs/AutonomousServicePatterns.md)
-* [Benefits of Kotlin CoRoutines and the Flow Framework](docs/KotlinCoRoutinesAndFlow.md)
-* [How Claim Check works](docs/ClaimCheck.md)
-* [How the Events Microstore works](docs/EventsMicrostore.md)
-* [How the Event Lake works](docs/EventLake.md)
-* [How the Regional Health Check works](docs/RegionalHealthCheck.md)
-* [How Fault Re-submission works](docs/FaultResubmission.md)
-* [Implementing Events](docs/EventImplementation.md)
-
-## High Level Project Structure
+## Project Structure
 
 - [core](core) — Framework code and reusable components.
 - [tools](tools) — Utilities for managing events.
-- [examples/sut](examples/sut) — Example application: Shipment Unit Tracking.
-- [examples/sut/README.md](examples/sut/README.md) — Explains how to run the example application.
+- [examples](examples) — Example applications (Kotlin and Java).
+- [docs](docs) — Detailed documentation.
 
