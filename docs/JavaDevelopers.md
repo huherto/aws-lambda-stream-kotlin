@@ -115,7 +115,7 @@ void shouldProcessOrder() {
 
 * [Framework Features](Features.md)
 * [Understanding Events and Event Types](Events.md)
-* [Implementing Events](EventImplementation.md)
+* [Implementing Events](EventImplementationJava.md)
 
 ## Examples
 

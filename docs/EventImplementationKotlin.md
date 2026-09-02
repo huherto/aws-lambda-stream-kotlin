@@ -1,9 +1,12 @@
+# Implementing Events (Kotlin)
+
+In the `aws-lambda-stream-kotlin` library, events must follow specific technical requirements to ensure predictable processing and compatibility with the framework's pipelines.
 
 ## Table of Contents
 
 - [Implementation Details](#implementation-details)
     - [1. Immutability](#1-immutability)
-    - [2. The `Event` Interface and `BaseEvent`](#2-the-event-interface-and-baseevent)
+    - [2. The `Event` Interface](#2-the-event-interface)
     - [3. Core Properties](#3-core-properties)
     - [4. Required Methods](#4-required-methods)
     - [5. Serialization](#5-serialization)
@@ -14,8 +17,6 @@
 
 
 ## Implementation Details
-
-In the `aws-lambda-stream-kotlin` library, events must follow specific technical requirements to ensure predictable processing and compatibility with the framework's pipelines.
 
 ### 1. Immutability
 Events must be immutable. All properties should be declared using `val`. This ensures that events cannot be mutated accidentally during pipeline processing, leading to safer and more predictable side effects.
@@ -128,18 +129,6 @@ EvaluatePipeline(
         listOf(VerifyTargetAddressEvent(entity = base.entity))
     }
 )
-```
-
-If you need to emit multiple events:
-
-```kotlin
-emit = { uow ->
-    val base = uow.event as ShipmentCreatedEvent
-    listOf(
-        EventA(entity = base.entity),
-        EventB(entity = base.entity)
-    )
-}
 ```
 
 Standard metadata (id, timestamp, tags, triggers, raw, and eem) are propagated from the triggering unit of work automatically. If you want to override these fields on a specific event, you can call `copyEvent` within your lambda:

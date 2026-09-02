@@ -63,4 +63,6 @@ technical implementation concerns.
 
 ## Implementing Events
 
-For guidance on how to implement events and event codecs in Kotlin, see [Implementing Events](EventImplementation.md).
+For guidance on how to implement events and event codecs, see:
+* [Implementing Events (Kotlin)](EventImplementationKotlin.md)
+* [Implementing Events (Java)](EventImplementationJava.md)

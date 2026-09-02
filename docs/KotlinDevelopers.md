@@ -109,7 +109,7 @@ fun `should process order`() = runTest {
 * [Framework Features](Features.md)
 * [Understanding Events and Event Types](Events.md)
 * [Benefits of Kotlin CoRoutines and the Flow Framework](KotlinCoRoutinesAndFlow.md)
-* [Implementing Events](EventImplementation.md)
+* [Implementing Events](EventImplementationKotlin.md)
 
 ## Examples
 
