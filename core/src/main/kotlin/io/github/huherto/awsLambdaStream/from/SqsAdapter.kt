@@ -19,10 +19,6 @@ class SqsAdapter(
     private val claimCheckRedeemer: ClaimCheckRedeemer? = null
 ) {
 
-    /**
-     * Intended for intra-service SQS messages, as opposed to consuming
-     * inter-service events.
-     */
     fun fromSqs(sqsEvent: SQSEvent): Flow<UnitOfWork> {
         val records = sqsEvent.records
 

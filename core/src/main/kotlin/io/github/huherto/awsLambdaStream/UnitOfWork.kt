@@ -3,6 +3,7 @@ package io.github.huherto.awsLambdaStream
 import io.github.huherto.awsLambdaStream.flavors.Pipeline
 import kotlin.reflect.KClass
 
+/** A unit of work containing an event and its processing context. */
 data class UnitOfWork @JvmOverloads constructor(
     val pipeline: Pipeline? = null,
     val record: Any? = null,
@@ -18,10 +19,8 @@ data class UnitOfWork @JvmOverloads constructor(
     val batch: List<UnitOfWork>? = null,
     val extensions: Map<KClass<*>, Any> = emptyMap(),
 ) {
-    /** Retrieves an extension of the specified type. */
     inline fun <reified T : Any> getExtension(): T? = extensions[T::class] as? T
 
-    /** Returns a new UnitOfWork with the given extension attached. */
     fun withExtension(extension: Any): UnitOfWork {
         return copy(extensions = extensions + (extension::class to extension))
     }

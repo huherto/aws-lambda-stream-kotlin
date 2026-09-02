@@ -6,14 +6,6 @@ import kotlinx.serialization.json.*
 import java.nio.ByteBuffer
 import java.util.*
 
-/**
- * Converts an [AttributeValue] to canonical DynamoDB JSON, the type-tagged form that DynamoDB
- * Streams and Lambda themselves use (`{"S":"a"}`, `{"NS":["1","2"]}`).
- *
- * Unlike [toJsonElement], which flattens to plain readable JSON, this preserves the type
- * envelope and is therefore lossless: sets stay sets rather than degrading to lists, and `N`
- * stays an unparsed string so large integers keep full precision.
- */
 fun AttributeValue.toCanonicalJsonObject(): JsonObject = buildJsonObject {
     when {
         s != null -> put("S", s)
@@ -29,11 +21,9 @@ fun AttributeValue.toCanonicalJsonObject(): JsonObject = buildJsonObject {
     }
 }
 
-/** Converts a map of [AttributeValue] (a DynamoDB image) to canonical DynamoDB JSON. */
 fun Map<String, AttributeValue?>.toCanonicalJsonObject(): JsonObject =
     JsonObject(mapValues { (_, value) -> value.toCanonicalJsonObjectOrNull() })
 
-/** Reads canonical DynamoDB JSON back into an [AttributeValue]. */
 fun JsonObject.toCanonicalAttributeValue(): AttributeValue {
     val entry = entries.firstOrNull() ?: return AttributeValue().withNULL(true)
     val (tag, value) = entry
@@ -53,17 +43,12 @@ fun JsonObject.toCanonicalAttributeValue(): AttributeValue {
     }
 }
 
-/** Reads a canonical DynamoDB JSON image back into a map of [AttributeValue]. */
 fun JsonObject.toCanonicalAttributeValueMap(): Map<String, AttributeValue> =
     mapValues { (_, value) -> value.jsonObject.toCanonicalAttributeValue() }
 
 private fun AttributeValue?.toCanonicalJsonObjectOrNull(): JsonObject =
     this?.toCanonicalJsonObject() ?: buildJsonObject { put("NULL", true) }
 
-/**
- * Base64-encodes the buffer's remaining bytes without consuming it. [ByteBuffer.array] is not
- * used because it fails on read-only buffers and ignores position/offset.
- */
 private fun ByteBuffer.encodeBase64(): String {
     val bytes = ByteArray(remaining())
     duplicate().get(bytes)

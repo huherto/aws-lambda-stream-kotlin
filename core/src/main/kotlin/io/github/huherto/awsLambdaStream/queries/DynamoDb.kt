@@ -22,9 +22,6 @@ import java.util.concurrent.ConcurrentHashMap
 // In-memory cache placeholder (replacing memory-cache)
 val memoryCache = ConcurrentHashMap<String, Any>()
 
-/**
- * Common configuration options for DynamoDB operations.
- */
 typealias MapDecryptFunc = suspend (Map<String, AttributeValue>) -> Map<String, AttributeValue>
 
 data class DynamoDbOptions(

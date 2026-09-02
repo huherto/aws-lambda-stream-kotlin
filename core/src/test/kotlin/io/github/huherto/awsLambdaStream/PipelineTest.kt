@@ -30,13 +30,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.nio.ByteBuffer
 
-/**
- * Test failure scenarios:
- * - DynamoDb is down
- * - DynamoDb is flaky
- * - EventBridge is down
- * - EventBridge is flaky
- */
+/** Tests for pipeline failure scenarios. */
 class PipelineTest {
 
     private lateinit var envConfig: EnvironmentConfig
@@ -221,6 +215,7 @@ class PipelineTest {
         )
     }
 
+    /** Container for test listeners. */
     private class TestListenerContainer(
         val envConfig: EnvironmentConfig,
         val eventsMicrostore: EventsMicrostore,

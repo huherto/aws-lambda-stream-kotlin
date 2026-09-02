@@ -1,30 +1,20 @@
 package io.github.huherto.awsLambdaStream.from
 
-import io.github.huherto.awsLambdaStream.DynamodbRaw
 import io.github.huherto.awsLambdaStream.ImagesRaw
 import io.github.huherto.awsLambdaStream.serialization.RecordImageSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json.Default.decodeFromString
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue as EventAV
 
-/**
- * The before/after images of a table change.
- *
- * This is a read-only view rather than a container: [DynamodbRaw] derives it from the original
- * stream record, and [ImagesRaw] holds images directly for events that were synthesized without
- * one.
- */
+/** The before/after images of a table change. */
 interface RecordPair {
     val new: RecordImage?
     val old: RecordImage?
 }
 
-/**
- * Creates a [RecordPair] from images alone. Prefer [DynamodbRaw] whenever the originating stream
- * record is available, since it keeps the record intact for replay.
- */
 fun RecordPair(new: RecordImage?, old: RecordImage?): ImagesRaw = ImagesRaw(new, old)
 
+/** Represents a record image in a DynamoDB stream. */
 @Serializable(with = RecordImageSerializer::class)
 class RecordImage(val map: Map<String, EventAV?>) : Map<String, EventAV?> by map {
 

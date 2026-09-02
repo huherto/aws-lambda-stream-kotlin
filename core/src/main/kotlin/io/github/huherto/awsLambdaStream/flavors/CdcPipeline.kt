@@ -21,40 +21,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.onEach
 
-/**
- * Pipeline flavor for change-data-capture style processing.
- *
- * A `CdcPipeline` receives incoming [UnitOfWork] items, filters them, optionally compacts related
- * records, queries related DynamoDB state, optionally enriches the event, and publishes the resulting
- * event.
- *
- * Processing order:
- * 1. Ignore events latched from this same source.
- * 2. Apply the configured event filter.
- * 3. Log pipeline start.
- * 4. Apply content filtering.
- * 5. Compact the stream when configured.
- * 6. Build and execute a DynamoDB query request.
- * 7. Build and execute a DynamoDB batch-get request.
- * 8. Optionally transform/enrich the event.
- * 9. Buffer downstream work using [parallel].
- * 10. Optionally encrypt or otherwise transform the event.
- * 11. Publish the resulting event.
- * 12. Log pipeline completion.
- *
- * @param id Unique identifier for this pipeline.
- * @param dynamoDbConnectorOptions Options for the DynamoDB connector used for query and batch-get stages.
- * @param eventPublisher Sink responsible for publishing final events.
- * @param eventFilter Event-level filter applied before pipeline-specific processing starts.
- * @param onContentType Predicate used to accept or reject a [UnitOfWork] after event filtering.
- * @param compactRule Optional stream compaction rule.
- * @param queryRule Optional rule used by the default primary-key query request builder.
- * @param toQueryRequest Optional custom query request mapper.
- * @param toBatchGetRequest Optional custom batch-get request mapper.
- * @param toEvent Optional event enrichment/translation function.
- * @param encryptEvent Optional final event transformation before publishing.
- * @param parallel Buffer capacity used before publish.
- */
+/** Pipeline flavor for change-data-capture style processing. */
 class CdcPipeline(
     id: String,
     private val dynamoDbConnectorOptions: DynamoDbConnector.Options = DynamoDbConnector.Options(),
@@ -73,13 +40,6 @@ class CdcPipeline(
 
     val dynamoDbQuery by lazy { DynamoDbQuery(dynamoDbConnectorOptions) }
 
-    /**
-     * Builds the DynamoDB query request for the current unit of work.
-     *
-     * - use a custom mapper when supplied;
-     * - create the default primary-key query request when a query rule is supplied;
-     * - otherwise return `null`.
-     */
     internal suspend fun addQueryRequest(uow: UnitOfWork): UnitOfWork {
         val queryRequest = when {
             toQueryRequest != null -> toQueryRequest.invoke(uow)
@@ -90,41 +50,23 @@ class CdcPipeline(
         return uow.withQueryRequest(queryRequest)
     }
 
-    /**
-     * Builds the optional DynamoDB batch-get request for the current unit of work.
-     */
     internal suspend fun addBatchGetRequest(uow: UnitOfWork): UnitOfWork {
         return uow.withBatchGetRequest(toBatchGetRequest?.invoke(uow))
     }
 
-    /**
-     * Applies the optional event transformation.
-     *
-     * If no transformation is configured, the unit of work passes through unchanged.
-     */
     internal suspend fun addEvent(uow: UnitOfWork): UnitOfWork {
         val mapper = toEvent ?: return uow
         return uow.copy(event = mapper(uow))
     }
 
-    /**
-     * Applies optional event encryption/transformation.
-     *
-     */
     internal suspend fun encrypt(uow: UnitOfWork): UnitOfWork {
         return encryptEvent?.invoke(uow) ?: uow
     }
 
-    /**
-     * Publishes final units of work through the configured [eventPublisher].
-     */
     internal fun Flow<UnitOfWork>.publish(): Flow<UnitOfWork> {
         return eventPublisher.publish(this)
     }
 
-    /**
-     * Connects this CDC pipeline to an upstream [Flow].
-     */
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun connect(
         fm: FaultManager,

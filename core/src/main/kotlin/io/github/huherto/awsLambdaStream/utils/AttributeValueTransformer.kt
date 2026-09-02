@@ -3,16 +3,10 @@ package io.github.huherto.awsLambdaStream.utils
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue as DynamoDbAttributeValue
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue as StreamAttributeValue
 
-/**
- * Converts a Map of Lambda Event AttributeValues to Kotlin SDK AttributeValues
- */
 fun Map<String, StreamAttributeValue>.toSdkMap(): Map<String, DynamoDbAttributeValue> {
     return this.mapValues { (_, value) -> value.toSdkAV() }
 }
 
-/**
- * Maps a single Event AttributeValue to a Kotlin SDK AttributeValue recursively
- */
 fun StreamAttributeValue.toSdkAV(): DynamoDbAttributeValue {
     return when {
         s != null -> DynamoDbAttributeValue.S(s)
@@ -29,6 +23,7 @@ fun StreamAttributeValue.toSdkAV(): DynamoDbAttributeValue {
     }
 }
 
+/** Interface for reading AttributeValue maps. */
 interface AttributeValueMapReader {
     fun getS(fieldName: String) : String?
     fun getDouble(fieldName: String) : Double?
@@ -38,6 +33,7 @@ interface AttributeValueMapReader {
     fun isNull(fieldName: String) : Boolean?
 }
 
+/** Reads from a Stream AttributeValue map. */
 class StreamAttributeValueMapReader(private val map: Map<String, StreamAttributeValue?>) : AttributeValueMapReader {
 
     override fun getS(fieldName: String): String? {
@@ -65,6 +61,7 @@ class StreamAttributeValueMapReader(private val map: Map<String, StreamAttribute
     }
 }
 
+/** Reads from a DynamoDb AttributeValue map. */
 class DynamoDbAttributeValueMapReader(private val map: Map<String, DynamoDbAttributeValue?>) : AttributeValueMapReader {
 
     override fun getS(fieldName: String): String? {

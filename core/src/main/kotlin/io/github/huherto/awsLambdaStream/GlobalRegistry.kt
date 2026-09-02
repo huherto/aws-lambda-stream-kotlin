@@ -8,6 +8,7 @@ import io.github.huherto.awsLambdaStream.faults.FaultManager
 import io.github.huherto.awsLambdaStream.sinks.EventBridgePublisher
 import io.github.huherto.awsLambdaStream.sinks.EventPublisher
 
+/** Internal registry for singleton instances. */
 private class RegistrySingleton<T>(
     private val lock: Any,
     private val defaultFactory: () -> T,
@@ -59,6 +60,7 @@ fun envConfig() : EnvironmentConfig {
     return GlobalRegistry.envConfig()
 }
 
+/** Singleton registry for global components. */
 object GlobalRegistry {
 
     private val lock = Any()

@@ -8,8 +8,10 @@ import io.github.huherto.awsLambdaStream.GlobalRegistry
 import io.github.huherto.awsLambdaStream.GlobalRegistry.envConfig
 import io.github.huherto.awsLambdaStream.UnitOfWork
 
+/** Factory for [DynamoDbClient]. */
 interface DynamoDbClientFactory : ClientFactory<DynamoDbClient>
 
+/** Default implementation of [DynamoDbClientFactory]. */
 class DefaultDynamoDbClientFactory() : DynamoDbClientFactory, AbstractClientFactory<DynamoDbClient>() {
     override fun create(): DynamoDbClient {
         val endpointUrl = envConfig().endPointUrl()
@@ -25,19 +27,10 @@ class DefaultDynamoDbClientFactory() : DynamoDbClientFactory, AbstractClientFact
     }
 }
 
-/**
- * Connector responsible for executing DynamoDB operations.
- *
- * This connector manages the interaction with the AWS SDK DynamoDB client, providing high-level
- * methods for common operations like queryAll, update, put, and batch-get. It supports automatic
- * pagination for queries, conditional failure handling, and retry strategies for batch operations.
- *
- * The connector is configured via [Options].
- *
- * @param options Configuration options for the connector.
- */
+/** Connector responsible for executing DynamoDB operations. */
 class DynamoDbConnector(private val options: Options) {
 
+    /** Options for [DynamoDbConnector]. */
     data class Options(
         val debug: (Any?) -> Unit = {},
         val throwConditionFailure: Boolean = false,

@@ -7,10 +7,7 @@ import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.JsonObject
 
-/**
- * Serializes a [RecordImage] as canonical DynamoDB JSON (`{"pk":{"S":"a"}}`), matching the shape
- * DynamoDB Streams delivers. See [toCanonicalJsonObject] for why the type envelope is kept.
- */
+/** Serializes a [RecordImage] as canonical DynamoDB JSON. */
 object RecordImageSerializer : KSerializer<RecordImage> {
     private val delegate = JsonObject.serializer()
 

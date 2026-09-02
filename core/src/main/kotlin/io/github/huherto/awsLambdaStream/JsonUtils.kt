@@ -8,10 +8,6 @@ import java.util.*
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.isAccessible
 
-/**
- * Extension function to convert any object to a [JsonElement] using reflection.
- * This provides a "zero-fail" serialization for logging arbitrary objects.
- */
 fun Any?.toJsonElement(visited: MutableSet<Int> = mutableSetOf()): JsonElement {
     if (this == null) return JsonNull
 
@@ -188,10 +184,6 @@ object SafeLogger {
         encodeDefaults = true
     }
 
-    /**
-     * Converts any object to JSON string safely.
-     * Never throws an exception.
-     */
     fun toJson(obj: Any?): String {
         if (obj == null) return "null"
 

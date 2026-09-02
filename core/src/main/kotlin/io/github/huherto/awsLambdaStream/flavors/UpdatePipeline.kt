@@ -27,20 +27,7 @@ import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.flatMapConcat
 import kotlinx.coroutines.flow.onEach
 
-/**
- * Pipeline flavor that reacts to incoming events, queries related DynamoDB records, loads those
- * records, builds update requests, and applies the updates.
- *
- * @param id Unique identifier for this pipeline.
- * @param dynamoDbConnectorOptions Options for the DynamoDB connector used for query and batch-get stages.
- * @param eventCodec Codec used to decode collected event payloads.
- * @param eventFilter Event-level filter applied before pipeline-specific processing starts.
- * @param onContentType Predicate used to accept or reject a [UnitOfWork] after event filtering.
- * @param compactRule Optional stream compaction rule.
- * @param toQueryRequest Function used to build the DynamoDB query request.
- * @param toGetRequest Function used to build the DynamoDB batch-get request.
- * @param toUpdateRequest Function used to build the final DynamoDB update request.
- */
+/** Pipeline flavor that reacts to incoming events, queries related DynamoDB records, loads those records, builds update requests, and applies the updates. */
 class UpdatePipeline(
     id: String,
     private val dynamoDbConnectorOptions: DynamoDbConnector.Options = DynamoDbConnector.Options(),
@@ -56,10 +43,6 @@ class UpdatePipeline(
     val dynamoDbSink by lazy { DynamoDbSink(DynamoDbConnector(dynamoDbConnectorOptions)) }
     val dynamoDbQuery by lazy { DynamoDbQuery(dynamoDbConnectorOptions) }
 
-    /**
-     * Returns `true` when the unit of work represents a collected event record that should be
-     * normalized before normal update processing.
-     */
     internal fun forCollectedEvents(uow: UnitOfWork): Boolean {
         return when (uow.record) {
             is DynamodbEvent.DynamodbStreamRecord -> {
@@ -72,20 +55,10 @@ class UpdatePipeline(
         }
     }
 
-    /**
-     * Deserializes the event payload stored in a collected DynamoDB record.
-     */
     internal fun decodeEvent(eventAsString: String): Event {
         return eventCodec.decode(eventAsString)
     }
 
-    /**
-     * Normalizes collected event records back into event units of work.
-     *
-     * Non-collected events pass through unchanged:
-     *
-     * `collected INSERT EVENT ? normalize(uow) : uow`
-     */
     internal fun normalizeIfCollectedEvent(uow: UnitOfWork): UnitOfWork {
         if (!forCollectedEvents(uow)) {
             return uow
@@ -111,21 +84,10 @@ class UpdatePipeline(
         )
     }
 
-    /**
-     * Adds the DynamoDB query request to the unit of work.
-     */
     internal fun toQuery(uow: UnitOfWork): UnitOfWork {
         return uow.withQueryRequest(toQueryRequest?.invoke(uow))
     }
 
-    /**
-     * Splits a unit of work with a DynamoDB query response into one unit of work per returned item.
-     *
-     * The current [UnitOfWork] shape does not include a dedicated `queryResponseItem` field, so each
-     * split item is represented as a shallow copyEvent carrying a synthetic [batch] with the source item.
-     * This preserves the pipeline split behavior while allowing downstream rule functions to inspect
-     * the original query response from the copied unit of work if needed.
-     */
     internal fun splitQueryResponse(uow: UnitOfWork): List<UnitOfWork> {
         val items = uow.queryResponse?.items.orEmpty()
 
@@ -138,23 +100,14 @@ class UpdatePipeline(
         }
     }
 
-    /**
-     * Adds the DynamoDB batch-get request to the unit of work.
-     */
     internal fun toGetRequest(uow: UnitOfWork): UnitOfWork {
         return uow.withBatchGetRequest(toGetRequest?.invoke(uow))
     }
 
-    /**
-     * Adds the DynamoDB update request to the unit of work.
-     */
     internal suspend fun toUpdateRequest(uow: UnitOfWork): UnitOfWork {
         return uow.withUpdateRequest(toUpdateRequest.invoke(uow))
     }
 
-    /**
-     * Executes DynamoDB update requests through the configured sink.
-     */
     internal fun Flow<UnitOfWork>.updateDynamoDB(fm: FaultManager): Flow<UnitOfWork> {
         return dynamoDbSink.update(fm, this)
     }
@@ -167,23 +120,6 @@ class UpdatePipeline(
         return dynamoDbQuery.batchGetDynamoDB(fm, this)
     }
 
-    /**
-     * Connects this update pipeline to an upstream [Flow].
-     *
-     * 1. Normalize collected event records.
-     * 2. Apply event filter.
-     * 3. Log start.
-     * 4. Apply content filter.
-     * 5. Compact.
-     * 6. Build query request.
-     * 7. Query DynamoDB.
-     * 8. Split query response.
-     * 9. Build batch-get request.
-     * 10. Batch-get DynamoDB.
-     * 11. Build update request.
-     * 12. Update DynamoDB.
-     * 13. Log end.
-     */
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun connect(fm: FaultManager, fromFlow: Flow<UnitOfWork>): Flow<UnitOfWork> {
         logger.info { "UpdatePipeline.connect: id=$id" }

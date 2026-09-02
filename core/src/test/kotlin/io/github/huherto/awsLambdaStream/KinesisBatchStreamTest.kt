@@ -22,33 +22,7 @@ import org.junit.jupiter.api.Test
 import java.nio.ByteBuffer
 import kotlin.random.Random
 
-/**
- * I wrote this class to experiment with the Kinesis batch stream. This is a summary of my findings.
- *
- * `reportBatchItemFailures` should not be set or set to false. The pipelines do not support reporting individual
- *  failures anyway.
- *
- * `bisectBatchOnError` should be set to true. The handler will split the batch in two, throttling the processing when
- *  the infrastructure is not stable.
- *
- * Regardless of any settings, events will be retried. Therefore, the operations on the events should be idempotent.
- *
- * If STREAM_RETRY_ENABLED is true, the fault manager will throw exceptions when there are retryable exceptions.
- * The exception will cause the batch to be submitted again, including events that have already been processed
- * successfully. The drawback is that more successful events will be retried.
- *
- * If STREAM_RETRY_ENABLED is false or not set, the fault manager will not throw exceptions. The failures will be
- * published to the event bus. The drawback is that retriable failures may end up as failures in the event bus.
- *
- * Regardless of any settings, if the event bus fails, then the handler will throw an exception and the batch
- * will be retried.
- *
- * DynamoDB and EventBridge connectors have their own retry logic with jitter and exponential backoff. This should
- * ameliorate the retries at the batch level problem.
- *
- * P.S. I added ITEM_LEVEL_RETRY_ENABLED environment variable to the FaultManager to enable item-level retries.
- * With this enabled reportBatchItemFailures can be set to true. The pipeline will report individual failures
- */
+/** Tests for Kinesis batch stream processing. */
 class KinesisBatchStreamTest {
 
     val log = logger {}
@@ -58,6 +32,7 @@ class KinesisBatchStreamTest {
      * It simulates a flaky infrastructure where some events fail to be processed.
      * The handler retries only the failed events and processes them successfully.
      */
+    /** Simulated Kinesis batch handler. */
     class KinesisBatchHandler : RequestHandler<KinesisEvent, StreamsEventResponse> {
 
         override fun handleRequest(event: KinesisEvent, context: Context): StreamsEventResponse {
@@ -84,6 +59,7 @@ class KinesisBatchStreamTest {
 
     // This was an attempt to use a pipeline to process the records.
     // It was not successful because there is no support for reporting individual failures with pipelines.
+    /** Simulated Kinesis batch handler with pipeline. */
     class KinesisBatchHandlerWithPipeline : RequestHandler<KinesisEvent, StreamsEventResponse> {
 
         val log = logger {}
@@ -120,6 +96,7 @@ class KinesisBatchStreamTest {
             return@runBlocking StreamsEventResponse(faultManager.kinesisRetryableFailures())
         }
 
+        /** Dummy retryable exception. */
         class DummyRetryableException(message: String) : SdkBaseException(message) {
             @OptIn(InternalApi::class)
             override val sdkErrorMetadata: ErrorMetadata = ServiceErrorMetadata().apply {

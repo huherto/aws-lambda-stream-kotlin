@@ -2,6 +2,7 @@ package io.github.huherto.awsLambdaStream
 
 import kotlinx.serialization.Serializable
 
+/** Represents a stream event. */
 interface Event {
     val id: String?
     val timestamp: Long? // In milliseconds since epoch
@@ -27,6 +28,7 @@ interface Event {
     ): Event
 }
 
+/** Reference to an event. */
 @Serializable
 data class EventReference(
     val id: String? = null,
@@ -34,11 +36,13 @@ data class EventReference(
     val timestamp: Long? = null,
 )
 
+/** Metadata for envelope encryption. */
 @Serializable
 data class EnvelopeEncryptionMetadata(val something: String?) {
     // Envelope Encryption Metadata. See SAP4SS page 347
 }
 
+/** Exception thrown when a fault occurs. */
 @Serializable
 class FaultException : RuntimeException {
 

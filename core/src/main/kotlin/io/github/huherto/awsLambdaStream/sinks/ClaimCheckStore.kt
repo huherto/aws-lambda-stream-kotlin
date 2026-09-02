@@ -16,16 +16,7 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.Serializable
 
-/**
- * S3-backed Claim Check store.
- *
- * Implements the claim-check pattern by storing the full event payload in S3 and replacing it with
- * a lightweight event that points to the stored object.
- *
- * S3 keys are formatted as:
- *
- * AWS_REGION/claimchecks/YYYY/MM/DD/HH/eventId
- */
+/** S3-backed Claim Check store. */
 class ClaimCheckStore(
     private val s3ClientFactory: S3ClientFactory,
     private val faultManager: FaultManager = GlobalRegistry.faultManager(),
@@ -33,12 +24,14 @@ class ClaimCheckStore(
     private val clock: Clock = kotlinx.datetime.Clock.System,
     private val bufferCapacity: Int = Channel.BUFFERED,
 ) {
+    /** Pointer to an event payload in S3. */
     @Serializable
     data class ClaimCheck(
         val bucket: String,
         val key: String,
     )
 
+    /** Event containing a claim check pointer. */
     data class ClaimCheckEvent(
         override val id: String?,
         private val type: String,
@@ -131,14 +124,6 @@ class ClaimCheckStore(
         }
     }
 
-    /**
-     * Stores full event payloads in S3.
-     *
-     * If [claimCheckBucketName] is not configured, this returns the original flow unchanged.
-     *
-     * This is designed to run after batching. When a [UnitOfWork] contains [UnitOfWork.batch],
-     * each item in the batch is stored independently and the batch is reassembled.
-     */
     fun storeClaimCheck(flow: Flow<UnitOfWork>): Flow<UnitOfWork> {
         val bucket = claimCheckBucketName
 

@@ -11,12 +11,7 @@ import io.github.huherto.awsLambdaStream.serialization.aws.SQSMessageSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-/**
- * A DynamoDB stream record, kept whole.
- *
- * [new] and [old] are derived views over [record], so nothing is duplicated and nothing about
- * the original invocation payload is lost on the way to JSON.
- */
+/** A DynamoDB stream record, kept whole. */
 @Serializable
 @SerialName(RAW_DYNAMODB)
 data class DynamodbRaw(
@@ -29,9 +24,7 @@ data class DynamodbRaw(
     override val old: RecordImage? by lazy { record.dynamodb?.oldImage?.let(::RecordImage) }
 }
 
-/**
- * Before/after images without an originating stream record.
- */
+/** Before/after images without an originating stream record. */
 @Serializable
 @SerialName(RAW_IMAGES)
 data class ImagesRaw(
@@ -55,11 +48,7 @@ data class SqsRaw(
     val message: SQSEvent.SQSMessage,
 ) : RawRecord
 
-/**
- * Claim-check pointer to an event payload parked in S3.
- *
- * See https://www.enterpriseintegrationpatterns.com/patterns/messaging/StoreInLibrary.html
- */
+/** Claim-check pointer to an event payload parked in S3. */
 @Serializable
 @SerialName(RAW_CLAIM_CHECK)
 data class ClaimCheck(

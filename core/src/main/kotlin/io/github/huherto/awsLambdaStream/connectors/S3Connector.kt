@@ -10,8 +10,10 @@ import io.github.huherto.awsLambdaStream.GlobalRegistry
 import io.github.huherto.awsLambdaStream.GlobalRegistry.envConfig
 import io.github.huherto.awsLambdaStream.UnitOfWork
 
+/** Factory for [S3Client]. */
 interface S3ClientFactory : ClientFactory<S3Client>
 
+/** Default implementation of [S3ClientFactory]. */
 class DefaultS3ClientFactory() : S3ClientFactory, AbstractClientFactory<S3Client>() {
     override fun create(): S3Client {
         val endpointUrl = envConfig().endPointUrl()
@@ -25,20 +27,10 @@ class DefaultS3ClientFactory() : S3ClientFactory, AbstractClientFactory<S3Client
     }
 }
 
-/**
- * S3Connector provides a wrapper around the AWS S3 client with debugging support
- * and pipeline-aware client management.
- *
- * @property options Configuration options for the connector.
- */
+/** Connector providing a wrapper around the AWS S3 client. */
 class S3Connector(private val options: S3Connector.Options) {
 
-    /**
-     * Configuration options for [S3Connector].
-     *
-     * @property clientFactory The factory used to create [S3Client] instances.
-     * @property debug A callback for debugging responses and errors.
-     */
+    /** Configuration options for [S3Connector]. */
     data class Options(
         val clientFactory: S3ClientFactory = GlobalRegistry.s3ClientFactory(),
         val debug: (Any?) -> Unit = {},

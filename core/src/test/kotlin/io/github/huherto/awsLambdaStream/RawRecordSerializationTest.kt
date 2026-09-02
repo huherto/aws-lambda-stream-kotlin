@@ -13,11 +13,7 @@ import org.junit.jupiter.api.Test
 import java.nio.ByteBuffer
 import java.util.*
 
-/**
- * The point of the sealed [RawRecord] hierarchy is that both serialization strategies dispatch on
- * the same `type` discriminator without `@Contextual` guesswork. These tests pin that down for
- * kotlinx.
- */
+/** Tests for RawRecord serialization. */
 class RawRecordSerializationTest {
 
     @Test

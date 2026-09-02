@@ -98,9 +98,6 @@ class S3Adapter(
         val body: ByteArray,
     )
 
-    /**
-     * Intended for intra-service messages, as opposed to consuming inter-service events.
-     */
     fun fromS3(event: S3Event): Flow<UnitOfWork> =
         event.records.asFlow()
             .map { s3Record ->
@@ -188,13 +185,6 @@ class S3Adapter(
         }
     }
 
-    /**
-     * Test helper.
-     *
-     * Equivalent to the TypeScript `toS3Records`.
-     *
-     * https://docs.aws.amazon.com/lambda/latest/dg/with-s3.html
-     */
     fun toS3Records(notifications: List<S3Notification>): S3Event =
         S3Event(
             records = notifications.mapIndexed { index, notification ->

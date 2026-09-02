@@ -18,7 +18,6 @@ class KinesisAdapter constructor(
     private val claimCheckRedeemer: ClaimCheckRedeemer? = null
 ) {
 
-    /** Java-friendly constructor. */
     constructor(eventCodec: EventCodec) : this(GlobalRegistry.faultManager(), eventCodec)
 
     fun  fromKinesis(kinesisEvent: KinesisEvent): Flow<UnitOfWork> {

@@ -6,17 +6,20 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
+/** Configuration for retry logic. */
 data class RetryConfig(
     val maxRetries: Int = 3,
     val retryWait: Duration = 1000.milliseconds
 )
 
+/** Strategy for retrying operations. */
 interface RetryStrategy<Request, Response, Result> {
     fun shouldRetry(response: Response): Boolean
     fun nextRequest(originalRequest: Request, response: Response): Request
     fun combineAttempts(attempts: List<Response>, finalResponse: Response): Result
 }
 
+/** Executor for retrying operations based on a strategy. */
 class RetryExecutor<Request, Response, Result>(
     private val retryConfig: RetryConfig,
     private val strategy: RetryStrategy<Request, Response, Result>,

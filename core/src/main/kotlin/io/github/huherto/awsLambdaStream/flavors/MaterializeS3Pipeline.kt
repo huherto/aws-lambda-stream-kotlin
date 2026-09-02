@@ -14,20 +14,7 @@ import io.github.huherto.awsLambdaStream.sinks.S3Sink
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.onEach
 
-/**
- * A pipeline that materializes events to S3.
- *
- * It can also fetch objects from S3 and delete objects from S3.
- *
- * @param pipelineId The unique identifier for this pipeline.
- * @param eventFilter A filter to apply to incoming events.
- * @param onContentType A predicate to filter events based on content type.
- * @param splitObject A transformation to split a single object into multiple units of work.
- * @param s3ConnectorOptions Options for the [S3Connector] used by this pipeline.
- * @param toGetRequest A function to create a [GetObjectRequest] from a [UnitOfWork].
- * @param toPutRequest A function to create a [PutObjectRequest] from a [UnitOfWork].
- * @param toDeleteRequest A function to create a [DeleteObjectRequest] from a [UnitOfWork].
- */
+/** A pipeline that materializes events to S3. */
 class MaterializeS3Pipeline(
     pipelineId: String,
     private val eventFilter: EventFilter = EventFilter.Any,

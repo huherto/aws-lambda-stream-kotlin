@@ -14,10 +14,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import org.junit.jupiter.api.Test
 
-/**
- * A replay fixture is only useful if what it captures can be fed back to a Lambda. These pin down
- * that both the source record and `event.raw` come out as JSON rather than a Java `toString()`.
- */
+/** Tests for UnitOfWork snapshotting. */
 class UnitOfWorkSnapshotTest {
 
     @Test

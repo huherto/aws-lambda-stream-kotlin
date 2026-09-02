@@ -5,14 +5,6 @@ import io.github.huherto.awsLambdaStream.from.RecordImage
 import io.github.huherto.awsLambdaStream.from.RecordPair
 import kotlinx.serialization.json.*
 
-/**
- * Plain-JSON views of a DynamoDB image, with the `S`/`N`/`SS` type envelope flattened away for
- * readability.
- *
- * These are lossy and one-way: sets collapse to lists and numbers are parsed, so large integers
- * lose precision. Use them for logging and human-facing output. For anything that has to survive
- * a round trip — replay, persistence — use the canonical form in [toCanonicalJsonObject].
- */
 fun RecordPair.toJsonString(): String =
     Json.encodeToString(JsonObject.serializer(), toJsonObject())
 

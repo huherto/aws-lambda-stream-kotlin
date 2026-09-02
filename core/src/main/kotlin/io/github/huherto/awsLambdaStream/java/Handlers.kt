@@ -18,21 +18,13 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.util.function.Function
 
-/**
- * Utility class providing Java-friendly methods for common [Flow] transformations and pipeline creation.
- */
+/** Utility class providing Java-friendly methods for common pipeline creation. */
 object Handlers {
 
-    /**
-     * Creates a new [PipelineAssembler.Builder].
-     */
     @JvmStatic
     fun assemblerBuilder(): PipelineAssembler.Builder =
         PipelineAssembler.builder()
 
-    /**
-     * Creates a [CdcPipeline] with Java-friendly defaults.
-     */
     @JvmStatic
     @JvmOverloads
     fun cdcPipeline(
@@ -47,9 +39,6 @@ object Handlers {
         eventFilter = eventFilter
     )
 
-    /**
-     * Creates a [CollectPipeline] with Java-friendly defaults.
-     */
     @JvmStatic
     @JvmOverloads
     fun collectPipeline(
@@ -64,9 +53,6 @@ object Handlers {
         correlationKey = correlationKey
     )
 
-    /**
-     * Creates a [CorrelatePipeline] with Java-friendly defaults.
-     */
     @JvmStatic
     @JvmOverloads
     fun correlatePipeline(
@@ -83,9 +69,6 @@ object Handlers {
         eventFilter = eventFilter
     )
 
-    /**
-     * Creates an [EvaluatePipeline] with Java-friendly defaults.
-     */
     @JvmStatic
     @JvmOverloads
     fun evaluatePipeline(
@@ -106,23 +89,14 @@ object Handlers {
         emit = emit
     )
 
-    /**
-     * Collects and logs metrics for the given flow.
-     */
     @JvmStatic
     fun collectMetrics(flow: Flow<UnitOfWork>): Flow<UnitOfWork> =
         flow.collectMetrics()
 
-    /**
-     * Collects and logs metrics for the given flow, including additional function-level metrics.
-     */
     @JvmStatic
     fun collectMetrics(flow: Flow<UnitOfWork>, functionMetrics: Map<String, Any>): Flow<UnitOfWork> =
         flow.collectMetrics(functionMetrics)
 
-    /**
-     * Updates the metrics of each [UnitOfWork] in the flow using the provided transformation.
-     */
     @JvmStatic
     fun updateMetrics(flow: Flow<UnitOfWork>, transform: Function<PipelineMetrics, PipelineMetrics>): Flow<UnitOfWork> =
         flow.map { uow -> uow.updateMetrics { pm -> transform.apply(pm) } }

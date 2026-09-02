@@ -36,15 +36,13 @@ import kotlin.test.Test
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue as EventAV
 
 
+/** Tests for CorrelatePipeline. */
 class CorrelatePipelineTest {
     companion object {
         val TIMESTAMP = Clock.System.now().toEpochMilliseconds()
     }
 
-    /**
-     * Concrete Fake Event to avoid issues with Kotlin reflection (KClass) on anonymous objects
-     * inside the filterEventTypes stage of the pipeline.
-     */
+    /** Fake event implementation for testing. */
     data class FakeEvent(
         override val id: String? = "event-1",
         override val timestamp: Long? = TIMESTAMP,
@@ -76,6 +74,7 @@ class CorrelatePipelineTest {
         )
     }
 
+    /** Fake event codec for testing. */
     class FakeEventCodec : EventCodec {
         override fun encode(event: Event): String {
             return (event as FakeEvent).encodedStr

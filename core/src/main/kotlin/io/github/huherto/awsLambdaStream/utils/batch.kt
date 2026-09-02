@@ -41,11 +41,13 @@ fun unBatchUow(uow: UnitOfWork): List<UnitOfWork> {
 }
 
 // Support models for rule configurations
+/** Rule configuration for pipeline operations. */
 data class PipelineRule(
     val group: Boolean = false,
     val compact: CompactRule? = null
 )
 
+/** Rule configuration for compacting operations. */
 data class CompactRule(
     val group: ((UnitOfWork) -> String?)? = null,
     val sort: ((UnitOfWork, UnitOfWork) -> Int)? = null
@@ -95,6 +97,7 @@ fun Flow<UnitOfWork>.compact(rule: CompactRule?): Flow<UnitOfWork> = flow {
 
 
 // Configuration classes for Batching Operations
+/** Options for batching by size. */
 data class BatchSizeOptions(
     val maxRequestSize: Int,
     val batchSize: Int,
@@ -105,9 +108,6 @@ data class BatchSizeOptions(
     val metricsEnabled: Boolean = false
 )
 
-/**
- * Batch EB request entries by size to avoid writing a batch that's too large to EB.
- */
 fun Flow<UnitOfWork>.batchWithSize(opt: BatchSizeOptions): Flow<List<UnitOfWork>> = flow {
     val batched = mutableListOf<UnitOfWork>()
     val sizes = mutableListOf<Int>()
@@ -161,6 +161,7 @@ fun Flow<UnitOfWork>.batchWithSize(opt: BatchSizeOptions): Flow<List<UnitOfWork>
     }
 }
 
+/** Options for batching by payload size or count. */
 data class PayloadSizeOptions(
     val batchSize: Int,
     val maxPayloadSize: Int,
@@ -168,9 +169,6 @@ data class PayloadSizeOptions(
     val metricsEnabled: Boolean = false
 )
 
-/**
- * Batches by aggregate payload size with a cap on payload count.
- */
 fun Flow<UnitOfWork>.batchWithPayloadSizeOrCount(opt: PayloadSizeOptions): Flow<List<UnitOfWork>> = flow {
     val batched = mutableListOf<UnitOfWork>()
     val sizes = mutableListOf<Int>()
@@ -219,10 +217,6 @@ private fun logMetrics(batch: List<UnitOfWork>, sizes: List<Int>, metricsEnabled
     }
 }
 
-/**
- * Simulates Buffer.byteLength(JSON.stringify(object)).
- * Replace with your actual JSON serialization logic (e.g., Jackson ObjectMapper or kotlinx.serialization).
- */
 private fun calculateByteSize(obj: Any?): Int {
     if (obj == null) return 0
     // Example: return objectMapper.writeValueAsBytes(obj).size

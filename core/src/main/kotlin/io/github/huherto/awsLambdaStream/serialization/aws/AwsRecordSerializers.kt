@@ -10,12 +10,7 @@ import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 
-/**
- * Base for kotlinx serializers that delegate to the AWS `LambdaEventSerializers` codecs.
- *
- * The record is embedded as real JSON rather than an escaped string, so a serialized event
- * carries the AWS-canonical record shape and stays readable as a replay fixture.
- */
+/** Base for kotlinx serializers that delegate to AWS codecs. */
 abstract class AwsRecordSerializer<T>(
     private val encode: (T) -> String,
     private val decode: (String) -> T,
@@ -34,16 +29,19 @@ abstract class AwsRecordSerializer<T>(
     }
 }
 
+/** Serializer for [DynamodbEvent.DynamodbStreamRecord]. */
 object DynamodbStreamRecordSerializer : AwsRecordSerializer<DynamodbEvent.DynamodbStreamRecord>(
     encode = DynamodbStreamRecordReplayJson::encode,
     decode = DynamodbStreamRecordReplayJson::decode,
 )
 
+/** Serializer for [KinesisEvent.KinesisEventRecord]. */
 object KinesisEventRecordSerializer : AwsRecordSerializer<KinesisEvent.KinesisEventRecord>(
     encode = KinesisEventRecordReplayJson::encode,
     decode = KinesisEventRecordReplayJson::decode,
 )
 
+/** Serializer for [SQSEvent.SQSMessage]. */
 object SQSMessageSerializer : AwsRecordSerializer<SQSEvent.SQSMessage>(
     encode = SQSMessageReplayJson::encode,
     decode = SQSMessageReplayJson::decode,
