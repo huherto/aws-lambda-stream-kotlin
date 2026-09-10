@@ -31,7 +31,11 @@ The `Event` interface requires the following metadata properties (accessible via
 *   `getPartitionKey()`: Used for ordering (e.g., Kinesis shard key).
 *   `getTags()`: Metadata tags for filtering or categorization.
 *   `getRaw()`: The raw payload or reference (e.g., a `ClaimCheck`).
-*   `getEem()`: Envelope Encryption Metadata.
+*   `getEem()`: Envelope Encryption Metadata used for field-level encryption. It contains:
+    * `getMasterKeyAlias()`: The KMS key alias used to generate the data key.
+    * `getDataKeys()`: A map of region to Base64 encoded encrypted data key.
+    * `getFields()`: The list of field names that are encrypted.
+    * `getAlgorithm()`: The encryption algorithm (default: `AES/GCM/NoPadding`).
 *   `getTriggers()`: References to preceding events in the causal chain.
 
 ### 4. Required Methods

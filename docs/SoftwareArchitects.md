@@ -23,3 +23,4 @@ The framework follows the serverless architecture patterns described by John Gil
 * [How the Event Lake works](EventLake.md)
 * [How the Regional Health Check works](RegionalHealthCheck.md)
 * [How Fault Re-submission works](FaultResubmission.md)
+* [How Envelope Encryption works](Encryption.md)

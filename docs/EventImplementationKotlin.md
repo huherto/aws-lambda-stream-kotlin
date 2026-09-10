@@ -31,7 +31,11 @@ The `Event` interface requires the following metadata properties:
 *   `partitionKey: String?`: Used for ordering (e.g., Kinesis shard key).
 *   `tags: Map<String, String>?`: Metadata tags for filtering or categorization.
 *   `raw: RawRecord?`: The raw payload or reference (e.g., a `ClaimCheck`).
-*   `eem: EnvelopeEncryptionMetadata?`: Envelope Encryption Metadata.
+*   `eem: EnvelopeEncryptionMetadata?`: Envelope Encryption Metadata used for field-level encryption. It contains:
+    * `masterKeyAlias: String?`: The KMS key alias used to generate the data key.
+    * `dataKeys: Map<String, String>?`: A map of region to Base64 encoded encrypted data key.
+    * `fields: List<String>?`: The list of field names that are encrypted.
+    * `algorithm: String?`: The encryption algorithm (default: `AES/GCM/NoPadding`).
 *   `triggers: List<EventReference>?`: References to preceding events in the causal chain.
 
 ### 4. Required Methods

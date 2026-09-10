@@ -5,6 +5,7 @@ A comprehensive list of features provided by the AWS Lambda Stream framework for
 ## Reliability
 - **Fault Handling**: Automatic capture and persistence of failed events (faults) to S3 or DynamoDB, including full context for later investigation and recovery.
 - **Retries**: Configurable retry strategies (e.g., exponential backoff) for AWS service connectors like DynamoDB, EventBridge, and S3.
+- **Envelope Encryption**: Field-level encryption for events and DynamoDB items using AWS KMS and AES-GCM, supporting multi-region data keys. See [Envelope Encryption](Encryption.md).
 - **Claim Check Pattern**: Integrated support for handling large event payloads by storing them in S3 and passing a reference through the stream.
 - **Dead-Letter Handling**: Seamless integration with AWS Lambda's failure mechanisms, augmented by custom framework-level fault events.
 
