@@ -17,6 +17,7 @@ data class UnitOfWork @JvmOverloads constructor(
     val triggers: List<Event>? = null,
     val correlated: List<Event>? = null,
     val batch: List<UnitOfWork>? = null,
+    val undecryptedEvent: Event? = null,
     val extensions: Map<KClass<*>, Any> = emptyMap(),
 ) {
     inline fun <reified T : Any> getExtension(): T? = extensions[T::class] as? T

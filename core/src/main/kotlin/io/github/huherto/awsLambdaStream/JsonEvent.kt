@@ -28,8 +28,8 @@ fun JsonObject.stringMapOrNull(name: String): Map<String, String>? {
         ?.mapValues { (_, value) -> (value as? JsonPrimitive)?.contentOrNull ?: return null }
 }
 
-class JsonEvent(jsonString: String) : Event {
-    private val jsonObject = Json.parseToJsonElement(jsonString).jsonObject
+class JsonEvent(val jsonObject: JsonObject) : Event {
+    constructor(jsonString: String) : this(Json.parseToJsonElement(jsonString).jsonObject)
     override val id: String?
         get() = jsonObject.stringOrNull("id")
     override val timestamp: Long?
@@ -48,6 +48,8 @@ class JsonEvent(jsonString: String) : Event {
         get() = (jsonObject["triggers"] as? JsonArray)
             ?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
             ?.map { EventReference(it) }
+
+    val json: JsonObject get() = jsonObject
 
     fun jsonObject(path: String) : JsonObject? {
         return getJsonObjectByPath(jsonObject, path)

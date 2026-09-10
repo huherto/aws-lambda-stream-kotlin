@@ -1,9 +1,6 @@
 package io.github.huherto.awsLambdaStream
 
-import io.github.huherto.awsLambdaStream.connectors.DefaultDynamoDbClientFactory
-import io.github.huherto.awsLambdaStream.connectors.DefaultS3ClientFactory
-import io.github.huherto.awsLambdaStream.connectors.DynamoDbClientFactory
-import io.github.huherto.awsLambdaStream.connectors.S3ClientFactory
+import io.github.huherto.awsLambdaStream.connectors.*
 import io.github.huherto.awsLambdaStream.faults.FaultManager
 import io.github.huherto.awsLambdaStream.sinks.EventBridgePublisher
 import io.github.huherto.awsLambdaStream.sinks.EventPublisher
@@ -172,6 +169,26 @@ object GlobalRegistry {
         s3ClientFactorySingleton.setFactory(factory)
     }
 
+    private val kmsClientFactorySingleton = RegistrySingleton(
+        lock = lock,
+        defaultFactory = { DefaultKmsClientFactory() as KmsClientFactory }
+    )
+
+    @JvmStatic
+    fun kmsClientFactory() : KmsClientFactory {
+        return kmsClientFactorySingleton.get()
+    }
+
+    @JvmStatic
+    fun setKmsClientFactory(kmsClientFactory: KmsClientFactory) {
+        kmsClientFactorySingleton.set(kmsClientFactory)
+    }
+
+    @JvmStatic
+    fun setKmsClientFactory(factory: () -> KmsClientFactory) {
+        kmsClientFactorySingleton.setFactory(factory)
+    }
+
     @JvmStatic
     fun reset() {
         synchronized(lock) {
@@ -180,6 +197,7 @@ object GlobalRegistry {
             faultManagerSingleton.reset()
             dynamoDbClientFactorySingleton.reset()
             s3ClientFactorySingleton.reset()
+            kmsClientFactorySingleton.reset()
         }
     }
 

@@ -38,9 +38,12 @@ data class EventReference(
 
 /** Metadata for envelope encryption. */
 @Serializable
-data class EnvelopeEncryptionMetadata(val something: String?) {
-    // Envelope Encryption Metadata. See SAP4SS page 347
-}
+data class EnvelopeEncryptionMetadata(
+    val masterKeyAlias: String? = null,
+    val dataKeys: Map<String, String>? = null, // region -> Base64 encrypted data key
+    val fields: List<String>? = null,
+    val algorithm: String? = "AES/GCM/NoPadding"
+)
 
 /** Exception thrown when a fault occurs. */
 @Serializable

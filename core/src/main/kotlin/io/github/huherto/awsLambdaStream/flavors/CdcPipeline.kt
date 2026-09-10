@@ -16,6 +16,8 @@ import io.github.huherto.awsLambdaStream.queries.DynamoDbQuery
 import io.github.huherto.awsLambdaStream.queries.QueryRule
 import io.github.huherto.awsLambdaStream.sinks.EventPublisher
 import io.github.huherto.awsLambdaStream.utils.CompactRule
+import io.github.huherto.awsLambdaStream.utils.EncryptionOptions
+import io.github.huherto.awsLambdaStream.utils.EventEncryption
 import io.github.huherto.awsLambdaStream.utils.compact
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -35,6 +37,8 @@ class CdcPipeline(
     private val toBatchGetRequest: (suspend (UnitOfWork) -> BatchGetItemRequest?)?,
     private val toEvent: (suspend (UnitOfWork) -> Event?)?,
     private val encryptEvent: (suspend (UnitOfWork) -> UnitOfWork)?,
+    private val encryptionOptions: EncryptionOptions?,
+    private val decrypt: Boolean,
     private val parallel: Int,
 ) : Pipeline(id) {
 
@@ -78,7 +82,13 @@ class CdcPipeline(
         val usesDynamoDb = queryRule != null || toQueryRequest != null || toBatchGetRequest != null
 
         with(fm) {
-            val filteredFlow = fromFlow
+            var flow = fromFlow
+            if (decrypt) {
+                flow = flow.let { EventEncryption.decryptEvent(fm).invoke(it) }
+                    .let { EventEncryption.decryptChangeEvent(fm).invoke(it) }
+            }
+
+            val filteredFlow = flow
                 .filterNotFaulty { uow -> outLatched(uow) }
                 .filterEvents(fm, eventFilter)
                 .onEach { uow -> printStartPipeline(uow) }
@@ -97,7 +107,13 @@ class CdcPipeline(
             return enrichedFlow
                 .mapNotFaulty { uow -> addEvent(uow) }
                 .buffer(parallel)
-                .mapNotFaulty { uow -> encrypt(uow) }
+                .let {
+                    if (encryptionOptions != null) {
+                        EventEncryption.encryptEvent(encryptionOptions, fm).invoke(it)
+                    } else {
+                        it.mapNotFaulty { uow -> encrypt(uow) }
+                    }
+                }
                 .publish()
                 .onEach { uow -> printEndPipeline(uow) }
         }
@@ -119,6 +135,8 @@ class CdcPipeline(
         private var toBatchGetRequest: (suspend (UnitOfWork) -> BatchGetItemRequest?)? = null
         private var toEvent: (suspend (UnitOfWork) -> Event?)? = null
         private var encryptEvent: (suspend (UnitOfWork) -> UnitOfWork)? = null
+        private var encryptionOptions: EncryptionOptions? = null
+        private var decrypt: Boolean = false
         private var parallel: Int = System.getenv("PARALLEL")?.toIntOrNull() ?: 4
 
         fun dynamoDbConnectorOptions(options: DynamoDbConnector.Options) = apply { this.dynamoDbConnectorOptions = options }
@@ -136,6 +154,8 @@ class CdcPipeline(
         fun toEventJava(toEvent: java.util.function.Function<UnitOfWork, Event?>) = apply { this.toEvent = { uow -> toEvent.apply(uow) } }
         fun encryptEvent(encryptEvent: suspend (UnitOfWork) -> UnitOfWork) = apply { this.encryptEvent = encryptEvent }
         fun encryptEvent(encryptEvent: java.util.function.Function<UnitOfWork, UnitOfWork>) = apply { this.encryptEvent = { uow -> encryptEvent.apply(uow) } }
+        fun encryptionOptions(options: EncryptionOptions) = apply { this.encryptionOptions = options }
+        fun decrypt(decrypt: Boolean = true) = apply { this.decrypt = decrypt }
         fun parallel(parallel: Int) = apply { this.parallel = parallel }
 
         override fun build(): CdcPipeline {
@@ -151,6 +171,8 @@ class CdcPipeline(
                 toBatchGetRequest = toBatchGetRequest,
                 toEvent = toEvent,
                 encryptEvent = encryptEvent,
+                encryptionOptions = encryptionOptions,
+                decrypt = decrypt,
                 parallel = parallel
             )
         }

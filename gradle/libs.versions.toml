@@ -18,6 +18,7 @@ aws-sdk-dynamodb = { module = "aws.sdk.kotlin:dynamodb" }
 aws-sdk-eventbridge = { module = "aws.sdk.kotlin:eventbridge" }
 aws-sdk-firehose = { module = "aws.sdk.kotlin:firehose" }
 aws-sdk-kinesis = { module = "aws.sdk.kotlin:kinesis" }
+aws-sdk-kms = { module = "aws.sdk.kotlin:kms" }
 aws-sdk-lambda = { module = "aws.sdk.kotlin:lambda" }
 aws-sdk-route53 = { module = "aws.sdk.kotlin:route53" }
 aws-sdk-s3 = { module = "aws.sdk.kotlin:s3" }

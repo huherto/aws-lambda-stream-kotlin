@@ -83,7 +83,7 @@ class JsonEventTest {
                 "source": "orders",
                 "priority": "high"
               },
-              "eem": { "something": "something" },
+              "eem": { "masterKeyAlias": "something" },
               "triggers": [
                 "trigger-1",
                 "trigger-2"
@@ -106,7 +106,7 @@ class JsonEventTest {
             "source" to "orders",
             "priority" to "high",
         ))
-        event.eem shouldBe EnvelopeEncryptionMetadata("something")
+        event.eem shouldBe EnvelopeEncryptionMetadata(masterKeyAlias = "something")
         event.triggers shouldContainExactly listOf(
             EventReference("trigger-1"),
             EventReference("trigger-2"),
