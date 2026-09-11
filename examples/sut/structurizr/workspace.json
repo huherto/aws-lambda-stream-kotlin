@@ -1,0 +1,1175 @@
+{
+  "configuration" : { },
+  "description" : "Description",
+  "documentation" : { },
+  "id" : 1,
+  "lastModifiedAgent" : "structurizr/diagrams/a6c29c35-5a84-4586-ac10-48e5afced1d0",
+  "lastModifiedDate" : "2026-09-11T09:17:51Z",
+  "lastModifiedUser" : "1951205934",
+  "model" : {
+    "people" : [ {
+      "description" : "A user of the SUT system.",
+      "id" : "1",
+      "name" : "User",
+      "properties" : {
+        "structurizr.dsl.identifier" : "user"
+      },
+      "relationships" : [ {
+        "description" : "Manages shipments via",
+        "destinationId" : "12",
+        "id" : "36",
+        "sourceId" : "1",
+        "tags" : "Relationship"
+      }, {
+        "description" : "Manages shipments via",
+        "destinationId" : "11",
+        "id" : "37",
+        "linkedRelationshipId" : "36",
+        "sourceId" : "1"
+      }, {
+        "description" : "Manages shipments via",
+        "destinationId" : "3",
+        "id" : "38",
+        "linkedRelationshipId" : "36",
+        "sourceId" : "1"
+      } ],
+      "tags" : "Element,Person"
+    }, {
+      "id" : "2",
+      "name" : "Canary",
+      "properties" : {
+        "structurizr.dsl.identifier" : "robot"
+      },
+      "relationships" : [ {
+        "description" : "Triggers health checks via",
+        "destinationId" : "26",
+        "id" : "39",
+        "sourceId" : "2",
+        "tags" : "Relationship"
+      }, {
+        "description" : "Triggers health checks via",
+        "destinationId" : "25",
+        "id" : "40",
+        "linkedRelationshipId" : "39",
+        "sourceId" : "2"
+      }, {
+        "description" : "Triggers health checks via",
+        "destinationId" : "3",
+        "id" : "41",
+        "linkedRelationshipId" : "39",
+        "sourceId" : "2"
+      } ],
+      "tags" : "Element,Person,Amazon Web Services - CloudWatch Synthetics"
+    } ],
+    "softwareSystems" : [ {
+      "containers" : [ {
+        "components" : [ {
+          "description" : "Central event distribution bus.",
+          "documentation" : { },
+          "id" : "5",
+          "name" : "Event Bus",
+          "properties" : {
+            "structurizr.dsl.identifier" : "eventBus"
+          },
+          "relationships" : [ {
+            "description" : "Forwards events to",
+            "destinationId" : "6",
+            "id" : "42",
+            "sourceId" : "5",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Delivers events to",
+            "destinationId" : "17",
+            "id" : "64",
+            "sourceId" : "5",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Delivers events to",
+            "destinationId" : "16",
+            "id" : "65",
+            "linkedRelationshipId" : "64",
+            "sourceId" : "5"
+          }, {
+            "description" : "Delivers fault events to",
+            "destinationId" : "20",
+            "id" : "69",
+            "sourceId" : "5",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Delivers fault events to",
+            "destinationId" : "19",
+            "id" : "70",
+            "linkedRelationshipId" : "69",
+            "sourceId" : "5"
+          } ],
+          "tags" : "Element,Component,Amazon Web Services - EventBridge",
+          "technology" : "AWS EventBridge"
+        }, {
+          "description" : "High-volume event stream for downstream consumers.",
+          "documentation" : { },
+          "id" : "6",
+          "name" : "Event Stream",
+          "properties" : {
+            "structurizr.dsl.identifier" : "eventStream"
+          },
+          "relationships" : [ {
+            "description" : "Triggers with events",
+            "destinationId" : "10",
+            "id" : "48",
+            "sourceId" : "6",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Triggers with events",
+            "destinationId" : "7",
+            "id" : "49",
+            "linkedRelationshipId" : "48",
+            "sourceId" : "6"
+          }, {
+            "description" : "Triggers with events",
+            "destinationId" : "15",
+            "id" : "59",
+            "sourceId" : "6",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Triggers with events",
+            "destinationId" : "11",
+            "id" : "60",
+            "linkedRelationshipId" : "59",
+            "sourceId" : "6"
+          } ],
+          "tags" : "Element,Component,Amazon Web Services - Kinesis",
+          "technology" : "AWS Kinesis"
+        } ],
+        "description" : "Central event distribution and streaming.",
+        "documentation" : { },
+        "id" : "4",
+        "name" : "Event Hub",
+        "properties" : {
+          "structurizr.dsl.identifier" : "eventHub"
+        },
+        "relationships" : [ {
+          "description" : "Triggers with events",
+          "destinationId" : "10",
+          "id" : "50",
+          "linkedRelationshipId" : "48",
+          "sourceId" : "4"
+        }, {
+          "description" : "Triggers with events",
+          "destinationId" : "7",
+          "id" : "51",
+          "linkedRelationshipId" : "48",
+          "sourceId" : "4"
+        }, {
+          "description" : "Triggers with events",
+          "destinationId" : "15",
+          "id" : "61",
+          "linkedRelationshipId" : "59",
+          "sourceId" : "4"
+        }, {
+          "description" : "Triggers with events",
+          "destinationId" : "11",
+          "id" : "62",
+          "linkedRelationshipId" : "59",
+          "sourceId" : "4"
+        }, {
+          "description" : "Delivers events to",
+          "destinationId" : "17",
+          "id" : "66",
+          "linkedRelationshipId" : "64",
+          "sourceId" : "4"
+        }, {
+          "description" : "Delivers events to",
+          "destinationId" : "16",
+          "id" : "67",
+          "linkedRelationshipId" : "64",
+          "sourceId" : "4"
+        }, {
+          "description" : "Delivers fault events to",
+          "destinationId" : "20",
+          "id" : "71",
+          "linkedRelationshipId" : "69",
+          "sourceId" : "4"
+        }, {
+          "description" : "Delivers fault events to",
+          "destinationId" : "19",
+          "id" : "72",
+          "linkedRelationshipId" : "69",
+          "sourceId" : "4"
+        } ],
+        "tags" : "Element,Container",
+        "technology" : "AWS EventBridge, Kinesis"
+      }, {
+        "components" : [ {
+          "description" : "Stores control event state.",
+          "documentation" : { },
+          "id" : "8",
+          "name" : "Events Table",
+          "properties" : {
+            "structurizr.dsl.identifier" : "controlTable"
+          },
+          "relationships" : [ {
+            "description" : "Triggers on changes",
+            "destinationId" : "9",
+            "id" : "43",
+            "sourceId" : "8",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component,Amazon Web Services - DynamoDB Table",
+          "technology" : "AWS DynamoDB"
+        }, {
+          "description" : "Processes table changes and publishes to the central EventBus.",
+          "documentation" : { },
+          "id" : "9",
+          "name" : "Control Trigger",
+          "properties" : {
+            "structurizr.dsl.identifier" : "controlTrigger"
+          },
+          "relationships" : [ {
+            "description" : "Publishes events to",
+            "destinationId" : "5",
+            "id" : "44",
+            "sourceId" : "9",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Publishes events to",
+            "destinationId" : "4",
+            "id" : "45",
+            "linkedRelationshipId" : "44",
+            "sourceId" : "9"
+          } ],
+          "tags" : "Element,Component,Amazon Web Services - Lambda",
+          "technology" : "AWS Lambda"
+        }, {
+          "description" : "Consumes events from the central Kinesis stream and updates the state.",
+          "documentation" : { },
+          "id" : "10",
+          "name" : "Control Listener",
+          "properties" : {
+            "structurizr.dsl.identifier" : "controlListener"
+          },
+          "relationships" : [ {
+            "description" : "Updates state in",
+            "destinationId" : "8",
+            "id" : "52",
+            "sourceId" : "10",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component,Amazon Web Services - Lambda",
+          "technology" : "AWS Lambda"
+        } ],
+        "description" : "Manages control-related events and state.",
+        "documentation" : { },
+        "id" : "7",
+        "name" : "Control Service",
+        "properties" : {
+          "structurizr.dsl.identifier" : "controlService"
+        },
+        "relationships" : [ {
+          "description" : "Publishes events to",
+          "destinationId" : "5",
+          "id" : "46",
+          "linkedRelationshipId" : "44",
+          "sourceId" : "7"
+        }, {
+          "description" : "Publishes events to",
+          "destinationId" : "4",
+          "id" : "47",
+          "linkedRelationshipId" : "44",
+          "sourceId" : "7"
+        } ],
+        "tags" : "Element,Container",
+        "technology" : "Kotlin, AWS Lambda, DynamoDB"
+      }, {
+        "components" : [ {
+          "description" : "REST API for managing shipments.",
+          "documentation" : { },
+          "id" : "12",
+          "name" : "Shipment API",
+          "properties" : {
+            "structurizr.dsl.identifier" : "shipmentApi"
+          },
+          "relationships" : [ {
+            "description" : "Reads/Writes shipment data",
+            "destinationId" : "13",
+            "id" : "53",
+            "sourceId" : "12",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component,Amazon Web Services - Lambda",
+          "technology" : "AWS Lambda"
+        }, {
+          "description" : "Stores shipment data.",
+          "documentation" : { },
+          "id" : "13",
+          "name" : "Shipments Table",
+          "properties" : {
+            "structurizr.dsl.identifier" : "shipmentTable"
+          },
+          "relationships" : [ {
+            "description" : "Triggers on changes",
+            "destinationId" : "14",
+            "id" : "54",
+            "sourceId" : "13",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component,Amazon Web Services - DynamoDB Table",
+          "technology" : "AWS DynamoDB"
+        }, {
+          "description" : "Processes table changes and publishes to the central EventBus.",
+          "documentation" : { },
+          "id" : "14",
+          "name" : "Shipment Trigger",
+          "properties" : {
+            "structurizr.dsl.identifier" : "shipmentTrigger"
+          },
+          "relationships" : [ {
+            "description" : "Publishes events to",
+            "destinationId" : "5",
+            "id" : "55",
+            "sourceId" : "14",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Publishes events to",
+            "destinationId" : "4",
+            "id" : "56",
+            "linkedRelationshipId" : "55",
+            "sourceId" : "14"
+          } ],
+          "tags" : "Element,Component,Amazon Web Services - Lambda",
+          "technology" : "AWS Lambda"
+        }, {
+          "description" : "Consumes events from the central Kinesis stream and updates shipment data.",
+          "documentation" : { },
+          "id" : "15",
+          "name" : "Shipment Listener",
+          "properties" : {
+            "structurizr.dsl.identifier" : "shipmentListener"
+          },
+          "relationships" : [ {
+            "description" : "Updates shipment data in",
+            "destinationId" : "13",
+            "id" : "63",
+            "sourceId" : "15",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component,Amazon Web Services - Lambda",
+          "technology" : "AWS Lambda"
+        } ],
+        "description" : "Backend for Frontend for shipment management.",
+        "documentation" : { },
+        "id" : "11",
+        "name" : "Shipment BFF",
+        "properties" : {
+          "structurizr.dsl.identifier" : "shipmentBff"
+        },
+        "relationships" : [ {
+          "description" : "Publishes events to",
+          "destinationId" : "5",
+          "id" : "57",
+          "linkedRelationshipId" : "55",
+          "sourceId" : "11"
+        }, {
+          "description" : "Publishes events to",
+          "destinationId" : "4",
+          "id" : "58",
+          "linkedRelationshipId" : "55",
+          "sourceId" : "11"
+        } ],
+        "tags" : "Element,Container",
+        "technology" : "Kotlin, AWS Lambda, DynamoDB"
+      }, {
+        "components" : [ {
+          "description" : "Ingests events from EventBridge and delivers to S3.",
+          "documentation" : { },
+          "id" : "17",
+          "name" : "Event Lake Firehose",
+          "properties" : {
+            "structurizr.dsl.identifier" : "lakeFirehose"
+          },
+          "relationships" : [ {
+            "description" : "Stores events in",
+            "destinationId" : "18",
+            "id" : "68",
+            "sourceId" : "17",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component,Amazon Web Services - Kinesis Firehose",
+          "technology" : "AWS Kinesis Firehose"
+        }, {
+          "description" : "Stores archived events.",
+          "documentation" : { },
+          "id" : "18",
+          "name" : "Event Lake Bucket",
+          "properties" : {
+            "structurizr.dsl.identifier" : "lakeBucket"
+          },
+          "tags" : "Element,Component,Amazon Web Services - Simple Storage Service",
+          "technology" : "AWS S3"
+        } ],
+        "description" : "Archives all system events for long-term storage.",
+        "documentation" : { },
+        "id" : "16",
+        "name" : "Event Lake",
+        "properties" : {
+          "structurizr.dsl.identifier" : "eventLake"
+        },
+        "tags" : "Element,Container",
+        "technology" : "AWS Firehose, S3"
+      }, {
+        "components" : [ {
+          "description" : "Ingests fault events from EventBridge.",
+          "documentation" : { },
+          "id" : "20",
+          "name" : "Fault Firehose",
+          "properties" : {
+            "structurizr.dsl.identifier" : "faultFirehose"
+          },
+          "relationships" : [ {
+            "description" : "Uses for transformation",
+            "destinationId" : "21",
+            "id" : "73",
+            "sourceId" : "20",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Stores fault logs in",
+            "destinationId" : "22",
+            "id" : "74",
+            "sourceId" : "20",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component,Amazon Web Services - Kinesis Firehose",
+          "technology" : "AWS Kinesis Firehose"
+        }, {
+          "description" : "Transforms and filters fault events.",
+          "documentation" : { },
+          "id" : "21",
+          "name" : "Fault Transform",
+          "properties" : {
+            "structurizr.dsl.identifier" : "faultTransform"
+          },
+          "relationships" : [ {
+            "description" : "Publishes faults to",
+            "destinationId" : "23",
+            "id" : "75",
+            "sourceId" : "21",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component,Amazon Web Services - Lambda",
+          "technology" : "AWS Lambda"
+        }, {
+          "description" : "Stores fault event logs.",
+          "documentation" : { },
+          "id" : "22",
+          "name" : "Fault Bucket",
+          "properties" : {
+            "structurizr.dsl.identifier" : "faultBucket"
+          },
+          "tags" : "Element,Component,Amazon Web Services - Simple Storage Service",
+          "technology" : "AWS S3"
+        }, {
+          "description" : "SNS Topic for fault notifications.",
+          "documentation" : { },
+          "id" : "23",
+          "name" : "Fault Topic",
+          "properties" : {
+            "structurizr.dsl.identifier" : "faultTopic"
+          },
+          "relationships" : [ {
+            "description" : "Forwards notifications to",
+            "destinationId" : "24",
+            "id" : "76",
+            "sourceId" : "23",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component,Amazon Web Services - Simple Notification Service",
+          "technology" : "AWS SNS"
+        }, {
+          "description" : "SQS Queue for fault verification.",
+          "documentation" : { },
+          "id" : "24",
+          "name" : "Fault Queue",
+          "properties" : {
+            "structurizr.dsl.identifier" : "faultQueue"
+          },
+          "tags" : "Element,Component,Amazon Web Services - Simple Queue Service",
+          "technology" : "AWS SQS"
+        } ],
+        "description" : "Monitors event processing faults and notifies via SNS.",
+        "documentation" : { },
+        "id" : "19",
+        "name" : "Event Fault Monitor",
+        "properties" : {
+          "structurizr.dsl.identifier" : "faultMonitor"
+        },
+        "tags" : "Element,Container",
+        "technology" : "Kotlin, AWS Firehose, Lambda, SNS"
+      }, {
+        "components" : [ {
+          "description" : "Endpoint to trigger regional health checks.",
+          "documentation" : { },
+          "id" : "26",
+          "name" : "Health API",
+          "properties" : {
+            "structurizr.dsl.identifier" : "healthApi"
+          },
+          "relationships" : [ {
+            "description" : "Initiates health check in",
+            "destinationId" : "27",
+            "id" : "77",
+            "sourceId" : "26",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component,Amazon Web Services - Lambda",
+          "technology" : "AWS Lambda"
+        }, {
+          "description" : "Stores health check state and results.",
+          "documentation" : { },
+          "id" : "27",
+          "name" : "Health Table",
+          "properties" : {
+            "structurizr.dsl.identifier" : "healthTable"
+          },
+          "relationships" : [ {
+            "description" : "Triggers on record creation",
+            "destinationId" : "28",
+            "id" : "78",
+            "sourceId" : "27",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component,Amazon Web Services - DynamoDB Table",
+          "technology" : "AWS DynamoDB"
+        }, {
+          "description" : "Processes health table changes.",
+          "documentation" : { },
+          "id" : "28",
+          "name" : "Health DB Trigger",
+          "properties" : {
+            "structurizr.dsl.identifier" : "healthDbTrigger"
+          },
+          "relationships" : [ {
+            "description" : "Writes artifact to",
+            "destinationId" : "29",
+            "id" : "79",
+            "sourceId" : "28",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component,Amazon Web Services - Lambda",
+          "technology" : "AWS Lambda"
+        }, {
+          "description" : "Stores health check artifacts.",
+          "documentation" : { },
+          "id" : "29",
+          "name" : "Health Bucket",
+          "properties" : {
+            "structurizr.dsl.identifier" : "healthBucket"
+          },
+          "relationships" : [ {
+            "description" : "Notifies on new artifact",
+            "destinationId" : "30",
+            "id" : "80",
+            "sourceId" : "29",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component,Amazon Web Services - Simple Storage Service",
+          "technology" : "AWS S3"
+        }, {
+          "description" : "SNS Topic for health check flow notifications.",
+          "documentation" : { },
+          "id" : "30",
+          "name" : "Health Topic",
+          "properties" : {
+            "structurizr.dsl.identifier" : "healthTopic"
+          },
+          "relationships" : [ {
+            "description" : "Forwards notification to",
+            "destinationId" : "31",
+            "id" : "81",
+            "sourceId" : "30",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component,Amazon Web Services - Simple Notification Service",
+          "technology" : "AWS SNS"
+        }, {
+          "description" : "SQS Queue for health check flow verification.",
+          "documentation" : { },
+          "id" : "31",
+          "name" : "Health Queue",
+          "properties" : {
+            "structurizr.dsl.identifier" : "healthQueue"
+          },
+          "relationships" : [ {
+            "description" : "Triggers processing of",
+            "destinationId" : "32",
+            "id" : "82",
+            "sourceId" : "31",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component,Amazon Web Services - Simple Queue Service",
+          "technology" : "AWS SQS"
+        }, {
+          "description" : "Processes S3 events and publishes to local EventBus.",
+          "documentation" : { },
+          "id" : "32",
+          "name" : "Health S3 Trigger",
+          "properties" : {
+            "structurizr.dsl.identifier" : "healthS3Trigger"
+          },
+          "relationships" : [ {
+            "description" : "Publishes health event to",
+            "destinationId" : "33",
+            "id" : "83",
+            "sourceId" : "32",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component,Amazon Web Services - Lambda",
+          "technology" : "AWS Lambda"
+        }, {
+          "description" : "Local EventBridge bus for health check flow.",
+          "documentation" : { },
+          "id" : "33",
+          "name" : "Health EventBus",
+          "properties" : {
+            "structurizr.dsl.identifier" : "healthBus"
+          },
+          "relationships" : [ {
+            "description" : "Forwards health event to",
+            "destinationId" : "34",
+            "id" : "84",
+            "sourceId" : "33",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component,Amazon Web Services - EventBridge",
+          "technology" : "AWS EventBridge"
+        }, {
+          "description" : "Local Kinesis stream for health check flow.",
+          "documentation" : { },
+          "id" : "34",
+          "name" : "Health Kinesis Stream",
+          "properties" : {
+            "structurizr.dsl.identifier" : "healthStream"
+          },
+          "relationships" : [ {
+            "description" : "Triggers on health event",
+            "destinationId" : "35",
+            "id" : "85",
+            "sourceId" : "34",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component,Amazon Web Services - Kinesis",
+          "technology" : "AWS Kinesis"
+        }, {
+          "description" : "Consumes from local stream and updates health table.",
+          "documentation" : { },
+          "id" : "35",
+          "name" : "Health Kinesis Trigger",
+          "properties" : {
+            "structurizr.dsl.identifier" : "healthKinesisTrigger"
+          },
+          "relationships" : [ {
+            "description" : "Completes health check in",
+            "destinationId" : "27",
+            "id" : "86",
+            "sourceId" : "35",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component,Amazon Web Services - Lambda",
+          "technology" : "AWS Lambda"
+        } ],
+        "description" : "Self-contained regional health monitoring loop.",
+        "documentation" : { },
+        "id" : "25",
+        "name" : "Regional Health Check",
+        "properties" : {
+          "structurizr.dsl.identifier" : "healthCheck"
+        },
+        "tags" : "Element,Container",
+        "technology" : "Kotlin, AWS Lambda, DynamoDB, S3, SNS, SQS"
+      } ],
+      "description" : "AWS Lambda stream processing example system.",
+      "documentation" : { },
+      "id" : "3",
+      "name" : "SUT Example",
+      "properties" : {
+        "structurizr.dsl.identifier" : "sut"
+      },
+      "tags" : "Element,Software System"
+    } ]
+  },
+  "name" : "Name",
+  "properties" : {
+    "structurizr.inspection.info" : "0",
+    "structurizr.inspection.ignore" : "0",
+    "structurizr.inspection.error" : "55",
+    "structurizr.inspection.warning" : "0",
+    "structurizr.dsl" : "d29ya3NwYWNlIHsKCiAgICAhY29uc3QgU1RFRUxfQkxVRSAjMTE2OGJkCiAgICAhY29uc3QgV0hJVEUgI2ZmZmZmZgogICAgIWNvbnN0IE5BVllfQkxVRSAjMDg0MjdiCiAgICAhY29uc3QgU0tZX0JMVUUgIzQzOGRkNQogICAgIWNvbnN0IExJR0hUX1NLWV9CTFVFICM4NWJiZjAKICAgICFjb25zdCBCTEFDSyAjMDAwMDAwCgogICAgIWNvbnN0IEFXU19MSUdIVF9CRyAgICAgICIjRjJGNEY0IgogICAgIWNvbnN0IEFXU19EQVJLX0ZHICAgICAgICIjMjMyRjNFIgogICAgIWNvbnN0IEFXU19NVVRFRF9GRyAgICAgICIjNTQ2RTdBIgoKICAgICFjb25zdCBBV1NfT1JBTkdFX0NPTVBVVEUgIiNGRjk5MDAiCiAgICAhY29uc3QgQVdTX0JMVUVfTkVUV09SSyAgICIjMkU3RDMyIgogICAgIWNvbnN0IEFXU19HUkVFTl9TVE9SQUdFICAiIzNGODYyNCIKICAgICFjb25zdCBBV1NfVEVBTF9EQVRBQkFTRSAgIiMwMDc3QzIiCiAgICAhY29uc3QgQVdTX0JMVUVfREFUQUJBU0UgICIjNTI3RkZGIgogICAgIWNvbnN0IEFXU19SRURfU0VDVVJJVFkgICAiI0QzMkYyRiIKICAgICFjb25zdCBBV1NfUFVSUExFX0FQUCAgICAgIiM3QjFGQTIiCiAgICAhY29uc3QgQVdTX1lFTExPV19NR01UICAgICIjRkJDMDJEIgogICAgIWNvbnN0IEFXU19HUkVZX0lORlJBICAgICAiIzc4OTA5QyIKICAgICFjb25zdCBBV1NfUElOS19BUFAgICAgICAgIiNFNzE1N0IiCgogICAgbW9kZWwgewoKICAgICAgICAgICAgYXJjaGV0eXBlcyB7CiAgICAgICAgICAgICAgIGxhbWJkYSA9IGNvbXBvbmVudCB7CiAgICAgICAgICAgICAgICAgICAgdGVjaG5vbG9neSAiQVdTIExhbWJkYSIKICAgICAgICAgICAgICAgICAgICB0YWdzICJBbWF6b24gV2ViIFNlcnZpY2VzIC0gTGFtYmRhIgogICAgICAgICAgICAgICAgfQoKICAgICAgICAgICAgICAgIGR5bmFtb2RiID0gY29tcG9uZW50IHsKICAgICAgICAgICAgICAgICAgICB0ZWNobm9sb2d5ICJBV1MgRHluYW1vRGIiCiAgICAgICAgICAgICAgICAgICAgdGFncyAiQW1hem9uIFdlYiBTZXJ2aWNlcyAtIER5bmFtb0RCIFRhYmxlIgogICAgICAgICAgICAgICAgfQoKICAgICAgICAgICAgICAgIHNlcnZpY2UgPSBjb250YWluZXIKICAgICAgICAgICAgfQogICAgICAgIHVzZXIgPSBwZXJzb24gIlVzZXIiICJBIHVzZXIgb2YgdGhlIFNVVCBzeXN0ZW0uIgoKICAgICAgICByb2JvdCA9IHBlcnNvbiAiQ2FuYXJ5IiAiIiB7CiAgICAgICAgICAgIHRhZ3MgIkFtYXpvbiBXZWIgU2VydmljZXMgLSBDbG91ZFdhdGNoIFN5bnRoZXRpY3MiCiAgICAgICAgfQoKICAgICAgICBzdXQgPSBzb2Z0d2FyZVN5c3RlbSAiU1VUIEV4YW1wbGUiICJBV1MgTGFtYmRhIHN0cmVhbSBwcm9jZXNzaW5nIGV4YW1wbGUgc3lzdGVtLiIgewoKICAgICAgICAgICAgZXZlbnRIdWIgPSBzZXJ2aWNlICJFdmVudCBIdWIiICJDZW50cmFsIGV2ZW50IGRpc3RyaWJ1dGlvbiBhbmQgc3RyZWFtaW5nLiIgIkFXUyBFdmVudEJyaWRnZSwgS2luZXNpcyIgewogICAgICAgICAgICAgICAgZXZlbnRCdXMgPSBjb21wb25lbnQgIkV2ZW50IEJ1cyIgIkNlbnRyYWwgZXZlbnQgZGlzdHJpYnV0aW9uIGJ1cy4iICJBV1MgRXZlbnRCcmlkZ2UiIHsKICAgICAgICAgICAgICAgICAgICB0YWdzICJBbWF6b24gV2ViIFNlcnZpY2VzIC0gRXZlbnRCcmlkZ2UiCiAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgICAgICBldmVudFN0cmVhbSA9IGNvbXBvbmVudCAiRXZlbnQgU3RyZWFtIiAiSGlnaC12b2x1bWUgZXZlbnQgc3RyZWFtIGZvciBkb3duc3RyZWFtIGNvbnN1bWVycy4iICJBV1MgS2luZXNpcyIgewogICAgICAgICAgICAgICAgICAgIHRhZ3MgIkFtYXpvbiBXZWIgU2VydmljZXMgLSBLaW5lc2lzIgogICAgICAgICAgICAgICAgfQogICAgICAgICAgICB9CgogICAgICAgICAgICBjb250cm9sU2VydmljZSA9IGNvbnRhaW5lciAiQ29udHJvbCBTZXJ2aWNlIiAiTWFuYWdlcyBjb250cm9sLXJlbGF0ZWQgZXZlbnRzIGFuZCBzdGF0ZS4iICJLb3RsaW4sIEFXUyBMYW1iZGEsIER5bmFtb0RCIiB7CiAgICAgICAgICAgICAgICBjb250cm9sVGFibGUgPSBjb21wb25lbnQgIkV2ZW50cyBUYWJsZSIgIlN0b3JlcyBjb250cm9sIGV2ZW50IHN0YXRlLiIgIkFXUyBEeW5hbW9EQiIgewogICAgICAgICAgICAgICAgICAgIHRhZ3MgIkFtYXpvbiBXZWIgU2VydmljZXMgLSBEeW5hbW9EQiBUYWJsZSIKICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgIGNvbnRyb2xUcmlnZ2VyID0gY29tcG9uZW50ICJDb250cm9sIFRyaWdnZXIiICJQcm9jZXNzZXMgdGFibGUgY2hhbmdlcyBhbmQgcHVibGlzaGVzIHRvIHRoZSBjZW50cmFsIEV2ZW50QnVzLiIgIkFXUyBMYW1iZGEiIHsKICAgICAgICAgICAgICAgICAgICB0YWdzICJBbWF6b24gV2ViIFNlcnZpY2VzIC0gTGFtYmRhIgogICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgICAgY29udHJvbExpc3RlbmVyID0gY29tcG9uZW50ICJDb250cm9sIExpc3RlbmVyIiAiQ29uc3VtZXMgZXZlbnRzIGZyb20gdGhlIGNlbnRyYWwgS2luZXNpcyBzdHJlYW0gYW5kIHVwZGF0ZXMgdGhlIHN0YXRlLiIgIkFXUyBMYW1iZGEiIHsKICAgICAgICAgICAgICAgICAgICB0YWdzICJBbWF6b24gV2ViIFNlcnZpY2VzIC0gTGFtYmRhIgogICAgICAgICAgICAgICAgfQogICAgICAgICAgICB9CgogICAgICAgICAgICBzaGlwbWVudEJmZiA9IGNvbnRhaW5lciAiU2hpcG1lbnQgQkZGIiAiQmFja2VuZCBmb3IgRnJvbnRlbmQgZm9yIHNoaXBtZW50IG1hbmFnZW1lbnQuIiAiS290bGluLCBBV1MgTGFtYmRhLCBEeW5hbW9EQiIgewogICAgICAgICAgICAgICAgc2hpcG1lbnRBcGkgPSBsYW1iZGEgIlNoaXBtZW50IEFQSSIgIlJFU1QgQVBJIGZvciBtYW5hZ2luZyBzaGlwbWVudHMuIiAiQVdTIExhbWJkYSIgewogICAgICAgICAgICAgICAgICAgIHRhZ3MgIkFtYXpvbiBXZWIgU2VydmljZXMgLSBMYW1iZGEiCiAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgICAgICBzaGlwbWVudFRhYmxlID0gZHluYW1vZGIgIlNoaXBtZW50cyBUYWJsZSIgIlN0b3JlcyBzaGlwbWVudCBkYXRhLiIgIkFXUyBEeW5hbW9EQiIgewogICAgICAgICAgICAgICAgICAgIHRhZ3MgIkFtYXpvbiBXZWIgU2VydmljZXMgLSBEeW5hbW9EQiBUYWJsZSIKICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgIHNoaXBtZW50VHJpZ2dlciA9IGNvbXBvbmVudCAiU2hpcG1lbnQgVHJpZ2dlciIgIlByb2Nlc3NlcyB0YWJsZSBjaGFuZ2VzIGFuZCBwdWJsaXNoZXMgdG8gdGhlIGNlbnRyYWwgRXZlbnRCdXMuIiAiQVdTIExhbWJkYSIgewogICAgICAgICAgICAgICAgICAgIHRhZ3MgIkFtYXpvbiBXZWIgU2VydmljZXMgLSBMYW1iZGEiCiAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgICAgICBzaGlwbWVudExpc3RlbmVyID0gY29tcG9uZW50ICJTaGlwbWVudCBMaXN0ZW5lciIgIkNvbnN1bWVzIGV2ZW50cyBmcm9tIHRoZSBjZW50cmFsIEtpbmVzaXMgc3RyZWFtIGFuZCB1cGRhdGVzIHNoaXBtZW50IGRhdGEuIiAiQVdTIExhbWJkYSIgewogICAgICAgICAgICAgICAgICAgIHRhZ3MgIkFtYXpvbiBXZWIgU2VydmljZXMgLSBMYW1iZGEiCiAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgIH0KCiAgICAgICAgICAgIGV2ZW50TGFrZSA9IGNvbnRhaW5lciAiRXZlbnQgTGFrZSIgIkFyY2hpdmVzIGFsbCBzeXN0ZW0gZXZlbnRzIGZvciBsb25nLXRlcm0gc3RvcmFnZS4iICJBV1MgRmlyZWhvc2UsIFMzIiB7CiAgICAgICAgICAgICAgICBsYWtlRmlyZWhvc2UgPSBjb21wb25lbnQgIkV2ZW50IExha2UgRmlyZWhvc2UiICJJbmdlc3RzIGV2ZW50cyBmcm9tIEV2ZW50QnJpZGdlIGFuZCBkZWxpdmVycyB0byBTMy4iICJBV1MgS2luZXNpcyBGaXJlaG9zZSIgewogICAgICAgICAgICAgICAgICAgIHRhZ3MgIkFtYXpvbiBXZWIgU2VydmljZXMgLSBLaW5lc2lzIEZpcmVob3NlIgogICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgICAgbGFrZUJ1Y2tldCA9IGNvbXBvbmVudCAiRXZlbnQgTGFrZSBCdWNrZXQiICJTdG9yZXMgYXJjaGl2ZWQgZXZlbnRzLiIgIkFXUyBTMyIgewogICAgICAgICAgICAgICAgICAgIHRhZ3MgIkFtYXpvbiBXZWIgU2VydmljZXMgLSBTaW1wbGUgU3RvcmFnZSBTZXJ2aWNlIgogICAgICAgICAgICAgICAgfQogICAgICAgICAgICB9CgogICAgICAgICAgICBmYXVsdE1vbml0b3IgPSBjb250YWluZXIgIkV2ZW50IEZhdWx0IE1vbml0b3IiICJNb25pdG9ycyBldmVudCBwcm9jZXNzaW5nIGZhdWx0cyBhbmQgbm90aWZpZXMgdmlhIFNOUy4iICJLb3RsaW4sIEFXUyBGaXJlaG9zZSwgTGFtYmRhLCBTTlMiIHsKICAgICAgICAgICAgICAgIGZhdWx0RmlyZWhvc2UgPSBjb21wb25lbnQgIkZhdWx0IEZpcmVob3NlIiAiSW5nZXN0cyBmYXVsdCBldmVudHMgZnJvbSBFdmVudEJyaWRnZS4iICJBV1MgS2luZXNpcyBGaXJlaG9zZSIgewogICAgICAgICAgICAgICAgICAgIHRhZ3MgIkFtYXpvbiBXZWIgU2VydmljZXMgLSBLaW5lc2lzIEZpcmVob3NlIgogICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgICAgZmF1bHRUcmFuc2Zvcm0gPSBjb21wb25lbnQgIkZhdWx0IFRyYW5zZm9ybSIgIlRyYW5zZm9ybXMgYW5kIGZpbHRlcnMgZmF1bHQgZXZlbnRzLiIgIkFXUyBMYW1iZGEiIHsKICAgICAgICAgICAgICAgICAgICB0YWdzICJBbWF6b24gV2ViIFNlcnZpY2VzIC0gTGFtYmRhIgogICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgICAgZmF1bHRCdWNrZXQgPSBjb21wb25lbnQgIkZhdWx0IEJ1Y2tldCIgIlN0b3JlcyBmYXVsdCBldmVudCBsb2dzLiIgIkFXUyBTMyIgewogICAgICAgICAgICAgICAgICAgIHRhZ3MgIkFtYXpvbiBXZWIgU2VydmljZXMgLSBTaW1wbGUgU3RvcmFnZSBTZXJ2aWNlIgogICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgICAgZmF1bHRUb3BpYyA9IGNvbXBvbmVudCAiRmF1bHQgVG9waWMiICJTTlMgVG9waWMgZm9yIGZhdWx0IG5vdGlmaWNhdGlvbnMuIiAiQVdTIFNOUyIgewogICAgICAgICAgICAgICAgICAgIHRhZ3MgIkFtYXpvbiBXZWIgU2VydmljZXMgLSBTaW1wbGUgTm90aWZpY2F0aW9uIFNlcnZpY2UiCiAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgICAgICBmYXVsdFF1ZXVlID0gY29tcG9uZW50ICJGYXVsdCBRdWV1ZSIgIlNRUyBRdWV1ZSBmb3IgZmF1bHQgdmVyaWZpY2F0aW9uLiIgIkFXUyBTUVMiIHsKICAgICAgICAgICAgICAgICAgICB0YWdzICJBbWF6b24gV2ViIFNlcnZpY2VzIC0gU2ltcGxlIFF1ZXVlIFNlcnZpY2UiCiAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgIH0KCiAgICAgICAgICAgIGhlYWx0aENoZWNrID0gY29udGFpbmVyICJSZWdpb25hbCBIZWFsdGggQ2hlY2siICJTZWxmLWNvbnRhaW5lZCByZWdpb25hbCBoZWFsdGggbW9uaXRvcmluZyBsb29wLiIgIktvdGxpbiwgQVdTIExhbWJkYSwgRHluYW1vREIsIFMzLCBTTlMsIFNRUyIgewogICAgICAgICAgICAgICAgaGVhbHRoQXBpID0gY29tcG9uZW50ICJIZWFsdGggQVBJIiAiRW5kcG9pbnQgdG8gdHJpZ2dlciByZWdpb25hbCBoZWFsdGggY2hlY2tzLiIgIkFXUyBMYW1iZGEiIHsKICAgICAgICAgICAgICAgICAgICB0YWdzICJBbWF6b24gV2ViIFNlcnZpY2VzIC0gTGFtYmRhIgogICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgICAgaGVhbHRoVGFibGUgPSBjb21wb25lbnQgIkhlYWx0aCBUYWJsZSIgIlN0b3JlcyBoZWFsdGggY2hlY2sgc3RhdGUgYW5kIHJlc3VsdHMuIiAiQVdTIER5bmFtb0RCIiB7CiAgICAgICAgICAgICAgICAgICAgdGFncyAiQW1hem9uIFdlYiBTZXJ2aWNlcyAtIER5bmFtb0RCIFRhYmxlIgogICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgICAgaGVhbHRoRGJUcmlnZ2VyID0gY29tcG9uZW50ICJIZWFsdGggREIgVHJpZ2dlciIgIlByb2Nlc3NlcyBoZWFsdGggdGFibGUgY2hhbmdlcy4iICJBV1MgTGFtYmRhIiB7CiAgICAgICAgICAgICAgICAgICAgdGFncyAiQW1hem9uIFdlYiBTZXJ2aWNlcyAtIExhbWJkYSIKICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgIGhlYWx0aEJ1Y2tldCA9IGNvbXBvbmVudCAiSGVhbHRoIEJ1Y2tldCIgIlN0b3JlcyBoZWFsdGggY2hlY2sgYXJ0aWZhY3RzLiIgIkFXUyBTMyIgewogICAgICAgICAgICAgICAgICAgIHRhZ3MgIkFtYXpvbiBXZWIgU2VydmljZXMgLSBTaW1wbGUgU3RvcmFnZSBTZXJ2aWNlIgogICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgICAgaGVhbHRoVG9waWMgPSBjb21wb25lbnQgIkhlYWx0aCBUb3BpYyIgIlNOUyBUb3BpYyBmb3IgaGVhbHRoIGNoZWNrIGZsb3cgbm90aWZpY2F0aW9ucy4iICJBV1MgU05TIiB7CiAgICAgICAgICAgICAgICAgICAgdGFncyAiQW1hem9uIFdlYiBTZXJ2aWNlcyAtIFNpbXBsZSBOb3RpZmljYXRpb24gU2VydmljZSIKICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgIGhlYWx0aFF1ZXVlID0gY29tcG9uZW50ICJIZWFsdGggUXVldWUiICJTUVMgUXVldWUgZm9yIGhlYWx0aCBjaGVjayBmbG93IHZlcmlmaWNhdGlvbi4iICJBV1MgU1FTIiB7CiAgICAgICAgICAgICAgICAgICAgdGFncyAiQW1hem9uIFdlYiBTZXJ2aWNlcyAtIFNpbXBsZSBRdWV1ZSBTZXJ2aWNlIgogICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgICAgaGVhbHRoUzNUcmlnZ2VyID0gY29tcG9uZW50ICJIZWFsdGggUzMgVHJpZ2dlciIgIlByb2Nlc3NlcyBTMyBldmVudHMgYW5kIHB1Ymxpc2hlcyB0byBsb2NhbCBFdmVudEJ1cy4iICJBV1MgTGFtYmRhIiB7CiAgICAgICAgICAgICAgICAgICAgdGFncyAiQW1hem9uIFdlYiBTZXJ2aWNlcyAtIExhbWJkYSIKICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgIGhlYWx0aEJ1cyA9IGNvbXBvbmVudCAiSGVhbHRoIEV2ZW50QnVzIiAiTG9jYWwgRXZlbnRCcmlkZ2UgYnVzIGZvciBoZWFsdGggY2hlY2sgZmxvdy4iICJBV1MgRXZlbnRCcmlkZ2UiIHsKICAgICAgICAgICAgICAgICAgICB0YWdzICJBbWF6b24gV2ViIFNlcnZpY2VzIC0gRXZlbnRCcmlkZ2UiCiAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgICAgICBoZWFsdGhTdHJlYW0gPSBjb21wb25lbnQgIkhlYWx0aCBLaW5lc2lzIFN0cmVhbSIgIkxvY2FsIEtpbmVzaXMgc3RyZWFtIGZvciBoZWFsdGggY2hlY2sgZmxvdy4iICJBV1MgS2luZXNpcyIgewogICAgICAgICAgICAgICAgICAgIHRhZ3MgIkFtYXpvbiBXZWIgU2VydmljZXMgLSBLaW5lc2lzIgogICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgICAgaGVhbHRoS2luZXNpc1RyaWdnZXIgPSBjb21wb25lbnQgIkhlYWx0aCBLaW5lc2lzIFRyaWdnZXIiICJDb25zdW1lcyBmcm9tIGxvY2FsIHN0cmVhbSBhbmQgdXBkYXRlcyBoZWFsdGggdGFibGUuIiAiQVdTIExhbWJkYSIgewogICAgICAgICAgICAgICAgICAgIHRhZ3MgIkFtYXpvbiBXZWIgU2VydmljZXMgLSBMYW1iZGEiCiAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgIH0KICAgICAgICB9CiAgICAgICAgCiAgICAgICAgIyBFeHRlcm5hbCBSZWxhdGlvbnNoaXBzCiAgICAgICAgdXNlciAtPiBzaGlwbWVudEFwaSAiTWFuYWdlcyBzaGlwbWVudHMgdmlhIgogICAgICAgIHJvYm90IC0+IGhlYWx0aEFwaSAiVHJpZ2dlcnMgaGVhbHRoIGNoZWNrcyB2aWEiCiAgICAgICAgCiAgICAgICAgIyBJbnRlcm5hbCBSZWxhdGlvbnNoaXBzCiAgICAgICAgZXZlbnRCdXMgLT4gZXZlbnRTdHJlYW0gIkZvcndhcmRzIGV2ZW50cyB0byIKICAgICAgICAKICAgICAgICAjIENvbnRyb2wgU2VydmljZSBEYXRhIEZsb3cKICAgICAgICBjb250cm9sVGFibGUgLT4gY29udHJvbFRyaWdnZXIgIlRyaWdnZXJzIG9uIGNoYW5nZXMiCiAgICAgICAgY29udHJvbFRyaWdnZXIgLT4gZXZlbnRCdXMgIlB1Ymxpc2hlcyBldmVudHMgdG8iCiAgICAgICAgZXZlbnRTdHJlYW0gLT4gY29udHJvbExpc3RlbmVyICJUcmlnZ2VycyB3aXRoIGV2ZW50cyIKICAgICAgICBjb250cm9sTGlzdGVuZXIgLT4gY29udHJvbFRhYmxlICJVcGRhdGVzIHN0YXRlIGluIgogICAgICAgIAogICAgICAgICMgU2hpcG1lbnQgQkZGIERhdGEgRmxvdwogICAgICAgIHNoaXBtZW50QXBpIC0+IHNoaXBtZW50VGFibGUgIlJlYWRzL1dyaXRlcyBzaGlwbWVudCBkYXRhIgogICAgICAgIHNoaXBtZW50VGFibGUgLT4gc2hpcG1lbnRUcmlnZ2VyICJUcmlnZ2VycyBvbiBjaGFuZ2VzIgogICAgICAgIHNoaXBtZW50VHJpZ2dlciAtPiBldmVudEJ1cyAiUHVibGlzaGVzIGV2ZW50cyB0byIKICAgICAgICBldmVudFN0cmVhbSAtPiBzaGlwbWVudExpc3RlbmVyICJUcmlnZ2VycyB3aXRoIGV2ZW50cyIKICAgICAgICBzaGlwbWVudExpc3RlbmVyIC0+IHNoaXBtZW50VGFibGUgIlVwZGF0ZXMgc2hpcG1lbnQgZGF0YSBpbiIKICAgICAgICAKICAgICAgICAjIEV2ZW50IExha2UgRGF0YSBGbG93CiAgICAgICAgZXZlbnRCdXMgLT4gbGFrZUZpcmVob3NlICJEZWxpdmVycyBldmVudHMgdG8iCiAgICAgICAgbGFrZUZpcmVob3NlIC0+IGxha2VCdWNrZXQgIlN0b3JlcyBldmVudHMgaW4iCiAgICAgICAgCiAgICAgICAgIyBGYXVsdCBNb25pdG9yIERhdGEgRmxvdwogICAgICAgIGV2ZW50QnVzIC0+IGZhdWx0RmlyZWhvc2UgIkRlbGl2ZXJzIGZhdWx0IGV2ZW50cyB0byIKICAgICAgICBmYXVsdEZpcmVob3NlIC0+IGZhdWx0VHJhbnNmb3JtICJVc2VzIGZvciB0cmFuc2Zvcm1hdGlvbiIKICAgICAgICBmYXVsdEZpcmVob3NlIC0+IGZhdWx0QnVja2V0ICJTdG9yZXMgZmF1bHQgbG9ncyBpbiIKICAgICAgICBmYXVsdFRyYW5zZm9ybSAtPiBmYXVsdFRvcGljICJQdWJsaXNoZXMgZmF1bHRzIHRvIgogICAgICAgIGZhdWx0VG9waWMgLT4gZmF1bHRRdWV1ZSAiRm9yd2FyZHMgbm90aWZpY2F0aW9ucyB0byIKICAgICAgICAKICAgICAgICAjIFJlZ2lvbmFsIEhlYWx0aCBDaGVjayBEYXRhIEZsb3cgKFRyYWNlciBMb29wKQogICAgICAgIGhlYWx0aEFwaSAtPiBoZWFsdGhUYWJsZSAiSW5pdGlhdGVzIGhlYWx0aCBjaGVjayBpbiIKICAgICAgICBoZWFsdGhUYWJsZSAtPiBoZWFsdGhEYlRyaWdnZXIgIlRyaWdnZXJzIG9uIHJlY29yZCBjcmVhdGlvbiIKICAgICAgICBoZWFsdGhEYlRyaWdnZXIgLT4gaGVhbHRoQnVja2V0ICJXcml0ZXMgYXJ0aWZhY3QgdG8iCiAgICAgICAgaGVhbHRoQnVja2V0IC0+IGhlYWx0aFRvcGljICJOb3RpZmllcyBvbiBuZXcgYXJ0aWZhY3QiCiAgICAgICAgaGVhbHRoVG9waWMgLT4gaGVhbHRoUXVldWUgIkZvcndhcmRzIG5vdGlmaWNhdGlvbiB0byIKICAgICAgICBoZWFsdGhRdWV1ZSAtPiBoZWFsdGhTM1RyaWdnZXIgIlRyaWdnZXJzIHByb2Nlc3Npbmcgb2YiCiAgICAgICAgaGVhbHRoUzNUcmlnZ2VyIC0+IGhlYWx0aEJ1cyAiUHVibGlzaGVzIGhlYWx0aCBldmVudCB0byIKICAgICAgICBoZWFsdGhCdXMgLT4gaGVhbHRoU3RyZWFtICJGb3J3YXJkcyBoZWFsdGggZXZlbnQgdG8iCiAgICAgICAgaGVhbHRoU3RyZWFtIC0+IGhlYWx0aEtpbmVzaXNUcmlnZ2VyICJUcmlnZ2VycyBvbiBoZWFsdGggZXZlbnQiCiAgICAgICAgaGVhbHRoS2luZXNpc1RyaWdnZXIgLT4gaGVhbHRoVGFibGUgIkNvbXBsZXRlcyBoZWFsdGggY2hlY2sgaW4iCiAgICB9CgogICAgdmlld3MgewogICAgICAgIHN5c3RlbUNvbnRleHQgc3V0ICJTeXN0ZW1Db250ZXh0IiB7CiAgICAgICAgICAgIGluY2x1ZGUgKgogICAgICAgIH0KICAgICAgICAKICAgICAgICBjb250YWluZXIgc3V0ICJDb250YWluZXJzIiB7CiAgICAgICAgICAgIGluY2x1ZGUgKgogICAgICAgIH0KICAgICAgICAKICAgICAgICBjb21wb25lbnQgZXZlbnRIdWIgIkV2ZW50SHViQ29tcG9uZW50cyIgewogICAgICAgICAgICBpbmNsdWRlICoKICAgICAgICB9CiAgICAgICAgCiAgICAgICAgY29tcG9uZW50IGNvbnRyb2xTZXJ2aWNlICJDb250cm9sU2VydmljZUNvbXBvbmVudHMiIHsKICAgICAgICAgICAgaW5jbHVkZSAqCiAgICAgICAgfQogICAgICAgIAogICAgICAgIGNvbXBvbmVudCBzaGlwbWVudEJmZiAiU2hpcG1lbnRCZmZDb21wb25lbnRzIiB7CiAgICAgICAgICAgIGluY2x1ZGUgKgogICAgICAgIH0KICAgICAgICAKICAgICAgICBjb21wb25lbnQgaGVhbHRoQ2hlY2sgIkhlYWx0aENoZWNrQ29tcG9uZW50cyIgewogICAgICAgICAgICBpbmNsdWRlICoKICAgICAgICB9CgogICAgICAgIGNvbXBvbmVudCBmYXVsdE1vbml0b3IgIkZhdWx0TW9uaXRvckNvbXBvbmVudHMiIHsKICAgICAgICAgICAgIGluY2x1ZGUgKgogICAgICAgIH0KCiAgICAgICAgY29tcG9uZW50IGV2ZW50TGFrZSAiRXZlbnRMYWtlQ29tcG9uZW50cyIgewogICAgICAgICAgICAgIGluY2x1ZGUgKgogICAgICAgIH0KCgogICAgICAgIHRoZW1lIGh0dHBzOi8vc3RhdGljLnN0cnVjdHVyaXpyLmNvbS90aGVtZXMvYW1hem9uLXdlYi1zZXJ2aWNlcy0yMDIzLjAxLjMxL3RoZW1lLmpzb24KCiAgICAgICAgc3R5bGVzIHsKICAgICAgICAgICAgZWxlbWVudCAiRWxlbWVudCIgewogICAgICAgICAgICAgICAgYmFja2dyb3VuZCAke1NURUVMX0JMVUV9CiAgICAgICAgICAgICAgICBjb2xvciAke1dISVRFfQogICAgICAgICAgICB9CiAgICAgICAgICAgIGVsZW1lbnQgIlBlcnNvbiIgewogICAgICAgICAgICAgICAgc2hhcGUgUGVyc29uCiAgICAgICAgICAgICAgICBiYWNrZ3JvdW5kICR7TkFWWV9CTFVFfQogICAgICAgICAgICB9CiAgICAgICAgICAgIGVsZW1lbnQgIlJvYm90IiB7CiAgICAgICAgICAgICAgICBzaGFwZSBSb2JvdAogICAgICAgICAgICAgICAgYmFja2dyb3VuZCAke05BVllfQkxVRX0KICAgICAgICAgICAgfQogICAgICAgICAgICBlbGVtZW50ICJDb250YWluZXIiIHsKICAgICAgICAgICAgICAgIGJhY2tncm91bmQgJHtTS1lfQkxVRX0KICAgICAgICAgICAgfQogICAgICAgICAgICBlbGVtZW50ICJDb21wb25lbnQiIHsKICAgICAgICAgICAgICAgIGJhY2tncm91bmQgJHtMSUdIVF9TS1lfQkxVRX0KICAgICAgICAgICAgICAgIGNvbG9yICR7QkxBQ0t9CiAgICAgICAgICAgIH0KICAgICAgICAgICAgZWxlbWVudCAiQW1hem9uIFdlYiBTZXJ2aWNlcyAtIExhbWJkYSIgewogICAgICAgICAgICAgICAgYmFja2dyb3VuZCAke1dISVRFfQogICAgICAgICAgICAgICAgY29sb3IgJHtBV1NfT1JBTkdFX0NPTVBVVEV9CiAgICAgICAgICAgIH0KICAgICAgICAgICAgZWxlbWVudCAiQW1hem9uIFdlYiBTZXJ2aWNlcyAtIEV2ZW50QnJpZGdlIiB7CiAgICAgICAgICAgICAgICBiYWNrZ3JvdW5kICR7V0hJVEV9CiAgICAgICAgICAgICAgICBjb2xvciAke0FXU19QSU5LX0FQUH0KICAgICAgICAgICAgfQogICAgICAgICAgICBlbGVtZW50ICJBbWF6b24gV2ViIFNlcnZpY2VzIC0gS2luZXNpcyIgewogICAgICAgICAgICAgICAgYmFja2dyb3VuZCAke1dISVRFfQogICAgICAgICAgICAgICAgY29sb3IgJHtBV1NfUFVSUExFX0FQUH0KICAgICAgICAgICAgfQogICAgICAgICAgICBlbGVtZW50ICJBbWF6b24gV2ViIFNlcnZpY2VzIC0gRHluYW1vREIgVGFibGUiIHsKICAgICAgICAgICAgICAgIGJhY2tncm91bmQgJHtXSElURX0KICAgICAgICAgICAgICAgIGNvbG9yICR7QVdTX0JMVUVfREFUQUJBU0V9CiAgICAgICAgICAgICAgICAjY29sb3IgJHtBV1NfUFVSUExFX0FQUH0KICAgICAgICAgICAgICAgIHNoYXBlIGN5bGluZGVyCiAgICAgICAgICAgIH0KICAgICAgICAgICAgZWxlbWVudCAiQW1hem9uIFdlYiBTZXJ2aWNlcyAtIEtpbmVzaXMgRmlyZWhvc2UiIHsKICAgICAgICAgICAgICAgIGJhY2tncm91bmQgJHtXSElURX0KICAgICAgICAgICAgICAgIGNvbG9yICR7QVdTX1BVUlBMRV9BUFB9CiAgICAgICAgICAgIH0KICAgICAgICAgICAgZWxlbWVudCAiQW1hem9uIFdlYiBTZXJ2aWNlcyAtIFNpbXBsZSBTdG9yYWdlIFNlcnZpY2UiIHsKICAgICAgICAgICAgICAgIGJhY2tncm91bmQgJHtXSElURX0KICAgICAgICAgICAgICAgIGNvbG9yICR7QVdTX0dSRUVOX1NUT1JBR0V9CiAgICAgICAgICAgIH0KICAgICAgICAgICAgZWxlbWVudCAiQW1hem9uIFdlYiBTZXJ2aWNlcyAtIFNpbXBsZSBOb3RpZmljYXRpb24gU2VydmljZSIgewogICAgICAgICAgICAgICAgYmFja2dyb3VuZCAke1dISVRFfQogICAgICAgICAgICAgICAgY29sb3IgJHtBV1NfUElOS19BUFB9CiAgICAgICAgICAgIH0KICAgICAgICAgICAgZWxlbWVudCAiQW1hem9uIFdlYiBTZXJ2aWNlcyAtIFNpbXBsZSBRdWV1ZSBTZXJ2aWNlIiB7CiAgICAgICAgICAgICAgICBiYWNrZ3JvdW5kICR7V0hJVEV9CiAgICAgICAgICAgICAgICBjb2xvciAke0FXU19QSU5LX0FQUH0KICAgICAgICAgICAgfQogICAgICAgICAgICBlbGVtZW50ICJBbWF6b24gV2ViIFNlcnZpY2VzIC0gQ2xvdWRXYXRjaCBTeW50aGV0aWNzIiB7CiAgICAgICAgICAgICAgICBzaGFwZSBSb2JvdAogICAgICAgICAgICAgICAgYmFja2dyb3VuZCAke1dISVRFfQogICAgICAgICAgICAgICAgY29sb3IgJHtBV1NfUFVSUExFX0FQUH0KICAgICAgICAgICAgfQogICAgICAgIH0KICAgIH0KfQ=="
+  },
+  "views" : {
+    "componentViews" : [ {
+      "containerId" : "4",
+      "dimensions" : {
+        "height" : 1884,
+        "width" : 2425
+      },
+      "elements" : [ {
+        "id" : "5",
+        "x" : 1015,
+        "y" : 730
+      }, {
+        "id" : "6",
+        "x" : 1920,
+        "y" : 735
+      }, {
+        "id" : "7",
+        "x" : 1324,
+        "y" : 209
+      }, {
+        "id" : "11",
+        "x" : 249,
+        "y" : 709
+      }, {
+        "id" : "16",
+        "x" : 1560,
+        "y" : 1205
+      }, {
+        "id" : "19",
+        "x" : 1030,
+        "y" : 1205
+      } ],
+      "externalContainerBoundariesVisible" : false,
+      "key" : "EventHubComponents",
+      "name" : "Component View: SUT Example - Event Hub",
+      "order" : 3,
+      "relationships" : [ {
+        "id" : "42"
+      }, {
+        "id" : "46"
+      }, {
+        "id" : "49"
+      }, {
+        "id" : "57"
+      }, {
+        "id" : "60",
+        "vertices" : [ {
+          "x" : 1005,
+          "y" : 415
+        } ]
+      }, {
+        "id" : "65"
+      }, {
+        "id" : "70"
+      } ]
+    }, {
+      "containerId" : "7",
+      "dimensions" : {
+        "height" : 1523,
+        "width" : 2825
+      },
+      "elements" : [ {
+        "id" : "4",
+        "x" : 630,
+        "y" : 635
+      }, {
+        "id" : "8",
+        "x" : 2014,
+        "y" : 259
+      }, {
+        "id" : "9",
+        "x" : 2035,
+        "y" : 725
+      }, {
+        "id" : "10",
+        "x" : 1260,
+        "y" : 270
+      } ],
+      "externalContainerBoundariesVisible" : false,
+      "key" : "ControlServiceComponents",
+      "name" : "Component View: SUT Example - Control Service",
+      "order" : 4,
+      "relationships" : [ {
+        "id" : "43"
+      }, {
+        "id" : "45"
+      }, {
+        "id" : "50"
+      }, {
+        "id" : "52"
+      } ]
+    }, {
+      "containerId" : "11",
+      "dimensions" : {
+        "height" : 1838,
+        "width" : 3836
+      },
+      "elements" : [ {
+        "id" : "1",
+        "x" : 199,
+        "y" : 584
+      }, {
+        "id" : "4",
+        "x" : 3135,
+        "y" : 619
+      }, {
+        "id" : "12",
+        "x" : 1039,
+        "y" : 634
+      }, {
+        "id" : "13",
+        "x" : 1700,
+        "y" : 654
+      }, {
+        "id" : "14",
+        "x" : 2325,
+        "y" : 259
+      }, {
+        "id" : "15",
+        "x" : 2360,
+        "y" : 1039
+      } ],
+      "externalContainerBoundariesVisible" : false,
+      "key" : "ShipmentBffComponents",
+      "name" : "Component View: SUT Example - Shipment BFF",
+      "order" : 5,
+      "relationships" : [ {
+        "id" : "36"
+      }, {
+        "id" : "53"
+      }, {
+        "id" : "54"
+      }, {
+        "id" : "56"
+      }, {
+        "id" : "61"
+      }, {
+        "id" : "63"
+      } ]
+    }, {
+      "containerId" : "25",
+      "dimensions" : {
+        "height" : 2698,
+        "width" : 4130
+      },
+      "elements" : [ {
+        "id" : "2",
+        "x" : 215,
+        "y" : 1165
+      }, {
+        "id" : "26",
+        "x" : 1040,
+        "y" : 1230
+      }, {
+        "id" : "27",
+        "x" : 1830,
+        "y" : 1230
+      }, {
+        "id" : "28",
+        "x" : 1835,
+        "y" : 724
+      }, {
+        "id" : "29",
+        "x" : 1835,
+        "y" : 265
+      }, {
+        "id" : "30",
+        "x" : 2611,
+        "y" : 259
+      }, {
+        "id" : "31",
+        "x" : 3380,
+        "y" : 265
+      }, {
+        "id" : "32",
+        "x" : 3380,
+        "y" : 1190
+      }, {
+        "id" : "33",
+        "x" : 3371,
+        "y" : 1899
+      }, {
+        "id" : "34",
+        "x" : 2595,
+        "y" : 1894
+      }, {
+        "id" : "35",
+        "x" : 1825,
+        "y" : 1890
+      } ],
+      "externalContainerBoundariesVisible" : false,
+      "key" : "HealthCheckComponents",
+      "name" : "Component View: SUT Example - Regional Health Check",
+      "order" : 6,
+      "relationships" : [ {
+        "id" : "39"
+      }, {
+        "id" : "77"
+      }, {
+        "id" : "78"
+      }, {
+        "id" : "79"
+      }, {
+        "id" : "80"
+      }, {
+        "id" : "81"
+      }, {
+        "id" : "82"
+      }, {
+        "id" : "83"
+      }, {
+        "id" : "84"
+      }, {
+        "id" : "85"
+      }, {
+        "id" : "86"
+      } ]
+    }, {
+      "containerId" : "19",
+      "dimensions" : {
+        "height" : 1408,
+        "width" : 4210
+      },
+      "elements" : [ {
+        "id" : "4",
+        "x" : 249,
+        "y" : 435
+      }, {
+        "id" : "20",
+        "x" : 1089,
+        "y" : 435
+      }, {
+        "id" : "21",
+        "x" : 1879,
+        "y" : 260
+      }, {
+        "id" : "22",
+        "x" : 1879,
+        "y" : 610
+      }, {
+        "id" : "23",
+        "x" : 2669,
+        "y" : 260
+      }, {
+        "id" : "24",
+        "x" : 3459,
+        "y" : 260
+      } ],
+      "externalContainerBoundariesVisible" : false,
+      "key" : "FaultMonitorComponents",
+      "name" : "Component View: SUT Example - Event Fault Monitor",
+      "order" : 7,
+      "relationships" : [ {
+        "id" : "71"
+      }, {
+        "id" : "73",
+        "vertices" : [ {
+          "x" : 1709,
+          "y" : 410
+        } ]
+      }, {
+        "id" : "74",
+        "vertices" : [ {
+          "x" : 1709,
+          "y" : 760
+        } ]
+      }, {
+        "id" : "75"
+      }, {
+        "id" : "76"
+      } ]
+    }, {
+      "containerId" : "16",
+      "dimensions" : {
+        "height" : 1523,
+        "width" : 1775
+      },
+      "elements" : [ {
+        "id" : "4",
+        "x" : 250,
+        "y" : 254
+      }, {
+        "id" : "17",
+        "x" : 1020,
+        "y" : 259
+      }, {
+        "id" : "18",
+        "x" : 1025,
+        "y" : 724
+      } ],
+      "externalContainerBoundariesVisible" : false,
+      "key" : "EventLakeComponents",
+      "name" : "Component View: SUT Example - Event Lake",
+      "order" : 8,
+      "relationships" : [ {
+        "id" : "66"
+      }, {
+        "id" : "68"
+      } ]
+    } ],
+    "configuration" : {
+      "lastSavedView" : "EventHubComponents",
+      "metadataSymbols" : "SquareBrackets",
+      "styles" : {
+        "elements" : [ {
+          "background" : "#ffffff",
+          "color" : "#7b1fa2",
+          "shape" : "Robot",
+          "tag" : "Amazon Web Services - CloudWatch Synthetics"
+        }, {
+          "background" : "#ffffff",
+          "color" : "#527fff",
+          "shape" : "Cylinder",
+          "tag" : "Amazon Web Services - DynamoDB Table"
+        }, {
+          "background" : "#ffffff",
+          "color" : "#e7157b",
+          "tag" : "Amazon Web Services - EventBridge"
+        }, {
+          "background" : "#ffffff",
+          "color" : "#7b1fa2",
+          "tag" : "Amazon Web Services - Kinesis"
+        }, {
+          "background" : "#ffffff",
+          "color" : "#7b1fa2",
+          "tag" : "Amazon Web Services - Kinesis Firehose"
+        }, {
+          "background" : "#ffffff",
+          "color" : "#ff9900",
+          "tag" : "Amazon Web Services - Lambda"
+        }, {
+          "background" : "#ffffff",
+          "color" : "#e7157b",
+          "tag" : "Amazon Web Services - Simple Notification Service"
+        }, {
+          "background" : "#ffffff",
+          "color" : "#e7157b",
+          "tag" : "Amazon Web Services - Simple Queue Service"
+        }, {
+          "background" : "#ffffff",
+          "color" : "#3f8624",
+          "tag" : "Amazon Web Services - Simple Storage Service"
+        }, {
+          "background" : "#85bbf0",
+          "color" : "#000000",
+          "tag" : "Component"
+        }, {
+          "background" : "#438dd5",
+          "tag" : "Container"
+        }, {
+          "background" : "#1168bd",
+          "color" : "#ffffff",
+          "tag" : "Element"
+        }, {
+          "background" : "#08427b",
+          "shape" : "Person",
+          "tag" : "Person"
+        }, {
+          "background" : "#08427b",
+          "shape" : "Robot",
+          "tag" : "Robot"
+        } ]
+      },
+      "terminology" : { },
+      "themes" : [ "https://static.structurizr.com/themes/amazon-web-services-2023.01.31/theme.json" ]
+    },
+    "containerViews" : [ {
+      "dimensions" : {
+        "height" : 1579,
+        "width" : 3270
+      },
+      "elements" : [ {
+        "id" : "1",
+        "x" : 190,
+        "y" : 415
+      }, {
+        "id" : "2",
+        "x" : 200,
+        "y" : 920
+      }, {
+        "id" : "4",
+        "x" : 1779,
+        "y" : 515
+      }, {
+        "id" : "7",
+        "x" : 1785,
+        "y" : 105
+      }, {
+        "id" : "11",
+        "x" : 990,
+        "y" : 520
+      }, {
+        "id" : "16",
+        "x" : 1650,
+        "y" : 990
+      }, {
+        "id" : "19",
+        "x" : 2195,
+        "y" : 985
+      }, {
+        "id" : "25",
+        "x" : 989,
+        "y" : 910
+      } ],
+      "externalSoftwareSystemBoundariesVisible" : false,
+      "key" : "Containers",
+      "name" : "Container View: SUT Example",
+      "order" : 2,
+      "relationships" : [ {
+        "id" : "37"
+      }, {
+        "id" : "40"
+      }, {
+        "id" : "47"
+      }, {
+        "id" : "51",
+        "vertices" : [ {
+          "x" : 2385,
+          "y" : 435
+        } ]
+      }, {
+        "id" : "58",
+        "vertices" : [ {
+          "x" : 1609,
+          "y" : 348
+        } ]
+      }, {
+        "id" : "62",
+        "vertices" : [ {
+          "x" : 1609,
+          "y" : 946
+        } ]
+      }, {
+        "id" : "67"
+      }, {
+        "id" : "72"
+      } ],
+      "softwareSystemId" : "3"
+    } ],
+    "systemContextViews" : [ {
+      "dimensions" : {
+        "height" : 1225,
+        "width" : 1540
+      },
+      "elements" : [ {
+        "id" : "1",
+        "x" : 230,
+        "y" : 160
+      }, {
+        "id" : "2",
+        "x" : 250,
+        "y" : 605
+      }, {
+        "id" : "3",
+        "x" : 890,
+        "y" : 425
+      } ],
+      "enterpriseBoundaryVisible" : true,
+      "key" : "SystemContext",
+      "name" : "System Context View: SUT Example",
+      "order" : 1,
+      "relationships" : [ {
+        "id" : "38"
+      }, {
+        "id" : "41"
+      } ],
+      "softwareSystemId" : "3"
+    } ]
+  }
+}
