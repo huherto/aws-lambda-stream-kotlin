@@ -42,7 +42,9 @@ class EventFaultMonitorStack(scope: Construct, serviceProps: ServiceProps) : Bas
         // Transform Lambda -> Topic
         grantAccessToTopic(transformLambda, topic)
 
-        // Topic -> Notification Verification Queue
+        // Topic -> Notification Verification Queue.
+        // We need this SQS queue just to verify that notificaitons work in the
+        // integration testing.
         publishToQueue(topic, notificationVerificationQueue)
 
         // Enable these after the destination bucket exists in the mirror region.

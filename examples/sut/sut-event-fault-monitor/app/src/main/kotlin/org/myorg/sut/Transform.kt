@@ -6,7 +6,6 @@ import aws.sdk.kotlin.services.sns.model.PublishRequest
 import aws.smithy.kotlin.runtime.net.url.Url
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
-import com.amazonaws.services.lambda.runtime.RequestStreamHandler
 import com.amazonaws.services.lambda.runtime.events.KinesisFirehoseEvent
 import io.github.huherto.awsLambdaStream.EnvironmentConfig
 import io.github.huherto.awsLambdaStream.longOrNull
@@ -19,61 +18,15 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
 import mu.KotlinLogging
 import java.io.ByteArrayInputStream
-import java.io.InputStream
-import java.io.OutputStream
 import java.util.*
 import java.util.zip.GZIPInputStream
 
-class Transform2 : RequestStreamHandler {
-    private val logger = KotlinLogging.logger {}
-
-    override fun handleRequest(
-        input: InputStream,
-        output: OutputStream,
-        context: Context,
-    ) {
-        val raw = input.readBytes().toString(Charsets.UTF_8)
-        logger.info { "Raw Firehose event: $raw" }
-
-        // parse manually after inspecting shape
-    }
-}
 
 class Transform : RequestHandler<KinesisFirehoseEvent, FirehoseTransformResponse> {
 
     private val logger = KotlinLogging.logger {}
 
     private val envConfig = EnvironmentConfig()
-
-    fun handleRequest_new(
-        input: KinesisFirehoseEvent,
-        context: Context,
-    ): FirehoseTransformResponse = runBlocking {
-
-        val notifications = linkedMapOf<String, Notification>()
-
-        val results = input.records.map { record ->
-            val originalData = Charsets.UTF_8.decode(record.data).toString()
-            fixRecordId(record)
-            logger.info { "Original data: $originalData" }
-            val event = json.parseToJsonElement(originalData)
-            val notification = createNotification(event as JsonObject)
-            notification?.let { notifications[it.messageDeduplicationId] = it }
-            val outputData = Base64.getEncoder()
-                .encodeToString(
-                    "originalData\n".toByteArray()
-                )
-            FirehoseTransformRecord(
-                recordId = record.recordId,
-                result = "Ok",
-                data = outputData,
-            )
-        }
-
-        sendNotifications(notifications)
-
-        FirehoseTransformResponse(records = results)
-    }
 
     fun decodeBase64JsonIfNeeded(value: String): String {
         val trimmed = value.trim()
