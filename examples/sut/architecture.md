@@ -1,6 +1,6 @@
-# SUT Architecture
+# SUT Example Architecture
 
-> **Note**: This documentation is part of the Structurizr model and reflects the system's design as defined in the C4 diagrams.
+> **Note**: This documentation is part of the [Structurizr model](structurizr/workspace.dsl) and reflects the system's design as defined in the C4 diagrams. For more information, visit the [Structurizr](https://structurizr.com/) home page.
 
 ## System Overview
 
