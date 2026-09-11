@@ -1,6 +1,6 @@
 # SUT Example Architecture: Design Motivations
 
-The SUT (Serialized Unit Tracking) Example is a reference implementation of a stream-processing architecture using the `aws-lambda-stream-kotlin` library. It demonstrates a system for tracking shipments or other entities using serial numbers. Beyond just describing the data flow, this document explains the **motivations** behind the key design choices that make the system resilient, scalable, and maintainable.
+The SUT (Serialized Unit Tracking) Example is a reference implementation of a stream-processing architecture using the `aws-lambda-stream-kotlin` library. It demonstrates a system for tracking shipments or other entities using serial numbers. 
 
 ## Architectural Philosophy
 
@@ -59,25 +59,78 @@ The system is built on the principle of **Autonomous Subsystems**. Each subsyste
 
 ---
 
-## Visualizing the Architecture
+## System Components & Services
 
-### System Context
+The SUT architecture is composed of several specialized services, each playing a critical role in the end-to-end event-driven workflow.
+
+> **Note**: The following diagrams were generated using the [Structurizr](https://structurizr.com/) model defined in `examples/sut/structurizr/workspace.dsl`.
+
+### 1. High-Level Views
+
+#### System Context
 Demonstrates the high-level actors and their interaction with the autonomous system.
 ![System Context](./images/SystemContext.svg)
 
-### Container View
+#### Container View
 Shows the boundaries between subsystems and the central role of the Event Hub.
 ![Containers](./images/Containers.svg)
 
-### Service Internals (Examples)
-These diagrams illustrate how the **Outbox** and **Microstore** patterns are implemented within specific services.
+### 2. Event Hub
+The **Event Hub** acts as the central nervous system for the subsystem, facilitating communication between all other services.
 
-*   **Control Service**: Manages business process state using the Microstore pattern.
-    ![Control Service](./images/ControlServiceComponents.svg)
-*   **Shipment BFF**: Provides an API while maintaining a materialized view of shipments via event consumption.
-    ![Shipment BFF](./images/ShipmentBffComponents.svg)
-*   **Event Hub**: The backbone for reliable event distribution.
-    ![Event Hub](./images/EventHubComponents.svg)
-*   **Event Lake & Fault Monitor**: The infrastructure for durability and recovery.
-    ![Event Lake](./images/EventLakeComponents.svg)
-    ![Fault Monitor](./images/FaultMonitorComponents.svg)
+![Event Hub](./images/EventHubComponents.svg)
+
+*   **Event Bus (AWS EventBridge)**: The primary entry point for all events. It uses rule-based routing to deliver events to multiple targets, such as the Event Stream, Event Lake, and Fault Monitor.
+*   **Event Stream (Amazon Kinesis)**: A durable, ordered log of all events. It allows downstream services (like the Control Service and Shipment BFF) to process events at their own pace while maintaining strict ordering for related records.
+
+### 3. Control Service
+The **Control Service** is responsible for managing business process state and orchestrating complex workflows.
+
+![Control Service](./images/ControlServiceComponents.svg)
+
+*   **Events Table (DynamoDB)**: A local **Events Microstore** that holds a sliding window of events for correlation and evaluation.
+*   **Control Listener (Lambda)**: Subscribes to the Event Stream and populates the Events Table with relevant records.
+*   **Control Trigger (Lambda)**: Reacts to changes in the Events Table (via DynamoDB Streams) to evaluate business rules and publish higher-order events back to the Event Hub.
+
+### 4. Shipment BFF
+The **Shipment BFF** (Backend for Frontend) provides the external interface for shipment management.
+
+![Shipment BFF](./images/ShipmentBffComponents.svg)
+
+*   **Shipment API (Lambda)**: A RESTful interface that allows users to create and track shipments.
+*   **Shipments Table (DynamoDB)**: Stores the current state of shipments. It also functions as an **Outbox**, where every write triggers an event publication.
+*   **Shipment Trigger (Lambda)**: Monitors the Shipments Table and publishes change events to the Event Hub.
+*   **Shipment Listener (Lambda)**: Consumes events from the Event Stream to update the materialized view of shipments in the Shipments Table.
+
+### 5. Event Lake
+The **Event Lake** provides a permanent, immutable record of all domain activity.
+
+![Event Lake](./images/EventLakeComponents.svg)
+
+*   **Event Lake Firehose (Kinesis Firehose)**: Buffers and delivers events from the Event Bus to long-term storage.
+*   **Event Lake Bucket (S3)**: The physical storage for the event archive, organized by date for efficient querying via tools like Amazon Athena.
+
+### 6. Event Fault Monitor
+The **Event Fault Monitor** ensures that no event is lost due to processing failures.
+
+![Fault Monitor](./images/FaultMonitorComponents.svg)
+
+*   **Fault Firehose (Kinesis Firehose)**: Captures technical `fault` events emitted by the framework when a pipeline fails.
+*   **Fault Transform (Lambda)**: Optionally enriches or filters fault events before they are stored.
+*   **Fault Bucket (S3)**: Stores detailed snapshots of failed Units of Work, including the original record and the error stack trace.
+*   **Fault Topic (SNS) & Queue (SQS)**: Provide alerting and temporary buffering for fault notifications.
+
+### 7. Regional Health Check
+The **Regional Health Check** implements the **Tracer Loop** to verify that the entire AWS infrastructure is correctly configured and operational.
+
+![Regional Health Check](./images/HealthCheckComponents.svg)
+
+*   **Health API (Lambda)**: Triggered by an external canary to initiate a health check iteration.
+*   **Health Table (DynamoDB)**: Tracks the state of the tracer transaction and records latency metrics.
+*   **Health DB Trigger (Lambda)**: The first step in the loop; it writes a small file to S3.
+*   **Health Bucket (S3)**: Triggers an S3 Event Notification when the tracer file is written.
+*   **Health Topic (SNS) & Queue (SQS)**: Transport the notification across the regional boundary to ensure connectivity.
+*   **Health S3 Trigger (Lambda)**: Processes the SQS message and publishes a health event to the local Health EventBus.
+*   **Health EventBus & Stream**: Local versions of the Event Hub used to test the full event routing path.
+*   **Health Kinesis Trigger (Lambda)**: The final step in the loop; it consumes the health event and updates the Health Table to mark the iteration as successful.
+
