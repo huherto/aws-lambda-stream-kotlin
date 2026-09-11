@@ -1,104 +1,83 @@
-# SUT Example Architecture
+# SUT Example Architecture: Design Motivations
 
-The SUT (System Under Test) Example is a reference implementation of a stream processing architecture using AWS Lambda and the `aws-lambda-stream-kotlin` library. It demonstrates how to build event-driven systems with centralized event distribution, long-term storage, fault monitoring, and regional health checks.
+The SUT (Serialized Unit Tracking) Example is a reference implementation of a stream-processing architecture using the `aws-lambda-stream-kotlin` library. It demonstrates a system for tracking shipments or other entities using serial numbers. Beyond just describing the data flow, this document explains the **motivations** behind the key design choices that make the system resilient, scalable, and maintainable.
 
-## System Context
+## Architectural Philosophy
 
-The SUT system interacts with two primary actors:
-- **User**: Manages shipments through the Shipment BFF.
-- **Canary**: An automated process that triggers regional health checks to ensure the system is operating correctly.
+The system is built on the principle of **Autonomous Subsystems**. Each subsystem owns its data, its logic, and its entry/exit points. This design addresses several distributed systems challenges:
 
-![System Context](./images/SystemContext.svg)
-
-## Containers
-
-The system is composed of several services (containers), each responsible for a specific domain:
-
-- **Event Hub**: The backbone of the system, handling central event distribution and streaming.
-- **Control Service**: Manages control-related events and state.
-- **Shipment BFF**: A Backend-for-Frontend service for shipment management.
-- **Event Lake**: Archives all system events for long-term storage and analysis.
-- **Event Fault Monitor**: Monitors event processing faults and sends notifications.
-- **Regional Health Check**: A self-contained loop that monitors the health of the system within a region.
-
-![Containers](./images/Containers.svg)
+- **Fault Isolation**: A failure in the Shipment BFF does not impact the Control Service's ability to process background tasks.
+- **Independent Scalability**: High-traffic components (like the Shipment API) can be scaled independently of background processors.
+- **Decoupled Evolution**: Subsystems communicate via stable event contracts, allowing internal implementations to change without affecting the rest of the system.
 
 ---
 
-## Service Details
+## Key Design Choices & Motivations
 
-### Event Hub
-The Event Hub facilitates communication between services using a publish-subscribe model.
+### 1. Event Hub: Hybrid Broker-Stream Model
+**Components**: AWS EventBridge (Broker) + Amazon Kinesis (Stream)
 
-- **Event Bus (AWS EventBridge)**: Receives events from various services and routes them.
-- **Event Stream (AWS Kinesis)**: Provides a high-volume stream for downstream consumers to process events in order.
+*   **Motivation**: 
+    - **EventBridge** provides flexible, rule-based routing and filtering. It acts as the central "post office" for the subsystem, allowing any service to subscribe to events without the producer knowing about them.
+    - **Kinesis** provides high-throughput, ordered processing. While EventBridge is great for routing, Kinesis ensures that related events (e.g., all updates for a single shipment) are processed in the correct order and allows consumers to "replay" the stream from a specific point in time if needed.
 
-![Event Hub Components](./images/EventHubComponents.svg)
+### 2. Transactional Outbox Pattern
+**Components**: DynamoDB + Lambda Trigger + EventBridge
 
-### Control Service
-The Control Service manages the state of control events.
+*   **Motivation**: In a distributed system, updating a database and publishing an event are two separate operations. If one succeeds and the other fails, the system becomes inconsistent.
+*   **Design Choice**: The SUT uses DynamoDB Streams (via the `Trigger` Lambda) to implement the **Transactional Outbox** pattern. Every write to the `Events Table` or `Shipments Table` automatically triggers an event publication. This guarantees **Atomic Consistency**: if the data is saved, the event *will* be published.
 
-- **Events Table (DynamoDB)**: Stores the current state.
-- **Control Trigger (Lambda)**: Reacts to table changes and publishes events to the central Event Bus.
-- **Control Listener (Lambda)**: Consumes events from the Kinesis stream to update the state in the Events Table.
+### 3. Events Microstore
+**Components**: DynamoDB (within Control Service and Shipment BFF)
 
-![Control Service Components](./images/ControlServiceComponents.svg)
+*   **Motivation**: Services often need to correlate multiple events (e.g., matching a "Shipment Created" event with a "Payment Confirmed" event). Querying a central event store or another service's database for this information creates tight coupling and performance bottlenecks.
+*   **Design Choice**: The **Events Microstore** pattern maintains a local, queryable copy of only the events relevant to that service. It uses a specific schema (Partition Key = Entity ID, Sort Key = Event ID/Type) to allow high-performance correlation and evaluation close to the processing logic.
 
-**Data Flow**:
-1. Changes in the `Events Table` trigger the `Control Trigger`.
-2. `Control Trigger` publishes events to the `Event Bus`.
-3. `Event Bus` forwards events to the `Event Stream`.
-4. `Control Listener` consumes events from the `Event Stream` and updates the `Events Table`.
+### 4. Event Lake
+**Components**: Kinesis Firehose + Amazon S3
 
-### Shipment BFF
-The Shipment BFF provides a REST API for managing shipments.
+*   **Motivation**: Operational databases (DynamoDB) are optimized for current state, not historical analysis. Storing years of events in DynamoDB is expensive and inefficient for analytics.
+*   **Design Choice**: The **Event Lake** provides long-term, immutable, and low-cost storage. It decouples the **System of Record** (current state) from the **System of Evidence** (audit trail). It is essential for compliance, business intelligence, and disaster recovery (re-populating a new database from scratch).
 
-- **Shipment API (Lambda)**: The entry point for user requests.
-- **Shipments Table (DynamoDB)**: Stores shipment data.
-- **Shipment Trigger (Lambda)**: Publishes shipment-related events to the Event Bus.
-- **Shipment Listener (Lambda)**: Updates shipment data based on events from the Kinesis stream.
+### 5. Fault Monitoring & Resubmission
+**Components**: Kinesis Firehose + S3 + SNS + `resubmit-events` tool
 
-![Shipment BFF Components](./images/ShipmentBffComponents.svg)
+*   **Motivation**: In stream processing, a single "poison pill" event (malformed data or a bug) can block the entire pipeline. Standard Lambda retries might fail indefinitely, leading to data loss or stuck streams.
+*   **Design Choice**: Instead of blocking, the framework captures a **Snapshot of the Unit of Work** (original record + error details) and moves it to a dedicated Fault Bucket. This allows the pipeline to continue while providing developers with the exact context needed to fix the bug and **resubmit** the failed event later.
 
-**Data Flow**:
-1. `User` interacts with `Shipment API`.
-2. `Shipment API` reads/writes to `Shipments Table`.
-3. `Shipments Table` changes trigger `Shipment Trigger`.
-4. `Shipment Trigger` publishes events to the `Event Bus`.
-5. `Shipment Listener` updates the table based on events received from the `Event Stream`.
+### 6. Active Health Check (The Tracer Loop)
+**Components**: API -> DynamoDB -> S3 -> SNS -> SQS -> EventBridge -> Kinesis
 
-### Event Lake
-The Event Lake ensures that all events are archived for audit and replay purposes.
+*   **Motivation**: Passive monitoring (CPU, Memory, 5XX errors) only tells you if a service is "up." It doesn't tell you if the complex integration between services is actually *working*.
+*   **Design Choice**: The **Tracer Loop** is a synthetic transaction that exercises the entire regional infrastructure. By flowing a test event through multiple AWS services and verifying its arrival at the end, the system proves that IAM roles, connectivity, and configurations are correctly set up across the whole stack.
 
-- **Event Lake Firehose (Kinesis Firehose)**: Ingests events from EventBridge.
-- **Event Lake Bucket (S3)**: Stores the archived events.
+### 7. Envelope Encryption
+**Components**: AWS KMS + `EnvelopeEncryptionMetadata`
 
-![Event Lake Components](./images/EventLakeComponents.svg)
+*   **Motivation**: Events in the Event Lake or Fault Bucket may contain sensitive information (PII). Relying solely on S3 bucket permissions is often insufficient for strict compliance requirements.
+*   **Design Choice**: The architecture supports **Envelope Encryption**. Each event payload is encrypted with a unique data key, which is itself encrypted using a KMS Master Key. This ensures that even if the storage layer is accessed, the data remains protected and can only be decrypted by services with explicit KMS permissions.
 
-### Event Fault Monitor
-The Fault Monitor tracks processing failures across the system.
+---
 
-- **Fault Firehose (Kinesis Firehose)**: Ingests fault events.
-- **Fault Transform (Lambda)**: Filters and transforms fault data.
-- **Fault Bucket (S3)**: Stores raw fault logs.
-- **Fault Topic (SNS)**: Sends alerts for processing faults.
+## Visualizing the Architecture
 
-![Event Fault Monitor Components](./images/FaultMonitorComponents.svg)
+### System Context
+Demonstrates the high-level actors and their interaction with the autonomous system.
+![System Context](./images/SystemContext.svg)
 
-### Regional Health Check
-The Health Check service implements a "tracer loop" to verify the entire regional infrastructure.
+### Container View
+Shows the boundaries between subsystems and the central role of the Event Hub.
+![Containers](./images/Containers.svg)
 
-- **Health API**: Triggered by the Canary.
-- **Health Table**: Tracks the status of health check iterations.
-- **Tracer Loop**: The health check flows through DynamoDB, S3, SNS, SQS, and finally back to the Health Table via the local Event Bus and Kinesis stream.
+### Service Internals (Examples)
+These diagrams illustrate how the **Outbox** and **Microstore** patterns are implemented within specific services.
 
-![Regional Health Check Components](./images/HealthCheckComponents.svg)
-
-**Health Check Data Flow**:
-1. `Health API` initiates a check in the `Health Table`.
-2. `Health DB Trigger` writes an artifact to the `Health Bucket`.
-3. `Health Bucket` notifies the `Health Topic` via S3 Event Notifications.
-4. `Health Topic` forwards the notification to the `Health Queue`.
-5. `Health S3 Trigger` processes the queue message and publishes a health event to the `Health EventBus`.
-6. `Health EventBus` forwards to the `Health Kinesis Stream`.
-7. `Health Kinesis Trigger` consumes the event and completes the check in the `Health Table`.
+*   **Control Service**: Manages business process state using the Microstore pattern.
+    ![Control Service](./images/ControlServiceComponents.svg)
+*   **Shipment BFF**: Provides an API while maintaining a materialized view of shipments via event consumption.
+    ![Shipment BFF](./images/ShipmentBffComponents.svg)
+*   **Event Hub**: The backbone for reliable event distribution.
+    ![Event Hub](./images/EventHubComponents.svg)
+*   **Event Lake & Fault Monitor**: The infrastructure for durability and recovery.
+    ![Event Lake](./images/EventLakeComponents.svg)
+    ![Fault Monitor](./images/FaultMonitorComponents.svg)

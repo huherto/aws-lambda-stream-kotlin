@@ -1,5 +1,6 @@
+# SUT (Serialized Unit Tracking) Example
 
-
+The SUT example demonstrates a system for tracking shipments or other entities using serial numbers. It serves as a reference implementation for the `aws-lambda-stream-kotlin` library, showcasing patterns for resilient and scalable stream processing on AWS.
 
 ## Setting Up the Local Integration Test Environment
 
