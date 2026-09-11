@@ -2,6 +2,8 @@
 
 The SUT example demonstrates a system for tracking shipments or other entities using serial numbers. It serves as a reference implementation for the `aws-lambda-stream-kotlin` library, showcasing patterns for resilient and scalable stream processing on AWS.
 
+Detailed architectural documentation, including diagrams and service descriptions, can be found in [architecture.md](architecture.md).
+
 ## Setting Up the Local Integration Test Environment
 
 This guide explains how to set up the required local tooling and run integration tests against a LocalStack-based AWS environment.
