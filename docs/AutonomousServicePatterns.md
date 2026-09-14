@@ -80,3 +80,7 @@ Event Lakes are typically composed of:
 - AWS EventBridge Rule (configured to exclude technical `fault` events)
 - Amazon Kinesis Data Firehose
 - Amazon S3 Bucket
+
+## Example Implementation
+
+For a practical example of these patterns in action, see the [SUT Example Architecture](../examples/sut/architecture.md).

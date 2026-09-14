@@ -229,3 +229,7 @@ Those signals flow through:
 
 The result is a simple, reusable health signal that represents whether the regional deployment is healthy enough to serve traffic.
 
+## Example
+
+See the [Regional Health Check section](../examples/sut/architecture.md#regional-health-check-tracer-loop) in the SUT Example Architecture for a practical implementation scenario.
+

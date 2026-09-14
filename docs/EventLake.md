@@ -49,3 +49,7 @@ This separation ensures that:
 - **Scalability**: Firehose and S3 automatically scale to handle varying event volumes.
 - **Cost-Effective**: S3 offers low-cost storage for large volumes of data, especially when using lifecycle policies to transition older data to cheaper storage classes.
 - **Separation of Concerns**: Decouples long-term archiving from operational event processing.
+
+## Example
+
+See the [Event Lake section](../examples/sut/architecture.md#event-lake) in the SUT Example Architecture for a practical implementation scenario.

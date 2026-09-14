@@ -24,3 +24,7 @@ The framework follows the serverless architecture patterns described by John Gil
 * [How the Regional Health Check works](RegionalHealthCheck.md)
 * [How Fault Re-submission works](FaultResubmission.md)
 * [How Envelope Encryption works](Encryption.md)
+
+## Example Implementation
+
+The [SUT Example Architecture](../examples/sut/architecture.md) provides a practical demonstration of how these patterns are applied in a real-world scenario, including Event Hubs, Control Services, and monitoring components.

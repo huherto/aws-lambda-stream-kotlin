@@ -17,5 +17,9 @@ Similarly, Autonomous Subsystems communicate with each other through (external) 
 
 It is the responsibility of the solution architect to define the boundaries between subsystems and services, ensuring that each subsystem and service has a clear and well-defined purpose, interface and scope.
 
+## Practical Example
+
+For a concrete implementation of these concepts, see the [SUT Example Architecture](../examples/sut/architecture.md).
+
 
 

@@ -100,3 +100,7 @@ export FUNCTION_NAME=my-service-processor
 - **Dry Run**: Use `DRY_RUN=true` to verify the number of events that will be resubmitted.
 - **Rate Limiting**: The tool includes built-in rate limiting to avoid overwhelming the target Lambda or downstream dependencies.
 - **Idempotency**: Ensure your Lambda processing logic is idempotent, as resubmitted events may have been partially processed before the original failure.
+
+## Example
+
+See the [Event Fault Monitor section](../examples/sut/architecture.md#event-fault-monitor) in the SUT Example Architecture for a practical implementation scenario.
