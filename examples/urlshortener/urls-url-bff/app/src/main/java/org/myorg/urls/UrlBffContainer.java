@@ -1,10 +1,10 @@
 package org.myorg.urls;
 
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient;
-import io.github.huherto.awsLambdaStream.connectors.DefaultDynamoDbClientFactory;
-import io.github.huherto.awsLambdaStream.connectors.DefaultEventBridgeClientFactory;
-import io.github.huherto.awsLambdaStream.sinks.EventBridgePublisher;
-import io.github.huherto.awsLambdaStream.sinks.EventPublisher;
+import io.kopipes.aws.connectors.DefaultDynamoDbClientFactory;
+import io.kopipes.aws.connectors.DefaultEventBridgeClientFactory;
+import io.kopipes.aws.sinks.EventBridgePublisher;
+import io.kopipes.aws.sinks.EventPublisher;
 
 public class UrlBffContainer {
     public final UrlDao urlDao;

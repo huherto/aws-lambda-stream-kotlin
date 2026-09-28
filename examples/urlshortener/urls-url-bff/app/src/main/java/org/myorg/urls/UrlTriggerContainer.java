@@ -1,15 +1,15 @@
 package org.myorg.urls;
 
-import io.github.huherto.awsLambdaStream.Event;
-import io.github.huherto.awsLambdaStream.PipelineAssembler;
-import io.github.huherto.awsLambdaStream.UnitOfWork;
-import io.github.huherto.awsLambdaStream.connectors.DefaultEventBridgeClientFactory;
-import io.github.huherto.awsLambdaStream.flavors.CdcPipeline;
-import io.github.huherto.awsLambdaStream.from.DynamodbAdapter;
-import io.github.huherto.awsLambdaStream.from.RecordImage;
-import io.github.huherto.awsLambdaStream.from.RecordPair;
-import io.github.huherto.awsLambdaStream.sinks.EventBridgePublisher;
-import io.github.huherto.awsLambdaStream.sinks.EventPublisher;
+import io.kopipes.aws.Event;
+import io.kopipes.aws.PipelineAssembler;
+import io.kopipes.aws.UnitOfWork;
+import io.kopipes.aws.connectors.DefaultEventBridgeClientFactory;
+import io.kopipes.aws.flavors.CdcPipeline;
+import io.kopipes.aws.from.DynamodbAdapter;
+import io.kopipes.aws.from.RecordImage;
+import io.kopipes.aws.from.RecordPair;
+import io.kopipes.aws.sinks.EventBridgePublisher;
+import io.kopipes.aws.sinks.EventPublisher;
 
 import java.util.List;
 import java.util.Map;

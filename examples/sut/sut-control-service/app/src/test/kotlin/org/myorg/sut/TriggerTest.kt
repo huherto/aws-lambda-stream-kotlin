@@ -2,13 +2,13 @@ package org.myorg.sut
 
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.StreamRecord
-import io.github.huherto.awsLambdaStream.GlobalRegistry
-import io.github.huherto.awsLambdaStream.PipelineAssembler
-import io.github.huherto.awsLambdaStream.faults.FaultManager
-import io.github.huherto.awsLambdaStream.from.DynamodbAdapter
-import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
-import io.github.huherto.awsLambdaStream.sinks.EventsMicrostoreInMemory
-import io.github.huherto.awsLambdaStream.testsupport.TestContext
+import io.kopipes.aws.GlobalRegistry
+import io.kopipes.aws.PipelineAssembler
+import io.kopipes.aws.faults.FaultManager
+import io.kopipes.aws.from.DynamodbAdapter
+import io.kopipes.aws.sinks.EventPublisherInMemory
+import io.kopipes.aws.sinks.EventsMicrostoreInMemory
+import io.kopipes.aws.testsupport.TestContext
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf

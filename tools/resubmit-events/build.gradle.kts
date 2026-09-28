@@ -5,7 +5,7 @@ plugins {
     application
 }
 
-group = "io.github.huherto.awsLambdaStream"
+group = "io.kopipes.aws"
 version = "1.0"
 
 repositories {

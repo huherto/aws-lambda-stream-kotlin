@@ -1,13 +1,13 @@
 package org.myorg.sut
 
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
-import io.github.huherto.awsLambdaStream.Event
-import io.github.huherto.awsLambdaStream.UnitOfWork
-import io.github.huherto.awsLambdaStream.from.RecordImage
-import io.github.huherto.awsLambdaStream.from.RecordPair
-import io.github.huherto.awsLambdaStream.utils.AttributeValueMapReader
-import io.github.huherto.awsLambdaStream.utils.DynamoDbAttributeValueMapReader
-import io.github.huherto.awsLambdaStream.utils.StreamAttributeValueMapReader
+import io.kopipes.aws.Event
+import io.kopipes.aws.UnitOfWork
+import io.kopipes.aws.from.RecordImage
+import io.kopipes.aws.from.RecordPair
+import io.kopipes.aws.utils.AttributeValueMapReader
+import io.kopipes.aws.utils.DynamoDbAttributeValueMapReader
+import io.kopipes.aws.utils.StreamAttributeValueMapReader
 import kotlinx.datetime.Clock
 import kotlinx.serialization.json.Json.Default.decodeFromString
 import java.util.UUID.randomUUID

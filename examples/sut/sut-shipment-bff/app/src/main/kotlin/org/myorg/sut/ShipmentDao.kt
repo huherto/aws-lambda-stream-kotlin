@@ -4,10 +4,10 @@ import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
 import aws.sdk.kotlin.services.dynamodb.model.GetItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.UpdateItemRequest
-import io.github.huherto.awsLambdaStream.sinks.DynamoDbUpdateValue.DbSet
-import io.github.huherto.awsLambdaStream.sinks.updateExpression
-import io.github.huherto.awsLambdaStream.utils.nullableN
-import io.github.huherto.awsLambdaStream.utils.nullableS
+import io.kopipes.aws.sinks.DynamoDbUpdateValue.DbSet
+import io.kopipes.aws.sinks.updateExpression
+import io.kopipes.aws.utils.nullableN
+import io.kopipes.aws.utils.nullableS
 
 class ShipmentDao(
     private val dynamoDbClient: DynamoDbClient, 

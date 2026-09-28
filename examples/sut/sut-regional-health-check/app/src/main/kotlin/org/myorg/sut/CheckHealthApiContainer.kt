@@ -1,7 +1,7 @@
 package org.myorg.sut
 
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
-import io.github.huherto.awsLambdaStream.GlobalRegistry.envConfig
+import io.kopipes.aws.GlobalRegistry.envConfig
 import kotlinx.coroutines.runBlocking
 
 class CheckHealthApiContainer(

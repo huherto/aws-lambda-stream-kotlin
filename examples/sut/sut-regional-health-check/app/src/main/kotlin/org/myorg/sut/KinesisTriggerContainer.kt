@@ -1,10 +1,10 @@
 package org.myorg.sut
 
-import io.github.huherto.awsLambdaStream.JsonEventCodec
-import io.github.huherto.awsLambdaStream.PipelineAssembler
-import io.github.huherto.awsLambdaStream.flavors.Pipeline
-import io.github.huherto.awsLambdaStream.flavors.UpdatePipeline
-import io.github.huherto.awsLambdaStream.from.KinesisAdapter
+import io.kopipes.aws.JsonEventCodec
+import io.kopipes.aws.PipelineAssembler
+import io.kopipes.aws.flavors.Pipeline
+import io.kopipes.aws.flavors.UpdatePipeline
+import io.kopipes.aws.from.KinesisAdapter
 
 class KinesisTriggerContainer () {
 

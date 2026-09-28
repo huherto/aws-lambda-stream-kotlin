@@ -2,8 +2,8 @@ package org.myorg.sut
 
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.*
-import io.github.huherto.awsLambdaStream.sinks.DynamoDbUpdateValue
-import io.github.huherto.awsLambdaStream.sinks.updateExpression
+import io.kopipes.aws.sinks.DynamoDbUpdateValue
+import io.kopipes.aws.sinks.updateExpression
 
 class Connector(
     debug: (String) -> Unit,

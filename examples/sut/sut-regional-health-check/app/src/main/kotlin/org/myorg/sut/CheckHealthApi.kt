@@ -2,7 +2,7 @@ package org.myorg.sut
 
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
-import io.github.huherto.awsLambdaStream.utils.loggedLazy
+import io.kopipes.aws.utils.loggedLazy
 import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging
 

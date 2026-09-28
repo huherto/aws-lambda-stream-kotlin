@@ -1,7 +1,7 @@
 package org.myorg.sut
 
-import io.github.huherto.awsLambdaStream.Event
-import io.github.huherto.awsLambdaStream.EventCodec
+import io.kopipes.aws.Event
+import io.kopipes.aws.EventCodec
 import kotlinx.serialization.json.Json
 
 object TrackedUnitEventCodec : EventCodec {

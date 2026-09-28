@@ -3,9 +3,9 @@ package org.myorg.sut
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
-import io.github.huherto.awsLambdaStream.metrics.collectMetrics
-import io.github.huherto.awsLambdaStream.metrics.updateMetrics
-import io.github.huherto.awsLambdaStream.utils.loggedLazy
+import io.kopipes.aws.metrics.collectMetrics
+import io.kopipes.aws.metrics.updateMetrics
+import io.kopipes.aws.utils.loggedLazy
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging

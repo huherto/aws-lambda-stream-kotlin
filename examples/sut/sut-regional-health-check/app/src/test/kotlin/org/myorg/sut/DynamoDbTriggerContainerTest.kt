@@ -1,12 +1,12 @@
 package org.myorg.sut
 
-import io.github.huherto.awsLambdaStream.EnvironmentConfig
-import io.github.huherto.awsLambdaStream.GlobalRegistry
-import io.github.huherto.awsLambdaStream.PipelineAssembler
-import io.github.huherto.awsLambdaStream.connectors.S3ClientFactory
-import io.github.huherto.awsLambdaStream.faults.FaultManager
-import io.github.huherto.awsLambdaStream.flavors.Pipeline
-import io.github.huherto.awsLambdaStream.from.DynamodbAdapter
+import io.kopipes.aws.EnvironmentConfig
+import io.kopipes.aws.GlobalRegistry
+import io.kopipes.aws.PipelineAssembler
+import io.kopipes.aws.connectors.S3ClientFactory
+import io.kopipes.aws.faults.FaultManager
+import io.kopipes.aws.flavors.Pipeline
+import io.kopipes.aws.from.DynamodbAdapter
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.mockk.coEvery

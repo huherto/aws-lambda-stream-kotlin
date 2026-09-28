@@ -3,8 +3,8 @@ package org.myorg.urls;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent;
-import io.github.huherto.awsLambdaStream.java.Handlers;
-import io.github.huherto.awsLambdaStream.java.PipelineRunner;
+import io.kopipes.aws.java.Handlers;
+import io.kopipes.aws.java.PipelineRunner;
 
 public class ControlListenerHandler implements RequestHandler<KinesisEvent, Void> {
     private final ControlListenerContainer container;

@@ -1,12 +1,12 @@
 package org.myorg.sut
 
-import io.github.huherto.awsLambdaStream.GlobalRegistry
-import io.github.huherto.awsLambdaStream.PipelineAssembler
-import io.github.huherto.awsLambdaStream.filters.EventFilter
-import io.github.huherto.awsLambdaStream.flavors.CdcPipeline
-import io.github.huherto.awsLambdaStream.flavors.Pipeline
-import io.github.huherto.awsLambdaStream.from.S3Adapter
-import io.github.huherto.awsLambdaStream.sinks.EventPublisher
+import io.kopipes.aws.GlobalRegistry
+import io.kopipes.aws.PipelineAssembler
+import io.kopipes.aws.filters.EventFilter
+import io.kopipes.aws.flavors.CdcPipeline
+import io.kopipes.aws.flavors.Pipeline
+import io.kopipes.aws.from.S3Adapter
+import io.kopipes.aws.sinks.EventPublisher
 
 class S3TriggerContainer(
     val eventPublisher: EventPublisher,

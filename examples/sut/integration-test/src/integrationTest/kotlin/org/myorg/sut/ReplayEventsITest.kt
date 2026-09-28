@@ -1,6 +1,6 @@
 package org.myorg.sut
 
-import io.github.huherto.awsLambdaStream.tools.ReplayEvents
+import io.kopipes.aws.tools.ReplayEvents
 import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.ints.shouldBeLessThanOrEqual
 import io.kotest.matchers.maps.shouldContainKey

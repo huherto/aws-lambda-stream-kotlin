@@ -2,8 +2,8 @@ package org.myorg.sut
 
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import com.amazonaws.services.lambda.runtime.Context
-import io.github.huherto.awsLambdaStream.EnvironmentConfig
-import io.github.huherto.awsLambdaStream.GlobalRegistry
+import io.kopipes.aws.EnvironmentConfig
+import io.kopipes.aws.GlobalRegistry
 import io.kotest.matchers.maps.shouldContain
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe

@@ -1,9 +1,9 @@
 package org.myorg.sut
 
-import io.github.huherto.awsLambdaStream.EnvelopeEncryptionMetadata
-import io.github.huherto.awsLambdaStream.Event
-import io.github.huherto.awsLambdaStream.EventReference
-import io.github.huherto.awsLambdaStream.RawRecord
+import io.kopipes.aws.EnvelopeEncryptionMetadata
+import io.kopipes.aws.Event
+import io.kopipes.aws.EventReference
+import io.kopipes.aws.RawRecord
 import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable

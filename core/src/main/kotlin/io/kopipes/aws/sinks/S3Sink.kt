@@ -1,0 +1,97 @@
+package io.kopipes.aws.sinks
+
+import io.kopipes.aws.GlobalRegistry.envConfig
+import io.kopipes.aws.UnitOfWork
+import io.kopipes.aws.connectors.S3Connector
+import io.kopipes.aws.extensions.copyS3
+import io.kopipes.aws.extensions.s3
+import io.kopipes.aws.metrics.withStepMetrics
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+
+class S3Sink(
+    private val s3ConnectorOptions: S3Connector.Options,
+    private val bucketName: String = envConfig().bucketName() ?: error("bucketName is not set"),
+) {
+
+    private fun getConnector() : S3Connector {
+        return S3Connector(s3ConnectorOptions)
+    }
+
+    fun Flow<UnitOfWork>.rateLimit(): Flow<UnitOfWork> = this
+
+    fun ensurePutRequestBucket(uow: UnitOfWork): UnitOfWork  {
+        val s3 = uow.s3
+        val putRequest = s3.putRequest
+        if (putRequest != null) {
+            if (putRequest.bucket == null) {
+                return uow.copyS3 { copy(putRequest = putRequest.copy { bucket = bucketName }) }
+            }
+        }
+        return uow
+    }
+
+    fun ensureDeleteRequestBucket(uow: UnitOfWork): UnitOfWork  {
+        val s3 = uow.s3
+        val deleteRequest = s3.deleteRequest
+        if (deleteRequest != null) {
+            if (deleteRequest.bucket == null) {
+                return uow.copyS3 { copy(deleteRequest = deleteRequest.copy { bucket = bucketName }) }
+            }
+        }
+        return uow
+    }
+
+    fun ensureCopyRequestBucket(uow: UnitOfWork): UnitOfWork  {
+        val s3 = uow.s3
+        val copyRequest = s3.copyRequest
+        if (copyRequest != null) {
+            if (copyRequest.bucket == null) {
+                return uow.copyS3 { copy(copyRequest = copyRequest.copy { bucket = bucketName }) }
+            }
+        }
+        return uow
+    }
+
+    fun putObject(fromFlow: Flow<UnitOfWork>): Flow<UnitOfWork> {
+        return fromFlow.rateLimit()
+            .map { uow -> ensurePutRequestBucket(uow) }
+            .map { uow ->
+                val putRequest = uow.s3.putRequest ?: return@map uow
+                uow.withStepMetrics("save") { uowWithMetrics ->
+                    val response = getConnector().putObject(putRequest, uowWithMetrics)
+                    uowWithMetrics.copyS3 {
+                        copy(putResponse = response)
+                    }
+                }
+            }
+    }
+
+    fun deleteObject(fromFlow: Flow<UnitOfWork>): Flow<UnitOfWork> {
+        return fromFlow.rateLimit()
+            .map { uow -> ensureDeleteRequestBucket(uow) }
+            .map { uow ->
+                val deleteRequest = uow.s3.deleteRequest ?: return@map uow
+                uow.withStepMetrics("delete") { uowWithMetrics ->
+                    val response = getConnector().deleteObject(uowWithMetrics.s3.deleteRequest!!, uowWithMetrics)
+                    uowWithMetrics.copyS3 {
+                        copy(deleteResponse = response)
+                    }
+                }
+            }
+    }
+
+    fun copyObject(fromFlow: Flow<UnitOfWork>): Flow<UnitOfWork> {
+        return fromFlow.rateLimit()
+            .map { uow -> ensureCopyRequestBucket(uow) }
+            .map { uow ->
+                val request = uow.s3.copyRequest ?: return@map uow
+                uow.withStepMetrics("copy") { uowWithMetrics ->
+                    val response = getConnector().copyObject(uowWithMetrics.s3.copyRequest!!, uowWithMetrics)
+                    uowWithMetrics.copyS3 {
+                        copy(copyResponse = response)
+                    }
+                }
+            }
+    }
+}

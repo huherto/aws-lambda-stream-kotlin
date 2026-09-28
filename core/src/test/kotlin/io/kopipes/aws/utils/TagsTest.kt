@@ -1,0 +1,106 @@
+package io.kopipes.aws.utils
+
+import io.kopipes.aws.EnvironmentConfig
+import io.kopipes.aws.GlobalRegistry
+import io.kopipes.aws.UnitOfWork
+import io.kopipes.aws.faults.FaultEvent
+import io.kopipes.aws.faults.FaultManager
+import io.kopipes.aws.flavors.Pipeline
+import io.kotest.matchers.shouldBe
+import io.mockk.every
+import io.mockk.mockk
+import kotlinx.coroutines.flow.Flow
+import org.junit.jupiter.api.Test
+
+class TagsTest {
+
+    @Test
+    fun `envTags should return configured environment tags`() {
+        val envConfig = mockk<EnvironmentConfig>()
+        every { envConfig.accountName() } returns "test-account"
+        every { envConfig.region() } returns "eu-west-1"
+        every { envConfig.stage() } returns "dev"
+        every { envConfig.service() } returns "test-service"
+        every { envConfig.awsLambdaFunctionName() } returns "test-function"
+        GlobalRegistry.setEnvConfig(envConfig)
+
+        envTags("test-pipeline") shouldBe mapOf(
+            "account" to "test-account",
+            "region" to "eu-west-1",
+            "stage" to "dev",
+            "source" to "test-service",
+            "functionname" to "test-function",
+            "pipeline" to "test-pipeline",
+        )
+    }
+
+    @Test
+    fun `envTags should use undefined for missing values`() {
+        val envConfig = mockk<EnvironmentConfig>()
+
+        every { envConfig.accountName() } returns null
+        every { envConfig.region() } returns null
+        every { envConfig.stage() } returns null
+        every { envConfig.serverlessStage() } returns null
+        every { envConfig.service() } returns null
+        every { envConfig.project() } returns null
+        every { envConfig.serverlessProject() } returns null
+        every { envConfig.awsLambdaFunctionName() } returns null
+        GlobalRegistry.setEnvConfig(envConfig)
+
+        envTags(null) shouldBe mapOf(
+            "account" to "undefined",
+            "region" to "undefined",
+            "stage" to "undefined",
+            "source" to "undefined",
+            "functionname" to "undefined",
+            "pipeline" to "undefined",
+        )
+    }
+
+    @Test
+    fun `adornStandardTags should add environment skip and pipeline tags to event`() {
+        val envConfig = mockk<EnvironmentConfig>()
+        val pipeline = object : Pipeline("test-pipeline") {
+            override fun connect(fm: FaultManager, fromFlow: Flow<UnitOfWork>): Flow<UnitOfWork> = fromFlow
+        }
+        val event = FaultEvent(
+            tags = mapOf("custom" to "value")
+        )
+        val uow = UnitOfWork(
+            pipeline = pipeline,
+            fault = event,
+        )
+
+        every { envConfig.accountName() } returns "test-account"
+        every { envConfig.region() } returns "eu-west-1"
+        every { envConfig.stage() } returns "dev"
+        every { envConfig.service() } returns "test-service"
+        every { envConfig.awsLambdaFunctionName() } returns "test-function"
+        every { envConfig.skip() } returns true
+        GlobalRegistry.setEnvConfig(envConfig)
+
+        val result = adornStandardTags(uow)
+
+        result.fault?.tags shouldBe mapOf(
+            "account" to "test-account",
+            "region" to "eu-west-1",
+            "stage" to "dev",
+            "source" to "test-service",
+            "functionname" to "test-function",
+            "pipeline" to "test-pipeline",
+            "skip" to "true",
+            "custom" to "value",
+        )
+    }
+
+    @Test
+    fun `adornStandardTags should return unchanged unit of work when event is missing`() {
+        val envConfig = mockk<EnvironmentConfig>()
+        val uow = UnitOfWork()
+        GlobalRegistry.setEnvConfig(envConfig)
+
+        adornStandardTags(uow) shouldBe uow
+    }
+
+}

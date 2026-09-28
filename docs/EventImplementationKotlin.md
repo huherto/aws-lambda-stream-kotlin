@@ -22,7 +22,7 @@ In the `aws-lambda-stream-kotlin` library, events must follow specific technical
 Events must be immutable. All properties should be declared using `val`. This ensures that events cannot be mutated accidentally during pipeline processing, leading to safer and more predictable side effects.
 
 ### 2. The `Event` Interface
-All events must implement the `io.github.huherto.awsLambdaStream.Event` interface.
+All events must implement the `io.kopipes.aws.Event` interface.
 
 ### 3. Core Properties
 The `Event` interface requires the following metadata properties:
@@ -110,8 +110,8 @@ data class OrderPlacedEvent(
 For every family of events, use the framework's `KotlinxEventCodec` to handle serialization.
 
 ```kotlin
-import io.github.huherto.awsLambdaStream.serialization.KotlinxEventCodec
-import io.github.huherto.awsLambdaStream.serialization.KotlinxSerializationStrategy
+import io.kopipes.aws.serialization.KotlinxEventCodec
+import io.kopipes.aws.serialization.KotlinxSerializationStrategy
 
 val ordersJson = KotlinxSerializationStrategy.defaultJson()
 

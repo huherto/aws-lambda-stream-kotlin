@@ -2,7 +2,7 @@ package org.myorg.urls;
 
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient;
 import aws.sdk.kotlin.services.dynamodb.model.*;
-import io.github.huherto.awsLambdaStream.utils.SdkavKt;
+import io.kopipes.aws.utils.SdkavKt;
 import kotlin.coroutines.EmptyCoroutineContext;
 import kotlinx.coroutines.BuildersKt;
 

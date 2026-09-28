@@ -1,6 +1,6 @@
 package org.myorg.sut
 
-import io.github.huherto.awsLambdaStream.JsonEvent
+import io.kopipes.aws.JsonEvent
 import io.kotest.matchers.equality.shouldBeEqualToComparingFields
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe

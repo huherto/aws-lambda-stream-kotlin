@@ -1,6 +1,6 @@
 package org.myorg.sut
 
-import io.github.huherto.awsLambdaStream.tools.ResubmitFaults
+import io.kopipes.aws.tools.ResubmitFaults
 import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe

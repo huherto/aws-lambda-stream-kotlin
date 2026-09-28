@@ -3,8 +3,8 @@ package org.myorg.sut.facades
 import aws.sdk.kotlin.services.eventbridge.EventBridgeClient
 import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequest
 import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequestEntry
-import io.github.huherto.awsLambdaStream.Event
-import io.github.huherto.awsLambdaStream.faults.FaultEvent
+import io.kopipes.aws.Event
+import io.kopipes.aws.faults.FaultEvent
 import io.kotest.matchers.shouldBe
 import kotlinx.serialization.json.Json
 

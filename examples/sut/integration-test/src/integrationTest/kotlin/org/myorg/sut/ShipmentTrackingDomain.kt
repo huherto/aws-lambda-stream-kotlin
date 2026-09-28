@@ -1,11 +1,11 @@
 package org.myorg.sut
 
-import io.github.huherto.awsLambdaStream.FaultException
-import io.github.huherto.awsLambdaStream.UnitOfWork
-import io.github.huherto.awsLambdaStream.faults.FaultEvent
-import io.github.huherto.awsLambdaStream.serialization.snapshots.ErrorSnapshot
-import io.github.huherto.awsLambdaStream.serialization.snapshots.RecordSnapshot
-import io.github.huherto.awsLambdaStream.serialization.snapshots.UnitOfWorkSnapshot
+import io.kopipes.aws.FaultException
+import io.kopipes.aws.UnitOfWork
+import io.kopipes.aws.faults.FaultEvent
+import io.kopipes.aws.serialization.snapshots.ErrorSnapshot
+import io.kopipes.aws.serialization.snapshots.RecordSnapshot
+import io.kopipes.aws.serialization.snapshots.UnitOfWorkSnapshot
 import kotlinx.datetime.Clock
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive

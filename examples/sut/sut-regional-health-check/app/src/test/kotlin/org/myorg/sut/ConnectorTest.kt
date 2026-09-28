@@ -2,7 +2,7 @@ package org.myorg.sut
 
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.*
-import io.github.huherto.awsLambdaStream.sinks.DynamoDbUpdateValue
+import io.kopipes.aws.sinks.DynamoDbUpdateValue
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.maps.shouldContainExactly
 import io.kotest.matchers.shouldBe

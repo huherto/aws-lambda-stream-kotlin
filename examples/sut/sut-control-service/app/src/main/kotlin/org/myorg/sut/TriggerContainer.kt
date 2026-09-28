@@ -1,18 +1,18 @@
 package org.myorg.sut
 
-import io.github.huherto.awsLambdaStream.Event
-import io.github.huherto.awsLambdaStream.GlobalRegistry
-import io.github.huherto.awsLambdaStream.PipelineAssembler
-import io.github.huherto.awsLambdaStream.UnitOfWork
-import io.github.huherto.awsLambdaStream.connectors.DefaultDynamoDbClientFactory
-import io.github.huherto.awsLambdaStream.filters.EventFilters
-import io.github.huherto.awsLambdaStream.flavors.CorrelatePipeline
-import io.github.huherto.awsLambdaStream.flavors.EvaluatePipeline
-import io.github.huherto.awsLambdaStream.flavors.Pipeline
-import io.github.huherto.awsLambdaStream.from.DynamodbAdapter
-import io.github.huherto.awsLambdaStream.sinks.EventPublisher
-import io.github.huherto.awsLambdaStream.sinks.EventsMicrostore
-import io.github.huherto.awsLambdaStream.sinks.EventsMicrostoreImpl
+import io.kopipes.aws.Event
+import io.kopipes.aws.GlobalRegistry
+import io.kopipes.aws.PipelineAssembler
+import io.kopipes.aws.UnitOfWork
+import io.kopipes.aws.connectors.DefaultDynamoDbClientFactory
+import io.kopipes.aws.filters.EventFilters
+import io.kopipes.aws.flavors.CorrelatePipeline
+import io.kopipes.aws.flavors.EvaluatePipeline
+import io.kopipes.aws.flavors.Pipeline
+import io.kopipes.aws.from.DynamodbAdapter
+import io.kopipes.aws.sinks.EventPublisher
+import io.kopipes.aws.sinks.EventsMicrostore
+import io.kopipes.aws.sinks.EventsMicrostoreImpl
 import mu.KotlinLogging.logger
 
 class TriggerContainer(

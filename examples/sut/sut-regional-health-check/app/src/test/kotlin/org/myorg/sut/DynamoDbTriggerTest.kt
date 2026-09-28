@@ -6,11 +6,11 @@ import aws.sdk.kotlin.services.s3.model.PutObjectResponse
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.StreamRecord
-import io.github.huherto.awsLambdaStream.EnvironmentConfig
-import io.github.huherto.awsLambdaStream.GlobalRegistry
-import io.github.huherto.awsLambdaStream.connectors.S3ClientFactory
-import io.github.huherto.awsLambdaStream.faults.FaultManager
-import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
+import io.kopipes.aws.EnvironmentConfig
+import io.kopipes.aws.GlobalRegistry
+import io.kopipes.aws.connectors.S3ClientFactory
+import io.kopipes.aws.faults.FaultManager
+import io.kopipes.aws.sinks.EventPublisherInMemory
 import io.kotest.matchers.shouldBe
 import io.mockk.*
 import org.junit.jupiter.api.BeforeEach

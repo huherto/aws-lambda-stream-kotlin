@@ -1,8 +1,8 @@
 package org.myorg.sut
 
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
-import io.github.huherto.awsLambdaStream.EnvironmentConfig
-import io.github.huherto.awsLambdaStream.GlobalRegistry
+import io.kopipes.aws.EnvironmentConfig
+import io.kopipes.aws.GlobalRegistry
 import kotlinx.coroutines.runBlocking
 
 class RestApiContainer(

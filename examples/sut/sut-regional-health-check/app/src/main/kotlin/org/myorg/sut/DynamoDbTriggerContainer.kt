@@ -1,9 +1,9 @@
 package org.myorg.sut
 
-import io.github.huherto.awsLambdaStream.PipelineAssembler
-import io.github.huherto.awsLambdaStream.flavors.MaterializeS3Pipeline
-import io.github.huherto.awsLambdaStream.flavors.Pipeline
-import io.github.huherto.awsLambdaStream.from.DynamodbAdapter
+import io.kopipes.aws.PipelineAssembler
+import io.kopipes.aws.flavors.MaterializeS3Pipeline
+import io.kopipes.aws.flavors.Pipeline
+import io.kopipes.aws.from.DynamodbAdapter
 
 class DynamoDbTriggerContainer() {
 

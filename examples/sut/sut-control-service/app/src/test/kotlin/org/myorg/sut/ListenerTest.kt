@@ -1,12 +1,12 @@
 package org.myorg.sut
 
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
-import io.github.huherto.awsLambdaStream.EnvironmentConfig
-import io.github.huherto.awsLambdaStream.GlobalRegistry
-import io.github.huherto.awsLambdaStream.faults.FaultManager
-import io.github.huherto.awsLambdaStream.sinks.EventPublisherInMemory
-import io.github.huherto.awsLambdaStream.sinks.EventsMicrostoreInMemory
-import io.github.huherto.awsLambdaStream.testsupport.TestContext
+import io.kopipes.aws.EnvironmentConfig
+import io.kopipes.aws.GlobalRegistry
+import io.kopipes.aws.faults.FaultManager
+import io.kopipes.aws.sinks.EventPublisherInMemory
+import io.kopipes.aws.sinks.EventsMicrostoreInMemory
+import io.kopipes.aws.testsupport.TestContext
 import io.kotest.matchers.maps.shouldBeEmpty
 import io.kotest.matchers.maps.shouldNotBeEmpty
 import io.kotest.matchers.nulls.shouldBeNull

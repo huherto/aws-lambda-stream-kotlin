@@ -1,7 +1,7 @@
 package org.myorg.sut
 
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
-import io.github.huherto.awsLambdaStream.JsonEvent
+import io.kopipes.aws.JsonEvent
 import io.kotest.matchers.longs.shouldBeGreaterThan
 import io.kotest.matchers.longs.shouldBeLessThan
 import io.kotest.matchers.nulls.shouldNotBeNull

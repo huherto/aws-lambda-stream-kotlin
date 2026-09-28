@@ -3,7 +3,7 @@ package org.myorg.sut
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.PutItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.PutItemResponse
-import io.github.huherto.awsLambdaStream.connectors.DynamoDbClientFactory
+import io.kopipes.aws.connectors.DynamoDbClientFactory
 import mu.KotlinLogging
 
 // Integration tests helper.

@@ -7,9 +7,9 @@ import aws.smithy.kotlin.runtime.net.url.Url
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.KinesisFirehoseEvent
-import io.github.huherto.awsLambdaStream.EnvironmentConfig
-import io.github.huherto.awsLambdaStream.longOrNull
-import io.github.huherto.awsLambdaStream.stringOrNull
+import io.kopipes.aws.EnvironmentConfig
+import io.kopipes.aws.longOrNull
+import io.kopipes.aws.stringOrNull
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
