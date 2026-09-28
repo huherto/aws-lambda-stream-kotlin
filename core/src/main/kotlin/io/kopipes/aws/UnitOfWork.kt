@@ -1,5 +1,6 @@
 package io.kopipes.aws
 
+import io.kopipes.aws.faults.FaultEvent
 import io.kopipes.aws.flavors.Pipeline
 import kotlin.reflect.KClass
 
@@ -8,7 +9,7 @@ data class UnitOfWork @JvmOverloads constructor(
     val pipeline: Pipeline? = null,
     val record: Any? = null,
     val event: Event? = null,
-    val fault: io.kopipes.aws.faults.FaultEvent? = null,
+    val fault: FaultEvent? = null,
     val key: String? = null,
     val sequenceNumber: String? = null,
     val shardId: String? = null,
