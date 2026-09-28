@@ -15,20 +15,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlin.time.Duration.Companion.milliseconds
 
-interface EventPublisher {
-    fun publish(flow: Flow<UnitOfWork>): Flow<UnitOfWork>
-}
-
-class EventPublisherInMemory : EventPublisher {
-    private val uows = mutableListOf<UnitOfWork>()
-    override fun publish(flow: Flow<UnitOfWork>): Flow<UnitOfWork> {
-        return flow.onEach { uows.add(it) }
-    }
-    fun events() = uows.map{ it.event }.toList()
-    fun faults() = uows.map{ it.fault }.toList()
-    fun uows() = uows.toList()
-}
-
 class EventBridgePublisher(
     val busName: String = envConfig().busName()?: "undefined",
     val source: String = envConfig().busSource() ?: "custom",

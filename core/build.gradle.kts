@@ -82,5 +82,6 @@ testing {
 }
 
 tasks.withType<Test> {
-    jvmArgs("-XX:+EnableDynamicAgentLoading")
+    maxHeapSize = "2g"
+    jvmArgs("-XX:+EnableDynamicAgentLoading", "-Xmx2g")
 }

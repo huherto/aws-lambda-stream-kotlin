@@ -105,6 +105,7 @@ Update `SerializableUnitOfWork` to support dynamic extension serialization.
 -   Refactor `SerializableUnitOfWork` to handle the new extension mechanism.
 -   Ensure fault events and resubmission tools can still see the necessary data.
 
-### Phase 5: Cleanup
--   Remove deprecated fields from core `UnitOfWork`.
--   Update all connectors and sinks to use the new extension-based API.
+### Phase 5: Cleanup & Core Separation
+- Removed direct AWS SDK dependencies from `UnitOfWork` and core utilities.
+- AWS-specific operations are encapsulated in `io.kopipes.aws.extensions.*` and attached dynamically via `UnitOfWork.withExtension(...)`.
+- Decoupled `Snapshottable` state extraction, `FaultManager`, and `JsonUtils` so that core stream processing can run purely in-memory without AWS classes.

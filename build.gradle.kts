@@ -12,16 +12,16 @@ idea {
     }
 }
 
-tasks.withType<Test> {
-    // Set the default log level for slf4j-simple to debug
-    //systemProperty("org.slf4j.simpleLogger.defaultLogLevel", "debug")
-
-    // Optional: Only enable it for your specific package to avoid too much noise
-    // systemProperty("org.slf4j.simpleLogger.log.io.kopipes.aws", "debug")
-    jvmArgs("-XX:+EnableDynamicAgentLoading")
-}
-
 allprojects {
+    plugins.withId("org.jetbrains.kotlin.jvm") {
+        extensions.configure<org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension> {
+            jvmToolchain(21)
+        }
+    }
+    tasks.withType<Test> {
+        maxHeapSize = "2048m"
+        jvmArgs("-XX:+EnableDynamicAgentLoading", "-Xmx2048m")
+    }
     tasks.register("dependencySizeReport") {
         group = "help"
         description = "Reports the sizes of runtime dependencies."

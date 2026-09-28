@@ -10,6 +10,7 @@ import com.amazonaws.services.lambda.runtime.events.KinesisEvent
 import com.amazonaws.services.lambda.runtime.events.StreamsEventResponse
 import com.amazonaws.services.lambda.runtime.events.StreamsEventResponse.BatchItemFailure
 import io.kopipes.aws.faults.FaultManager
+import io.kopipes.aws.faults.kinesisRetryableFailures
 import io.kopipes.aws.from.KinesisAdapter
 import io.kopipes.aws.sinks.EventPublisherInMemory
 import io.kopipes.aws.testsupport.TestContext

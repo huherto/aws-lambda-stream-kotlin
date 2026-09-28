@@ -1,12 +1,33 @@
 package io.kopipes.aws
 
-import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue
 import io.kopipes.aws.flavors.Pipeline
+import io.kopipes.aws.serialization.Snapshottable
 import kotlinx.serialization.json.*
 import java.nio.ByteBuffer
 import java.util.*
+import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.isAccessible
+
+fun interface CustomJsonSerializer {
+    fun serialize(obj: Any, visited: MutableSet<Int>): JsonElement?
+}
+
+object JsonCustomSerializers {
+    private val serializers = CopyOnWriteArrayList<CustomJsonSerializer>()
+
+    fun register(serializer: CustomJsonSerializer) {
+        serializers.add(serializer)
+    }
+
+    fun serialize(obj: Any, visited: MutableSet<Int>): JsonElement? {
+        for (serializer in serializers) {
+            val result = serializer.serialize(obj, visited)
+            if (result != null) return result
+        }
+        return null
+    }
+}
 
 fun Any?.toJsonElement(visited: MutableSet<Int> = mutableSetOf()): JsonElement {
     if (this == null) return JsonNull
@@ -29,28 +50,17 @@ fun Any?.toJsonElement(visited: MutableSet<Int> = mutableSetOf()): JsonElement {
     visited.add(id)
 
     try {
+        // Custom registered serializers
+        JsonCustomSerializers.serialize(this, visited)?.let { return it }
+
         // Special cases
         when (this) {
+            is Snapshottable -> return toSnapshot().toJsonElement(visited)
             is ByteBuffer -> {
                 val duplicate = this.duplicate()
                 val bytes = ByteArray(duplicate.remaining())
                 duplicate.get(bytes)
                 return JsonPrimitive(Base64.getEncoder().encodeToString(bytes))
-            }
-            is AttributeValue -> {
-                return when {
-                    s != null -> JsonPrimitive(s)
-                    n != null -> n.toJsonNumber()
-                    b != null -> b.toJsonElement(visited)
-                    getBOOL() != null -> JsonPrimitive(getBOOL())
-                    getNULL() == true -> JsonNull
-                    m != null -> m.toJsonElement(visited)
-                    l != null -> l.toJsonElement(visited)
-                    getSS() != null -> JsonArray(getSS().map { JsonPrimitive(it) })
-                    getNS() != null -> JsonArray(getNS().map { it.toJsonNumber() })
-                    getBS() != null -> JsonArray(getBS().map { it.toJsonElement(visited) })
-                    else -> JsonNull
-                }
             }
             is Pipeline -> {
                 return buildJsonObject {
@@ -58,6 +68,9 @@ fun Any?.toJsonElement(visited: MutableSet<Int> = mutableSetOf()): JsonElement {
                 }
             }
         }
+
+        // Dynamic reflection fallback for known third-party models
+        AttributeValueReflectionSerializer.serialize(this, visited)?.let { return it }
 
         // Iterables & Arrays
         if (this is Iterable<*>) {
@@ -176,6 +189,40 @@ private fun String.toJsonNumber(): JsonPrimitive {
     return this.toLongOrNull()?.let { JsonPrimitive(it) }
         ?: this.toDoubleOrNull()?.let { JsonPrimitive(it) }
         ?: JsonPrimitive(this)
+}
+
+private object AttributeValueReflectionSerializer {
+    fun serialize(obj: Any, visited: MutableSet<Int>): JsonElement? {
+        if (obj.javaClass.name == "com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue") {
+            return try {
+                val clazz = obj.javaClass
+                val s = clazz.getMethod("getS").invoke(obj) as? String
+                if (s != null) return JsonPrimitive(s)
+                val n = clazz.getMethod("getN").invoke(obj) as? String
+                if (n != null) return n.toJsonNumber()
+                val b = clazz.getMethod("getB").invoke(obj)
+                if (b != null) return b.toJsonElement(visited)
+                val bool = clazz.getMethod("getBOOL").invoke(obj) as? Boolean
+                if (bool != null) return JsonPrimitive(bool)
+                val isNull = clazz.getMethod("getNULL").invoke(obj) as? Boolean
+                if (isNull == true) return JsonNull
+                val m = clazz.getMethod("getM").invoke(obj)
+                if (m != null) return m.toJsonElement(visited)
+                val l = clazz.getMethod("getL").invoke(obj)
+                if (l != null) return l.toJsonElement(visited)
+                val ss = clazz.getMethod("getSS").invoke(obj) as? List<*>
+                if (ss != null) return JsonArray(ss.filterIsInstance<String>().map { JsonPrimitive(it) })
+                val ns = clazz.getMethod("getNS").invoke(obj) as? List<*>
+                if (ns != null) return JsonArray(ns.filterIsInstance<String>().map { it.toJsonNumber() })
+                val bs = clazz.getMethod("getBS").invoke(obj) as? List<*>
+                if (bs != null) return JsonArray(bs.map { it.toJsonElement(visited) })
+                JsonNull
+            } catch (_: Throwable) {
+                null
+            }
+        }
+        return null
+    }
 }
 
 object SafeLogger {

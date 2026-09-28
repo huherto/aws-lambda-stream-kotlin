@@ -1,7 +1,5 @@
 package io.kopipes.aws.faults
 
-import aws.smithy.kotlin.runtime.SdkBaseException
-import com.amazonaws.services.lambda.runtime.events.StreamsEventResponse
 import io.kopipes.aws.FaultException
 import io.kopipes.aws.UnitOfWork
 import io.kopipes.aws.envConfig
@@ -9,7 +7,53 @@ import io.kopipes.aws.flavors.Pipeline
 import io.kopipes.aws.sinks.EventPublisher
 import kotlinx.coroutines.flow.*
 import mu.KotlinLogging
+import java.util.*
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.CopyOnWriteArrayList
+
+/**
+ * Strategy interface for classifying whether an exception is retryable.
+ */
+fun interface RetryExceptionClassifier {
+    fun isRetryable(throwable: Throwable): Boolean
+
+    companion object {
+        private val classifiers = CopyOnWriteArrayList<RetryExceptionClassifier>()
+
+        fun register(classifier: RetryExceptionClassifier) {
+            classifiers.add(classifier)
+        }
+
+        fun isRetryable(throwable: Throwable): Boolean {
+            var current: Throwable? = throwable
+            var depth = 0
+            val visited = Collections.newSetFromMap(IdentityHashMap<Throwable, Boolean>())
+            while (current != null && depth < 20 && visited.add(current)) {
+                depth++
+                for (classifier in classifiers) {
+                    if (classifier.isRetryable(current)) return true
+                }
+                // Check reflection for AWS SDK or other retryable exceptions without compile-time coupling
+                try {
+                    val sdkBaseClass = Class.forName("aws.smithy.kotlin.runtime.SdkBaseException")
+                    if (sdkBaseClass.isInstance(current)) {
+                        val metadataMethod = sdkBaseClass.getMethod("getSdkErrorMetadata")
+                        val metadata = metadataMethod.invoke(current)
+                        if (metadata != null) {
+                            val isRetryableMethod = metadata.javaClass.getMethod("isRetryable")
+                            if (isRetryableMethod.invoke(metadata) == true) {
+                                return true
+                            }
+                        }
+                    }
+                } catch (_: Throwable) {
+                }
+                current = current.cause
+            }
+            return false
+        }
+    }
+}
 
 /** Handles failures that occur while processing pipeline flows. */
 class FaultManager(
@@ -17,8 +61,9 @@ class FaultManager(
     private val skipErrorLogging: Boolean = false,
     private val isStreamRetryEnabled: Boolean = envConfig().streamRetryEnabled(),
     private val isItemLevelRetryEnabled: Boolean = envConfig().itemLevelRetryEnabled(),
-    private val awsLambdaFunctionName: String = envConfig().awsLambdaFunctionName()?:"undefined",
-    private val faultEventFactory: FaultEventFactory = FaultEventFactory(awsLambdaFunctionName = awsLambdaFunctionName)
+    private val awsLambdaFunctionName: String = envConfig().awsLambdaFunctionName() ?: "undefined",
+    private val faultEventFactory: FaultEventFactory = FaultEventFactory(awsLambdaFunctionName = awsLambdaFunctionName),
+    private val isRetryablePredicate: (Throwable) -> Boolean = { RetryExceptionClassifier.isRetryable(it) }
 ) {
 
     private val logger = KotlinLogging.logger { }
@@ -44,8 +89,17 @@ class FaultManager(
         return theFaults.toList()
     }
 
-    fun publisher() : EventPublisher {
+    fun publisher(): EventPublisher {
         return eventPublisher
+    }
+
+    fun pollRetryableItems(): List<UnitOfWork> {
+        val items = mutableListOf<UnitOfWork>()
+        while (true) {
+            val uow = retryableItems.poll() ?: break
+            items.add(uow)
+        }
+        return items
     }
 
     inline fun <R> Flow<UnitOfWork>.mapNotFaulty(
@@ -59,8 +113,8 @@ class FaultManager(
 
     inline fun <R> mapNotFaultyFrom(
         source: Flow<UnitOfWork>,
-        crossinline block: suspend (UnitOfWork) -> R?)
-    : Flow<R> {
+        crossinline block: suspend (UnitOfWork) -> R?
+    ): Flow<R> {
         return source.mapNotFaulty(block)
     }
 
@@ -79,7 +133,7 @@ class FaultManager(
         } catch (e: Throwable) {
             val faultException = FaultException(uow, e)
 
-            // redirecFailure() will rethrow if the exception is retryable.
+            // redirectFailure() will rethrow if the exception is retryable.
             // causing the pipeline to fail in the lambda handler.
             redirectFailure(faultException)
             null
@@ -87,21 +141,8 @@ class FaultManager(
     }
 
     private fun isRetriableException(exception: FaultException): Boolean {
-        if (exception.cause is SdkBaseException) {
-            return (exception.cause as SdkBaseException).sdkErrorMetadata.isRetryable
-        }
-        return false
-    }
-
-    fun kinesisRetryableFailures(): List<StreamsEventResponse.BatchItemFailure> {
-        val retryableBatchFailures = mutableListOf<StreamsEventResponse.BatchItemFailure>()
-
-        while (true) {
-            val uow = retryableItems.poll() ?: break
-            retryableBatchFailures.add(StreamsEventResponse.BatchItemFailure(uow.sequenceNumber))
-        }
-
-        return retryableBatchFailures
+        val cause = exception.cause ?: exception
+        return isRetryablePredicate(cause)
     }
 
     fun redirectFailure(ex: FaultException) {
@@ -130,7 +171,7 @@ class FaultManager(
         }
     }
 
-    suspend fun flushFaults() : Int {
+    suspend fun flushFaults(): Int {
         val flow = flow {
             while (true) {
                 val fault = theFaults.poll() ?: break
@@ -142,5 +183,4 @@ class FaultManager(
         logger.debug { "flushFaults: count=$count" }
         return count
     }
-
 }
