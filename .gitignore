@@ -57,3 +57,7 @@ volume/
 
 .awslocal_logs/
 /framework_reference
+
+docs/course/
+.structurizr/
+structurizr-preview.war
