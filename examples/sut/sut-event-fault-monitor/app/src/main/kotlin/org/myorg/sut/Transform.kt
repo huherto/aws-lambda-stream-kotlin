@@ -7,9 +7,7 @@ import aws.smithy.kotlin.runtime.net.url.Url
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.KinesisFirehoseEvent
-import io.kopipes.aws.EnvironmentConfig
-import io.kopipes.aws.longOrNull
-import io.kopipes.aws.stringOrNull
+import io.kopipes.aws.AwsEnvironmentConfig
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
@@ -21,12 +19,14 @@ import java.io.ByteArrayInputStream
 import java.util.*
 import java.util.zip.GZIPInputStream
 
+private fun JsonObject.stringOrNull(key: String): String? = this[key]?.jsonPrimitive?.contentOrNull
+private fun JsonObject.longOrNull(key: String): Long? = this[key]?.jsonPrimitive?.longOrNull
 
 class Transform : RequestHandler<KinesisFirehoseEvent, FirehoseTransformResponse> {
 
     private val logger = KotlinLogging.logger {}
 
-    private val envConfig = EnvironmentConfig()
+    private val envConfig = AwsEnvironmentConfig()
 
     fun decodeBase64JsonIfNeeded(value: String): String {
         val trimmed = value.trim()
@@ -50,14 +50,15 @@ class Transform : RequestHandler<KinesisFirehoseEvent, FirehoseTransformResponse
         context: Context,
     ): FirehoseTransformResponse = runBlocking {
         // This is shared by all the uows.
-        val notifications = linkedMapOf<String, Notification>()
+        val notifications = linkedMapOf<String, Any>()
         val results = input.records.map { record ->
             val originalData = Charsets.UTF_8.decode(record.data).toString()
             fixRecordId(record)
             processAsPipeline(record, originalData, context, notifications)
         }
 
-        sendNotifications(notifications)
+        @Suppress("UNCHECKED_CAST")
+        sendNotifications(notifications as Map<String, Notification>)
 
         FirehoseTransformResponse(records = results)
     }
@@ -66,7 +67,7 @@ class Transform : RequestHandler<KinesisFirehoseEvent, FirehoseTransformResponse
         record: KinesisFirehoseEvent.Record?,
         originalData: String,
         context: Context,
-        notifications: LinkedHashMap<String, Notification>
+        notifications: MutableMap<String, Any>
     ): FirehoseTransformRecord {
         val uow = TransformUnitOfWork(
             recordId = record!!.recordId,
@@ -110,18 +111,14 @@ class Transform : RequestHandler<KinesisFirehoseEvent, FirehoseTransformResponse
         final: Boolean = false,
     ): (TransformUnitOfWork) -> TransformUnitOfWork = { uow ->
         try {
-            if (uow.err != null && !final) {
+            f(uow)
+        } catch (e: Exception) {
+            logger.error(e) { "Failed to process record ${uow.recordId} at step ${f::class.simpleName}" }
+            if (final) {
                 uow
             } else {
-                f(uow)
+                throw e
             }
-        } catch (err: Throwable) {
-            logger.error(err) { "Failed to transform Firehose record ${uow.recordId}" }
-
-            uow.copy(
-                err = err,
-                data = uow.originalData,
-            )
         }
     }
 
@@ -131,53 +128,32 @@ class Transform : RequestHandler<KinesisFirehoseEvent, FirehoseTransformResponse
     }
 
     private fun parseEvent(uow: TransformUnitOfWork): TransformUnitOfWork {
-        val eventAsString = requireNotNull(uow.eventAsString) {
-            "eventAsString is required"
-        }
-
-        return uow.copy(
-            event = json.parseToJsonElement(eventAsString),
-        )
+        val data = uow.eventAsString ?: uow.originalData
+        val element = json.parseToJsonElement(data)
+        return uow.copy(event = element)
     }
 
     private fun decompressEvent(uow: TransformUnitOfWork): TransformUnitOfWork {
-        val event = requireNotNull(uow.event) {
-            "event is required"
-        }
-
-        if (event !is JsonObject) {
-            return uow
-        }
-
+        val event = uow.event as? JsonObject ?: return uow
         val detail = event["detail"] ?: return uow
-
-        val decompressed = JsonObject(
-            event.toMutableMap().apply {
-                put("detail", decompressJson(detail))
+        val decompressedDetail = decompressJson(detail)
+        val decompressedEvent = buildJsonObject {
+            event.forEach { (k, v) ->
+                put(k, if (k == "detail") decompressedDetail else v)
             }
-        )
-
-        return uow.copy(event = decompressed)
+        }
+        return uow.copy(event = decompressedEvent)
     }
 
     private fun stringifyEvent(uow: TransformUnitOfWork): TransformUnitOfWork {
-        val event = requireNotNull(uow.event) {
-            "event is required"
-        }
-
-        return uow.copy(
-            data = json.encodeToString(JsonElement.serializer(), event),
-        )
+        val event = uow.event ?: return uow
+        val stringified = json.encodeToString(JsonElement.serializer(), event)
+        return uow.copy(data = stringified)
     }
 
     private fun base64Data(uow: TransformUnitOfWork): TransformUnitOfWork {
-        val data = requireNotNull(uow.data) {
-            "data is required"
-        }
-
-        val encoded = Base64.getEncoder()
-            .encodeToString("$data\n".toByteArray(Charsets.UTF_8))
-
+        val data = (uow.data ?: uow.originalData) + "\n"
+        val encoded = Base64.getEncoder().encodeToString(data.toByteArray(Charsets.UTF_8))
         return uow.copy(data = encoded)
     }
 
@@ -284,7 +260,7 @@ class Transform : RequestHandler<KinesisFirehoseEvent, FirehoseTransformResponse
         return when (element) {
             is JsonObject -> {
                 buildJsonObject {
-                    element.forEach { key, value ->
+                    element.forEach { (key, value) ->
                         put(key, decompressJson(value))
                     }
                 }
@@ -306,63 +282,57 @@ class Transform : RequestHandler<KinesisFirehoseEvent, FirehoseTransformResponse
                     element
                 }
             }
-
-            JsonNull -> JsonNull
         }
     }
 
-    private fun unzip(base64: String): String {
-        val compressed = Base64.getDecoder().decode(base64)
-
-        return GZIPInputStream(ByteArrayInputStream(compressed)).use { gzip ->
-            gzip.readBytes().toString(Charsets.UTF_8)
-        }
+    private fun unzip(compressed: String): String {
+        val bytes = Base64.getDecoder().decode(compressed)
+        val bis = ByteArrayInputStream(bytes)
+        val gzip = GZIPInputStream(bis)
+        val result = gzip.bufferedReader().use { it.readText() }
+        return result
     }
-
-    private data class TransformUnitOfWork(
-        val recordId: String,
-        val originalData: String,
-        val data: String? = null,
-        val eventAsString: String? = null,
-        val event: JsonElement? = null,
-        val ctx: Context,
-        val notifications: MutableMap<String, Notification>,
-        val err: Throwable? = null,
-    )
-
-    private data class Notification(
-        val subject: String,
-        val messageDeduplicationId: String,
-        val messageGroupId: String,
-        val message: String,
-    )
 
     companion object {
-        private const val COMPRESSION_PREFIX = "COMPRESSED"
-
-        private val json = Json {
+        const val COMPRESSION_PREFIX = "COMPRESSED"
+        val json = Json {
             ignoreUnknownKeys = true
             isLenient = true
-            encodeDefaults = false
         }
-
-        private val prettyJson = Json {
+        val prettyJson = Json {
             ignoreUnknownKeys = true
-            isLenient = true
             prettyPrint = true
-            encodeDefaults = false
+            isLenient = true
         }
     }
 }
 
+data class TransformUnitOfWork(
+    val recordId: String,
+    val originalData: String,
+    val data: String? = null,
+    val eventAsString: String? = null,
+    val event: JsonElement? = null,
+    val ctx: Context,
+    val notifications: MutableMap<String, Any> = linkedMapOf(),
+    val err: Throwable? = null,
+)
+
+data class Notification(
+    val subject: String,
+    val messageDeduplicationId: String,
+    val messageGroupId: String,
+    val message: String
+)
+
 @Serializable
 data class FirehoseTransformResponse(
-    val records: List<FirehoseTransformRecord>,
+    val records: List<FirehoseTransformRecord>
 )
 
 @Serializable
 data class FirehoseTransformRecord(
     val recordId: String,
     val result: String,
-    val data: String,
+    val data: String
 )

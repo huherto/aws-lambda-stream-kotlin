@@ -7,7 +7,7 @@ import aws.sdk.kotlin.services.lambda.model.InvokeRequest
 import aws.smithy.kotlin.runtime.net.url.Url
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
-import io.kopipes.aws.toJsonElement
+import io.kopipes.core.toJsonElement
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.*
 import org.myorg.sut.TrackedUnit

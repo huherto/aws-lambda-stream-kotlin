@@ -1,15 +1,15 @@
 package org.myorg.urls;
 
-import io.kopipes.aws.Event;
-import io.kopipes.aws.PipelineAssembler;
-import io.kopipes.aws.UnitOfWork;
 import io.kopipes.aws.connectors.DefaultEventBridgeClientFactory;
 import io.kopipes.aws.flavors.CdcPipeline;
 import io.kopipes.aws.from.DynamodbAdapter;
 import io.kopipes.aws.from.RecordImage;
 import io.kopipes.aws.from.RecordPair;
 import io.kopipes.aws.sinks.EventBridgePublisher;
-import io.kopipes.aws.sinks.EventPublisher;
+import io.kopipes.core.Event;
+import io.kopipes.core.PipelineAssembler;
+import io.kopipes.core.UnitOfWork;
+import io.kopipes.core.sinks.EventPublisher;
 
 import java.util.List;
 import java.util.Map;

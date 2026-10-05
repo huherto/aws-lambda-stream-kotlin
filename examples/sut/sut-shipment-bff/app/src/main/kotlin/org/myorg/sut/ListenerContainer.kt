@@ -1,12 +1,12 @@
 package org.myorg.sut
 
 import aws.sdk.kotlin.services.dynamodb.model.UpdateItemRequest
-import io.kopipes.aws.PipelineAssembler
-import io.kopipes.aws.UnitOfWork
-import io.kopipes.aws.filters.EventFilters
 import io.kopipes.aws.flavors.MaterializePipeline
-import io.kopipes.aws.flavors.Pipeline
 import io.kopipes.aws.from.KinesisAdapter
+import io.kopipes.core.PipelineAssembler
+import io.kopipes.core.UnitOfWork
+import io.kopipes.core.filters.EventFilters
+import io.kopipes.core.flavors.Pipeline
 
 class ListenerContainer() {
 

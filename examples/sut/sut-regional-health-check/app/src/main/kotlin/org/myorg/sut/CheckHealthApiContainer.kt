@@ -1,7 +1,7 @@
 package org.myorg.sut
 
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
-import io.kopipes.aws.GlobalRegistry.envConfig
+import io.kopipes.aws.awsEnvConfig
 import kotlinx.coroutines.runBlocking
 
 class CheckHealthApiContainer(
@@ -19,12 +19,12 @@ class CheckHealthApiContainer(
         }
     }
 
-    val tableName = envConfig().entityTableName()
+    val tableName = awsEnvConfig().entityTableName()
         ?: error("ENTITY_TABLE_NAME is not configured")
 
-    val unhealthyFlag : Boolean = envConfig().unhealthy()
+    val unhealthyFlag : Boolean = awsEnvConfig().unhealthy()
 
-    val awsRegion : String = envConfig().awsRegion()
+    val awsRegion : String = awsEnvConfig().awsRegion()
 
     private fun debug(namespace: String): (String) -> Unit =
         { message ->

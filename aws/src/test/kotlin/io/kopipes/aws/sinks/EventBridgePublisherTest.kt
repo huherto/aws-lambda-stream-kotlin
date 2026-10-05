@@ -1,0 +1,167 @@
+package io.kopipes.aws.sinks
+
+import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequest
+import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequestEntry
+import io.kopipes.aws.MyEventA
+import io.kopipes.aws.connectors.ConnectorResponse
+import io.kopipes.aws.connectors.EventBridgeConnector
+import io.kopipes.aws.extensions.*
+import io.kopipes.core.EnvironmentConfig
+import io.kopipes.core.Event
+import io.kopipes.core.UnitOfWork
+import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.nulls.shouldNotBeNull
+import io.kotest.matchers.shouldBe
+import io.mockk.*
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.runBlocking
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.Test
+
+class EventBridgePublisherTest {
+
+    fun mockEnvConfig() : EnvironmentConfig {
+        val spy = spyk(EnvironmentConfig())
+        every { spy.awsRegion() } returns "us-east-1"
+        return spy
+    }
+
+    @AfterEach
+    fun tearDown() {
+        unmockkAll()
+    }
+
+    @Nested
+    inner class ToPublishRequestEntry {
+
+        @Test
+        fun `should map correctly based on event presence`() {
+            // Arrange
+
+            val publisher = EventBridgePublisher(
+                busName = "test-bus",
+                source = "test-source")
+
+            val mockEvent = mockk<Event>()
+            every { mockEvent.eventType() } returns "test-type"
+            every { mockEvent.toString() } returns """{"data":"value"}"""
+
+            val uowWithEvent = UnitOfWork(event = mockEvent)
+            val uowWithoutEvent = UnitOfWork(event = null)
+
+            // Act
+            val resultWithEvent = publisher.toPublishRequestEntry(uowWithEvent)
+            val resultWithoutEvent = publisher.toPublishRequestEntry(uowWithoutEvent)
+
+            // Assert
+            resultWithEvent.publishRequestEntry.shouldNotBeNull()
+            resultWithEvent.publishRequestEntry!!.eventBusName shouldBe "test-bus"
+            resultWithEvent.publishRequestEntry!!.source shouldBe "test-source"
+            resultWithEvent.publishRequestEntry!!.detailType shouldBe "test-type"
+            resultWithEvent.publishRequestEntry!!.detail shouldBe """{"data":"value"}"""
+
+            resultWithoutEvent.publishRequestEntry.shouldBeNull()
+        }
+    }
+
+    @Nested
+    inner class ToPublishRequest {
+
+        @Test
+        fun `should handle batch correctly based on entries presence`() {
+            // Arrange
+
+            val publisher = EventBridgePublisher(endpointId = "test-endpoint")
+
+            val entry1 = PutEventsRequestEntry.Companion { source = "source1" }
+
+            val validBatch = listOf(
+                UnitOfWork().withPublishRequestEntry(entry1),
+                UnitOfWork().withPublishRequestEntry(null)// this should be filtered out
+            )
+
+            val uowWithBatch = UnitOfWork(batch = validBatch)
+            val uowEmptyBatch = UnitOfWork(batch = emptyList())
+            val uowNullBatch = UnitOfWork(batch = null)
+
+            // Act
+            val resultWithBatch = publisher.toPublishRequest(uowWithBatch)
+            val resultEmptyBatch = publisher.toPublishRequest(uowEmptyBatch)
+            val resultNullBatch = publisher.toPublishRequest(uowNullBatch)
+
+            // Assert
+            resultWithBatch.publishRequest.shouldNotBeNull()
+            resultWithBatch.publishRequest!!.entries?.size shouldBe 1
+            resultWithBatch.publishRequest!!.entries?.get(0)?.source shouldBe "source1"
+            resultWithBatch.publishRequest!!.endpointId shouldBe "test-endpoint"
+
+            resultEmptyBatch.publishRequest shouldBe null
+            resultNullBatch.publishRequest shouldBe null
+        }
+    }
+
+    @Nested
+    inner class PutEvents {
+
+        @Test
+        fun `should execute connector when publishRequest is provided`(): Unit  = runBlocking {
+            // Arrange
+            mockkConstructor(EventBridgeConnector::class)
+            val mockResponse = mockk<ConnectorResponse>()
+            coEvery { anyConstructed<EventBridgeConnector>().putEvents(any()) } returns mockResponse
+
+            val publisher = EventBridgePublisher()
+
+            val request = PutEventsRequest.Companion { endpointId = "test-endpoint" }
+            val uowWithRequest = UnitOfWork().withPublishRequest(request)
+            val uowWithoutRequest = UnitOfWork().withPublishRequest(null)
+
+            // Act
+            val resultWithRequest = publisher.putEvents(uowWithRequest)
+            val resultWithoutRequest = publisher.putEvents(uowWithoutRequest)
+
+            // Assert
+            resultWithRequest.publishResponse shouldBe mockResponse
+            resultWithRequest.publishRequest shouldBe request
+
+            resultWithoutRequest.publishResponse.shouldBeNull()
+        }
+    }
+
+    @Nested
+    inner class PublishFlow {
+
+        @Test
+        fun `should process flow of UnitOfWork completely`() : Unit = runBlocking {
+            // Arrange
+            mockkConstructor(EventBridgeConnector::class)
+            val mockResponse = mockk<ConnectorResponse>()
+            coEvery { anyConstructed<EventBridgeConnector>().putEvents(any()) } returns mockResponse
+
+            val publisher = EventBridgePublisher(
+                busName = "flow-bus",
+                source = "flow-source",
+                batchSize = 2)
+
+            val event1 = MyEventA(id = "id1", tags = emptyMap())
+            val event2 = MyEventA(id = "id2", tags = emptyMap())
+
+            val uow1 = UnitOfWork(event = event1)
+            val uow2 = UnitOfWork(event = event2)
+
+            val inputFlow = flowOf(uow1, uow2)
+
+            // Act
+            val resultList = publisher.publish(inputFlow).toList()
+
+            // Assert
+            resultList.size shouldBe 2
+            
+            // Check that entries map correctly
+            resultList[0].publishRequestEntry?.detail.shouldNotBeNull()
+            resultList[1].publishRequestEntry?.detail.shouldNotBeNull()
+        }
+    }
+}

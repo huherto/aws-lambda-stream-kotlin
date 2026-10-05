@@ -21,6 +21,14 @@ tasks.withType<Test> {
     jvmArgs("-XX:+EnableDynamicAgentLoading")
 }
 
+subprojects {
+    plugins.withId("org.jetbrains.kotlin.jvm") {
+        configure<org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension> {
+            jvmToolchain(21)
+        }
+    }
+}
+
 allprojects {
     tasks.register("dependencySizeReport") {
         group = "help"

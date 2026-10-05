@@ -6,11 +6,12 @@ import aws.sdk.kotlin.services.s3.model.PutObjectResponse
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.StreamRecord
-import io.kopipes.aws.EnvironmentConfig
-import io.kopipes.aws.GlobalRegistry
+import io.kopipes.aws.AwsEnvironmentConfig
+import io.kopipes.aws.AwsGlobalRegistry
 import io.kopipes.aws.connectors.S3ClientFactory
-import io.kopipes.aws.faults.FaultManager
-import io.kopipes.aws.sinks.EventPublisherInMemory
+import io.kopipes.core.GlobalRegistry
+import io.kopipes.core.faults.FaultManager
+import io.kopipes.core.sinks.EventPublisherInMemory
 import io.kotest.matchers.shouldBe
 import io.mockk.*
 import org.junit.jupiter.api.BeforeEach
@@ -22,8 +23,7 @@ class DynamoDbTriggerTest {
 
     @BeforeEach
     fun beforeEach() {
-
-        val envConfig = spyk<EnvironmentConfig>(EnvironmentConfig())
+        val envConfig = spyk<AwsEnvironmentConfig>(AwsEnvironmentConfig())
         coEvery { envConfig.awsRegion() } returns "eu-west-1"
         coEvery { envConfig.bucketName() } returns "bucket-name"
         GlobalRegistry.setEnvConfig(envConfig)
@@ -42,7 +42,7 @@ class DynamoDbTriggerTest {
         val s3Client: S3Client = mockk(relaxed = true)
         val s3ClientFactory: S3ClientFactory = mockk()
         every { s3ClientFactory.getClient(any()) } returns s3Client
-        GlobalRegistry.setS3ClientFactory(s3ClientFactory)
+        AwsGlobalRegistry.setS3ClientFactory(s3ClientFactory)
         coEvery {
             s3Client.putObject(capture(putRequestSlot))
         } returns PutObjectResponse {}
@@ -87,7 +87,7 @@ class DynamoDbTriggerTest {
         val s3Client: S3Client = mockk(relaxed = true)
         val s3ClientFactory: S3ClientFactory = mockk()
         every { s3ClientFactory.getClient(any()) } returns s3Client
-        GlobalRegistry.setS3ClientFactory(s3ClientFactory)
+        AwsGlobalRegistry.setS3ClientFactory(s3ClientFactory)
         val container = DynamoDbTriggerContainer()
 
         val trigger = DynamoDbTrigger({ container})

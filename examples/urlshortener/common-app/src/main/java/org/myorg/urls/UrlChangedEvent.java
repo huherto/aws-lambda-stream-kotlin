@@ -1,9 +1,9 @@
 package org.myorg.urls;
 
-import io.kopipes.aws.EnvelopeEncryptionMetadata;
-import io.kopipes.aws.Event;
-import io.kopipes.aws.EventReference;
-import io.kopipes.aws.RawRecord;
+import io.kopipes.core.EnvelopeEncryptionMetadata;
+import io.kopipes.core.Event;
+import io.kopipes.core.EventReference;
+import io.kopipes.core.RawRecord;
 import java.util.List;
 import java.util.Map;
 

@@ -1,7 +1,7 @@
 package org.myorg.sut
 
-import io.kopipes.aws.Event
-import io.kopipes.aws.EventCodec
+import io.kopipes.core.Event
+import io.kopipes.core.EventCodec
 import kotlinx.serialization.json.Json
 
 object TrackedUnitEventCodec : EventCodec {

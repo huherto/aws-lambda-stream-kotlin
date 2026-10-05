@@ -4,7 +4,7 @@ import aws.sdk.kotlin.services.dynamodb.DynamoDbClient;
 import io.kopipes.aws.connectors.DefaultDynamoDbClientFactory;
 import io.kopipes.aws.connectors.DefaultEventBridgeClientFactory;
 import io.kopipes.aws.sinks.EventBridgePublisher;
-import io.kopipes.aws.sinks.EventPublisher;
+import io.kopipes.core.sinks.EventPublisher;
 
 public class UrlBffContainer {
     public final UrlDao urlDao;

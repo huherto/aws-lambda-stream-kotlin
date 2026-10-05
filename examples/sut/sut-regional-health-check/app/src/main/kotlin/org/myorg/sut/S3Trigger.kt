@@ -3,7 +3,7 @@ package org.myorg.sut
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.SQSEvent
-import io.kopipes.aws.utils.loggedLazy
+import io.kopipes.core.utils.loggedLazy
 import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging
 

@@ -1,10 +1,10 @@
 package org.myorg.sut
 
-import io.kopipes.aws.JsonEventCodec
-import io.kopipes.aws.PipelineAssembler
-import io.kopipes.aws.flavors.Pipeline
 import io.kopipes.aws.flavors.UpdatePipeline
 import io.kopipes.aws.from.KinesisAdapter
+import io.kopipes.core.JsonEventCodec
+import io.kopipes.core.PipelineAssembler
+import io.kopipes.core.flavors.Pipeline
 
 class KinesisTriggerContainer () {
 

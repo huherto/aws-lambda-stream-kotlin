@@ -10,7 +10,7 @@ repositories {
 }
 
 dependencies {
-    implementation(project(":core"))
+    api(project(":aws"))
     implementation(platform(libs.aws.sdk.bom))
     implementation(libs.aws.sdk.dynamodb)
     implementation(libs.jackson.databind)

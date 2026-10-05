@@ -3,15 +3,15 @@ package org.myorg.sut
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
-import io.kopipes.aws.utils.loggedLazy
+import io.kopipes.core.utils.loggedLazy
 import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging
 
 class Trigger constructor(
     containerFactory: () -> TriggerContainer = { TriggerContainer.build() }
-): RequestHandler<DynamodbEvent, String> {
+) : RequestHandler<DynamodbEvent, Void?> {
 
-    private val logger = KotlinLogging.logger {  }
+    private val logger = KotlinLogging.logger { }
 
     private val container: TriggerContainer by loggedLazy(
         name = "TriggerContainer",
@@ -19,18 +19,16 @@ class Trigger constructor(
         initializer = containerFactory,
     )
 
-    override fun handleRequest(ddbEvent: DynamodbEvent, context: Context) : String = runBlocking{
+    override fun handleRequest(dynamodbEvent: DynamodbEvent, context: Context): Void? = runBlocking {
+        logger.info { "Trigger invoked with ${dynamodbEvent.records?.size ?: 0} DynamoDB records" }
 
-        val headFlow = container.dynamoDbAdapter.fromDynamoDB(ddbEvent)
-        logger.info { "Processing ${ddbEvent.records?.size} records" }
-        container.assembler
-            .assemble(headFlow, true)
-            .collect {
-                val eventClass = it.event?.javaClass?.simpleName ?: "unknown"
-                val eventAsString = it.event?.toString() ?: "no event"
-                logger.info { "processed event ${it.event?.id}, $eventClass" }
-            }
+        val assembler = container.assembler
+        val headFlow = container.dynamoDbAdapter
+            .fromDynamoDB(dynamodbEvent)
 
-        "Done"
+        assembler
+            .assemble(headFlow)
+            .collect { logger.info { "collected " + it.event?.id } }
+        null
     }
 }

@@ -1,11 +1,11 @@
 package org.myorg.sut
 
-import io.kopipes.aws.FaultException
-import io.kopipes.aws.UnitOfWork
-import io.kopipes.aws.faults.FaultEvent
-import io.kopipes.aws.serialization.snapshots.ErrorSnapshot
-import io.kopipes.aws.serialization.snapshots.RecordSnapshot
-import io.kopipes.aws.serialization.snapshots.UnitOfWorkSnapshot
+import io.kopipes.core.FaultException
+import io.kopipes.core.UnitOfWork
+import io.kopipes.core.faults.FaultEvent
+import io.kopipes.core.serialization.snapshots.ErrorSnapshot
+import io.kopipes.core.serialization.snapshots.RecordSnapshot
+import io.kopipes.core.serialization.snapshots.UnitOfWorkSnapshot
 import kotlinx.datetime.Clock
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive

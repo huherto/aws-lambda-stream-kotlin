@@ -2,13 +2,14 @@ package org.myorg.sut
 
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.StreamRecord
-import io.kopipes.aws.GlobalRegistry
-import io.kopipes.aws.PipelineAssembler
-import io.kopipes.aws.faults.FaultManager
 import io.kopipes.aws.from.DynamodbAdapter
-import io.kopipes.aws.sinks.EventPublisherInMemory
-import io.kopipes.aws.sinks.EventsMicrostoreInMemory
 import io.kopipes.aws.testsupport.TestContext
+import io.kopipes.core.GlobalRegistry
+import io.kopipes.core.PipelineAssembler
+import io.kopipes.core.faults.FaultManager
+import io.kopipes.core.sinks.EventPublisherInMemory
+import io.kopipes.core.sinks.EventsMicrostoreInMemory
+import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
@@ -21,7 +22,10 @@ class TriggerTest {
         val faultManager = FaultManager(eventPublisher, skipErrorLogging = true)
         GlobalRegistry.setFaultManager(faultManager)
         val eventsMicrostore = EventsMicrostoreInMemory(faultManager)
-        val container = TriggerContainer(eventPublisher, eventsMicrostore)
+        val container = TriggerContainer(
+            eventsMicrostore = eventsMicrostore,
+            eventPublisher = eventPublisher
+        )
         
         return container
     }
@@ -75,7 +79,7 @@ class TriggerTest {
         val singleRecordResult = trigger.handleRequest(singleRecordEvent, testContext)
 
         // Assert
-        emptyEventResult shouldBe "Done"
-        singleRecordResult shouldBe "Done"
+        emptyEventResult.shouldBeNull()
+        singleRecordResult.shouldBeNull()
     }
 }

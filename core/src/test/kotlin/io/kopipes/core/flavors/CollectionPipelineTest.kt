@@ -1,0 +1,229 @@
+package io.kopipes.core.flavors
+
+import io.kopipes.core.*
+import io.kopipes.core.sinks.EventsMicrostore
+import io.kopipes.core.sinks.saveOptions
+import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.comparables.shouldBeGreaterThan
+import io.kotest.matchers.nulls.shouldNotBeNull
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.types.shouldBeTypeOf
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.spyk
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.runBlocking
+import kotlinx.datetime.Clock
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+
+class CollectionPipelineTest {
+
+    companion object {
+        val TIMESTAMP = Clock.System.now().toEpochMilliseconds()
+    }
+
+    val envConfig = spyk<EnvironmentConfig> {
+        every { awsRegion() } returns "eu-west-1"
+    }
+
+    @BeforeEach
+    fun beforeEach() {
+        GlobalRegistry.setEnvConfig(envConfig)
+    }
+
+    private val eventsMicrostore = mockk<EventsMicrostore>()
+
+    private fun createPipeline(
+        pipelineId: String = "pipeline-1",
+        ttlDays: Int? = null,
+        includeRaw: Boolean = true,
+        expire: Boolean = false,
+    ): CollectPipeline {
+        return CollectPipeline.builder()
+            .id(pipelineId)
+            .eventsMicrostore(eventsMicrostore)
+            .apply {
+                ttlDays?.let { ttlDays(it) }
+                includeRaw(includeRaw)
+                expire(expire)
+            }
+            .build()
+    }
+
+    private fun createEvent(
+        id: String = "event-1",
+        timestamp: Long = Clock.System.now().toEpochMilliseconds(),
+        partitionKey: String? = "partition-1",
+    ): Event = TestEvent(
+        id = id,
+        timestamp = timestamp,
+        partitionKey = partitionKey,
+    )
+
+    data class TestEvent(
+        override val id: String?,
+        override val timestamp: Long?,
+        override val partitionKey: String?,
+        override val tags: Map<String, String>? = null,
+        override val raw: RawRecord? = null,
+        override val eem: EnvelopeEncryptionMetadata? = null,
+        override val triggers: List<EventReference>? = null,
+    ) : Event {
+        override fun eventType() = "TestEvent"
+        override fun toString() = """{"id":"$id"}"""
+        override fun copyEvent(
+            id: String?,
+            timestamp: Long?,
+            partitionKey: String?,
+            tags: Map<String, String>?,
+            raw: RawRecord?,
+            eem: EnvelopeEncryptionMetadata?,
+            triggers: List<EventReference>?
+        ): Event = copy(
+            id = id,
+            timestamp = timestamp,
+            partitionKey = partitionKey,
+            tags = tags,
+            raw = raw,
+            eem = eem,
+            triggers = triggers
+        )
+    }
+
+    @Test
+    fun `daysInSecs should convert days to seconds for common values`() {
+        // Arrange
+        val pipeline = createPipeline()
+
+        // Act
+        val zeroDays = pipeline.daysInSecs(0)
+        val oneDay = pipeline.daysInSecs(1)
+        val twoDays = pipeline.daysInSecs(2)
+
+        // Assert
+        zeroDays shouldBe 0L
+        oneDay shouldBe 86_400L
+        twoDays shouldBe 172_800L
+    }
+
+    @Test
+    fun `save should map UnitOfWork to SaveOptions using explicit ttl includeRaw and expire values`() : Unit = runBlocking {
+        // Arrange
+        val pipeline = createPipeline(
+            pipelineId = "my-pipeline",
+            ttlDays = 2,
+            includeRaw = false,
+            expire = true,
+        )
+        val event = createEvent(timestamp = TIMESTAMP)
+        val uow = UnitOfWork(
+            event = event,
+            key = "correlation-key",
+            sequenceNumber = "seq-1",
+        )
+
+        every { eventsMicrostore.save(any()) } answers { firstArg() }
+
+        // Act
+        val result = pipeline.run {
+            flowOf(uow).save().toList()
+        }
+
+        // Assert
+        result shouldHaveSize 1
+        val saved = result.first()
+        val options = saved.saveOptions.shouldNotBeNull()
+
+        options.pk shouldBe "event-1"
+        options.sk shouldBe "EVENT"
+        options.discriminator shouldBe "EVENT"
+        options.timeStamp  shouldBe TIMESTAMP
+        options.awsRegion shouldBe "eu-west-1"
+        options.sequenceNumber shouldBe "seq-1"
+        options.ttl?.shouldBeGreaterThan(TIMESTAMP / 1000)
+        options.expire shouldBe true
+        options.data shouldBe "correlation-key"
+        options.includeRaw shouldBe false
+        options.pipelineId shouldBe "my-pipeline"
+    }
+
+    @Test
+    fun `save should use env ttl when ttlDays is not provided and copy null event fields safely`() : Unit = runBlocking {
+        // Arrange
+        every { envConfig.ttl() } returns 5
+        val pipeline = createPipeline(
+            pipelineId = "pipeline-2",
+            ttlDays = null,
+            includeRaw = true,
+            expire = false,
+        )
+        val uow = UnitOfWork(
+            event = createEvent(timestamp = Clock.System.now().toEpochMilliseconds()),
+            key = null,
+            sequenceNumber = null,
+        )
+
+        every { eventsMicrostore.save(any()) } answers { firstArg() }
+
+        // Act
+        val result = pipeline.run {
+            flowOf(uow).save().toList()
+        }
+
+        // Assert
+        result shouldHaveSize 1
+        val options = result.first().saveOptions.shouldNotBeNull()
+
+        options.pk shouldBe "event-1"
+        options.timeStamp!! shouldBeGreaterThan Clock.System.now().toEpochMilliseconds() - 5_000L
+        options.ttl shouldNotBe null
+        options.expire shouldBe false
+        options.data shouldBe null
+        options.includeRaw shouldBe true
+        options.pipelineId shouldBe "pipeline-2"
+    }
+
+    @Test
+    fun `save should delegate to eventsMicrostore and preserve the flow content`() : Unit = runBlocking {
+        // Arrange
+        val pipeline = createPipeline(pipelineId = "pipeline-4")
+        val first = UnitOfWork(event = createEvent(id = "e-1"))
+        val second = UnitOfWork(event = createEvent(id = "e-2"))
+
+        every { eventsMicrostore.save(any()) } answers { firstArg() }
+
+        // Act
+        val result = pipeline.run {
+            flowOf(first, second).save().toList()
+        }
+
+        // Assert
+        result.shouldHaveSize(2)
+        result[0].saveOptions.shouldNotBeNull().pk shouldBe "e-1"
+        result[1].saveOptions.shouldNotBeNull().pk shouldBe "e-2"
+        result[0].saveOptions.shouldNotBe(result[1].saveOptions)
+    }
+
+    @Test
+    fun `save should keep saveOptions independent per element`() : Unit = runBlocking {
+        // Arrange
+        val pipeline = createPipeline(pipelineId = "pipeline-5")
+        val uow = UnitOfWork(event = createEvent(id = "same-id"))
+
+        every { eventsMicrostore.save(any()) } answers { firstArg() }
+
+        // Act
+        val result = pipeline.run {
+            flowOf(uow).save().toList()
+        }
+
+        // Assert
+        result shouldHaveSize 1
+        val savedUow = result.first()
+        savedUow.saveOptions.shouldNotBeNull()
+        savedUow.saveOptions.shouldBeTypeOf<EventsMicrostore.SaveOptions>()
+    }
+}

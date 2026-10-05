@@ -3,7 +3,7 @@ package org.myorg.sut
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
 import aws.sdk.kotlin.services.dynamodb.model.UpdateItemResponse
 import io.kopipes.aws.sinks.DynamoDbUpdateValue
-import io.kopipes.aws.utils.ttl
+import io.kopipes.core.utils.ttl
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.maps.shouldContainExactly
 import io.kotest.matchers.shouldBe

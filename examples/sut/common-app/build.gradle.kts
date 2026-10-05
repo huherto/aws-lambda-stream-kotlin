@@ -27,7 +27,7 @@ dependencies {
     implementation(libs.kotlin.stdlib)
     implementation(libs.kotlinx.coroutines)
     implementation(libs.kotlinx.serialization.json)
-    implementation(project(":core"))
+    api(project(":aws"))
 
     testImplementation(kotlin("test"))
     testImplementation(libs.aws.lambda.java.tests)

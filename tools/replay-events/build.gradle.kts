@@ -15,7 +15,7 @@ repositories {
 dependencies {
     implementation(platform(libs.aws.sdk.bom))
 
-    implementation(project(":core"))
+    implementation(project(":aws"))
     implementation(libs.aws.sdk.lambda)
     implementation(libs.aws.sdk.s3)
     implementation(libs.kotlin.stdlib)

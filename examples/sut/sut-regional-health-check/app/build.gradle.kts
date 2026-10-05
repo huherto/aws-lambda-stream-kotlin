@@ -24,7 +24,7 @@ dependencies {
 
     implementation(platform(libs.aws.sdk.bom))
 
-    implementation(project(":core"))
+    implementation(project(":aws"))
     implementation(project(":examples:sut:common-app"))
 
     implementation(libs.aws.java.core)

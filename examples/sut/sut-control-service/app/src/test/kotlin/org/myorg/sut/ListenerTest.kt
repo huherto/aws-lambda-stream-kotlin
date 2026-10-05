@@ -1,12 +1,13 @@
 package org.myorg.sut
 
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
-import io.kopipes.aws.EnvironmentConfig
-import io.kopipes.aws.GlobalRegistry
-import io.kopipes.aws.faults.FaultManager
-import io.kopipes.aws.sinks.EventPublisherInMemory
-import io.kopipes.aws.sinks.EventsMicrostoreInMemory
+import io.kopipes.aws.AwsEnvironmentConfig
+import io.kopipes.aws.AwsGlobalRegistry
 import io.kopipes.aws.testsupport.TestContext
+import io.kopipes.core.GlobalRegistry
+import io.kopipes.core.faults.FaultManager
+import io.kopipes.core.sinks.EventPublisherInMemory
+import io.kopipes.core.sinks.EventsMicrostoreInMemory
 import io.kotest.matchers.maps.shouldBeEmpty
 import io.kotest.matchers.maps.shouldNotBeEmpty
 import io.kotest.matchers.nulls.shouldBeNull
@@ -31,7 +32,8 @@ class ListenerTest {
 
     @BeforeEach
     fun beforeEach() {
-        val envConfig = spyk( EnvironmentConfig())
+        AwsGlobalRegistry.init()
+        val envConfig = spyk(AwsEnvironmentConfig())
         every { envConfig.awsRegion() } returns "eu-west-1"
         every { envConfig.tableName() } returns "events-table-name"
         GlobalRegistry.setEnvConfig(envConfig)

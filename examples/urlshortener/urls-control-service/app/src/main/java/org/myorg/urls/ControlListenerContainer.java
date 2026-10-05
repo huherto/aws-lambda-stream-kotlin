@@ -1,13 +1,12 @@
 package org.myorg.urls;
 
-import io.kopipes.aws.GlobalRegistry;
-import io.kopipes.aws.PipelineAssembler;
 import io.kopipes.aws.connectors.DefaultDynamoDbClientFactory;
 import io.kopipes.aws.connectors.DynamoDbClientFactory;
-import io.kopipes.aws.flavors.CollectPipeline;
 import io.kopipes.aws.from.KinesisAdapter;
-import io.kopipes.aws.sinks.EventsMicrostore;
 import io.kopipes.aws.sinks.EventsMicrostoreImpl;
+import io.kopipes.core.PipelineAssembler;
+import io.kopipes.core.flavors.CollectPipeline;
+import io.kopipes.core.sinks.EventsMicrostore;
 
 public class ControlListenerContainer {
     public final EventsMicrostore eventsMicrostore;
@@ -29,11 +28,6 @@ public class ControlListenerContainer {
     }
 
     public static ControlListenerContainer build() {
-        GlobalRegistry.envConfig().eventTableName();
-
-        String tableName = System.getenv("EVENTS_TABLE_NAME");
-        if (tableName == null) tableName = "urls-dev-events";
-
         DynamoDbClientFactory factory = new DefaultDynamoDbClientFactory();
         EventsMicrostore eventsMicrostore = new EventsMicrostoreImpl(factory);
 

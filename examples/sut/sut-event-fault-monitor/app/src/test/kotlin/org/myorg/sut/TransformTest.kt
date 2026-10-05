@@ -387,6 +387,6 @@ class TransformTest {
     }
 
     private companion object {
-        private val uowClass = Class.forName("org.myorg.sut.Transform\$TransformUnitOfWork")
+        private val uowClass = TransformUnitOfWork::class.java
     }
 }

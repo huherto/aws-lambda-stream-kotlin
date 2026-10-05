@@ -1,12 +1,12 @@
 package org.myorg.sut
 
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
-import io.kopipes.aws.EnvironmentConfig
-import io.kopipes.aws.GlobalRegistry
+import io.kopipes.aws.AwsEnvironmentConfig
+import io.kopipes.aws.awsEnvConfig
 import kotlinx.coroutines.runBlocking
 
 class RestApiContainer(
-    envConfig: EnvironmentConfig,
+    envConfig: AwsEnvironmentConfig,
     val dynamoDBClient: DynamoDbClient) {
 
     companion object {
@@ -15,7 +15,7 @@ class RestApiContainer(
             val dynamoDbClient = runBlocking {
                 DynamoDbClient.fromEnvironment {}
             }
-            val envConfig = GlobalRegistry.envConfig()
+            val envConfig = awsEnvConfig()
 
             return RestApiContainer(envConfig, dynamoDBClient = dynamoDbClient)
         }

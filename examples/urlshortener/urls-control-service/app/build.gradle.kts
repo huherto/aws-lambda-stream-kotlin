@@ -11,7 +11,7 @@ repositories {
 }
 
 dependencies {
-    implementation(project(":core"))
+    implementation(project(":aws"))
     implementation(project(":examples:urlshortener:common-app"))
 
     implementation(platform(libs.aws.sdk.bom))

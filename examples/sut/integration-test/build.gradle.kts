@@ -57,7 +57,7 @@ testing {
                 implementation(libs.kotlinx.serialization.json)
                 implementation(libs.slf4j.simple)
 
-                implementation(project(":core"))
+                implementation(project(":aws"))
                 implementation(project(":examples:sut:common-app"))
                 implementation(project())
 

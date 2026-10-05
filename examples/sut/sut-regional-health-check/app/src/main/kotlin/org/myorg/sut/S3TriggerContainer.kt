@@ -1,12 +1,12 @@
 package org.myorg.sut
 
-import io.kopipes.aws.GlobalRegistry
-import io.kopipes.aws.PipelineAssembler
-import io.kopipes.aws.filters.EventFilter
 import io.kopipes.aws.flavors.CdcPipeline
-import io.kopipes.aws.flavors.Pipeline
 import io.kopipes.aws.from.S3Adapter
-import io.kopipes.aws.sinks.EventPublisher
+import io.kopipes.core.GlobalRegistry
+import io.kopipes.core.PipelineAssembler
+import io.kopipes.core.filters.EventFilter
+import io.kopipes.core.flavors.Pipeline
+import io.kopipes.core.sinks.EventPublisher
 
 class S3TriggerContainer(
     val eventPublisher: EventPublisher,

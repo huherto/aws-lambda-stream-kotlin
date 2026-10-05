@@ -1,6 +1,6 @@
 package org.myorg.sut
 
-import io.kopipes.aws.EventReference
+import io.kopipes.core.EventReference
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import kotlin.test.Test

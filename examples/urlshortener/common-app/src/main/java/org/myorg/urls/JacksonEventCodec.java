@@ -5,8 +5,8 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import io.kopipes.aws.Event;
-import io.kopipes.aws.EventCodec;
+import io.kopipes.core.Event;
+import io.kopipes.core.EventCodec;
 import org.jetbrains.annotations.NotNull;
 
 public class JacksonEventCodec implements EventCodec {

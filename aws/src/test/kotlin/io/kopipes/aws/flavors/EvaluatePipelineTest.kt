@@ -1,0 +1,417 @@
+package io.kopipes.aws.flavors
+
+import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
+import com.amazonaws.services.lambda.runtime.events.models.dynamodb.StreamRecord
+import io.kopipes.aws.from.RecordImage
+import io.kopipes.aws.from.RecordPair
+import io.kopipes.aws.from.TableChangeEvent
+import io.kopipes.core.*
+import io.kopipes.core.faults.FaultManager
+import io.kopipes.core.sinks.EventPublisher
+import io.kopipes.core.sinks.EventsMicrostore
+import io.kopipes.core.sinks.queryParams
+import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.nulls.shouldNotBeNull
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeTypeOf
+import io.mockk.every
+import io.mockk.mockk
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonPrimitive
+import org.junit.jupiter.api.Test
+import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue as StreamAV
+
+class EvaluatePipelineTest {
+
+    class SimpleEventCodec : EventCodec {
+        override fun decode(eventAsString: String): Event {
+            val jsonEvent: JsonEvent = try {
+                JsonEvent(eventAsString)
+            } catch (e: Exception) {
+                throw e
+            }
+            return jsonEvent
+        }
+
+        override fun encode(event: Event): String {
+            return Json.encodeToString(event)
+        }
+    }
+
+    private val eventPublisher = mockk<EventPublisher>()
+    private val eventsMicrostore = mockk<EventsMicrostore>()
+    private val eventCodec = SimpleEventCodec()
+    private val faultManager = mockk<FaultManager>()
+
+    private fun createPipeline(
+        pipelineId: String = "pipeline-1",
+        correlationKeySuffix: String = "",
+        index: String? = null,
+        expression: ((UnitOfWork) -> Boolean)? = null,
+        emit: ((UnitOfWork) -> List<Event>)? = null,
+    ): EvaluatePipeline {
+        return EvaluatePipeline.builder()
+            .id(pipelineId)
+            .eventPublisher(eventPublisher)
+            .eventsMicrostore(eventsMicrostore)
+            .correlationKeySuffix(correlationKeySuffix)
+            .index(index)
+            .eventCodec(eventCodec)
+            .apply {
+                expression?.let { expression(it) }
+                emit?.let { emit(it) }
+            }
+            .build()
+    }
+
+    data class TestEvent(
+        override val id: String? = null,
+        override val timestamp: Long? = null,
+        override val partitionKey: String? = null,
+        override val tags: Map<String, String>? = null,
+        override val raw: RawRecord? = null,
+        override val eem: EnvelopeEncryptionMetadata? = null,
+        override val triggers: List<EventReference>? = null,
+        val type: String = "TestEvent",
+    ) : Event {
+        override fun eventType() = type
+        override fun toString() = """{"id":"$id","type":"$type"}"""
+
+        override fun copyEvent(
+            id: String?,
+            timestamp: Long?,
+            partitionKey: String?,
+            tags: Map<String, String>?,
+            raw: RawRecord?,
+            eem: EnvelopeEncryptionMetadata?,
+            triggers: List<EventReference>?
+        ): Event = copy(
+            id = id,
+            timestamp = timestamp,
+            partitionKey = partitionKey,
+            tags = tags,
+            raw = raw,
+            eem = eem,
+            triggers = triggers
+        )
+    }
+
+    private fun createEvent(
+        id: String = "event-1",
+        timestamp: Long = 1_700_000_000_000L,
+        partitionKey: String? = "partition-1",
+        tags: Map<String, String>? = null,
+        raw: RawRecord? = null,
+        eem: EnvelopeEncryptionMetadata? = null,
+        type: String = "TestEvent",
+    ): Event = TestEvent(
+        id = id,
+        timestamp = timestamp,
+        partitionKey = partitionKey,
+        tags = tags,
+        raw = raw,
+        eem = eem,
+        type = type
+    )
+
+    private fun createInsertRecord(
+        sk: String = "EVENT",
+        discriminator: String? = null,
+    ): DynamodbEvent.DynamodbStreamRecord {
+        return DynamodbEvent.DynamodbStreamRecord().apply {
+            eventName = "INSERT"
+            dynamodb = StreamRecord().apply {
+                keys = mapOf("sk" to StreamAV(sk))
+                newImage = buildMap {
+                    if (discriminator != null) {
+                        put("discriminator", StreamAV(discriminator))
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `forEvents should accept INSERT events with EVENT sk and CORREL newImage and reject others`() {
+        // Arrange
+        val pipeline = createPipeline()
+
+        val eventInsert = UnitOfWork(record = createInsertRecord(sk = "EVENT"))
+        val correlInsert = UnitOfWork(record = createInsertRecord(discriminator = "CORREL"))
+        val wrongSkInsert = UnitOfWork(record = createInsertRecord(sk = "NOT_EVENT"))
+        val wrongType = UnitOfWork(record = Any())
+
+        // Act
+        val eventInsertResult = pipeline.forEvents(eventInsert)
+        val correlInsertResult = pipeline.forEvents(correlInsert)
+        val wrongSkInsertResult = pipeline.forEvents(wrongSkInsert)
+        val wrongTypeResult = pipeline.forEvents(wrongType)
+
+        // Assert
+        eventInsertResult shouldBe true
+        correlInsertResult shouldBe true
+        wrongSkInsertResult shouldBe false
+        wrongTypeResult shouldBe false
+    }
+
+    @Test
+    fun `defaultUnmarshall should throw for invalid json`() {
+        // Arrange
+        val pipeline = createPipeline()
+
+        // Act & Assert
+        shouldThrow<Exception> {
+            pipeline.defaultUnmarshall("not-json")
+        }
+    }
+
+    @Test
+    fun `normalize should populate meta queryParams and event from record pair`() {
+        // Arrange
+        val pipeline = createPipeline(
+            //unmarshall = { input -> createEvent(id = "decoded", type = "DecodedType", raw = input) }
+        )
+        val rawNew = RecordImage(
+            mapOf(
+                "event" to StreamAV().withS("""{"id":"decoded","type":"DecodedType"}"""),
+                "pk" to StreamAV("pk-1"),
+                "data" to StreamAV("data-1"),
+                "discriminator" to StreamAV("CORREL"),
+                "suffix" to StreamAV("suffix-1"),
+                "ttl" to StreamAV().withN("123"),
+                "expire" to StreamAV().withBOOL(true),
+            )
+        )
+        val tableChangeEvent = TableChangeEvent(
+            id = "event-1",
+            raw = RecordPair(new = rawNew, old = null)
+        )
+        val uow = UnitOfWork(
+            record = createInsertRecord(discriminator = "CORREL"),
+            event = tableChangeEvent
+        )
+
+        // Act
+        val result = pipeline.normalize(uow)
+
+        // Assert
+        val meta = result.meta.shouldNotBeNull()
+        meta["eventId"] shouldBe "event-1.pipeline-1"
+        meta["partitionKey"] shouldBe "pk-1"
+
+        result.queryParams.shouldNotBeNull()
+        result.queryParams!!.pk shouldBe "pk-1"
+        result.queryParams!!.correlation shouldBe true
+        val ev = result.event.shouldNotBeNull()
+        ev.id shouldBe "decoded"
+        ev.eventType() shouldBe "DecodedType"
+    }
+
+    @Test
+    fun `onCorrelationKeySuffix should match empty suffix and same suffix and reject different suffixes`() {
+        // Arrange
+        val noSuffixPipeline = createPipeline(correlationKeySuffix = "")
+        val suffixPipeline = createPipeline(correlationKeySuffix = "abc")
+
+        val noSuffixUow = UnitOfWork(meta = mapOf("suffix" to null))
+        val sameSuffixUow = UnitOfWork(meta = mapOf("suffix" to "abc"))
+        val differentSuffixUow = UnitOfWork(meta = mapOf("suffix" to "xyz"))
+
+        // Act
+        val noSuffixMatch = noSuffixPipeline.onCorrelationKeySuffix(noSuffixUow)
+        val sameSuffixMatch = suffixPipeline.onCorrelationKeySuffix(sameSuffixUow)
+        val differentSuffixMatch = suffixPipeline.onCorrelationKeySuffix(differentSuffixUow)
+        val missingSuffixRejected = suffixPipeline.onCorrelationKeySuffix(noSuffixUow)
+
+        // Assert
+        noSuffixMatch shouldBe true
+        sameSuffixMatch shouldBe true
+        differentSuffixMatch shouldBe false
+        missingSuffixRejected shouldBe false
+    }
+
+    @Test
+    fun `complex should set triggers when expression is null and filter by expression when provided`() : Unit = runBlocking {
+        // Arrange
+        val first = UnitOfWork(event = createEvent(id = "e-1"))
+        val second = UnitOfWork(event = createEvent(id = "e-2"))
+        val pipelineWithNoExpression = createPipeline()
+
+        every { eventsMicrostore.queryByPk(any()) } answers { firstArg() }
+
+        val expressionPipeline = createPipeline(
+            expression = { uow -> uow.meta?.get("keep") == "true" }
+        )
+        val matchingUow = UnitOfWork(
+            meta = mapOf(
+                "keep" to "true",
+                "suffix" to null,
+                "id" to "uow-1",
+                "correlationKey" to "correlation-key"
+            ),
+            event = createEvent(id = "e-3")
+        )
+        val rejectedUow = matchingUow.copy(meta = matchingUow.meta?.plus("keep" to "false"))
+
+        // Act
+        val noExpressionResult = pipelineWithNoExpression.run {
+            flowOf(first, second).complex(faultManager).toList()
+        }
+        val expressionResult = expressionPipeline.run {
+            flowOf(matchingUow, rejectedUow).complex(faultManager).toList()
+        }
+
+        // Assert
+        noExpressionResult shouldHaveSize 2
+        noExpressionResult[0].triggers.shouldNotBeNull()
+        noExpressionResult[0].triggers!![0].id shouldBe "e-1"
+        noExpressionResult[1].triggers.shouldNotBeNull()
+        noExpressionResult[1].triggers!![0].id shouldBe "e-2"
+
+        expressionResult shouldHaveSize 1
+        expressionResult[0].meta!!["keep"] shouldBe "true"
+    }
+
+    data class HigherType(
+        override val id: String? = null,
+        override val timestamp: Long? = null,
+        override val partitionKey: String? = null,
+        override val tags: Map<String, String>? = null,
+        override val raw: RawRecord? = null,
+        override val eem: EnvelopeEncryptionMetadata? = null,
+        override val triggers: List<EventReference>? = null
+    ) : Event {
+        override fun eventType(): String {
+            return "HigherType"
+        }
+
+        override fun toString(): String {
+            TODO("Not yet implemented")
+        }
+
+        override fun copyEvent(
+            id: String?,
+            timestamp: Long?,
+            partitionKey: String?,
+            tags: Map<String, String>?,
+            raw: RawRecord?,
+            eem: EnvelopeEncryptionMetadata?,
+            triggers: List<EventReference>?
+        ): Event = copy(
+            id = id,
+            timestamp = timestamp,
+            partitionKey = partitionKey,
+            tags = tags,
+            raw = raw,
+            eem = eem,
+            triggers = triggers
+        )
+    }
+
+    @Test
+    fun `toHigherOrderEvents should create simple higher order event`() {
+        // Arrange
+        val baseEvent = createEvent(
+            id = "base-event",
+            timestamp = 1_700_000_000_000L,
+            tags = mapOf("region" to "eu-west-1", "source" to "app", "team" to "core", "env" to "test"),
+            raw = JsonRaw(JsonPrimitive("raw-value")),
+            eem = EnvelopeEncryptionMetadata("something"),
+            type = "BaseType"
+        )
+        val trigger = createEvent(id = "trigger-1", timestamp = 1_700_000_000_123L, type = "TriggerType")
+        val uow = UnitOfWork(
+            event = baseEvent,
+            meta = mapOf(
+                "eventId" to "uow-1.pipeline-simple",
+                "partitionKey" to "partition-1"
+            ),
+            triggers = listOf(trigger, baseEvent)
+        )
+
+        val pipeline = createPipeline(
+            pipelineId = "pipeline-simple",
+            correlationKeySuffix = "suffix-a",
+            emit = { listOf(HigherType()) }
+        )
+
+        // Act
+        val result = pipeline.toHigherOrderEvents(uow)
+
+        // Assert
+        result shouldHaveSize 1
+        val event = result.first().event.shouldNotBeNull()
+        event.shouldBeTypeOf<HigherType>()
+        event.id shouldBe "uow-1.pipeline-simple"
+        event.eventType() shouldBe "HigherType"
+        event.partitionKey shouldBe "partition-1"
+        event.tags shouldBe mapOf("team" to "core", "env" to "test")
+        event.triggers?.shouldHaveSize(2)
+        event.raw shouldBe JsonRaw(JsonPrimitive("raw-value"))
+        event.eem shouldBe EnvelopeEncryptionMetadata("something")
+    }
+
+
+    @Test
+    fun `toHigherOrderEvents should create multiple events`() {
+        // Arrange
+        val baseEvent = createEvent(
+            id = "base-event",
+            timestamp = 1_700_000_000_000L,
+            tags = mapOf("region" to "eu-west-1", "source" to "app", "team" to "core", "env" to "test"),
+            raw = JsonRaw(JsonPrimitive("raw-value")),
+            eem = EnvelopeEncryptionMetadata("something"),
+            type = "BaseType"
+        )
+        val trigger = createEvent(id = "trigger-1", timestamp = 1_700_000_000_123L, type = "TriggerType")
+        val uow = UnitOfWork(
+            event = baseEvent,
+            meta = mapOf(
+                "eventId" to "uow-1.pipeline-custom",
+                "partitionKey" to "partition-1"
+            ),
+            triggers = listOf(trigger, baseEvent)
+        )
+
+        val pipeline = createPipeline(
+            pipelineId = "pipeline-custom",
+            correlationKeySuffix = "suffix-a",
+            emit = { _ ->
+                listOf(
+                    HigherType(),
+                    HigherType()
+                )
+            }
+        )
+
+        // Act
+        val result = pipeline.toHigherOrderEvents(uow)
+
+        // Assert
+        result shouldHaveSize 2
+        result[0].event.shouldNotBeNull().shouldBeTypeOf<HigherType>()
+        result[1].event.shouldNotBeNull().shouldBeTypeOf<HigherType>()
+    }
+
+    @Test
+    fun `toHigherOrderEvents should return empty when emit is missing`() {
+        // Arrange
+        val pipeline = createPipeline(
+            emit = null
+        )
+        val uow = UnitOfWork(
+            event = createEvent(),
+            meta = mapOf("id" to "uow-1", "correlationKey" to "key")
+        )
+
+        // Act
+        val result = pipeline.toHigherOrderEvents(uow)
+
+        // Assert
+        result shouldBe emptyList()
+    }
+}

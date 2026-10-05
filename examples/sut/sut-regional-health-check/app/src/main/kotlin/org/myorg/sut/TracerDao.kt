@@ -5,13 +5,13 @@ import aws.sdk.kotlin.services.dynamodb.model.UpdateItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.UpdateItemResponse
 import aws.sdk.kotlin.services.s3.model.PutObjectRequest
 import aws.smithy.kotlin.runtime.content.ByteStream
-import io.kopipes.aws.*
 import io.kopipes.aws.from.RecordPair
 import io.kopipes.aws.from.TableChangeEvent
 import io.kopipes.aws.sinks.DynamoDbUpdateValue
 import io.kopipes.aws.sinks.timestampCondition
 import io.kopipes.aws.sinks.updateExpression
-import io.kopipes.aws.utils.ttl
+import io.kopipes.core.*
+import io.kopipes.core.utils.ttl
 import kotlinx.datetime.Clock
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json

@@ -1,15 +1,16 @@
 package org.myorg.sut
 
-import io.kopipes.aws.EnvironmentConfig
-import io.kopipes.aws.GlobalRegistry
-import io.kopipes.aws.PipelineAssembler
+import io.kopipes.aws.AwsEnvironmentConfig
+import io.kopipes.aws.AwsGlobalRegistry
 import io.kopipes.aws.connectors.S3ClientFactory
-import io.kopipes.aws.faults.FaultManager
-import io.kopipes.aws.flavors.Pipeline
 import io.kopipes.aws.from.DynamodbAdapter
+import io.kopipes.core.GlobalRegistry
+import io.kopipes.core.PipelineAssembler
+import io.kopipes.core.faults.FaultManager
+import io.kopipes.core.flavors.Pipeline
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.matchers.types.shouldBeSameInstanceAs
-import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
 import org.junit.jupiter.api.Test
@@ -18,10 +19,10 @@ import kotlin.reflect.jvm.isAccessible
 
 class DynamoDbTriggerContainerTest {
 
-    fun mockEnvConfig() : EnvironmentConfig {
-        val envConfig: EnvironmentConfig = spyk()
-        coEvery { envConfig.awsRegion() } returns "us-east-1"
-        coEvery { envConfig.bucketName() } returns "bucket-name"
+    fun mockEnvConfig() : AwsEnvironmentConfig {
+        val envConfig: AwsEnvironmentConfig = spyk()
+        every { envConfig.awsRegion() } returns "us-east-1"
+        every { envConfig.bucketName() } returns "bucket-name"
         return envConfig
     }
 
@@ -33,7 +34,7 @@ class DynamoDbTriggerContainerTest {
         val envConfig = mockEnvConfig()
         GlobalRegistry.setEnvConfig(envConfig)
         GlobalRegistry.setFaultManager(faultManager)
-        GlobalRegistry.setS3ClientFactory(s3ClientFactory)
+        AwsGlobalRegistry.setS3ClientFactory(s3ClientFactory)
 
         val container = DynamoDbTriggerContainer()
 
@@ -53,7 +54,7 @@ class DynamoDbTriggerContainerTest {
         val envConfig = mockEnvConfig()
         val s3ClientFactory : S3ClientFactory = mockk(relaxed = true)
         GlobalRegistry.setEnvConfig(envConfig)
-        GlobalRegistry.setS3ClientFactory(s3ClientFactory)
+        AwsGlobalRegistry.setS3ClientFactory(s3ClientFactory)
         val container = DynamoDbTriggerContainer()
 
         // Act

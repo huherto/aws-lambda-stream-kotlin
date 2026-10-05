@@ -1,10 +1,10 @@
 package org.myorg.sut
 
-import io.kopipes.aws.EnvironmentConfig
-import io.kopipes.aws.GlobalRegistry
-import io.kopipes.aws.faults.FaultManager
 import io.kopipes.aws.from.KinesisAdapter
-import io.kopipes.aws.sinks.EventsMicrostore
+import io.kopipes.core.EnvironmentConfig
+import io.kopipes.core.GlobalRegistry
+import io.kopipes.core.faults.FaultManager
+import io.kopipes.core.sinks.EventsMicrostore
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.mockk
