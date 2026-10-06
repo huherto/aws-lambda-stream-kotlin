@@ -1,16 +1,16 @@
 package io.kopipes.aws.from
 
 import com.amazonaws.services.lambda.runtime.events.KinesisFirehoseEvent
+import io.kopipes.aws.AwsGlobalRegistry
 import io.kopipes.aws.queries.ClaimCheckRedeemer
 import io.kopipes.core.EventCodec
-import io.kopipes.core.GlobalRegistry
 import io.kopipes.core.UnitOfWork
 import io.kopipes.core.faults.FaultManager
 import io.kopipes.core.filters.outSkip
 import kotlinx.coroutines.flow.*
 
 class FirehoseAdapter(
-    private val faultManager: FaultManager = GlobalRegistry.faultManager(),
+    private val faultManager: FaultManager = AwsGlobalRegistry.faultManager(),
     private val eventCodec: EventCodec,
     private val claimCheckRedeemer: ClaimCheckRedeemer? = null
 ) {

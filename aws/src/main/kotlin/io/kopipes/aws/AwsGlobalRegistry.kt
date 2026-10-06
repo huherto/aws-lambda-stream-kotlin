@@ -11,6 +11,9 @@ import io.kopipes.core.*
 import io.kopipes.core.faults.FaultManager
 import io.kopipes.core.serialization.snapshots.AwsOperationSnapshot
 import io.kopipes.core.serialization.snapshots.DefaultUnitOfWorkSnapshotter
+import io.kopipes.core.serialization.snapshots.RecordSnapshotter
+import io.kopipes.core.serialization.snapshots.UnitOfWorkSnapshotter
+import io.kopipes.core.sinks.EventPublisher
 
 /** Registry for AWS specific client factories and global configuration. */
 object AwsGlobalRegistry {
@@ -151,6 +154,76 @@ object AwsGlobalRegistry {
     @JvmStatic
     fun setCloudWatchClientFactory(factory: () -> CloudWatchClientFactory) {
         cloudWatchClientFactorySingleton.setFactory(factory)
+    }
+
+    @JvmStatic
+    fun envConfig(): AwsEnvironmentConfig {
+        return (GlobalRegistry.envConfig() as? AwsEnvironmentConfig) ?: AwsEnvironmentConfig.defaultInstance
+    }
+
+    @JvmStatic
+    fun setEnvConfig(config: AwsEnvironmentConfig) {
+        GlobalRegistry.setEnvConfig(config)
+    }
+
+    @JvmStatic
+    fun setEnvConfigFactory(factory: () -> AwsEnvironmentConfig) {
+        GlobalRegistry.setEnvConfigFactory(factory)
+    }
+
+    @JvmStatic
+    fun eventPublisher(): EventPublisher {
+        return GlobalRegistry.eventPublisher()
+    }
+
+    @JvmStatic
+    fun setEventPublisher(publisher: EventPublisher) {
+        GlobalRegistry.setEventPublisher(publisher)
+    }
+
+    @JvmStatic
+    fun setEventPublisherFactory(factory: () -> EventPublisher) {
+        GlobalRegistry.setEventPublisherFactory(factory)
+    }
+
+    @JvmStatic
+    fun faultManager(): FaultManager {
+        return GlobalRegistry.faultManager()
+    }
+
+    @JvmStatic
+    fun setFaultManager(manager: FaultManager) {
+        GlobalRegistry.setFaultManager(manager)
+    }
+
+    @JvmStatic
+    fun setFaultManagerFactory(factory: () -> FaultManager) {
+        GlobalRegistry.setFaultManagerFactory(factory)
+    }
+
+    @JvmStatic
+    fun unitOfWorkSnapshotter(): UnitOfWorkSnapshotter {
+        return GlobalRegistry.unitOfWorkSnapshotter()
+    }
+
+    @JvmStatic
+    fun setUnitOfWorkSnapshotter(snapshotter: UnitOfWorkSnapshotter) {
+        GlobalRegistry.setUnitOfWorkSnapshotter(snapshotter)
+    }
+
+    @JvmStatic
+    fun setUnitOfWorkSnapshotterFactory(factory: () -> UnitOfWorkSnapshotter) {
+        GlobalRegistry.setUnitOfWorkSnapshotterFactory(factory)
+    }
+
+    @JvmStatic
+    fun registerRecordSnapshotter(snapshotter: RecordSnapshotter) {
+        GlobalRegistry.registerRecordSnapshotter(snapshotter)
+    }
+
+    @JvmStatic
+    fun registeredRecordSnapshotters(): List<RecordSnapshotter> {
+        return GlobalRegistry.registeredRecordSnapshotters()
     }
 
     @JvmStatic

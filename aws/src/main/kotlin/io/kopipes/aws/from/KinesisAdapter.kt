@@ -1,10 +1,10 @@
 package io.kopipes.aws.from
 
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
+import io.kopipes.aws.AwsGlobalRegistry
 import io.kopipes.aws.queries.ClaimCheckRedeemer
 import io.kopipes.core.Event
 import io.kopipes.core.EventCodec
-import io.kopipes.core.GlobalRegistry
 import io.kopipes.core.GlobalRegistry.envConfig
 import io.kopipes.core.UnitOfWork
 import io.kopipes.core.faults.FaultManager
@@ -17,12 +17,12 @@ import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.mapNotNull
 
 class KinesisAdapter(
-    private val faultManager: FaultManager = GlobalRegistry.faultManager(),
+    private val faultManager: FaultManager = AwsGlobalRegistry.faultManager(),
     private val eventCodec: EventCodec,
     private val claimCheckRedeemer: ClaimCheckRedeemer? = null
 ) {
 
-    constructor(eventCodec: EventCodec) : this(GlobalRegistry.faultManager(), eventCodec)
+    constructor(eventCodec: EventCodec) : this(AwsGlobalRegistry.faultManager(), eventCodec)
 
     fun fromKinesis(kinesisEvent: KinesisEvent): Flow<UnitOfWork> {
         if (kinesisEvent.records.isNullOrEmpty()) {

@@ -2,11 +2,11 @@ package io.kopipes.aws.from
 
 import aws.sdk.kotlin.services.s3.model.GetObjectRequest
 import com.amazonaws.services.lambda.runtime.events.SQSEvent
+import io.kopipes.aws.AwsGlobalRegistry
 import io.kopipes.aws.connectors.S3Connector
 import io.kopipes.aws.extensions.copyS3
 import io.kopipes.aws.extensions.s3
 import io.kopipes.core.EventCodec
-import io.kopipes.core.GlobalRegistry
 import io.kopipes.core.UnitOfWork
 import io.kopipes.core.faults.FaultManager
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -16,7 +16,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 class S3Adapter(
-    private val faultManager: FaultManager = GlobalRegistry.faultManager(),
+    private val faultManager: FaultManager = AwsGlobalRegistry.faultManager(),
     private val eventCodec: EventCodec,
     private val s3ConnectorOptions: S3Connector.Options = S3Connector.Options(),
 ) {

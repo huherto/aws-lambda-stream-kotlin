@@ -1,8 +1,8 @@
 package org.myorg.sut
 
+import io.kopipes.aws.AwsGlobalRegistry
 import io.kopipes.aws.flavors.CdcPipeline
 import io.kopipes.aws.from.S3Adapter
-import io.kopipes.core.GlobalRegistry
 import io.kopipes.core.PipelineAssembler
 import io.kopipes.core.filters.EventFilter
 import io.kopipes.core.flavors.Pipeline
@@ -17,7 +17,7 @@ class S3TriggerContainer(
         fun build() : S3TriggerContainer {
 
             return S3TriggerContainer(
-                eventPublisher = GlobalRegistry.eventPublisher(),
+                eventPublisher = AwsGlobalRegistry.eventPublisher(),
             )
         }
     }

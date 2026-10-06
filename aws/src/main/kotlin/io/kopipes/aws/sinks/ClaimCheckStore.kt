@@ -21,7 +21,7 @@ import kotlinx.serialization.Serializable
 /** S3-backed Claim Check store. */
 class ClaimCheckStore(
     private val s3ClientFactory: S3ClientFactory = AwsGlobalRegistry.s3ClientFactory(),
-    private val faultManager: FaultManager = GlobalRegistry.faultManager(),
+    private val faultManager: FaultManager = AwsGlobalRegistry.faultManager(),
     private val claimCheckBucketName: String? = java.lang.System.getenv("CLAIMCHECK_BUCKET_NAME"),
     private val clock: Clock = kotlinx.datetime.Clock.System,
     private val bufferCapacity: Int = Channel.BUFFERED,

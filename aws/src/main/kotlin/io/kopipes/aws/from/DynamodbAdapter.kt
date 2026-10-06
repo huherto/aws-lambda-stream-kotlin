@@ -1,9 +1,9 @@
 package io.kopipes.aws.from
 
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
+import io.kopipes.aws.AwsGlobalRegistry
 import io.kopipes.aws.DynamodbRaw
 import io.kopipes.core.EventCodec
-import io.kopipes.core.GlobalRegistry
 import io.kopipes.core.GlobalRegistry.envConfig
 import io.kopipes.core.UnitOfWork
 import io.kopipes.core.faults.FaultManager
@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.mapNotNull
 import mu.KotlinLogging
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue as EventAV
 
-class DynamodbAdapter(private val faultManager: FaultManager = GlobalRegistry.faultManager()) {
+class DynamodbAdapter(private val faultManager: FaultManager = AwsGlobalRegistry.faultManager()) {
 
     private val pkFn = "pk"
 

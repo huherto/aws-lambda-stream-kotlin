@@ -3,26 +3,26 @@ package org.myorg.sut
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import com.amazonaws.services.lambda.runtime.Context
 import io.kopipes.aws.AwsEnvironmentConfig
-import io.kopipes.core.GlobalRegistry
 import io.kotest.matchers.maps.shouldContain
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
-import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
-import io.mockk.spyk
 import org.junit.jupiter.api.Test
 
 class CheckHealthApiTest {
 
     fun createContainer(unhealthyFlag: Boolean) : CheckHealthApiContainer {
-        val envConfig = spyk(AwsEnvironmentConfig())
-        coEvery { envConfig.awsRegion() } returns "us-east-1"
-        coEvery { envConfig.entityTableName() } returns "tracer-table-name"
-        coEvery { envConfig.unhealthy() } returns unhealthyFlag
+        val envConfig = mockk<AwsEnvironmentConfig>()
+        every { envConfig.awsRegion() } returns "us-east-1"
+        every { envConfig.entityTableName() } returns "tracer-table-name"
+        every { envConfig.unhealthy() } returns unhealthyFlag
 
-        GlobalRegistry.setEnvConfig(envConfig)
-        return CheckHealthApiContainer(dynamoDBClient = mockk<DynamoDbClient>())
+        return CheckHealthApiContainer(
+            dynamoDBClient = mockk<DynamoDbClient>(),
+            envConfig = envConfig,
+        )
     }
 
     @Test

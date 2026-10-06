@@ -1,8 +1,8 @@
 package org.myorg.sut
 
+import io.kopipes.aws.AwsGlobalRegistry
 import io.kopipes.aws.flavors.CdcPipeline
 import io.kopipes.aws.from.DynamodbAdapter
-import io.kopipes.core.GlobalRegistry
 import io.kopipes.core.PipelineAssembler
 import io.kopipes.core.flavors.Pipeline
 import io.kopipes.core.sinks.EventPublisher
@@ -15,7 +15,7 @@ class TriggerContainer(
 
         fun build() : TriggerContainer {
             return TriggerContainer(
-                eventPublisher = GlobalRegistry.eventPublisher(),
+                eventPublisher = AwsGlobalRegistry.eventPublisher(),
             )
         }
     }

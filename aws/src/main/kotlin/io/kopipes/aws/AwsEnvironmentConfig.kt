@@ -1,7 +1,6 @@
 package io.kopipes.aws
 
 import io.kopipes.core.EnvironmentConfig
-import io.kopipes.core.GlobalRegistry
 
 /** AWS-specific environment configuration. */
 open class AwsEnvironmentConfig : EnvironmentConfig() {
@@ -100,5 +99,5 @@ open class AwsEnvironmentConfig : EnvironmentConfig() {
 }
 
 fun awsEnvConfig(): AwsEnvironmentConfig {
-    return (GlobalRegistry.envConfig() as? AwsEnvironmentConfig) ?: AwsEnvironmentConfig.defaultInstance
+    return AwsGlobalRegistry.envConfig()
 }

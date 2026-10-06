@@ -8,7 +8,6 @@ import io.kopipes.aws.extensions.putRequest
 import io.kopipes.aws.extensions.queryRequest
 import io.kopipes.aws.extensions.withPutResponse
 import io.kopipes.aws.extensions.withQueryResponse
-import io.kopipes.core.GlobalRegistry
 import io.kopipes.core.UnitOfWork
 import io.kopipes.core.faults.FaultManager
 import io.kopipes.core.metrics.withStepMetrics
@@ -19,7 +18,7 @@ import kotlinx.coroutines.flow.buffer
 /** DynamoDB-backed implementation of [EventsMicrostore]. */
 open class EventsMicrostoreImpl @JvmOverloads constructor(
     private val dynamoDbClientFactory: DynamoDbClientFactory = AwsGlobalRegistry.dynamoDbClientFactory(),
-    faultManager: FaultManager = GlobalRegistry.faultManager(),
+    faultManager: FaultManager = AwsGlobalRegistry.faultManager(),
     bufferCapacity: Int = Channel.BUFFERED,
 ) : BaseEventsMicrostore(faultManager, bufferCapacity, awsEnvConfig().tableName() ?: "events") {
 

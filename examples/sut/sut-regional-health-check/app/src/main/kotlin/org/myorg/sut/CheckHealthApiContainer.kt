@@ -1,11 +1,13 @@
 package org.myorg.sut
 
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
+import io.kopipes.aws.AwsEnvironmentConfig
 import io.kopipes.aws.awsEnvConfig
 import kotlinx.coroutines.runBlocking
 
 class CheckHealthApiContainer(
-    val dynamoDBClient: DynamoDbClient
+    val dynamoDBClient: DynamoDbClient,
+    val envConfig: AwsEnvironmentConfig = awsEnvConfig(),
 ) {
 
     companion object {
@@ -15,16 +17,19 @@ class CheckHealthApiContainer(
                 DynamoDbClient.fromEnvironment {}
             }
 
-            return CheckHealthApiContainer(dynamoDBClient = dynamoDbClient)
+            return CheckHealthApiContainer(
+                dynamoDBClient = dynamoDbClient,
+                envConfig = awsEnvConfig(),
+            )
         }
     }
 
-    val tableName = awsEnvConfig().entityTableName()
+    val tableName = envConfig.entityTableName()
         ?: error("ENTITY_TABLE_NAME is not configured")
 
-    val unhealthyFlag : Boolean = awsEnvConfig().unhealthy()
+    val unhealthyFlag : Boolean = envConfig.unhealthy()
 
-    val awsRegion : String = awsEnvConfig().awsRegion()
+    val awsRegion : String = envConfig.awsRegion()
 
     private fun debug(namespace: String): (String) -> Unit =
         { message ->
