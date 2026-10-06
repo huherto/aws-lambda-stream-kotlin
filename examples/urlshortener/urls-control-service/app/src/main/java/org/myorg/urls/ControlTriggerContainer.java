@@ -27,6 +27,8 @@ public class ControlTriggerContainer {
                 .id("correlate")
                 .eventsMicrostore(eventsMicrostore)
                 .eventCodec(JacksonEventCodec.INSTANCE)
+                .isCollectedEvent(DynamodbAdapter::forCollectedEvents)
+                .normalizer(DynamodbAdapter.normalize(JacksonEventCodec.INSTANCE))
                 .correlationKeySupplier(this::correlationKey)
                 .build();
 

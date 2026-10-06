@@ -2,10 +2,17 @@ package io.kopipes.aws.flavors
 
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.PutItemResponse
+import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
+import com.amazonaws.services.lambda.runtime.events.models.dynamodb.StreamRecord
 import io.kopipes.aws.AwsEnvironmentConfig
+import io.kopipes.aws.DynamodbRaw
 import io.kopipes.aws.connectors.DynamoDbClientFactory
 import io.kopipes.aws.extensions.putRequest
 import io.kopipes.aws.extensions.putResponse
+import io.kopipes.aws.from.DynamodbAdapter
+import io.kopipes.aws.from.RecordImage
+import io.kopipes.aws.from.RecordPair
+import io.kopipes.aws.from.TableChangeEvent
 import io.kopipes.aws.sinks.EventsMicrostoreImpl
 import io.kopipes.core.*
 import io.kopipes.core.faults.FaultManager
@@ -14,8 +21,11 @@ import io.kopipes.core.flavors.CorrelatePipeline
 import io.kopipes.core.sinks.EventPublisherInMemory
 import io.kopipes.core.sinks.EventsMicrostoreInMemory
 import io.kopipes.core.sinks.saveOptions
+import io.kotest.matchers.booleans.shouldBeFalse
+import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -26,6 +36,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.Clock
 import org.junit.jupiter.api.BeforeEach
 import kotlin.test.Test
+import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue as EventAV
 
 /** Tests for CorrelatePipeline in AWS context. */
 class CorrelatePipelineTest {
@@ -41,7 +52,7 @@ class CorrelatePipelineTest {
         override val raw: RawRecord? = null,
         override val eem: EnvelopeEncryptionMetadata? = null,
         override val triggers: List<EventReference>? = null,
-        val encodedStr: String = "{}"
+        val encodedStr: String = "{}",
     ) : Event {
         override fun eventType() = "TestEvent"
         override fun toString() = encodedStr
@@ -112,7 +123,6 @@ class CorrelatePipelineTest {
         val event = createFakeEvent(eventId = "test-event-id", eventTimestamp = 12345L)
         val uow = UnitOfWork(
             event = event,
-            key = "test-key"
         )
 
         val fm = FaultManager(EventPublisherInMemory())
@@ -125,11 +135,79 @@ class CorrelatePipelineTest {
         val saveOptions = processedUow.saveOptions
         saveOptions.shouldNotBeNull()
         saveOptions.pk shouldBe "test-correlation-key"
-        saveOptions.sk shouldBe "CORREL"
+        saveOptions.sk shouldBe "test-event-id"
         saveOptions.discriminator shouldBe "CORREL"
         saveOptions.data shouldBe "test-event-id"
         saveOptions.expire shouldBe true
         saveOptions.pipelineId shouldBe "test-pipeline"
+    }
+
+    @Test
+    fun `DynamodbAdapter forCollectedEvents should accept INSERT records with sk EVENT`() {
+        val skEventAttr = EventAV().apply { s = "EVENT" }
+        val streamRecord = StreamRecord().apply {
+            keys = mapOf("sk" to skEventAttr)
+        }
+        val validRecord = DynamodbEvent.DynamodbStreamRecord().apply {
+            eventName = "INSERT"
+            dynamodb = streamRecord
+        }
+
+        val validUow = UnitOfWork(
+            record = validRecord,
+            event = TableChangeEvent(raw = DynamodbRaw(validRecord))
+        )
+
+        DynamodbAdapter.forCollectedEvents(validUow).shouldBeTrue()
+    }
+
+    @Test
+    fun `DynamodbAdapter forCollectedEvents should reject non-INSERT or non-EVENT records`() {
+        val skNotEventAttr = EventAV().apply { s = "CORREL" }
+        val streamRecord = StreamRecord().apply {
+            keys = mapOf("sk" to skNotEventAttr)
+        }
+        val nonInsertRecord = DynamodbEvent.DynamodbStreamRecord().apply {
+            eventName = "MODIFY"
+            dynamodb = streamRecord
+        }
+
+        val invalidUow = UnitOfWork(
+            record = nonInsertRecord,
+            event = TableChangeEvent(raw = DynamodbRaw(nonInsertRecord))
+        )
+
+        DynamodbAdapter.forCollectedEvents(invalidUow).shouldBeFalse()
+    }
+
+    @Test
+    fun `DynamodbAdapter normalize should extract metadata and decode event`() {
+        val recordImageMap = mapOf(
+            "event" to EventAV().apply { s = "{\"hello\":\"world\"}" },
+            "ttl" to EventAV().apply { n = "12345" },
+            "data" to EventAV().apply { s = "data-val" }
+        )
+        val streamRecord = StreamRecord().apply {
+            sequenceNumber = "seq-999"
+        }
+        val dynamodbRecord = DynamodbEvent.DynamodbStreamRecord().apply {
+            dynamodb = streamRecord
+        }
+
+        val rawPair = RecordPair(new = RecordImage(recordImageMap), old = null)
+        val uow = UnitOfWork(
+            record = dynamodbRecord,
+            event = TableChangeEvent(raw = rawPair)
+        )
+
+        val normalizer = DynamodbAdapter.normalize(FakeEventCodec())
+        val normalizedUow = normalizer(uow)
+
+        normalizedUow.event.shouldBeInstanceOf<FakeEvent>()
+        (normalizedUow.event as FakeEvent).encodedStr shouldBe "{\"hello\":\"world\"}"
+        normalizedUow.meta?.get("sequenceNumber") shouldBe "seq-999"
+        normalizedUow.meta?.get("ttl") shouldBe "12345"
+        normalizedUow.meta?.get("data") shouldBe "data-val"
     }
 
     @Test
@@ -162,6 +240,62 @@ class CorrelatePipelineTest {
 
         resultList.size shouldBe 1
         val processedUow = resultList.first()
+        processedUow.putRequest.shouldNotBeNull()
+        processedUow.putResponse.shouldNotBeNull()
+    }
+
+    @Test
+    fun `connect should decode DynamoDB stream record and correlate end to end`(): Unit = runBlocking {
+        val dynamoDbClientMock = mockk<DynamoDbClient>()
+        val dynamoDbClientFactory = spyk<DynamoDbClientFactory>()
+        every { dynamoDbClientFactory.getClient(any()) } returns dynamoDbClientMock
+        coEvery { dynamoDbClientMock.putItem(any()) } returns PutItemResponse.invoke {}
+
+        val faultManager = FaultManager(eventPublisher = EventPublisherInMemory())
+        val pipeline = CorrelatePipeline.builder()
+            .id("test-pipeline")
+            .correlationKeySupplier { "correlated-pk" }
+            .eventFilter(EventFilters.classes(FakeEvent::class))
+            .eventCodec(FakeEventCodec())
+            .isCollectedEvent(DynamodbAdapter::forCollectedEvents)
+            .normalizer(DynamodbAdapter.normalize(FakeEventCodec()))
+            .eventsMicrostore(
+                EventsMicrostoreImpl(
+                    dynamoDbClientFactory = dynamoDbClientFactory,
+                    faultManager = faultManager
+                )
+            )
+            .build()
+
+        val recordImageMap = mapOf(
+            "event" to EventAV().apply { s = "{}" },
+            "ttl" to EventAV().apply { n = "12345" },
+            "data" to EventAV().apply { s = "data-val" }
+        )
+        val skEventAttr = EventAV().apply { s = "EVENT" }
+        val streamRecord = StreamRecord().apply {
+            keys = mapOf("sk" to skEventAttr)
+            sequenceNumber = "seq-123"
+        }
+        val dynamodbRecord = DynamodbEvent.DynamodbStreamRecord().apply {
+            eventName = "INSERT"
+            dynamodb = streamRecord
+        }
+
+        val rawPair = RecordPair(new = RecordImage(recordImageMap), old = null)
+        val incomingUow = UnitOfWork(
+            record = dynamodbRecord,
+            event = TableChangeEvent(raw = rawPair)
+        )
+
+        val resultFlow = pipeline.connect(faultManager, flowOf(incomingUow))
+        val resultList = resultFlow.toList()
+
+        resultList.size shouldBe 1
+        val processedUow = resultList.first()
+        processedUow.event.shouldBeInstanceOf<FakeEvent>()
+        processedUow.saveOptions?.pk shouldBe "correlated-pk"
+        processedUow.saveOptions?.discriminator shouldBe "CORREL"
         processedUow.putRequest.shouldNotBeNull()
         processedUow.putResponse.shouldNotBeNull()
     }

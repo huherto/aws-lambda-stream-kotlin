@@ -2,6 +2,7 @@ package io.kopipes.aws.from
 
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import io.kopipes.aws.DynamodbRaw
+import io.kopipes.core.EventCodec
 import io.kopipes.core.GlobalRegistry
 import io.kopipes.core.GlobalRegistry.envConfig
 import io.kopipes.core.UnitOfWork
@@ -12,6 +13,7 @@ import io.kopipes.core.metrics.withMetrics
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.mapNotNull
+import mu.KotlinLogging
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue as EventAV
 
 class DynamodbAdapter(private val faultManager: FaultManager = GlobalRegistry.faultManager()) {
@@ -107,5 +109,44 @@ class DynamodbAdapter(private val faultManager: FaultManager = GlobalRegistry.fa
         }
 
         return suffix
+    }
+
+    companion object {
+        private val logger = KotlinLogging.logger { }
+
+        @JvmStatic
+        fun forCollectedEvents(uow: UnitOfWork): Boolean {
+            val record = uow.record
+            return when (record) {
+                is DynamodbEvent.DynamodbStreamRecord -> {
+                    record.eventName == "INSERT"
+                            && record.dynamodb?.keys?.get("sk")?.s == "EVENT"
+                            && uow.event?.raw is RecordPair
+                }
+                else -> false
+            }
+        }
+
+        @JvmStatic
+        fun normalize(eventCodec: EventCodec): (UnitOfWork) -> UnitOfWork {
+            return { uow ->
+                val raw = uow.event?.raw as? RecordPair
+                val rawNew = raw?.new ?: RecordImage(mapOf())
+                val eventAsString = rawNew.getEvent() ?: "{}"
+                val eventAsObject = eventCodec.decode(eventAsString)
+                val record = uow.record as? DynamodbEvent.DynamodbStreamRecord
+                if (eventAsObject.id == null) {
+                    logger.warn { "Event id is null: $eventAsString" }
+                }
+                uow.copy(
+                    meta = mapOf(
+                        "sequenceNumber" to record?.dynamodb?.sequenceNumber,
+                        "ttl" to "" + rawNew.getTtl().toString(),
+                        "data" to "" + rawNew.getData(),
+                    ),
+                    event = eventAsObject
+                )
+            }
+        }
     }
 }

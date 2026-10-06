@@ -11,7 +11,7 @@ import io.kopipes.core.sinks.EventsMicrostore
 class ListenerContainer(
     val eventsMicrostore: EventsMicrostore,
     val collectPipeline: CollectPipeline = CollectPipeline.builder()
-        .id("collect-pipeline")
+        .id("coll1")
         .eventFilter(EventFilter.Any)
         .eventsMicrostore(eventsMicrostore)
         .build(),
