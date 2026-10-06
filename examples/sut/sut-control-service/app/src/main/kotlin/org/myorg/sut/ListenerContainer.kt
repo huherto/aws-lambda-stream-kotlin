@@ -24,8 +24,9 @@ class ListenerContainer(
 ) {
     companion object {
         fun build(): ListenerContainer {
+            val dynamoDbClientFactory = DynamoDBClientWrapperFactory(DefaultDynamoDbClientFactory())
             val eventsMicrostore = EventsMicrostoreImpl(
-                DefaultDynamoDbClientFactory(),
+                dynamoDbClientFactory = dynamoDbClientFactory,
             )
             return ListenerContainer(eventsMicrostore = eventsMicrostore)
         }
