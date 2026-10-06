@@ -1,7 +1,6 @@
 package org.myorg.sut
 
 import io.kopipes.aws.connectors.DefaultDynamoDbClientFactory
-import io.kopipes.aws.flavors.EvaluatePipeline
 import io.kopipes.aws.from.DynamodbAdapter
 import io.kopipes.aws.sinks.EventBridgePublisher
 import io.kopipes.aws.sinks.EventsMicrostoreImpl
@@ -10,6 +9,7 @@ import io.kopipes.core.PipelineAssembler
 import io.kopipes.core.UnitOfWork
 import io.kopipes.core.filters.EventFilters
 import io.kopipes.core.flavors.CorrelatePipeline
+import io.kopipes.core.flavors.EvaluatePipeline
 import io.kopipes.core.sinks.EventPublisher
 import io.kopipes.core.sinks.EventsMicrostore
 import mu.KotlinLogging.logger
@@ -36,6 +36,8 @@ class TriggerContainer(
         .eventPublisher(eventPublisher)
         .eventsMicrostore(eventsMicrostore)
         .eventCodec(TrackedUnitEventCodec)
+        .isEvaluateEvent(DynamodbAdapter::forEvaluateEvents)
+        .normalizer(DynamodbAdapter.normalizeEvaluate("eval_vta", TrackedUnitEventCodec))
         .eventFilter(EventFilters.name(TrackedUnitEvent.SHIPMENT_CREATED))
         .emit { uow ->
             val base = uow.event as ShipmentCreatedEvent
@@ -47,6 +49,8 @@ class TriggerContainer(
         .eventPublisher(eventPublisher)
         .eventsMicrostore(eventsMicrostore)
         .eventCodec(TrackedUnitEventCodec)
+        .isEvaluateEvent(DynamodbAdapter::forEvaluateEvents)
+        .normalizer(DynamodbAdapter.normalizeEvaluate("eval2", TrackedUnitEventCodec))
         .eventFilter(EventFilters.name(TrackedUnitEvent.DELIVERY_ATTEMPTED))
         .emit(Companion::contactCustomer)
         .expression { uow -> true }

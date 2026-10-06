@@ -1,95 +1,53 @@
-package io.kopipes.aws.flavors
+package io.kopipes.core.flavors
 
-import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
-import io.kopipes.aws.from.RecordImage
-import io.kopipes.aws.from.RecordPair
-import io.kopipes.aws.from.TableChangeEvent
 import io.kopipes.core.*
 import io.kopipes.core.faults.FaultManager
 import io.kopipes.core.filters.EventFilter
 import io.kopipes.core.filters.filterEvents
-import io.kopipes.core.flavors.Pipeline
 import io.kopipes.core.sinks.EventPublisher
 import io.kopipes.core.sinks.EventsMicrostore
-import io.kopipes.core.sinks.withQueryParams
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 
-
 /** Pipeline flavor that evaluates collected and correlated events and publishes higher-order events. */
 class EvaluatePipeline(
     id: String,
-    val eventPublisher: EventPublisher,
+    val eventPublisher: EventPublisher? = null,
     val eventsMicrostore: EventsMicrostore,
-    val onContentType: (UnitOfWork) -> Boolean,
-    val eventFilter: EventFilter,
-    val correlationKeySuffix: String,
-    val index: String?,
-    val bufferCapacity: Int,
-    val eventCodec: EventCodec,
-    val expression: ((UnitOfWork) -> Boolean)?,
-    val emit: ((UnitOfWork) -> (List<Event>))?,
+    val onContentType: (UnitOfWork) -> Boolean = { true },
+    val eventFilter: EventFilter = EventFilter.Any,
+    val correlationKeySuffix: String = "",
+    val index: String? = null,
+    val bufferCapacity: Int = Channel.BUFFERED,
+    val eventCodec: EventCodec? = null,
+    val expression: ((UnitOfWork) -> Boolean)? = null,
+    val emit: ((UnitOfWork) -> List<Event>)? = null,
+    val isEvaluateEvent: ((UnitOfWork) -> Boolean)? = null,
+    val normalizer: ((UnitOfWork) -> UnitOfWork)? = null,
 ) : Pipeline(id) {
 
-    internal fun forEvents(uow: UnitOfWork) : Boolean {
-        val record = uow.record
-        return when(record) {
-            is DynamodbEvent.DynamodbStreamRecord -> {
-                (record.eventName == "INSERT"
-                        && record.dynamodb?.keys?.get("sk")?.s == "EVENT")
-                        || record.dynamodb?.newImage?.get("discriminator")?.s == "CORREL"
-            }
-            else -> false
-        }
+    fun forEvents(uow: UnitOfWork): Boolean {
+        if (isEvaluateEvent != null) return isEvaluateEvent.invoke(uow)
+        return uow.event != null
     }
 
-    internal fun defaultUnmarshall(eventAsString: String) : Event {
-        return eventCodec.decode(eventAsString)
+    fun normalize(uow: UnitOfWork): UnitOfWork {
+        if (normalizer != null) return normalizer.invoke(uow)
+        return uow
     }
 
-    internal fun normalize(uow: UnitOfWork): UnitOfWork {
-
-        val tableChangeEvent = uow.event as? TableChangeEvent ?: return uow
-        val raw = tableChangeEvent.raw as? RecordPair ?: return uow
-
-        val rawNew = raw.new ?: RecordImage(mapOf())
-        val eventAsString = rawNew.getEvent()?: "{}"
-        val eventAsObject = defaultUnmarshall(eventAsString)
-        val correlation = rawNew.getDiscriminator() == "CORREL"
-        val pk = rawNew.getPk()
-        val data = rawNew.getData()
-        val suffix = rawNew.getSuffix()
-        val queryParams = EventsMicrostore.QueryParams(
-            pk = pk,
-            correlation =  correlation,
-            data = data,
-            index = index,
-        )
-
-        val correlationKey = if (correlation) pk else data
-        val partitionKey = correlationKey?.replace(".${suffix}", "")
-
-        return uow.withQueryParams(queryParams).copy(
-            event = eventAsObject,
-            meta = mapOf(
-                "eventId" to "${tableChangeEvent.id}.${id}",
-                "partitionKey" to partitionKey,
-            )
-        )
-    }
-
-    internal fun onCorrelationKeySuffix(uow: UnitOfWork): Boolean {
+    fun onCorrelationKeySuffix(uow: UnitOfWork): Boolean {
         val uowSuffix = uow.meta?.get("suffix") ?: ""
         return correlationKeySuffix == uowSuffix
     }
 
-    internal fun Flow<UnitOfWork>.queryCorrelated() : Flow<UnitOfWork> {
+    fun Flow<UnitOfWork>.queryCorrelated(): Flow<UnitOfWork> {
         // queryByPK already has a fault manager.
         return eventsMicrostore.queryByPk(this)
     }
 
-    internal fun Flow<UnitOfWork>.complex(fm : FaultManager): Flow<UnitOfWork> {
+    fun Flow<UnitOfWork>.complex(fm: FaultManager): Flow<UnitOfWork> {
         return if (expression == null) {
             this.map { uow ->
                 uow.copy(
@@ -108,11 +66,10 @@ class EvaluatePipeline(
                         null
                     }
                 }
-
         }
     }
 
-    internal fun toHigherOrderEvents(uow: UnitOfWork): List<UnitOfWork> {
+    fun toHigherOrderEvents(uow: UnitOfWork): List<UnitOfWork> {
         val emit = this.emit ?: return emptyList()
         val triggeringEvent = uow.event ?: return emptyList()
 
@@ -140,7 +97,6 @@ class EvaluatePipeline(
         }
     }
 
-
     private fun aggregateTags(uow: UnitOfWork): MutableMap<String, String>? {
         // reduce + merge + omit(['region', 'source'])
         val aggregatedTags = uow.triggers
@@ -154,17 +110,17 @@ class EvaluatePipeline(
         return aggregatedTags
     }
 
-    internal fun Flow<UnitOfWork>.publish() : Flow<UnitOfWork> {
-        return eventPublisher.publish(this)
+    fun Flow<UnitOfWork>.publish(): Flow<UnitOfWork> {
+        return eventPublisher?.publish(this) ?: this
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    override fun connect(fm: FaultManager, fromFlow: Flow<UnitOfWork>) : Flow<UnitOfWork> {
+    override fun connect(fm: FaultManager, fromFlow: Flow<UnitOfWork>): Flow<UnitOfWork> {
         logger.info { "Evaluate.connect: id=$id" }
         with(fm) {
             val flow = fromFlow
-                .filterNotFaulty{ uow -> forEvents(uow) }
-                .mapNotFaulty{  uow -> normalize(uow) }
+                .filterNotFaulty { uow -> forEvents(uow) }
+                .mapNotFaulty { uow -> normalize(uow) }
                 .filterEvents(fm, eventFilter)
                 .onEach { uow -> printStartPipeline(uow) }
                 .filterNotFaulty { uow -> onContentType(uow) }
@@ -195,6 +151,8 @@ class EvaluatePipeline(
         private var eventCodec: EventCodec? = null
         private var expression: ((UnitOfWork) -> Boolean)? = null
         private var emit: ((UnitOfWork) -> List<Event>)? = null
+        private var isEvaluateEvent: ((UnitOfWork) -> Boolean)? = null
+        private var normalizer: ((UnitOfWork) -> UnitOfWork)? = null
 
         fun eventPublisher(eventPublisher: EventPublisher) = apply { this.eventPublisher = eventPublisher }
         fun eventsMicrostore(eventsMicrostore: EventsMicrostore) = apply { this.eventsMicrostore = eventsMicrostore }
@@ -209,20 +167,26 @@ class EvaluatePipeline(
         fun expressionJava(expression: java.util.function.Predicate<UnitOfWork>) = apply { this.expression = { uow -> expression.test(uow) } }
         fun emit(emit: (UnitOfWork) -> List<Event>) = apply { this.emit = emit }
         fun emitJava(emit: java.util.function.Function<UnitOfWork, List<Event>>) = apply { this.emit = { uow -> emit.apply(uow) } }
+        fun isEvaluateEvent(isEvaluateEvent: (UnitOfWork) -> Boolean) = apply { this.isEvaluateEvent = isEvaluateEvent }
+        fun normalizer(normalizer: (UnitOfWork) -> UnitOfWork) = apply { this.normalizer = normalizer }
 
         override fun build(): EvaluatePipeline {
+            val pipelineId = id ?: error("id is required")
+            val microstore = eventsMicrostore ?: error("eventsMicrostore is required")
             return EvaluatePipeline(
-                id = id ?: throw IllegalArgumentException("id is required"),
-                eventPublisher = eventPublisher ?: throw IllegalArgumentException("eventPublisher is required"),
-                eventsMicrostore = eventsMicrostore ?: throw IllegalArgumentException("eventsMicrostore is required"),
+                id = pipelineId,
+                eventPublisher = eventPublisher,
+                eventsMicrostore = microstore,
                 onContentType = onContentType,
                 eventFilter = eventFilter,
                 correlationKeySuffix = correlationKeySuffix,
                 index = index,
                 bufferCapacity = bufferCapacity,
-                eventCodec = eventCodec ?: throw IllegalArgumentException("eventCodec is required"),
+                eventCodec = eventCodec,
                 expression = expression,
-                emit = emit
+                emit = emit,
+                isEvaluateEvent = isEvaluateEvent,
+                normalizer = normalizer,
             )
         }
     }

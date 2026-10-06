@@ -10,6 +10,8 @@ import io.kopipes.core.faults.FaultManager
 import io.kopipes.core.metrics.PipelineMetrics
 import io.kopipes.core.metrics.Timer
 import io.kopipes.core.metrics.withMetrics
+import io.kopipes.core.sinks.EventsMicrostore
+import io.kopipes.core.sinks.withQueryParams
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.mapNotNull
@@ -146,6 +148,56 @@ class DynamodbAdapter(private val faultManager: FaultManager = AwsGlobalRegistry
                     ),
                     event = eventAsObject
                 )
+            }
+        }
+
+        @JvmStatic
+        fun forEvaluateEvents(uow: UnitOfWork): Boolean {
+            val record = uow.record
+            return when (record) {
+                is DynamodbEvent.DynamodbStreamRecord -> {
+                    (record.eventName == "INSERT"
+                            && record.dynamodb?.keys?.get("sk")?.s == "EVENT")
+                            || record.dynamodb?.newImage?.get("discriminator")?.s == "CORREL"
+                }
+                else -> false
+            }
+        }
+
+        @JvmStatic
+        @JvmOverloads
+        fun normalizeEvaluate(pipelineId: String, eventCodec: EventCodec, index: String? = null): (UnitOfWork) -> UnitOfWork {
+            return { uow ->
+                val tableChangeEvent = uow.event as? TableChangeEvent
+                val raw = (tableChangeEvent?.raw ?: uow.event?.raw) as? RecordPair
+                if (tableChangeEvent == null || raw == null) {
+                    uow
+                } else {
+                    val rawNew = raw.new ?: RecordImage(mapOf())
+                    val eventAsString = rawNew.getEvent() ?: "{}"
+                    val eventAsObject = eventCodec.decode(eventAsString)
+                    val correlation = rawNew.getDiscriminator() == "CORREL"
+                    val pk = rawNew.getPk()
+                    val data = rawNew.getData()
+                    val suffix = rawNew.getSuffix()
+                    val queryParams = EventsMicrostore.QueryParams(
+                        pk = pk,
+                        correlation = correlation,
+                        data = data,
+                        index = index,
+                    )
+
+                    val correlationKey = if (correlation) pk else data
+                    val partitionKey = correlationKey?.replace(".${suffix}", "")
+
+                    uow.withQueryParams(queryParams).copy(
+                        event = eventAsObject,
+                        meta = mapOf(
+                            "eventId" to "${tableChangeEvent.id}.${pipelineId}",
+                            "partitionKey" to partitionKey,
+                        )
+                    )
+                }
             }
         }
     }

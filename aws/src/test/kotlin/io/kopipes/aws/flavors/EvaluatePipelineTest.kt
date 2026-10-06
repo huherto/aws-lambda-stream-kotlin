@@ -2,11 +2,13 @@ package io.kopipes.aws.flavors
 
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.StreamRecord
+import io.kopipes.aws.from.DynamodbAdapter
 import io.kopipes.aws.from.RecordImage
 import io.kopipes.aws.from.RecordPair
 import io.kopipes.aws.from.TableChangeEvent
 import io.kopipes.core.*
 import io.kopipes.core.faults.FaultManager
+import io.kopipes.core.flavors.EvaluatePipeline
 import io.kopipes.core.sinks.EventPublisher
 import io.kopipes.core.sinks.EventsMicrostore
 import io.kopipes.core.sinks.queryParams
@@ -61,6 +63,8 @@ class EvaluatePipelineTest {
             .correlationKeySuffix(correlationKeySuffix)
             .index(index)
             .eventCodec(eventCodec)
+            .isEvaluateEvent { DynamodbAdapter.forEvaluateEvents(it) }
+            .normalizer(DynamodbAdapter.normalizeEvaluate(pipelineId, eventCodec, index))
             .apply {
                 expression?.let { expression(it) }
                 emit?.let { emit(it) }
@@ -159,13 +163,26 @@ class EvaluatePipelineTest {
     }
 
     @Test
-    fun `defaultUnmarshall should throw for invalid json`() {
+    fun `normalize should throw for invalid json`() {
         // Arrange
         val pipeline = createPipeline()
+        val rawNew = RecordImage(
+            mapOf(
+                "event" to StreamAV().withS("not-json"),
+            )
+        )
+        val tableChangeEvent = TableChangeEvent(
+            id = "event-1",
+            raw = RecordPair(new = rawNew, old = null)
+        )
+        val uow = UnitOfWork(
+            record = createInsertRecord(discriminator = "CORREL"),
+            event = tableChangeEvent
+        )
 
         // Act & Assert
         shouldThrow<Exception> {
-            pipeline.defaultUnmarshall("not-json")
+            pipeline.normalize(uow)
         }
     }
 

@@ -3,13 +3,13 @@ package org.myorg.urls;
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient;
 import io.kopipes.aws.connectors.DefaultDynamoDbClientFactory;
 import io.kopipes.aws.connectors.DynamoDbClientFactory;
-import io.kopipes.aws.flavors.EvaluatePipeline;
 import io.kopipes.aws.from.DynamodbAdapter;
 import io.kopipes.aws.sinks.EventsMicrostoreImpl;
 import io.kopipes.core.Event;
 import io.kopipes.core.PipelineAssembler;
 import io.kopipes.core.UnitOfWork;
 import io.kopipes.core.flavors.CorrelatePipeline;
+import io.kopipes.core.flavors.EvaluatePipeline;
 import io.kopipes.core.sinks.EventsMicrostore;
 
 import java.util.List;
@@ -37,6 +37,8 @@ public class ControlTriggerContainer {
                 .id("evaluate")
                 .eventsMicrostore(eventsMicrostore)
                 .eventCodec(JacksonEventCodec.INSTANCE)
+                .isEvaluateEvent(DynamodbAdapter::forEvaluateEvents)
+                .normalizer(DynamodbAdapter.normalizeEvaluate("evaluate", JacksonEventCodec.INSTANCE))
                 .expression(this::shouldProcess)
                 .emit(this::processEvent)
                 .build();
