@@ -129,6 +129,19 @@ class DynamodbAdapter(private val faultManager: FaultManager = AwsGlobalRegistry
         }
 
         @JvmStatic
+        fun forEvaluateEvents(uow: UnitOfWork): Boolean {
+            val record = uow.record
+            return when (record) {
+                is DynamodbEvent.DynamodbStreamRecord -> {
+                    (record.eventName == "INSERT"
+                            && record.dynamodb?.keys?.get("sk")?.s == "EVENT")
+                            || record.dynamodb?.newImage?.get("discriminator")?.s == "CORREL"
+                }
+                else -> false
+            }
+        }
+
+        @JvmStatic
         fun normalize(eventCodec: EventCodec): (UnitOfWork) -> UnitOfWork {
             return { uow ->
                 val tableChangeEvent = uow.event as? TableChangeEvent

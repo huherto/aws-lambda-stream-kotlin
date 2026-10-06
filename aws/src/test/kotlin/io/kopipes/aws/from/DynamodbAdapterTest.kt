@@ -234,6 +234,40 @@ class DynamodbAdapterTest {
     }
 
     // ============================================================================
+    // Tests for forEvaluateEvents
+    // ============================================================================
+
+    @Test
+    fun `forEvaluateEvents should return true for INSERT with EVENT sk or CORREL discriminator`() {
+        val eventInsertRecord = createDynamodbRecord(
+            eventName = "INSERT",
+            partitionKeyValue = "pk-1"
+        ).apply {
+            dynamodb.keys = mapOf("sk" to EventAV().withS("EVENT"))
+        }
+        val correlInsertRecord = createDynamodbRecord(
+            eventName = "INSERT",
+            newImage = mapOf("discriminator" to EventAV().withS("CORREL"))
+        )
+        val correlModifyRecord = createDynamodbRecord(
+            eventName = "MODIFY",
+            newImage = mapOf("discriminator" to EventAV().withS("CORREL"))
+        )
+        val otherInsertRecord = createDynamodbRecord(
+            eventName = "INSERT",
+            newImage = mapOf("discriminator" to EventAV().withS("OTHER"))
+        ).apply {
+            dynamodb.keys = mapOf("sk" to EventAV().withS("OTHER"))
+        }
+
+        assertTrue(DynamodbAdapter.forEvaluateEvents(io.kopipes.core.UnitOfWork(record = eventInsertRecord)))
+        assertTrue(DynamodbAdapter.forEvaluateEvents(io.kopipes.core.UnitOfWork(record = correlInsertRecord)))
+        assertTrue(DynamodbAdapter.forEvaluateEvents(io.kopipes.core.UnitOfWork(record = correlModifyRecord)))
+        assertFalse(DynamodbAdapter.forEvaluateEvents(io.kopipes.core.UnitOfWork(record = otherInsertRecord)))
+        assertFalse(DynamodbAdapter.forEvaluateEvents(io.kopipes.core.UnitOfWork(record = Any())))
+    }
+
+    // ============================================================================
     // Helper functions
     // ============================================================================
 

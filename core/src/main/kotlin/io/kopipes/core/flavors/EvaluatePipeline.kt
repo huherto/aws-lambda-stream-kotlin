@@ -1,11 +1,9 @@
-package io.kopipes.aws.flavors
+package io.kopipes.core.flavors
 
-import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import io.kopipes.core.*
 import io.kopipes.core.faults.FaultManager
 import io.kopipes.core.filters.EventFilter
 import io.kopipes.core.filters.filterEvents
-import io.kopipes.core.flavors.Pipeline
 import io.kopipes.core.sinks.EventPublisher
 import io.kopipes.core.sinks.EventsMicrostore
 import io.kopipes.core.sinks.withQueryParams
@@ -13,39 +11,38 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 
-
 /** Pipeline flavor that evaluates collected and correlated events and publishes higher-order events. */
 class EvaluatePipeline(
     id: String,
-    val eventPublisher: EventPublisher,
+    val eventPublisher: EventPublisher? = null,
     val eventsMicrostore: EventsMicrostore,
-    val onContentType: (UnitOfWork) -> Boolean,
-    val eventFilter: EventFilter,
-    val correlationKeySuffix: String,
-    val index: String?,
-    val bufferCapacity: Int,
+    val onContentType: (UnitOfWork) -> Boolean = { true },
+    val eventFilter: EventFilter = EventFilter.Any,
+    val correlationKeySuffix: String = "",
+    val index: String? = null,
+    val bufferCapacity: Int = Channel.BUFFERED,
     val eventCodec: EventCodec,
-    val expression: ((UnitOfWork) -> Boolean)?,
-    val emit: ((UnitOfWork) -> (List<Event>))?,
+    val expression: ((UnitOfWork) -> Boolean)? = null,
+    val emit: ((UnitOfWork) -> List<Event>)? = null,
+    val isEvaluateEvent: ((UnitOfWork) -> Boolean)? = null,
+    val normalizer: ((UnitOfWork) -> UnitOfWork)? = null,
 ) : Pipeline(id) {
 
-    internal fun forEvents(uow: UnitOfWork) : Boolean {
-        val record = uow.record
-        return when(record) {
-            is DynamodbEvent.DynamodbStreamRecord -> {
-                (record.eventName == "INSERT"
-                        && record.dynamodb?.keys?.get("sk")?.s == "EVENT")
-                        || record.dynamodb?.newImage?.get("discriminator")?.s == "CORREL"
-            }
-            else -> false
+    fun forEvents(uow: UnitOfWork): Boolean {
+        if (isEvaluateEvent != null) return isEvaluateEvent.invoke(uow)
+        val event = uow.event
+        if (event is TableChangeEvent) {
+            return !event.isDeleted() && (event.getDiscriminator() == "CORREL" || event.getEvent() != null)
         }
+        return event != null
     }
 
-    internal fun defaultUnmarshall(eventAsString: String) : Event {
+    fun defaultUnmarshall(eventAsString: String): Event {
         return eventCodec.decode(eventAsString)
     }
 
-    internal fun normalize(uow: UnitOfWork): UnitOfWork {
+    fun normalize(uow: UnitOfWork): UnitOfWork {
+        if (normalizer != null) return normalizer.invoke(uow)
 
         val tableChangeEvent = uow.event as? TableChangeEvent ?: return uow
 
@@ -57,7 +54,7 @@ class EvaluatePipeline(
         val suffix = tableChangeEvent.getSuffix()
         val queryParams = EventsMicrostore.QueryParams(
             pk = pk,
-            correlation =  correlation,
+            correlation = correlation,
             data = data,
             index = index,
         )
@@ -67,24 +64,25 @@ class EvaluatePipeline(
 
         return uow.withQueryParams(queryParams).copy(
             event = eventAsObject,
-            meta = mapOf(
+            meta = (uow.meta ?: emptyMap()) + mapOf(
                 "eventId" to "${tableChangeEvent.id}.${id}",
                 "partitionKey" to partitionKey,
+                "suffix" to (suffix ?: "")
             )
         )
     }
 
-    internal fun onCorrelationKeySuffix(uow: UnitOfWork): Boolean {
+    fun onCorrelationKeySuffix(uow: UnitOfWork): Boolean {
         val uowSuffix = uow.meta?.get("suffix") ?: ""
         return correlationKeySuffix == uowSuffix
     }
 
-    internal fun Flow<UnitOfWork>.queryCorrelated() : Flow<UnitOfWork> {
+    fun Flow<UnitOfWork>.queryCorrelated(): Flow<UnitOfWork> {
         // queryByPK already has a fault manager.
         return eventsMicrostore.queryByPk(this)
     }
 
-    internal fun Flow<UnitOfWork>.complex(fm : FaultManager): Flow<UnitOfWork> {
+    fun Flow<UnitOfWork>.complex(fm: FaultManager): Flow<UnitOfWork> {
         return if (expression == null) {
             this.map { uow ->
                 uow.copy(
@@ -96,18 +94,17 @@ class EvaluatePipeline(
                 .filter { uow -> fm.faulty(uow) { onCorrelationKeySuffix(uow) } == true }
                 .queryCorrelated()
                 .mapNotNull { uow ->
-                    val result = fm.faulty(uow) { expression(uow) }
+                    val result = fm.faulty(uow) { expression.invoke(uow) }
                     if (result == true) {
                         uow.copy(triggers = listOfNotNull(uow.event))
                     } else {
                         null
                     }
                 }
-
         }
     }
 
-    internal fun toHigherOrderEvents(uow: UnitOfWork): List<UnitOfWork> {
+    fun toHigherOrderEvents(uow: UnitOfWork): List<UnitOfWork> {
         val emit = this.emit ?: return emptyList()
         val triggeringEvent = uow.event ?: return emptyList()
 
@@ -135,7 +132,6 @@ class EvaluatePipeline(
         }
     }
 
-
     private fun aggregateTags(uow: UnitOfWork): MutableMap<String, String>? {
         // reduce + merge + omit(['region', 'source'])
         val aggregatedTags = uow.triggers
@@ -149,17 +145,17 @@ class EvaluatePipeline(
         return aggregatedTags
     }
 
-    internal fun Flow<UnitOfWork>.publish() : Flow<UnitOfWork> {
-        return eventPublisher.publish(this)
+    fun Flow<UnitOfWork>.publish(): Flow<UnitOfWork> {
+        return eventPublisher?.publish(this) ?: this
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    override fun connect(fm: FaultManager, fromFlow: Flow<UnitOfWork>) : Flow<UnitOfWork> {
-        logger.info { "Evaluate.connect: id=$id" }
+    override fun connect(fm: FaultManager, fromFlow: Flow<UnitOfWork>): Flow<UnitOfWork> {
+        logger.info { "EvaluatePipeline.connect: id=$id" }
         with(fm) {
             val flow = fromFlow
-                .filterNotFaulty{ uow -> forEvents(uow) }
-                .mapNotFaulty{  uow -> normalize(uow) }
+                .filterNotFaulty { uow -> forEvents(uow) }
+                .mapNotFaulty { uow -> normalize(uow) }
                 .filterEvents(fm, eventFilter)
                 .onEach { uow -> printStartPipeline(uow) }
                 .filterNotFaulty { uow -> onContentType(uow) }
@@ -190,8 +186,10 @@ class EvaluatePipeline(
         private var eventCodec: EventCodec? = null
         private var expression: ((UnitOfWork) -> Boolean)? = null
         private var emit: ((UnitOfWork) -> List<Event>)? = null
+        private var isEvaluateEvent: ((UnitOfWork) -> Boolean)? = null
+        private var normalizer: ((UnitOfWork) -> UnitOfWork)? = null
 
-        fun eventPublisher(eventPublisher: EventPublisher) = apply { this.eventPublisher = eventPublisher }
+        fun eventPublisher(eventPublisher: EventPublisher?) = apply { this.eventPublisher = eventPublisher }
         fun eventsMicrostore(eventsMicrostore: EventsMicrostore) = apply { this.eventsMicrostore = eventsMicrostore }
         fun onContentType(onContentType: (UnitOfWork) -> Boolean) = apply { this.onContentType = onContentType }
         fun onContentType(onContentType: java.util.function.Predicate<UnitOfWork>) = apply { this.onContentType = { uow -> onContentType.test(uow) } }
@@ -204,11 +202,15 @@ class EvaluatePipeline(
         fun expressionJava(expression: java.util.function.Predicate<UnitOfWork>) = apply { this.expression = { uow -> expression.test(uow) } }
         fun emit(emit: (UnitOfWork) -> List<Event>) = apply { this.emit = emit }
         fun emitJava(emit: java.util.function.Function<UnitOfWork, List<Event>>) = apply { this.emit = { uow -> emit.apply(uow) } }
+        fun isEvaluateEvent(predicate: (UnitOfWork) -> Boolean) = apply { this.isEvaluateEvent = predicate }
+        fun isEvaluateEventJava(predicate: java.util.function.Predicate<UnitOfWork>) = apply { this.isEvaluateEvent = { uow -> predicate.test(uow) } }
+        fun normalizer(normalizer: (UnitOfWork) -> UnitOfWork) = apply { this.normalizer = normalizer }
+        fun normalizerJava(normalizer: java.util.function.Function<UnitOfWork, UnitOfWork>) = apply { this.normalizer = { uow -> normalizer.apply(uow) } }
 
         override fun build(): EvaluatePipeline {
             return EvaluatePipeline(
                 id = id ?: throw IllegalArgumentException("id is required"),
-                eventPublisher = eventPublisher ?: throw IllegalArgumentException("eventPublisher is required"),
+                eventPublisher = eventPublisher,
                 eventsMicrostore = eventsMicrostore ?: throw IllegalArgumentException("eventsMicrostore is required"),
                 onContentType = onContentType,
                 eventFilter = eventFilter,
@@ -217,7 +219,9 @@ class EvaluatePipeline(
                 bufferCapacity = bufferCapacity,
                 eventCodec = eventCodec ?: throw IllegalArgumentException("eventCodec is required"),
                 expression = expression,
-                emit = emit
+                emit = emit,
+                isEvaluateEvent = isEvaluateEvent,
+                normalizer = normalizer,
             )
         }
     }

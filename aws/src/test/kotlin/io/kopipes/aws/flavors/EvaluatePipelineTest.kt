@@ -3,10 +3,12 @@ package io.kopipes.aws.flavors
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.StreamRecord
 import io.kopipes.aws.from.DynamoDbChangeEvent
+import io.kopipes.aws.from.DynamodbAdapter
 import io.kopipes.aws.from.RecordImage
 import io.kopipes.aws.from.RecordPair
 import io.kopipes.core.*
 import io.kopipes.core.faults.FaultManager
+import io.kopipes.core.flavors.EvaluatePipeline
 import io.kopipes.core.sinks.EventPublisher
 import io.kopipes.core.sinks.EventsMicrostore
 import io.kopipes.core.sinks.queryParams
@@ -51,6 +53,7 @@ class EvaluatePipelineTest {
         pipelineId: String = "pipeline-1",
         correlationKeySuffix: String = "",
         index: String? = null,
+        isEvaluateEvent: ((UnitOfWork) -> Boolean)? = DynamodbAdapter::forEvaluateEvents,
         expression: ((UnitOfWork) -> Boolean)? = null,
         emit: ((UnitOfWork) -> List<Event>)? = null,
     ): EvaluatePipeline {
@@ -62,6 +65,7 @@ class EvaluatePipelineTest {
             .index(index)
             .eventCodec(eventCodec)
             .apply {
+                isEvaluateEvent?.let { isEvaluateEvent(it) }
                 expression?.let { expression(it) }
                 emit?.let { emit(it) }
             }
