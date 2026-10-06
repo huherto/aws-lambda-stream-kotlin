@@ -3,6 +3,7 @@ package io.kopipes.aws.from
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.StreamRecord
 import io.kopipes.core.EnvironmentConfig
+import io.kopipes.core.TableChangeEvent
 import io.kopipes.core.faults.FaultManager
 import io.kopipes.core.sinks.EventPublisherInMemory
 import io.mockk.spyk

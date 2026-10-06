@@ -1,14 +1,14 @@
 package io.kopipes.aws.from
 
 import io.kopipes.core.EnvelopeEncryptionMetadata
-import io.kopipes.core.Event
 import io.kopipes.core.EventReference
 import io.kopipes.core.RawRecord
+import io.kopipes.core.TableChangeEvent
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 @Serializable
-data class TableChangeEvent(
+data class DynamodbTableChangeEvent(
     override val id: String? = null,
     override val timestamp: Long? = null,
     override val partitionKey: String? = null,
@@ -16,12 +16,8 @@ data class TableChangeEvent(
     override val raw: RawRecord? = null,
     override val eem: EnvelopeEncryptionMetadata? = null,
     override val triggers: List<EventReference>? = null,
-    val type: String? = null,
-) : Event {
-
-    override fun eventType(): String {
-        return type ?: "table_change"
-    }
+    override val type: String? = null,
+) : TableChangeEvent() {
 
     override fun toString(): String {
         return Json.encodeToString(serializer(), this)
@@ -35,7 +31,7 @@ data class TableChangeEvent(
         raw: RawRecord?,
         eem: EnvelopeEncryptionMetadata?,
         triggers: List<EventReference>?
-    ): Event = copy(
+    ): DynamodbTableChangeEvent = copy(
         id = id,
         timestamp = timestamp,
         partitionKey = partitionKey,
@@ -45,3 +41,5 @@ data class TableChangeEvent(
         triggers = triggers
     )
 }
+
+typealias DynamoDbTableChangeEvent = DynamodbTableChangeEvent

@@ -5,6 +5,7 @@ import io.kopipes.aws.AwsGlobalRegistry
 import io.kopipes.aws.DynamodbRaw
 import io.kopipes.core.EventCodec
 import io.kopipes.core.GlobalRegistry.envConfig
+import io.kopipes.core.TableChangeEvent
 import io.kopipes.core.UnitOfWork
 import io.kopipes.core.faults.FaultManager
 import io.kopipes.core.metrics.PipelineMetrics
@@ -53,8 +54,8 @@ class DynamodbAdapter(private val faultManager: FaultManager = AwsGlobalRegistry
         }
     }
 
-    internal fun buildEvent(dynamodbRecord: DynamodbEvent.DynamodbStreamRecord): TableChangeEvent {
-        val event = TableChangeEvent(
+    internal fun buildEvent(dynamodbRecord: DynamodbEvent.DynamodbStreamRecord): DynamodbTableChangeEvent {
+        val event = DynamodbTableChangeEvent(
             id = dynamodbRecord.eventID,
             timestamp = deriveTimestamp(dynamodbRecord),
             partitionKey = dynamodbRecord.dynamodb?.keys?.get(pkFn)?.s,
