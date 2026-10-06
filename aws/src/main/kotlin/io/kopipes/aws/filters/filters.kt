@@ -2,9 +2,12 @@ package io.kopipes.aws.filters
 
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import io.kopipes.aws.from.RecordPair
+import io.kopipes.core.TableChangeEvent
 import io.kopipes.core.UnitOfWork
 
 fun outLatched(uow: UnitOfWork): Boolean {
+    val tableChangeEvent = uow.event as? TableChangeEvent
+    if (tableChangeEvent?.latched() == true) return false
     val raw = uow.event?.raw as? RecordPair
     if (raw?.new?.latched() == true) return false
     val record = uow.record as? DynamodbEvent.DynamodbStreamRecord

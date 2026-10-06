@@ -1,9 +1,6 @@
 package io.kopipes.aws.flavors
 
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
-import io.kopipes.aws.from.RecordImage
-import io.kopipes.aws.from.RecordPair
-import io.kopipes.aws.from.TableChangeEvent
 import io.kopipes.core.*
 import io.kopipes.core.faults.FaultManager
 import io.kopipes.core.filters.EventFilter
@@ -51,15 +48,13 @@ class EvaluatePipeline(
     internal fun normalize(uow: UnitOfWork): UnitOfWork {
 
         val tableChangeEvent = uow.event as? TableChangeEvent ?: return uow
-        val raw = tableChangeEvent.raw as? RecordPair ?: return uow
 
-        val rawNew = raw.new ?: RecordImage(mapOf())
-        val eventAsString = rawNew.getEvent()?: "{}"
+        val eventAsString = tableChangeEvent.getEvent() ?: "{}"
         val eventAsObject = defaultUnmarshall(eventAsString)
-        val correlation = rawNew.getDiscriminator() == "CORREL"
-        val pk = rawNew.getPk()
-        val data = rawNew.getData()
-        val suffix = rawNew.getSuffix()
+        val correlation = tableChangeEvent.getDiscriminator() == "CORREL"
+        val pk = tableChangeEvent.getPk()
+        val data = tableChangeEvent.getData()
+        val suffix = tableChangeEvent.getSuffix()
         val queryParams = EventsMicrostore.QueryParams(
             pk = pk,
             correlation =  correlation,

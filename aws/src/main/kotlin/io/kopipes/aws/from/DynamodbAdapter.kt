@@ -5,6 +5,7 @@ import io.kopipes.aws.AwsGlobalRegistry
 import io.kopipes.aws.DynamodbRaw
 import io.kopipes.core.EventCodec
 import io.kopipes.core.GlobalRegistry.envConfig
+import io.kopipes.core.TableChangeEvent
 import io.kopipes.core.UnitOfWork
 import io.kopipes.core.faults.FaultManager
 import io.kopipes.core.metrics.PipelineMetrics
@@ -51,8 +52,8 @@ class DynamodbAdapter(private val faultManager: FaultManager = AwsGlobalRegistry
         }
     }
 
-    internal fun buildEvent(dynamodbRecord: DynamodbEvent.DynamodbStreamRecord): TableChangeEvent {
-        val event = TableChangeEvent(
+    internal fun buildEvent(dynamodbRecord: DynamodbEvent.DynamodbStreamRecord): DynamoDbChangeEvent {
+        val event = DynamoDbChangeEvent(
             id = dynamodbRecord.eventID,
             timestamp = deriveTimestamp(dynamodbRecord),
             partitionKey = dynamodbRecord.dynamodb?.keys?.get(pkFn)?.s,
@@ -121,7 +122,7 @@ class DynamodbAdapter(private val faultManager: FaultManager = AwsGlobalRegistry
                 is DynamodbEvent.DynamodbStreamRecord -> {
                     record.eventName == "INSERT"
                             && record.dynamodb?.keys?.get("sk")?.s == "EVENT"
-                            && uow.event?.raw is RecordPair
+                            && (uow.event is TableChangeEvent || uow.event?.raw is RecordPair)
                 }
                 else -> false
             }
@@ -130,19 +131,20 @@ class DynamodbAdapter(private val faultManager: FaultManager = AwsGlobalRegistry
         @JvmStatic
         fun normalize(eventCodec: EventCodec): (UnitOfWork) -> UnitOfWork {
             return { uow ->
-                val raw = uow.event?.raw as? RecordPair
-                val rawNew = raw?.new ?: RecordImage(mapOf())
-                val eventAsString = rawNew.getEvent() ?: "{}"
+                val tableChangeEvent = uow.event as? TableChangeEvent
+                val eventAsString = tableChangeEvent?.getEvent() ?: (uow.event?.raw as? RecordPair)?.new?.getEvent() ?: "{}"
                 val eventAsObject = eventCodec.decode(eventAsString)
                 val record = uow.record as? DynamodbEvent.DynamodbStreamRecord
+                val ttl = tableChangeEvent?.getTtl() ?: (uow.event?.raw as? RecordPair)?.new?.getTtl()
+                val data = tableChangeEvent?.getData() ?: (uow.event?.raw as? RecordPair)?.new?.getData()
                 if (eventAsObject.id == null) {
                     logger.warn { "Event id is null: $eventAsString" }
                 }
                 uow.copy(
                     meta = mapOf(
                         "sequenceNumber" to record?.dynamodb?.sequenceNumber,
-                        "ttl" to "" + rawNew.getTtl().toString(),
-                        "data" to "" + rawNew.getData(),
+                        "ttl" to "" + ttl?.toString(),
+                        "data" to "" + data,
                     ),
                     event = eventAsObject
                 )

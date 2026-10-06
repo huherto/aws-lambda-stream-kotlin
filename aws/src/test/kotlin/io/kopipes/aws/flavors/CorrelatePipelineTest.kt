@@ -9,10 +9,10 @@ import io.kopipes.aws.DynamodbRaw
 import io.kopipes.aws.connectors.DynamoDbClientFactory
 import io.kopipes.aws.extensions.putRequest
 import io.kopipes.aws.extensions.putResponse
+import io.kopipes.aws.from.DynamoDbChangeEvent
 import io.kopipes.aws.from.DynamodbAdapter
 import io.kopipes.aws.from.RecordImage
 import io.kopipes.aws.from.RecordPair
-import io.kopipes.aws.from.TableChangeEvent
 import io.kopipes.aws.sinks.EventsMicrostoreImpl
 import io.kopipes.core.*
 import io.kopipes.core.faults.FaultManager
@@ -155,7 +155,7 @@ class CorrelatePipelineTest {
 
         val validUow = UnitOfWork(
             record = validRecord,
-            event = TableChangeEvent(raw = DynamodbRaw(validRecord))
+            event = DynamoDbChangeEvent(raw = DynamodbRaw(validRecord))
         )
 
         DynamodbAdapter.forCollectedEvents(validUow).shouldBeTrue()
@@ -174,7 +174,7 @@ class CorrelatePipelineTest {
 
         val invalidUow = UnitOfWork(
             record = nonInsertRecord,
-            event = TableChangeEvent(raw = DynamodbRaw(nonInsertRecord))
+            event = DynamoDbChangeEvent(raw = DynamodbRaw(nonInsertRecord))
         )
 
         DynamodbAdapter.forCollectedEvents(invalidUow).shouldBeFalse()
@@ -197,7 +197,7 @@ class CorrelatePipelineTest {
         val rawPair = RecordPair(new = RecordImage(recordImageMap), old = null)
         val uow = UnitOfWork(
             record = dynamodbRecord,
-            event = TableChangeEvent(raw = rawPair)
+            event = DynamoDbChangeEvent(raw = rawPair)
         )
 
         val normalizer = DynamodbAdapter.normalize(FakeEventCodec())
@@ -285,7 +285,7 @@ class CorrelatePipelineTest {
         val rawPair = RecordPair(new = RecordImage(recordImageMap), old = null)
         val incomingUow = UnitOfWork(
             record = dynamodbRecord,
-            event = TableChangeEvent(raw = rawPair)
+            event = DynamoDbChangeEvent(raw = rawPair)
         )
 
         val resultFlow = pipeline.connect(faultManager, flowOf(incomingUow))

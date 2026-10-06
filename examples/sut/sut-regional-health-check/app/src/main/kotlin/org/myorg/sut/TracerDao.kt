@@ -6,7 +6,6 @@ import aws.sdk.kotlin.services.dynamodb.model.UpdateItemResponse
 import aws.sdk.kotlin.services.s3.model.PutObjectRequest
 import aws.smithy.kotlin.runtime.content.ByteStream
 import io.kopipes.aws.from.RecordPair
-import io.kopipes.aws.from.TableChangeEvent
 import io.kopipes.aws.sinks.DynamoDbUpdateValue
 import io.kopipes.aws.sinks.timestampCondition
 import io.kopipes.aws.sinks.updateExpression

@@ -9,14 +9,10 @@ import io.kopipes.aws.extensions.queryResponse
 import io.kopipes.aws.extensions.withBatchGetRequest
 import io.kopipes.aws.extensions.withQueryRequest
 import io.kopipes.aws.extensions.withUpdateRequest
-import io.kopipes.aws.from.RecordImage
 import io.kopipes.aws.from.RecordPair
 import io.kopipes.aws.queries.DynamoDbQuery
 import io.kopipes.aws.sinks.DynamoDbSink
-import io.kopipes.core.Event
-import io.kopipes.core.EventCodec
-import io.kopipes.core.PipelineBuilder
-import io.kopipes.core.UnitOfWork
+import io.kopipes.core.*
 import io.kopipes.core.faults.FaultManager
 import io.kopipes.core.filters.EventFilter
 import io.kopipes.core.filters.filterEvents
@@ -51,7 +47,7 @@ class UpdatePipeline(
             is DynamodbEvent.DynamodbStreamRecord -> {
                 record.eventName == "INSERT" &&
                         record.dynamodb.keys["sk"]?.s == "EVENT" &&
-                        uow.event?.raw is RecordPair
+                        (uow.event is TableChangeEvent || uow.event?.raw is RecordPair)
             }
 
             else -> false
@@ -67,11 +63,12 @@ class UpdatePipeline(
             return uow
         }
 
-        val raw = uow.event?.raw as? RecordPair
-        val rawNew = raw?.new ?: RecordImage(mapOf())
-        val eventAsString = rawNew.getEvent() ?: "{}"
+        val tableChangeEvent = uow.event as? TableChangeEvent
+        val eventAsString = tableChangeEvent?.getEvent() ?: (uow.event?.raw as? RecordPair)?.new?.getEvent() ?: "{}"
         val eventAsObject = decodeEvent(eventAsString)
         val record = uow.record as? DynamodbEvent.DynamodbStreamRecord
+        val ttl = tableChangeEvent?.getTtl() ?: (uow.event?.raw as? RecordPair)?.new?.getTtl()
+        val data = tableChangeEvent?.getData() ?: (uow.event?.raw as? RecordPair)?.new?.getData()
 
         if (eventAsObject.id == null) {
             logger.warn { "Event id is null: $eventAsString" }
@@ -80,8 +77,8 @@ class UpdatePipeline(
         return uow.copy(
             meta = mapOf(
                 "sequenceNumber" to record?.dynamodb?.sequenceNumber,
-                "ttl" to rawNew.getTtl().toString(),
-                "data" to rawNew.getData(),
+                "ttl" to ttl.toString(),
+                "data" to data,
             ),
             event = eventAsObject,
         )

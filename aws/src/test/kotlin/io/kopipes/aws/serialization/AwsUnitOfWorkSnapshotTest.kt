@@ -2,7 +2,7 @@ package io.kopipes.aws.serialization
 
 import io.kopipes.aws.AwsGlobalRegistry
 import io.kopipes.aws.DynamodbRaw
-import io.kopipes.aws.from.TableChangeEvent
+import io.kopipes.aws.from.DynamoDbChangeEvent
 import io.kopipes.aws.serialization.aws.DynamodbSerializationTest
 import io.kopipes.aws.serialization.aws.DynamodbStreamRecordReplayJson
 import io.kopipes.core.RAW_DYNAMODB
@@ -40,7 +40,7 @@ class AwsUnitOfWorkSnapshotTest {
     @Test
     fun `should encode event raw as a discriminated raw record`() {
         val record = DynamodbSerializationTest.streamRecord()
-        val event = TableChangeEvent(id = "event-1", raw = DynamodbRaw(record))
+        val event = DynamoDbChangeEvent(id = "event-1", raw = DynamodbRaw(record))
 
         val snapshot = UnitOfWork(event = event).toSnapshot()
 
