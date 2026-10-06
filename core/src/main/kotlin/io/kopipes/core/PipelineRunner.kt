@@ -1,7 +1,5 @@
-package io.kopipes.aws.java
+package io.kopipes.core
 
-import io.kopipes.core.PipelineAssembler
-import io.kopipes.core.UnitOfWork
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.onEach
@@ -9,32 +7,32 @@ import kotlinx.coroutines.runBlocking
 import java.util.function.Consumer
 import kotlin.coroutines.EmptyCoroutineContext
 
-typealias  TransformerFunction = (Flow<UnitOfWork>) -> Flow<UnitOfWork>
+typealias TransformerFunction = (Flow<UnitOfWork>) -> Flow<UnitOfWork>
 
-sealed class Step{
+sealed class Step {
     data class Transformer(val f: TransformerFunction) : Step()
     data class OnEach(val f: Consumer<UnitOfWork>) : Step()
 }
 
-class PipelineRunner<I> (
-     private val assembler: PipelineAssembler,
+class PipelineRunner<I>(
+    private val assembler: PipelineAssembler,
 ) {
 
-    private var headFlowCreator : ((I) -> Flow<UnitOfWork>)? = null
+    private var headFlowCreator: ((I) -> Flow<UnitOfWork>)? = null
 
     private val steps = mutableListOf<Step>()
 
-    fun headFlow(hfc : (I) -> Flow<UnitOfWork>) : PipelineRunner<I> {
-        headFlowCreator = hfc;
+    fun headFlow(hfc: (I) -> Flow<UnitOfWork>): PipelineRunner<I> {
+        headFlowCreator = hfc
         return this
     }
 
-    fun transformer(f: TransformerFunction) : PipelineRunner<I> {
+    fun transformer(f: TransformerFunction): PipelineRunner<I> {
         steps.add(Step.Transformer(f))
         return this
     }
 
-    fun onEach(f: Consumer<UnitOfWork>) : PipelineRunner<I> {
+    fun onEach(f: Consumer<UnitOfWork>): PipelineRunner<I> {
         steps.add(Step.OnEach(f))
         return this
     }
@@ -47,8 +45,8 @@ class PipelineRunner<I> (
                 val assembler = assembler
 
                 var flow = assembler.assemble(headFlow)
-                for(step in steps) {
-                    when(step ) {
+                for (step in steps) {
+                    when (step) {
                         is Step.Transformer -> {
                             flow = step.f(flow)
                         }

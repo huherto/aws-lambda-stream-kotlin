@@ -1,9 +1,5 @@
-package io.kopipes.aws.java
+package io.kopipes.core
 
-import io.kopipes.core.EnvironmentConfig
-import io.kopipes.core.GlobalRegistry
-import io.kopipes.core.PipelineAssembler
-import io.kopipes.core.UnitOfWork
 import io.kopipes.core.faults.FaultManager
 import io.kopipes.core.flavors.Pipeline
 import io.kopipes.core.sinks.EventPublisherInMemory
@@ -25,7 +21,7 @@ class PipelineRunnerTest {
     fun beforeEach() {
         GlobalRegistry.reset()
         GlobalRegistry.setEnvConfig(object : EnvironmentConfig() {
-            override fun isMetricEnabled(name: String): Boolean = false
+            override fun isMetricEnabled(key: String): Boolean = false
         })
         GlobalRegistry.setFaultManager(FaultManager(eventPublisher = EventPublisherInMemory()))
     }

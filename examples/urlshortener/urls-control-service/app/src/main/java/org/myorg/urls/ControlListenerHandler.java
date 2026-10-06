@@ -4,7 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent;
 import io.kopipes.aws.java.Handlers;
-import io.kopipes.aws.java.PipelineRunner;
+import io.kopipes.core.PipelineRunner;
 
 public class ControlListenerHandler implements RequestHandler<KinesisEvent, Void> {
     private final ControlListenerContainer container;
