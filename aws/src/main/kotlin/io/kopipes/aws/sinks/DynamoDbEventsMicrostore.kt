@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.buffer
 
 /** DynamoDB-backed implementation of [EventsMicrostore]. */
-open class EventsMicrostoreImpl @JvmOverloads constructor(
+open class DynamoDbEventsMicrostore @JvmOverloads constructor(
     private val dynamoDbClientFactory: DynamoDbClientFactory = AwsGlobalRegistry.dynamoDbClientFactory(),
     faultManager: FaultManager = AwsGlobalRegistry.faultManager(),
     bufferCapacity: Int = Channel.BUFFERED,

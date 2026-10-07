@@ -2,8 +2,8 @@ package org.myorg.sut
 
 import io.kopipes.aws.connectors.DefaultDynamoDbClientFactory
 import io.kopipes.aws.from.DynamodbAdapter
+import io.kopipes.aws.sinks.DynamoDbEventsMicrostore
 import io.kopipes.aws.sinks.EventBridgePublisher
-import io.kopipes.aws.sinks.EventsMicrostoreImpl
 import io.kopipes.core.Event
 import io.kopipes.core.PipelineAssembler
 import io.kopipes.core.UnitOfWork
@@ -74,7 +74,7 @@ class TriggerContainer(
         }
 
         fun build(): TriggerContainer {
-            val eventsMicrostore = EventsMicrostoreImpl(
+            val eventsMicrostore = DynamoDbEventsMicrostore(
                 DefaultDynamoDbClientFactory(),
             )
             val eventPublisher = EventBridgePublisher()

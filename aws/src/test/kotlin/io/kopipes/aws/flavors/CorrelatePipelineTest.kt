@@ -13,7 +13,7 @@ import io.kopipes.aws.from.DynamoDbChangeEvent
 import io.kopipes.aws.from.DynamodbAdapter
 import io.kopipes.aws.from.RecordImage
 import io.kopipes.aws.from.RecordPair
-import io.kopipes.aws.sinks.EventsMicrostoreImpl
+import io.kopipes.aws.sinks.DynamoDbEventsMicrostore
 import io.kopipes.core.*
 import io.kopipes.core.faults.FaultManager
 import io.kopipes.core.filters.EventFilters
@@ -211,7 +211,7 @@ class CorrelatePipelineTest {
     }
 
     @Test
-    fun `connect should successfully process a valid UnitOfWork with EventsMicrostoreImpl`(): Unit = runBlocking {
+    fun `connect should successfully process a valid UnitOfWork with DynamoDbEventsMicrostore`(): Unit = runBlocking {
         val dynamoDbClientMock = mockk<DynamoDbClient>()
         val dynamoDbClientFactory = spyk<DynamoDbClientFactory>()
         every { dynamoDbClientFactory.getClient(any()) } returns dynamoDbClientMock
@@ -224,7 +224,7 @@ class CorrelatePipelineTest {
             .eventFilter(EventFilters.classes(FakeEvent::class))
             .eventCodec(FakeEventCodec())
             .eventsMicrostore(
-                EventsMicrostoreImpl(
+                DynamoDbEventsMicrostore(
                     dynamoDbClientFactory = dynamoDbClientFactory,
                     faultManager = faultManager
                 )
@@ -260,7 +260,7 @@ class CorrelatePipelineTest {
             .isCollectedEvent(DynamodbAdapter::forCollectedEvents)
             .normalizer(DynamodbAdapter.normalize(FakeEventCodec()))
             .eventsMicrostore(
-                EventsMicrostoreImpl(
+                DynamoDbEventsMicrostore(
                     dynamoDbClientFactory = dynamoDbClientFactory,
                     faultManager = faultManager
                 )

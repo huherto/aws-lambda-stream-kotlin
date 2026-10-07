@@ -4,7 +4,7 @@ import aws.sdk.kotlin.services.dynamodb.DynamoDbClient;
 import io.kopipes.aws.connectors.DefaultDynamoDbClientFactory;
 import io.kopipes.aws.connectors.DynamoDbClientFactory;
 import io.kopipes.aws.from.DynamodbAdapter;
-import io.kopipes.aws.sinks.EventsMicrostoreImpl;
+import io.kopipes.aws.sinks.DynamoDbEventsMicrostore;
 import io.kopipes.core.Event;
 import io.kopipes.core.PipelineAssembler;
 import io.kopipes.core.UnitOfWork;
@@ -69,7 +69,7 @@ public class ControlTriggerContainer {
         DynamoDbClientFactory factory = new DefaultDynamoDbClientFactory();
         DynamoDbClient client = factory.getClient("urls-control-service");
 
-        EventsMicrostore eventsMicrostore = new EventsMicrostoreImpl(factory);
+        EventsMicrostore eventsMicrostore = new DynamoDbEventsMicrostore(factory);
         UrlDao urlDao = new UrlDao(client, urlsTableName);
 
         return new ControlTriggerContainer(eventsMicrostore, urlDao);

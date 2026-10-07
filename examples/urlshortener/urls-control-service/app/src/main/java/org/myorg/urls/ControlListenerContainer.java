@@ -3,7 +3,7 @@ package org.myorg.urls;
 import io.kopipes.aws.connectors.DefaultDynamoDbClientFactory;
 import io.kopipes.aws.connectors.DynamoDbClientFactory;
 import io.kopipes.aws.from.KinesisAdapter;
-import io.kopipes.aws.sinks.EventsMicrostoreImpl;
+import io.kopipes.aws.sinks.DynamoDbEventsMicrostore;
 import io.kopipes.core.PipelineAssembler;
 import io.kopipes.core.flavors.CollectPipeline;
 import io.kopipes.core.sinks.EventsMicrostore;
@@ -29,7 +29,7 @@ public class ControlListenerContainer {
 
     public static ControlListenerContainer build() {
         DynamoDbClientFactory factory = new DefaultDynamoDbClientFactory();
-        EventsMicrostore eventsMicrostore = new EventsMicrostoreImpl(factory);
+        EventsMicrostore eventsMicrostore = new DynamoDbEventsMicrostore(factory);
 
         return new ControlListenerContainer(eventsMicrostore);
     }

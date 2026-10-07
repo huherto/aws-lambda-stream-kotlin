@@ -7,7 +7,7 @@ import io.kopipes.aws.connectors.DynamoDbClientFactory
 import io.kopipes.aws.extensions.putRequest
 import io.kopipes.aws.extensions.queryRequest
 import io.kopipes.aws.extensions.withQueryResponse
-import io.kopipes.aws.sinks.EventsMicrostoreImpl
+import io.kopipes.aws.sinks.DynamoDbEventsMicrostore
 import io.kopipes.core.*
 import io.kopipes.core.faults.FaultManager
 import io.kopipes.core.sinks.EventsMicrostore
@@ -24,7 +24,7 @@ import io.mockk.spyk
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
-class EventsMicrostoreImplTest {
+class DynamoDbEventsMicrostoreTest {
 
     private val dynamoDbClient = mockk<DynamoDbClient>()
     private val faultManager = mockk<FaultManager>()
@@ -34,7 +34,7 @@ class EventsMicrostoreImplTest {
         factory
     }
 
-    private val eventMicrostore = EventsMicrostoreImpl(dynamoDbClientFactory, faultManager)
+    private val eventMicrostore = DynamoDbEventsMicrostore(dynamoDbClientFactory, faultManager)
 
     @Test
     fun `putRequest should correctly populate PutItemRequest based on UnitOfWork, Event, and EnvironmentConfig`() {

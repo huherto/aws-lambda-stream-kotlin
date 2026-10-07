@@ -105,7 +105,7 @@ graph TD
 - **Package**: `io.kopipes.aws` (and subpackages `connectors`, `from`, `sinks`, `queries`, `flavors`, `serialization`, `extensions`, `java`, `utils`, `tools`)
 - **Connectors**: `ClientFactory`, `AbstractClientFactory`, `DynamoDbConnector`, `EventBridgeConnector`, `KmsConnector`, `S3Connector`, `CloudWatchConnector`, `DynamoDbBatchGetRetryStrategy`, `EventBridgeRetryStrategy`
 - **Adapters (`from`)**: `DynamodbAdapter`, `KinesisAdapter`, `SqsAdapter`, `S3Adapter`, `EventBridgeAdapter`, `SnsAdapter`, `FirehoseAdapter`, `CognitoAdapter`, `CwAdapter`, `RecordPair`, `TableChangeEvent`, `RawRecords.kt`
-- **Sinks**: `DynamoDbSink`, `DynamoDbUpdateExpression`, `EventBridgePublisher`, `S3Sink`, `CloudWatchSink`, `EventsMicrostoreImpl`, `ClaimCheckStore`
+- **Sinks**: `DynamoDbSink`, `DynamoDbUpdateExpression`, `EventBridgePublisher`, `S3Sink`, `CloudWatchSink`, `DynamoDbEventsMicrostore`, `ClaimCheckStore`
 - **Queries & Tools**: `DynamoDbQuery`, `S3Query`, `ClaimCheckRedeemer`, `DynamoDb`, `S3`, `ReplayEvents`, `ResubmitFaults`
 - **Pipelines**: `CdcPipeline`, `MaterializePipeline`, `MaterializeS3Pipeline`, `UpdatePipeline`, `EvaluatePipeline`
 - **Serialization & Snapshots**: `AwsRecordSerializers`, `AwsSerializers`, `DynamodbSerialization`, `KinesisSerialization`, `SqsSerialization`, `RecordPairSerialization`, `AttributeValueCanonicalJson`, `DynamoDbRecordSnapshotter`, `KinesisRecordSnapshotter`, `SqsRecordSnapshotter`, `S3Snapshot`
@@ -204,7 +204,7 @@ The new `aws` module encapsulates all AWS SDK clients, Lambda adapters, cloud si
 - Create the `aws` module in `settings.gradle.kts` and configure `aws/build.gradle.kts` with dependencies on `project(":core")` and AWS Kotlin/Java SDKs.
 - Move AWS connectors (`ClientFactory`, `DynamoDbConnector`, `EventBridgeConnector`, `KmsConnector`, `S3Connector`, `CloudWatchConnector`) and AWS retry strategies (`DynamoDbBatchGetRetryStrategy`, `EventBridgeRetryStrategy`) to `io.kopipes.aws.connectors`.
 - Move event source adapters (`DynamodbAdapter`, `KinesisAdapter`, `SqsAdapter`, `S3Adapter`, `EventBridgeAdapter`, `SnsAdapter`, `FirehoseAdapter`, `CognitoAdapter`, `CwAdapter`, `RecordPair`, `TableChangeEvent`, `RawRecords`) to `io.kopipes.aws.from`.
-- Move AWS sinks and microstore implementations (`DynamoDbSink`, `EventBridgePublisher`, `S3Sink`, `CloudWatchSink`, `EventsMicrostoreImpl`, `ClaimCheckStore`) to `io.kopipes.aws.sinks`.
+- Move AWS sinks and microstore implementations (`DynamoDbSink`, `EventBridgePublisher`, `S3Sink`, `CloudWatchSink`, `DynamoDbEventsMicrostore`, `ClaimCheckStore`) to `io.kopipes.aws.sinks`.
 - Move AWS queries (`DynamoDbQuery`, `S3Query`, `ClaimCheckRedeemer`, `DynamoDb`, `S3`) to `io.kopipes.aws.queries`.
 - Move AWS pipeline flavors (`CdcPipeline`, `MaterializePipeline`, `MaterializeS3Pipeline`, `UpdatePipeline`, `EvaluatePipeline`) to `io.kopipes.aws.flavors`.
 - Move AWS Lambda handlers and Java bridge (`Handlers.kt`, `PipelineRunner`) to `io.kopipes.aws.java`.

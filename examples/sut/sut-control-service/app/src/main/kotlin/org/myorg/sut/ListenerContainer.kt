@@ -2,7 +2,7 @@ package org.myorg.sut
 
 import io.kopipes.aws.connectors.DefaultDynamoDbClientFactory
 import io.kopipes.aws.from.KinesisAdapter
-import io.kopipes.aws.sinks.EventsMicrostoreImpl
+import io.kopipes.aws.sinks.DynamoDbEventsMicrostore
 import io.kopipes.core.PipelineAssembler
 import io.kopipes.core.filters.EventFilter
 import io.kopipes.core.flavors.CollectPipeline
@@ -25,7 +25,7 @@ class ListenerContainer(
     companion object {
         fun build(): ListenerContainer {
             val dynamoDbClientFactory = DynamoDBClientWrapperFactory(DefaultDynamoDbClientFactory())
-            val eventsMicrostore = EventsMicrostoreImpl(
+            val eventsMicrostore = DynamoDbEventsMicrostore(
                 dynamoDbClientFactory = dynamoDbClientFactory,
             )
             return ListenerContainer(eventsMicrostore = eventsMicrostore)

@@ -12,8 +12,8 @@ import com.amazonaws.services.lambda.runtime.events.KinesisEvent
 import io.kopipes.aws.connectors.DynamoDbClientFactory
 import io.kopipes.aws.connectors.EventBridgeClientFactory
 import io.kopipes.aws.from.KinesisAdapter
+import io.kopipes.aws.sinks.DynamoDbEventsMicrostore
 import io.kopipes.aws.sinks.EventBridgePublisher
-import io.kopipes.aws.sinks.EventsMicrostoreImpl
 import io.kopipes.core.EnvironmentConfig
 import io.kopipes.core.PipelineAssembler
 import io.kopipes.core.faults.FaultManager
@@ -205,7 +205,7 @@ class PipelineTest {
         val faultManager = FaultManager(
             eventPublisher = eventPublisher,
         )
-        val eventsMicrostore = EventsMicrostoreImpl(
+        val eventsMicrostore = DynamoDbEventsMicrostore(
             dynamoDbClientFactory = dynamoDbClientFactory,
             faultManager = faultManager,
         )
