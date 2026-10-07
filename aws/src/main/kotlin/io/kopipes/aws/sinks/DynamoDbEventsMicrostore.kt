@@ -13,6 +13,7 @@ import io.kopipes.aws.utils.nullableBool
 import io.kopipes.aws.utils.nullableN
 import io.kopipes.aws.utils.nullableS
 import io.kopipes.core.Event
+import io.kopipes.core.FaultException
 import io.kopipes.core.JsonEvent
 import io.kopipes.core.UnitOfWork
 import io.kopipes.core.faults.FaultManager
@@ -76,12 +77,13 @@ open class DynamoDbEventsMicrostore @JvmOverloads constructor(
         }
     }
 
-    internal fun unmarshall(eventAsString: String): Event {
-        val jsonEvent: JsonEvent = try {
+    internal fun unmarshall(eventAsString: String, uow: UnitOfWork? = null): Event? {
+        val jsonEvent: JsonEvent? = try {
             JsonEvent(eventAsString)
         } catch (e: Exception) {
-            logger.error { "Failed to parse event: $eventAsString, $e" }
-            throw e
+            logger.error(e) { "Failed to parse event: $eventAsString" }
+            faultManager.redirectFailure(FaultException(uow, e))
+            null
         }
         return jsonEvent
     }
@@ -91,7 +93,7 @@ open class DynamoDbEventsMicrostore @JvmOverloads constructor(
 
         val correlatedEvents = uow.queryResponse?.items?.mapNotNull { item ->
             val eventString = (item["event"] as? AttributeValue.S)?.value
-            eventString?.let { unmarshall(it) }
+            eventString?.let { unmarshall(it, uow) }
         }
         return uow.copy(
             correlated = correlatedEvents

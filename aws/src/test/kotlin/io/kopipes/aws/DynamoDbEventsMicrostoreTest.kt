@@ -27,13 +27,12 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import kotlin.time.Duration.Companion.milliseconds
 
 class DynamoDbEventsMicrostoreTest {
 
     private val dynamoDbClient = mockk<DynamoDbClient>()
-    private val faultManager = mockk<FaultManager>()
+    private val faultManager = mockk<FaultManager>(relaxed = true)
     private val dynamoDbClientFactory by lazy {
         val factory = spyk<DynamoDbClientFactory>()
         every { factory.getClient(any()) } returns dynamoDbClient
@@ -234,18 +233,24 @@ class DynamoDbEventsMicrostoreTest {
         val result = eventMicrostore.unmarshall(jsonString)
 
         // Assert
-        result.id shouldBe "evt-123"
-        result.eventType() shouldBe "TEST_EVENT"
+        val parsed = result.shouldNotBeNull()
+        parsed.id shouldBe "evt-123"
+        parsed.eventType() shouldBe "TEST_EVENT"
     }
 
     @Test
-    fun `unmarshall should throw exception for invalid json string`() {
+    fun `unmarshall should record fault and return null for invalid json string`() {
         // Arrange
         val invalidJson = "invalid-json"
+        val uow = UnitOfWork(key = "test-uow")
         
-        // Act & Assert
-        assertThrows<Exception> {
-            eventMicrostore.unmarshall(invalidJson)
+        // Act
+        val result = eventMicrostore.unmarshall(invalidJson, uow)
+
+        // Assert
+        result.shouldBeNull()
+        verify(exactly = 1) {
+            faultManager.redirectFailure(match { it.uow == uow && it.cause is Exception })
         }
     }
 
@@ -288,6 +293,37 @@ class DynamoDbEventsMicrostoreTest {
         correlated[0].eventType() shouldBe "TYPE_1"
         correlated[1].id shouldBe "evt-2"
         correlated[1].eventType() shouldBe "TYPE_2"
+    }
+
+    @Test
+    fun `toCorrelated should extract valid events and record faults for corrupted items`() {
+        // Arrange
+        val validJson1 = "{\"id\":\"evt-1\", \"type\":\"TYPE_1\"}"
+        val invalidJson = "invalid-json"
+        val validJson2 = "{\"id\":\"evt-2\", \"type\":\"TYPE_2\"}"
+
+        val itemsList = listOf(
+            mapOf("event" to AttributeValue.S(validJson1)),
+            mapOf("event" to AttributeValue.S(invalidJson)),
+            mapOf("event" to AttributeValue.S(validJson2)),
+        )
+
+        val uow = UnitOfWork(key = "corr-test").withQueryResponse(QueryResponse {
+            items = itemsList
+        })
+
+        // Act
+        val result = eventMicrostore.toCorrelated(uow)
+
+        // Assert
+        val correlated = result.correlated.shouldNotBeNull()
+        correlated shouldHaveSize 2
+        correlated[0].id shouldBe "evt-1"
+        correlated[1].id shouldBe "evt-2"
+
+        verify(exactly = 1) {
+            faultManager.redirectFailure(match { it.uow == uow })
+        }
     }
 
     @Test
@@ -669,5 +705,52 @@ class DynamoDbEventsMicrostoreTest {
         correlated[0].id shouldBe "evt-limit-1"
 
         coVerify(exactly = 1) { client.query(any()) }
+    }
+
+    @Test
+    fun `queryByPk should continue processing and record fault in faultManager when corrupted correlated event is present`() = runTest {
+        // Arrange
+        val client = mockk<DynamoDbClient>()
+        val factory = mockk<DynamoDbClientFactory>()
+        every { factory.getClient(any()) } returns client
+
+        val eventPublisher = mockk<EventPublisher>(relaxed = true)
+        val fm = FaultManager(eventPublisher, skipErrorLogging = true)
+        val microstore = DynamoDbEventsMicrostore(
+            dynamoDbClientFactory = factory,
+            faultManager = fm,
+            parallel = 1
+        )
+
+        val uow = UnitOfWork(key = "corr-uow").withQueryParams(EventsMicrostore.QueryParams(
+            pk = "test-pk",
+            correlation = true
+        ))
+
+        val validEventJson = "{\"id\":\"valid-1\", \"type\":\"VALID_TYPE\"}"
+        val corruptedEventJson = "not-a-valid-json"
+
+        val queryResponse = QueryResponse {
+            items = listOf(
+                mapOf("event" to AttributeValue.S(validEventJson)),
+                mapOf("event" to AttributeValue.S(corruptedEventJson))
+            )
+            count = 2
+        }
+
+        coEvery { client.query(any()) } returns queryResponse
+
+        // Act
+        val results = microstore.queryByPk(flowOf(uow)).toList()
+
+        // Assert
+        results shouldHaveSize 1
+        val result = results.first()
+        val correlated = result.correlated.shouldNotBeNull()
+        correlated shouldHaveSize 1
+        correlated[0].id shouldBe "valid-1"
+        correlated[0].eventType() shouldBe "VALID_TYPE"
+
+        fm.getFaults() shouldHaveSize 1
     }
 }
