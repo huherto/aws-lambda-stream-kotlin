@@ -65,11 +65,10 @@ open class DynamoDbEventsMicrostore @JvmOverloads constructor(
             if (data.isNullOrEmpty()) return uow
             val request = QueryRequest {
                 tableName = targetTable
-                indexName = uow.queryParams?.index ?: "DataIndex"
+                indexName = queryParams.index ?: "DataIndex"
                 keyConditionExpression = "#data = :data"
                 expressionAttributeNames = mapOf("#data" to "data")
                 expressionAttributeValues = mapOf(":data" to AttributeValue.S(data))
-                consistentRead = true
             }
             return uow.withQueryRequest(request)
         }

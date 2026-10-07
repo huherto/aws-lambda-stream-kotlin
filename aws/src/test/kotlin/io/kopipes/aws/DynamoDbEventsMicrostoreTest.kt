@@ -107,11 +107,9 @@ class DynamoDbEventsMicrostoreTest {
     }
 
     @Test
-    fun `toQueryRequest should set queryRequest when correlation is true and pk is provided`() {
+    fun `toQueryRequest should set queryRequest with consistentRead when correlation is true and pk is provided`() {
         // Arrange
-        val uow = UnitOfWork(
-            meta = mapOf("correlation" to "true", "pk" to "test-pk")
-        ).withQueryParams(EventsMicrostore.QueryParams(
+        val uow = UnitOfWork().withQueryParams(EventsMicrostore.QueryParams(
             pk = "test-pk",
             correlation = true
         ))
@@ -121,6 +119,8 @@ class DynamoDbEventsMicrostoreTest {
 
         // Assert
         val request = result.queryRequest.shouldNotBeNull()
+        request.tableName shouldBe "events"
+        request.indexName.shouldBeNull()
         request.keyConditionExpression shouldBe "#pk = :pk"
         request.expressionAttributeNames shouldBe mapOf("#pk" to "pk")
         
@@ -131,11 +131,51 @@ class DynamoDbEventsMicrostoreTest {
     }
 
     @Test
-    fun `toQueryRequest should return original uow when correlation is false`() {
+    fun `toQueryRequest should set queryRequest on DataIndex without consistentRead when correlation is false and data is provided`() {
         // Arrange
-        val uow = UnitOfWork(
-            meta = mapOf("correlation" to "false", "pk" to "test-pk")
-        )
+        val uow = UnitOfWork().withQueryParams(EventsMicrostore.QueryParams(
+            data = "test-data",
+            correlation = false
+        ))
+
+        // Act
+        val result = eventMicrostore.toQueryRequest(uow)
+
+        // Assert
+        val request = result.queryRequest.shouldNotBeNull()
+        request.tableName shouldBe "events"
+        request.indexName shouldBe "DataIndex"
+        request.keyConditionExpression shouldBe "#data = :data"
+        request.expressionAttributeNames shouldBe mapOf("#data" to "data")
+
+        val dataValue = request.expressionAttributeValues?.get(":data")
+        dataValue.shouldNotBeNull()
+        dataValue.shouldBeTypeOf<AttributeValue.S>().value shouldBe "test-data"
+        request.consistentRead shouldBe null
+    }
+
+    @Test
+    fun `toQueryRequest should use custom index name when specified in queryParams`() {
+        // Arrange
+        val uow = UnitOfWork().withQueryParams(EventsMicrostore.QueryParams(
+            data = "test-data",
+            correlation = false,
+            index = "CustomGsiIndex"
+        ))
+
+        // Act
+        val result = eventMicrostore.toQueryRequest(uow)
+
+        // Assert
+        val request = result.queryRequest.shouldNotBeNull()
+        request.indexName shouldBe "CustomGsiIndex"
+        request.consistentRead shouldBe null
+    }
+
+    @Test
+    fun `toQueryRequest should return original uow when queryParams is null`() {
+        // Arrange
+        val uow = UnitOfWork()
 
         // Act
         val result = eventMicrostore.toQueryRequest(uow)
@@ -146,18 +186,37 @@ class DynamoDbEventsMicrostoreTest {
     }
 
     @Test
-    fun `toQueryRequest should return original uow when pk is missing`() {
+    fun `toQueryRequest should return original uow when correlation is true but pk is missing or empty`() {
         // Arrange
-        val uow = UnitOfWork(
-            meta = mapOf("correlation" to "true")
-        )
+        val uowNullPk = UnitOfWork().withQueryParams(EventsMicrostore.QueryParams(
+            pk = null,
+            correlation = true
+        ))
+        val uowEmptyPk = UnitOfWork().withQueryParams(EventsMicrostore.QueryParams(
+            pk = "",
+            correlation = true
+        ))
 
-        // Act
-        val result = eventMicrostore.toQueryRequest(uow)
+        // Act & Assert
+        eventMicrostore.toQueryRequest(uowNullPk).queryRequest.shouldBeNull()
+        eventMicrostore.toQueryRequest(uowEmptyPk).queryRequest.shouldBeNull()
+    }
 
-        // Assert
-        result.queryRequest.shouldBeNull()
-        result shouldBe uow
+    @Test
+    fun `toQueryRequest should return original uow when correlation is false but data is missing or empty`() {
+        // Arrange
+        val uowNullData = UnitOfWork().withQueryParams(EventsMicrostore.QueryParams(
+            data = null,
+            correlation = false
+        ))
+        val uowEmptyData = UnitOfWork().withQueryParams(EventsMicrostore.QueryParams(
+            data = "",
+            correlation = false
+        ))
+
+        // Act & Assert
+        eventMicrostore.toQueryRequest(uowNullData).queryRequest.shouldBeNull()
+        eventMicrostore.toQueryRequest(uowEmptyData).queryRequest.shouldBeNull()
     }
 
     @Test
