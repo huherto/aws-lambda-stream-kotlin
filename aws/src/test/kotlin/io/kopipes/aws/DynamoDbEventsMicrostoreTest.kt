@@ -452,6 +452,7 @@ class DynamoDbEventsMicrostoreTest {
         val eventJson = "{\"id\":\"corr-1\", \"type\":\"CORR_TYPE\"}"
         val queryResponse = QueryResponse {
             items = listOf(mapOf("event" to AttributeValue.S(eventJson)))
+            count = 1
         }
 
         coEvery { client.query(any()) } returns queryResponse
@@ -549,5 +550,124 @@ class DynamoDbEventsMicrostoreTest {
         // Assert
         results shouldHaveSize 3
         maxActiveCalls shouldBe 2
+    }
+
+    @Test
+    fun `queryByPk should paginate and aggregate items across multiple pages when lastEvaluatedKey is present`() = runTest {
+        // Arrange
+        val client = mockk<DynamoDbClient>()
+        val factory = mockk<DynamoDbClientFactory>()
+        every { factory.getClient(any()) } returns client
+
+        val eventPublisher = mockk<EventPublisher>(relaxed = true)
+        val fm = FaultManager(eventPublisher, skipErrorLogging = true)
+        val microstore = DynamoDbEventsMicrostore(
+            dynamoDbClientFactory = factory,
+            faultManager = fm,
+            parallel = 1
+        )
+
+        val uow = UnitOfWork(key = "paginated-query").withQueryParams(EventsMicrostore.QueryParams(
+            pk = "test-pk",
+            correlation = true
+        ))
+
+        val event1Json = "{\"id\":\"evt-page-1\", \"type\":\"PAGE_1\"}"
+        val event2Json = "{\"id\":\"evt-page-2\", \"type\":\"PAGE_2\"}"
+
+        val page1Key = mapOf("pk" to AttributeValue.S("test-pk"), "sk" to AttributeValue.S("sk-1"))
+
+        val page1Response = QueryResponse {
+            items = listOf(mapOf("event" to AttributeValue.S(event1Json)))
+            count = 1
+            lastEvaluatedKey = page1Key
+        }
+        val page2Response = QueryResponse {
+            items = listOf(mapOf("event" to AttributeValue.S(event2Json)))
+            count = 1
+            lastEvaluatedKey = null
+        }
+
+        coEvery {
+            client.query(match { it.exclusiveStartKey == null })
+        } returns page1Response
+
+        coEvery {
+            client.query(match { it.exclusiveStartKey == page1Key })
+        } returns page2Response
+
+        // Act
+        val results = microstore.queryByPk(flowOf(uow)).toList()
+
+        // Assert
+        results shouldHaveSize 1
+        val result = results.first()
+        val response = result.queryResponse.shouldNotBeNull()
+        response.items?.size shouldBe 2
+        response.count shouldBe 2
+        response.lastEvaluatedKey shouldBe null
+
+        val correlated = result.correlated.shouldNotBeNull()
+        correlated shouldHaveSize 2
+        correlated[0].id shouldBe "evt-page-1"
+        correlated[0].eventType() shouldBe "PAGE_1"
+        correlated[1].id shouldBe "evt-page-2"
+        correlated[1].eventType() shouldBe "PAGE_2"
+
+        coVerify(exactly = 1) { client.query(match { it.exclusiveStartKey == null }) }
+        coVerify(exactly = 1) { client.query(match { it.exclusiveStartKey == page1Key }) }
+    }
+
+    @Test
+    fun `queryByPk should stop pagination when limit on query request is reached`() = runTest {
+        // Arrange
+        val client = mockk<DynamoDbClient>()
+        val factory = mockk<DynamoDbClientFactory>()
+        every { factory.getClient(any()) } returns client
+
+        val eventPublisher = mockk<EventPublisher>(relaxed = true)
+        val fm = FaultManager(eventPublisher, skipErrorLogging = true)
+        val microstore = DynamoDbEventsMicrostore(
+            dynamoDbClientFactory = factory,
+            faultManager = fm,
+            parallel = 1
+        )
+
+        // Custom microstore override or query request with limit
+        val uow = UnitOfWork(key = "limited-query").withQueryRequest(
+            aws.sdk.kotlin.services.dynamodb.model.QueryRequest {
+                tableName = "events"
+                limit = 1
+            }
+        )
+
+        val event1Json = "{\"id\":\"evt-limit-1\", \"type\":\"LIMIT_1\"}"
+        val page1Key = mapOf("pk" to AttributeValue.S("test-pk"), "sk" to AttributeValue.S("sk-1"))
+
+        val page1Response = QueryResponse {
+            items = listOf(mapOf("event" to AttributeValue.S(event1Json)))
+            count = 1
+            lastEvaluatedKey = page1Key
+        }
+
+        coEvery {
+            client.query(any())
+        } returns page1Response
+
+        // Act
+        val results = microstore.queryByPk(flowOf(uow)).toList()
+
+        // Assert
+        results shouldHaveSize 1
+        val result = results.first()
+        val response = result.queryResponse.shouldNotBeNull()
+        response.items?.size shouldBe 1
+        response.count shouldBe 1
+
+        val correlated = result.correlated.shouldNotBeNull()
+        correlated shouldHaveSize 1
+        correlated[0].id shouldBe "evt-limit-1"
+
+        coVerify(exactly = 1) { client.query(any()) }
     }
 }

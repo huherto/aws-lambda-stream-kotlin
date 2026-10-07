@@ -4,6 +4,7 @@ import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
 import aws.sdk.kotlin.services.dynamodb.model.PutItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.QueryRequest
+import aws.sdk.kotlin.services.dynamodb.model.QueryResponse
 import io.kopipes.aws.AwsGlobalRegistry
 import io.kopipes.aws.awsEnvConfig
 import io.kopipes.aws.connectors.DynamoDbClientFactory
@@ -162,10 +163,40 @@ open class DynamoDbEventsMicrostore @JvmOverloads constructor(
     }
 
     private suspend fun queryDynamoDb(uow: UnitOfWork): UnitOfWork {
+        val queryRequest = uow.queryRequest ?: return uow.withQueryResponse(null)
         val client = getClient(uow)
-        val queryResponse = uow.queryRequest?.let {
-            client.query(it)
+
+        var cursor: Map<String, AttributeValue>? = queryRequest.exclusiveStartKey
+        var itemsCount = 0
+        val allItems = mutableListOf<Map<String, AttributeValue>>()
+        lateinit var lastResponse: QueryResponse
+
+        do {
+            val currentRequest = queryRequest.copy {
+                exclusiveStartKey = cursor
+            }
+            val response = client.query(currentRequest)
+            val items = response.items ?: emptyList()
+            itemsCount += items.size
+            allItems += items
+            lastResponse = response
+
+            cursor = if (
+                response.lastEvaluatedKey?.isNotEmpty() == true &&
+                (currentRequest.limit == null || itemsCount < currentRequest.limit!!)
+            ) {
+                response.lastEvaluatedKey
+            } else {
+                null
+            }
+        } while (cursor != null)
+
+        val aggregatedResponse = lastResponse.copy {
+            items = allItems
+            lastEvaluatedKey = null
+            count = allItems.size
         }
-        return uow.withQueryResponse(queryResponse)
+
+        return uow.withQueryResponse(aggregatedResponse)
     }
 }
