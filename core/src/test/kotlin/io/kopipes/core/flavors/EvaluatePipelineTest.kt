@@ -336,4 +336,49 @@ class EvaluatePipelineTest {
         published.first().event?.id shouldBe "tce-e2e.pipeline-e2e"
         published.first().event?.eventType() shouldBe "DerivedEvent"
     }
+
+    @Test
+    fun `normalize should populate queryParams with consistentRead true by default`() {
+        val pipeline = EvaluatePipeline.builder()
+            .id("pipeline-consistent-default")
+            .eventsMicrostore(eventsMicrostore)
+            .eventCodec(eventCodec)
+            .build()
+
+        val tce = DummyTableChangeEvent(
+            pk = "order#1",
+            data = "d1",
+            discriminator = "CORREL",
+            event = """{"id":"init-1","type":"TestEvent"}"""
+        )
+        val uow = UnitOfWork(event = tce)
+
+        val normalized = pipeline.normalize(uow)
+
+        val queryParams = normalized.queryParams.shouldNotBeNull()
+        queryParams.consistentRead shouldBe true
+    }
+
+    @Test
+    fun `normalize should populate queryParams with configured consistentRead value`() {
+        val pipeline = EvaluatePipeline.builder()
+            .id("pipeline-consistent-false")
+            .eventsMicrostore(eventsMicrostore)
+            .eventCodec(eventCodec)
+            .consistentRead(false)
+            .build()
+
+        val tce = DummyTableChangeEvent(
+            pk = "order#1",
+            data = "d1",
+            discriminator = "CORREL",
+            event = """{"id":"init-1","type":"TestEvent"}"""
+        )
+        val uow = UnitOfWork(event = tce)
+
+        val normalized = pipeline.normalize(uow)
+
+        val queryParams = normalized.queryParams.shouldNotBeNull()
+        queryParams.consistentRead shouldBe false
+    }
 }

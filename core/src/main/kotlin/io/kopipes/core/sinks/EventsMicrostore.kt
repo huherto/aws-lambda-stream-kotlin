@@ -20,11 +20,12 @@ interface EventsMicrostore {
         val pipelineId : String? = null,
     )
 
-    data class QueryParams(
+    data class QueryParams @JvmOverloads constructor(
         val pk: String? = null,
         val correlation: Boolean,
         val data: String? = null,
         val index: String? = null,
+        val consistentRead: Boolean = true,
     )
 
     fun save(flow: Flow<UnitOfWork>) : Flow<UnitOfWork>

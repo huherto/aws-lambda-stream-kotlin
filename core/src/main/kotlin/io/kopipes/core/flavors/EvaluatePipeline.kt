@@ -26,6 +26,7 @@ class EvaluatePipeline(
     val emit: ((UnitOfWork) -> List<Event>)? = null,
     val isEvaluateEvent: ((UnitOfWork) -> Boolean)? = null,
     val normalizer: ((UnitOfWork) -> UnitOfWork)? = null,
+    val consistentRead: Boolean = true,
 ) : Pipeline(id) {
 
     fun forEvents(uow: UnitOfWork): Boolean {
@@ -57,6 +58,7 @@ class EvaluatePipeline(
             correlation = correlation,
             data = data,
             index = index,
+            consistentRead = consistentRead,
         )
 
         val correlationKey = if (correlation) pk else data
@@ -188,6 +190,7 @@ class EvaluatePipeline(
         private var emit: ((UnitOfWork) -> List<Event>)? = null
         private var isEvaluateEvent: ((UnitOfWork) -> Boolean)? = null
         private var normalizer: ((UnitOfWork) -> UnitOfWork)? = null
+        private var consistentRead: Boolean = true
 
         fun eventPublisher(eventPublisher: EventPublisher?) = apply { this.eventPublisher = eventPublisher }
         fun eventsMicrostore(eventsMicrostore: EventsMicrostore) = apply { this.eventsMicrostore = eventsMicrostore }
@@ -206,6 +209,7 @@ class EvaluatePipeline(
         fun isEvaluateEventJava(predicate: java.util.function.Predicate<UnitOfWork>) = apply { this.isEvaluateEvent = { uow -> predicate.test(uow) } }
         fun normalizer(normalizer: (UnitOfWork) -> UnitOfWork) = apply { this.normalizer = normalizer }
         fun normalizerJava(normalizer: java.util.function.Function<UnitOfWork, UnitOfWork>) = apply { this.normalizer = { uow -> normalizer.apply(uow) } }
+        fun consistentRead(consistentRead: Boolean) = apply { this.consistentRead = consistentRead }
 
         override fun build(): EvaluatePipeline {
             return EvaluatePipeline(
@@ -222,6 +226,7 @@ class EvaluatePipeline(
                 emit = emit,
                 isEvaluateEvent = isEvaluateEvent,
                 normalizer = normalizer,
+                consistentRead = consistentRead,
             )
         }
     }

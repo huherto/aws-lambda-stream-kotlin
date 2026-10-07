@@ -61,7 +61,7 @@ open class DynamoDbEventsMicrostore @JvmOverloads constructor(
                 keyConditionExpression = "#pk = :pk"
                 expressionAttributeNames = mapOf("#pk" to "pk")
                 expressionAttributeValues = mapOf(":pk" to AttributeValue.S(pk))
-                consistentRead = true
+                consistentRead = queryParams.consistentRead
             }
             return uow.withQueryRequest(request)
         } else {

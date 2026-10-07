@@ -136,6 +136,31 @@ class DynamoDbEventsMicrostoreTest {
     }
 
     @Test
+    fun `toQueryRequest should set queryRequest with consistentRead false when correlation is true and consistentRead is false`() {
+        // Arrange
+        val uow = UnitOfWork().withQueryParams(EventsMicrostore.QueryParams(
+            pk = "test-pk",
+            correlation = true,
+            consistentRead = false
+        ))
+
+        // Act
+        val result = eventMicrostore.toQueryRequest(uow)
+
+        // Assert
+        val request = result.queryRequest.shouldNotBeNull()
+        request.tableName shouldBe "events"
+        request.indexName.shouldBeNull()
+        request.keyConditionExpression shouldBe "#pk = :pk"
+        request.expressionAttributeNames shouldBe mapOf("#pk" to "pk")
+        
+        val pkValue = request.expressionAttributeValues?.get(":pk")
+        pkValue.shouldNotBeNull()
+        pkValue.shouldBeTypeOf<AttributeValue.S>().value shouldBe "test-pk"
+        request.consistentRead shouldBe false
+    }
+
+    @Test
     fun `toQueryRequest should set queryRequest on DataIndex without consistentRead when correlation is false and data is provided`() {
         // Arrange
         val uow = UnitOfWork().withQueryParams(EventsMicrostore.QueryParams(
