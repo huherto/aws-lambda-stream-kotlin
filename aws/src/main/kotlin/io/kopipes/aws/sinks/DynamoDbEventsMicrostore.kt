@@ -19,18 +19,19 @@ import io.kopipes.core.metrics.withStepMetrics
 import io.kopipes.core.sinks.EventsMicrostore
 import io.kopipes.core.sinks.queryParams
 import io.kopipes.core.sinks.saveOptions
+import io.kopipes.core.utils.mapParallel
 import io.kopipes.core.utils.omit
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.buffer
 import mu.KotlinLogging
 
 /** DynamoDB-backed implementation of [EventsMicrostore]. */
 open class DynamoDbEventsMicrostore @JvmOverloads constructor(
     private val dynamoDbClientFactory: DynamoDbClientFactory = AwsGlobalRegistry.dynamoDbClientFactory(),
     private val faultManager: FaultManager = AwsGlobalRegistry.faultManager(),
-    private val bufferCapacity: Int = Channel.BUFFERED,
+    @Suppress("UNUSED_PARAMETER") bufferCapacity: Int = Channel.BUFFERED,
     private val tableName: String = awsEnvConfig().tableName() ?: "events",
+    private val parallel: Int = awsEnvConfig().parallel() ?: 4,
 ) : EventsMicrostore {
 
     private val logger = KotlinLogging.logger { }
@@ -126,30 +127,26 @@ open class DynamoDbEventsMicrostore @JvmOverloads constructor(
         return uow.withPutRequest(putRequest)
     }
 
-    override fun save(flow: Flow<UnitOfWork>): Flow<UnitOfWork> {
-        with(faultManager) {
-            return flow.mapNotFaulty { uow -> putRequest(uow) }
-                .buffer(bufferCapacity)
-                .mapNotFaulty { uow ->
-                    uow.withStepMetrics("save") { uowWithMetrics ->
-                        putDynamoDb(uowWithMetrics)
-                    }
+    override fun save(flow: Flow<UnitOfWork>): Flow<UnitOfWork> =
+        flow.mapParallel(parallel) { uow ->
+            faultManager.faulty(uow) { item ->
+                val prepared = putRequest(item)
+                prepared.withStepMetrics("save") { uowWithMetrics ->
+                    putDynamoDb(uowWithMetrics)
                 }
+            }
         }
-    }
 
-    override fun queryByPk(flow: Flow<UnitOfWork>): Flow<UnitOfWork> {
-        with(faultManager) {
-            return flow.mapNotFaulty { uow -> toQueryRequest(uow) }
-                .buffer(bufferCapacity)
-                .mapNotFaulty { uow ->
-                    uow.withStepMetrics("query") { uowWithMetrics ->
-                        queryDynamoDb(uowWithMetrics)
-                    }
+    override fun queryByPk(flow: Flow<UnitOfWork>): Flow<UnitOfWork> =
+        flow.mapParallel(parallel) { uow ->
+            faultManager.faulty(uow) { item ->
+                val prepared = toQueryRequest(item)
+                val queried = prepared.withStepMetrics("query") { uowWithMetrics ->
+                    queryDynamoDb(uowWithMetrics)
                 }
-                .mapNotFaulty { uow -> toCorrelated(uow) }
+                toCorrelated(queried)
+            }
         }
-    }
 
     private fun getClient(uow: UnitOfWork): DynamoDbClient {
         val pipelineId = uow.pipeline?.id ?: "unknown"

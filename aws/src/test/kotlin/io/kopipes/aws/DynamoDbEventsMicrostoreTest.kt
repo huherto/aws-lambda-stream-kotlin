@@ -2,14 +2,14 @@ package io.kopipes.aws
 
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
+import aws.sdk.kotlin.services.dynamodb.model.PutItemResponse
 import aws.sdk.kotlin.services.dynamodb.model.QueryResponse
 import io.kopipes.aws.connectors.DynamoDbClientFactory
-import io.kopipes.aws.extensions.putRequest
-import io.kopipes.aws.extensions.queryRequest
-import io.kopipes.aws.extensions.withQueryResponse
+import io.kopipes.aws.extensions.*
 import io.kopipes.aws.sinks.DynamoDbEventsMicrostore
 import io.kopipes.core.*
 import io.kopipes.core.faults.FaultManager
+import io.kopipes.core.sinks.EventPublisher
 import io.kopipes.core.sinks.EventsMicrostore
 import io.kopipes.core.sinks.withQueryParams
 import io.kopipes.core.sinks.withSaveOptions
@@ -18,11 +18,17 @@ import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeTypeOf
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.spyk
+import io.mockk.*
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import kotlin.time.Duration.Companion.milliseconds
 
 class DynamoDbEventsMicrostoreTest {
 
@@ -282,5 +288,266 @@ class DynamoDbEventsMicrostoreTest {
         correlated[0].eventType() shouldBe "TYPE_1"
         correlated[1].id shouldBe "evt-2"
         correlated[1].eventType() shouldBe "TYPE_2"
+    }
+
+    @Test
+    fun `save should execute PutItem on DynamoDbClient for each unit of work and attach PutItemResponse`() = runTest {
+        // Arrange
+        val client = mockk<DynamoDbClient>()
+        val factory = mockk<DynamoDbClientFactory>()
+        every { factory.getClient(any()) } returns client
+
+        val eventPublisher = mockk<EventPublisher>(relaxed = true)
+        val fm = FaultManager(eventPublisher, skipErrorLogging = true)
+        val microstore = DynamoDbEventsMicrostore(
+            dynamoDbClientFactory = factory,
+            faultManager = fm,
+            parallel = 2
+        )
+
+        val uow1 = UnitOfWork(key = "k1").withSaveOptions(EventsMicrostore.SaveOptions(
+            pk = "pk1",
+            sk = "EVENT",
+            discriminator = "EVENT",
+            timeStamp = 123456L,
+            expire = false,
+            suffix = ""
+        ))
+        val uow2 = UnitOfWork(key = "k2").withSaveOptions(EventsMicrostore.SaveOptions(
+            pk = "pk2",
+            sk = "EVENT",
+            discriminator = "EVENT",
+            timeStamp = 123456L,
+            expire = false,
+            suffix = ""
+        ))
+
+        val expectedResponse1 = PutItemResponse {}
+        val expectedResponse2 = PutItemResponse {}
+
+        coEvery { client.putItem(match { it.item?.get("pk") == AttributeValue.S("pk1") }) } returns expectedResponse1
+        coEvery { client.putItem(match { it.item?.get("pk") == AttributeValue.S("pk2") }) } returns expectedResponse2
+
+        // Act
+        val results = microstore.save(flowOf(uow1, uow2)).toList()
+
+        // Assert
+        results shouldHaveSize 2
+        val res1 = results.first { it.key == "k1" }
+        val res2 = results.first { it.key == "k2" }
+
+        res1.putResponse shouldBe expectedResponse1
+        res2.putResponse shouldBe expectedResponse2
+
+        coVerify(exactly = 2) { client.putItem(any()) }
+    }
+
+    @Test
+    fun `save should route exceptions during putItem to FaultManager`() = runTest {
+        // Arrange
+        val client = mockk<DynamoDbClient>()
+        val factory = mockk<DynamoDbClientFactory>()
+        every { factory.getClient(any()) } returns client
+
+        val eventPublisher = mockk<EventPublisher>(relaxed = true)
+        val fm = FaultManager(eventPublisher, skipErrorLogging = true)
+        val microstore = DynamoDbEventsMicrostore(
+            dynamoDbClientFactory = factory,
+            faultManager = fm,
+            parallel = 1
+        )
+
+        val uow = UnitOfWork(key = "failing-put").withSaveOptions(EventsMicrostore.SaveOptions(
+            pk = "pk-fail",
+            sk = "EVENT",
+            discriminator = "EVENT",
+            timeStamp = 123456L,
+            expire = false,
+            suffix = ""
+        ))
+        coEvery { client.putItem(any()) } throws RuntimeException("DynamoDB error")
+
+        // Act
+        val results = microstore.save(flowOf(uow)).toList()
+
+        // Assert
+        results shouldHaveSize 0
+        fm.getFaults() shouldHaveSize 1
+    }
+
+    @Test
+    fun `save should execute concurrently with configured parallelism`() = runTest {
+        // Arrange
+        val client = mockk<DynamoDbClient>()
+        val factory = mockk<DynamoDbClientFactory>()
+        every { factory.getClient(any()) } returns client
+
+        val eventPublisher = mockk<EventPublisher>(relaxed = true)
+        val fm = FaultManager(eventPublisher, skipErrorLogging = true)
+        val microstore = DynamoDbEventsMicrostore(
+            dynamoDbClientFactory = factory,
+            faultManager = fm,
+            parallel = 2
+        )
+
+        val uowList = (1..3).map {
+            UnitOfWork(key = "key-$it").withSaveOptions(EventsMicrostore.SaveOptions(
+                pk = "pk-$it",
+                sk = "EVENT",
+                discriminator = "EVENT",
+                timeStamp = 123456L,
+                expire = false,
+                suffix = ""
+            ))
+        }
+
+        val firstTwoStarted = CompletableDeferred<Unit>()
+        var activeCalls = 0
+        var maxActiveCalls = 0
+
+        coEvery { client.putItem(any()) } coAnswers {
+            activeCalls += 1
+            maxActiveCalls = maxOf(maxActiveCalls, activeCalls)
+            if (activeCalls == 2) {
+                firstTwoStarted.complete(Unit)
+            }
+            delay(100.milliseconds)
+            activeCalls -= 1
+            PutItemResponse {}
+        }
+
+        // Act
+        val collection = async {
+            microstore.save(uowList.asFlow()).toList()
+        }
+
+        firstTwoStarted.await()
+        val results = collection.await()
+
+        // Assert
+        results shouldHaveSize 3
+        maxActiveCalls shouldBe 2
+    }
+
+    @Test
+    fun `queryByPk should execute Query on DynamoDbClient and populate correlated events`() = runTest {
+        // Arrange
+        val client = mockk<DynamoDbClient>()
+        val factory = mockk<DynamoDbClientFactory>()
+        every { factory.getClient(any()) } returns client
+
+        val eventPublisher = mockk<EventPublisher>(relaxed = true)
+        val fm = FaultManager(eventPublisher, skipErrorLogging = true)
+        val microstore = DynamoDbEventsMicrostore(
+            dynamoDbClientFactory = factory,
+            faultManager = fm,
+            parallel = 2
+        )
+
+        val uow = UnitOfWork(key = "q1").withQueryParams(EventsMicrostore.QueryParams(
+            pk = "test-pk",
+            correlation = true
+        ))
+
+        val eventJson = "{\"id\":\"corr-1\", \"type\":\"CORR_TYPE\"}"
+        val queryResponse = QueryResponse {
+            items = listOf(mapOf("event" to AttributeValue.S(eventJson)))
+        }
+
+        coEvery { client.query(any()) } returns queryResponse
+
+        // Act
+        val results = microstore.queryByPk(flowOf(uow)).toList()
+
+        // Assert
+        results shouldHaveSize 1
+        val result = results.first()
+        result.queryResponse shouldBe queryResponse
+        val correlated = result.correlated.shouldNotBeNull()
+        correlated shouldHaveSize 1
+        correlated[0].id shouldBe "corr-1"
+        correlated[0].eventType() shouldBe "CORR_TYPE"
+
+        coVerify(exactly = 1) { client.query(any()) }
+    }
+
+    @Test
+    fun `queryByPk should route exceptions during query to FaultManager`() = runTest {
+        // Arrange
+        val client = mockk<DynamoDbClient>()
+        val factory = mockk<DynamoDbClientFactory>()
+        every { factory.getClient(any()) } returns client
+
+        val eventPublisher = mockk<EventPublisher>(relaxed = true)
+        val fm = FaultManager(eventPublisher, skipErrorLogging = true)
+        val microstore = DynamoDbEventsMicrostore(
+            dynamoDbClientFactory = factory,
+            faultManager = fm,
+            parallel = 1
+        )
+
+        val uow = UnitOfWork(key = "failing-query").withQueryParams(EventsMicrostore.QueryParams(
+            pk = "test-pk",
+            correlation = true
+        ))
+
+        coEvery { client.query(any()) } throws RuntimeException("Query failed")
+
+        // Act
+        val results = microstore.queryByPk(flowOf(uow)).toList()
+
+        // Assert
+        results shouldHaveSize 0
+        fm.getFaults() shouldHaveSize 1
+    }
+
+    @Test
+    fun `queryByPk should execute concurrently with configured parallelism`() = runTest {
+        // Arrange
+        val client = mockk<DynamoDbClient>()
+        val factory = mockk<DynamoDbClientFactory>()
+        every { factory.getClient(any()) } returns client
+
+        val eventPublisher = mockk<EventPublisher>(relaxed = true)
+        val fm = FaultManager(eventPublisher, skipErrorLogging = true)
+        val microstore = DynamoDbEventsMicrostore(
+            dynamoDbClientFactory = factory,
+            faultManager = fm,
+            parallel = 2
+        )
+
+        val uowList = (1..3).map {
+            UnitOfWork(key = "q-$it").withQueryParams(EventsMicrostore.QueryParams(
+                pk = "pk-$it",
+                correlation = true
+            ))
+        }
+
+        val firstTwoStarted = CompletableDeferred<Unit>()
+        var activeCalls = 0
+        var maxActiveCalls = 0
+
+        coEvery { client.query(any()) } coAnswers {
+            activeCalls += 1
+            maxActiveCalls = maxOf(maxActiveCalls, activeCalls)
+            if (activeCalls == 2) {
+                firstTwoStarted.complete(Unit)
+            }
+            delay(100.milliseconds)
+            activeCalls -= 1
+            QueryResponse { items = emptyList() }
+        }
+
+        // Act
+        val collection = async {
+            microstore.queryByPk(uowList.asFlow()).toList()
+        }
+
+        firstTwoStarted.await()
+        val results = collection.await()
+
+        // Assert
+        results shouldHaveSize 3
+        maxActiveCalls shouldBe 2
     }
 }
