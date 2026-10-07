@@ -3,11 +3,11 @@ package org.myorg.sut
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
 import io.kopipes.aws.from.RecordImage
 import io.kopipes.aws.from.RecordPair
-import io.kopipes.aws.utils.AttributeValueMapReader
 import io.kopipes.aws.utils.DynamoDbAttributeValueMapReader
 import io.kopipes.aws.utils.StreamAttributeValueMapReader
 import io.kopipes.core.Event
 import io.kopipes.core.UnitOfWork
+import io.kopipes.core.utils.AttributeValueMapReader
 import kotlinx.datetime.Clock
 import kotlinx.serialization.json.Json.Default.decodeFromString
 import java.util.UUID.randomUUID

@@ -1,5 +1,6 @@
 package io.kopipes.aws.utils
 
+import io.kopipes.core.utils.AttributeValueMapReader
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue as DynamoDbAttributeValue
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue as StreamAttributeValue
 
@@ -23,16 +24,6 @@ fun StreamAttributeValue.toSdkAV(): DynamoDbAttributeValue {
     }
 }
 
-/** Interface for reading AttributeValue maps. */
-interface AttributeValueMapReader {
-    fun getS(fieldName: String) : String?
-    fun getDouble(fieldName: String) : Double?
-    fun getInt(fieldName: String) : Int?
-    fun getBool(fieldName: String) : Boolean?
-    fun getLong(fieldName: String) : Long?
-    fun isNull(fieldName: String) : Boolean?
-}
-
 /** Reads from a Stream AttributeValue map. */
 class StreamAttributeValueMapReader(private val map: Map<String, StreamAttributeValue?>) : AttributeValueMapReader {
 
@@ -49,7 +40,7 @@ class StreamAttributeValueMapReader(private val map: Map<String, StreamAttribute
     }
 
     override fun getBool(fieldName: String): Boolean? {
-        return map[fieldName]?.n?.toBoolean()
+        return map[fieldName]?.bool
     }
 
     override fun getLong(fieldName: String): Long? {
