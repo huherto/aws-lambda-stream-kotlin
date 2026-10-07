@@ -4,25 +4,6 @@ import io.kopipes.core.utils.AttributeValueMapReader
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue as DynamoDbAttributeValue
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue as StreamAttributeValue
 
-fun Map<String, StreamAttributeValue>.toSdkMap(): Map<String, DynamoDbAttributeValue> {
-    return this.mapValues { (_, value) -> value.toSdkAV() }
-}
-
-fun StreamAttributeValue.toSdkAV(): DynamoDbAttributeValue {
-    return when {
-        s != null -> DynamoDbAttributeValue.S(s)
-        n != null -> DynamoDbAttributeValue.N(n)
-        bool != null -> DynamoDbAttributeValue.Bool(bool)
-        m != null -> DynamoDbAttributeValue.M(m.toSdkMap())
-        l != null -> DynamoDbAttributeValue.L(l.map { it.toSdkAV() })
-        ss != null -> DynamoDbAttributeValue.Ss(ss)
-        ns != null -> DynamoDbAttributeValue.Ns(ns)
-        bs != null -> DynamoDbAttributeValue.Bs(bs.map { it.array() })
-        b != null -> DynamoDbAttributeValue.B(b.array())
-        isNULL -> DynamoDbAttributeValue.Null(true)
-        else -> throw IllegalArgumentException("Unsupported AttributeValue type")
-    }
-}
 
 /** Reads from a Stream AttributeValue map. */
 class StreamAttributeValueMapReader(private val map: Map<String, StreamAttributeValue?>) : AttributeValueMapReader {
