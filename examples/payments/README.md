@@ -189,3 +189,28 @@ LocalStack's periodic TTL sweep (`DYNAMODB_REMOVE_EXPIRED_ITEMS=1` in `docker-co
 
 Every event on the bus is logged to `/aws/events/payments-event-hub-local-events` (faults to `…-faults`):
 `awslocal logs filter-log-events --log-group-name /aws/events/payments-event-hub-local-events`.
+
+## Integration tests
+
+`integration-test` checks the deployed subsystem end to end on LocalStack, through its real entry points: HTTP
+to the BFF via API Gateway, `ACCOUNTS.*` events onto our bus, and simulation mode for every external system.
+Nothing is injected.
+
+```bash
+./run_itests.sh                                    # all of them, about 4 minutes
+./run_itests.sh 'org.myorg.payments.BffApiITest'   # one class
+```
+
+| Class | What it proves |
+|---|---|
+| `SimulatedPaymentsITest` | The six simulated outcomes, each step coming from the gateway that heard it; the late deposit expires at the deadline and then completes |
+| `BffApiITest` | `PUT` once (`202`, repeat `202`, other body `409`), validation (`401`, `400` with the field), `404` for another customer's payment, newest-first paging and status filter, latest `ACCOUNT_CHANGED` wins |
+| `BoundaryITest` | Only curated `PAYMENTS.*` events with source `external` reach the downstream bus: no `raw`, no `triggers`, no account numbers, no `ACCOUNTS.*` forwarded |
+| `IdempotenceITest` | A redelivered webhook event and a retried `PUT` change nothing |
+
+- **Isolated per run:** each run uses its own payment ids, customers and accounts, so runs don't interfere and
+  the list endpoint sees exactly the run's payments.
+- **Reading the boundary:** the downstream hub has a verification queue next to its log, so the tests can read
+  what crossed.
+- **Accounts first:** the default channel has one shard, so the tests publish all their accounts before any
+  payment. Otherwise the accounts would queue behind the payments' events.

@@ -1,10 +1,13 @@
 package org.myorg.payments
 
+import software.amazon.awscdk.Duration
 import software.amazon.awscdk.services.events.EventBus
 import software.amazon.awscdk.services.events.EventPattern
 import software.amazon.awscdk.services.events.Match
 import software.amazon.awscdk.services.events.Rule
 import software.amazon.awscdk.services.events.targets.CloudWatchLogGroup
+import software.amazon.awscdk.services.events.targets.SqsQueue
+import software.amazon.awscdk.services.sqs.Queue
 import software.amazon.awscdk.services.logs.LogGroup
 import software.amazon.awscdk.services.logs.RetentionDays
 import software.constructs.Construct
@@ -28,6 +31,18 @@ class DownstreamEventHubStack(scope: Construct, serviceProps: ServiceProps) : Ba
             .eventBus(bus)
             .eventPattern(EventPattern.builder().source(Match.prefix("")).build())
             .targets(listOf(CloudWatchLogGroup(log)))
+            .build()
+
+        // Lets the integration tests read what crossed the boundary, as the sut example's fault monitor does.
+        val verification = Queue.Builder.create(this, "VerificationQueue")
+            .queueName("${service()}-${stage()}-verification")
+            .retentionPeriod(Duration.hours(1))
+            .build()
+        Rule.Builder.create(this, "CatchAllToVerification")
+            .ruleName("${service()}-${stage()}-catch-all-verification")
+            .eventBus(bus)
+            .eventPattern(EventPattern.builder().source(Match.prefix("")).build())
+            .targets(listOf(SqsQueue(verification)))
             .build()
     }
 }
