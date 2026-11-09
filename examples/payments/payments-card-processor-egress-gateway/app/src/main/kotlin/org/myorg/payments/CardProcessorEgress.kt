@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
 import com.amazonaws.services.lambda.runtime.events.SQSEvent
+import io.kopipes.aws.AwsGlobalRegistry
 import io.kopipes.aws.from.KinesisAdapter
 import io.kopipes.core.PipelineAssembler
 import io.kopipes.core.utils.loggedLazy
@@ -39,6 +40,10 @@ class HttpCardProcessor(
                 .build(),
             HttpResponse.BodyHandlers.ofString(),
         )
+        if (response.statusCode() == 429) {
+            val retryAfter = response.headers().firstValue("Retry-After").map { it.toLongOrNull() }.orElse(null) ?: 1
+            throw RateLimited(retryAfter * 1000)
+        }
         check(response.statusCode() == 202) { "card processor answered ${response.statusCode()}" }
     }
 }
@@ -48,22 +53,45 @@ class SimulatedCardProcessor(
     private val delivery: DelayedDelivery,
     private val delaySeconds: Int,
     private val clock: () -> Long = System::currentTimeMillis,
+    /** The processor's own limit: like the real one, it answers 429 above its rate, and counts how often it did. */
+    private val limit: SimulatedRateLimit = SimulatedRateLimit.none(),
 ) : CardProcessor {
     override suspend fun credit(payment: Payment) {
+        limit.admit(clock())
         val webhook = simulatedCardWebhook(payment, createdSeconds = clock() / 1000 + delaySeconds)
-        delivery.deliverLater(cardJson.encodeToString(CardWebhook.serializer(), webhook), delaySeconds)
+        val body = cardJson.encodeToString(CardWebhook.serializer(), webhook)
+        // K-6: the processor delivers the same webhook (same event_id) more than once.
+        repeat(Simulation.deliveries(payment.to.account)) { n ->
+            delivery.deliverLater(body, delaySeconds + n * Simulation.REDELIVERY_SECONDS)
+        }
     }
 }
 
 class EgressContainer(val cardProcessor: CardProcessor) {
     companion object {
-        fun build(): EgressContainer = EgressContainer(
-            if (Simulation.enabled()) SimulatedCardProcessor(SqsDelayedDelivery.fromEnvironment(), Simulation.delaySeconds(5))
-            else HttpCardProcessor(
-                System.getenv("CARD_PROCESSOR_URL") ?: error("CARD_PROCESSOR_URL is not configured"),
-                System.getenv("CARD_PROCESSOR_API_KEY") ?: error("CARD_PROCESSOR_API_KEY is not configured"),
-            ),
-        )
+        fun build(): EgressContainer {
+            installCardFaultManager()
+            val dynamoDb = AwsGlobalRegistry.dynamoDbClientFactory().getClient("rate")
+            val rateTable = System.getenv("RATE_TABLE_NAME") ?: error("RATE_TABLE_NAME is not configured")
+            val processor =
+                if (Simulation.enabled()) SimulatedCardProcessor(
+                    SqsDelayedDelivery.fromEnvironment(),
+                    Simulation.delaySeconds(5),
+                    limit = DynamoDbSimulatedRateLimit(
+                        DynamoDbRateStore(dynamoDb, rateTable, "SIMULATION#processor"),
+                        perSecond = System.getenv("SIMULATED_PROCESSOR_LIMIT")?.toIntOrNull() ?: 5,
+                    ),
+                )
+                else HttpCardProcessor(
+                    System.getenv("CARD_PROCESSOR_URL") ?: error("CARD_PROCESSOR_URL is not configured"),
+                    System.getenv("CARD_PROCESSOR_API_KEY") ?: error("CARD_PROCESSOR_API_KEY is not configured"),
+                )
+            val bucket = TokenBucket(
+                DynamoDbRateStore(dynamoDb, rateTable, "RATE#card-processor"),
+                perSecond = System.getenv("CARD_PROCESSOR_RATE")?.toIntOrNull() ?: 5,
+            )
+            return EgressContainer(PacedCardProcessor(processor, bucket))
+        }
     }
 
     val assembler: PipelineAssembler = PipelineAssembler.builder()
@@ -117,5 +145,35 @@ class Simulator(
             check(response.statusCode() in 200..299) { "webhook answered ${response.statusCode()}" }
         }
         return null
+    }
+}
+
+/** Simulation only: the card processor's own rate limit. */
+fun interface SimulatedRateLimit {
+    /** Throws [RateLimited] above the processor's rate. */
+    suspend fun admit(now: Long)
+
+    companion object {
+        fun none() = SimulatedRateLimit { }
+        const val TOO_MANY_REQUESTS_COUNTER = "SIMULATION#processor-429s"
+    }
+}
+
+class DynamoDbSimulatedRateLimit(private val store: DynamoDbRateStore, private val perSecond: Int) : SimulatedRateLimit {
+    override suspend fun admit(now: Long) {
+        if (!store.take(now / 1000, perSecond)) {
+            store.count(SimulatedRateLimit.TOO_MANY_REQUESTS_COUNTER)
+            throw RateLimited(retryAfterMillis = 1000 - now % 1000, message = "simulated: 429 Too Many Requests")
+        }
+    }
+}
+
+/** A 429 the in-invocation retries couldn't absorb goes back to the stream instead of becoming a fault. */
+fun installCardFaultManager() {
+    io.kopipes.aws.AwsGlobalRegistry.setFaultManagerFactory {
+        io.kopipes.core.faults.FaultManager(
+            eventPublisher = io.kopipes.aws.AwsGlobalRegistry.eventPublisher(),
+            isRetryable = { it is RateLimited || io.kopipes.aws.AwsGlobalRegistry.isAwsRetryable(it) },
+        )
     }
 }

@@ -4,6 +4,8 @@ import software.amazon.awscdk.RemovalPolicy
 import software.amazon.awscdk.services.dynamodb.Attribute
 import software.amazon.awscdk.services.dynamodb.AttributeType
 import software.amazon.awscdk.services.dynamodb.Billing
+import software.amazon.awscdk.services.dynamodb.GlobalSecondaryIndexPropsV2
+import software.amazon.awscdk.services.dynamodb.ProjectionType
 import software.amazon.awscdk.services.dynamodb.StreamViewType
 import software.amazon.awscdk.services.dynamodb.TableV2
 import software.amazon.awscdk.services.events.EventBus
@@ -32,6 +34,17 @@ class CoreCheckingIngressStack(scope: Construct, serviceProps: ServiceProps) : B
             .billing(Billing.onDemand())
             .removalPolicy(RemovalPolicy.DESTROY)
             .dynamoStream(StreamViewType.NEW_IMAGE)
+            // Core checking's inquiry by reference, which the egress gateway uses to resolve calls in doubt.
+            .globalSecondaryIndexes(
+                listOf(
+                    GlobalSecondaryIndexPropsV2.builder()
+                        .indexName("byReference")
+                        .partitionKey(Attribute.builder().name("REF_NO").type(AttributeType.STRING).build())
+                        .sortKey(Attribute.builder().name("TXN_TYP").type(AttributeType.STRING).build())
+                        .projectionType(ProjectionType.KEYS_ONLY)
+                        .build()
+                )
+            )
             .build()
 
         // A row may arrive before its request was recorded: retry the batch instead of faulting.

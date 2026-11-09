@@ -61,13 +61,16 @@ fun coreCheckingReason(code: String?): String = when (code) {
     else -> Reasons.REJECTED
 }
 
-/** What core checking would write for a debit or a refund credit of this payment. */
-fun simulatedLedgerEntry(payment: Payment, txnType: String, postedAt: Long): LedgerEntry {
+/**
+ * What core checking would write for a debit or a refund credit of this payment. Core checking assigns its own
+ * [entryId] to every call and has no idempotency keys, so calling it twice posts twice: the simulation does the same,
+ * which is what makes "called once" testable.
+ */
+fun simulatedLedgerEntry(payment: Payment, txnType: String, postedAt: Long, entryId: String): LedgerEntry {
     val rejected = txnType == LedgerEntry.PAYMENT && payment.from.account == Simulation.INSUFFICIENT_FUNDS_ACCOUNT
     val signed = if (txnType == LedgerEntry.PAYMENT) "-${payment.amount}" else payment.amount
     return LedgerEntry(
-        // Core checking has no idempotency keys; the simulation stands in for "called once per request".
-        ENTRY_ID = "${payment.id}-$txnType",
+        ENTRY_ID = entryId,
         ACCT_NO = payment.from.account,
         AMT = signed,
         TXN_TYP = txnType,

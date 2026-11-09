@@ -4,7 +4,7 @@
 # Usage:
 #   ./deploy_stacks.sh                       # test, build and deploy everything
 #   ./deploy_stacks.sh payments-bff          # only these stacks
-#   ./deploy_stacks.sh -d                    # delete localstack state first
+#   ./deploy_stacks.sh -d                    # delete localstack state (and leftover Lambda containers) first
 #
 # After the first deploy, run scripts/publish-accounts.sh: the BFF only accepts payments
 # from accounts it has heard of through ACCOUNT_CHANGED.
@@ -99,6 +99,9 @@ done
 
 if [[ "$DELETE_LOCALSTACK_STATE" == true ]]; then
 	curl -X DELETE http://localhost:4566/_localstack/state
+	# LocalStack runs each function in its own container, and those containers outlive a state reset or a LocalStack
+	# restart. Left behind, every redeploy adds a set, until Docker runs out of memory and LocalStack hangs.
+	docker ps -aq --filter "name=localstack-main-lambda" | xargs docker rm -f > /dev/null 2>&1 || true
 fi
 
 for stack in "${STACKS[@]}"; do

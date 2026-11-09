@@ -36,6 +36,21 @@ class CardProcessorEgressTest {
     }
 
     @Test
+    fun `K-6 - the processor delivers the same webhook twice, a few seconds apart`() = runTest {
+        // Arrange
+        val deliveries = mutableListOf<Pair<String, Int>>()
+        val processor = SimulatedCardProcessor({ body, delay -> deliveries += body to delay }, delaySeconds = 5, clock = { 1_000_000L })
+
+        // Act
+        processor.credit(Fixtures.payment.copy(to = Party(Party.CARD, Simulation.DUPLICATE_WEBHOOK_CARD)))
+
+        // Assert
+        deliveries.map { it.second } shouldBe listOf(5, 5 + Simulation.REDELIVERY_SECONDS)
+        deliveries.map { it.first }.toSet().size shouldBe 1
+        cardJson.decodeFromString(CardWebhook.serializer(), deliveries.first().first).type shouldBe CardWebhook.SUCCEEDED
+    }
+
+    @Test
     fun `only card deposits are credited`() = runTest {
         // Arrange
         GlobalRegistry.setFaultManager(FaultManager(EventPublisherInMemory(), skipErrorLogging = true))

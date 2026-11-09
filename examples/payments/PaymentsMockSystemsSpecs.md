@@ -13,10 +13,10 @@
 |---|---|---|---|---|
 | [1. Tests in the book's style](#1-tests-in-the-books-style) | Unit, integration and contract tests in every service | Part of building each service | Each pattern's logic, idempotence, order tolerance, contracts | Nothing to watch running |
 | [2. Event injection](#2-event-injection) | One script that publishes internal events onto our bus | One small script | The saga, the BFF's view, the timeout, compensation, live | The gateways: it pretends to be them |
-| [3. Simulated external systems](#3-simulated-external-systems) | Each egress gateway, in simulation mode, pretends to call its external system and feeds that system's response to the ingress gateway | A setting in three gateways | Both gateways of every external system doing their real translation | Faults other than a failed outcome |
+| [3. Simulated external systems](#3-simulated-external-systems) | Each egress gateway, in simulation mode, pretends to call its external system and feeds that system's response to the ingress gateway | A setting in three gateways | Both gateways of every external system doing their real translation, and the faults of the fault accounts | Faults without a fault account |
 | [4. Neighbouring subsystems](#4-neighbouring-subsystems-as-configuration) | A downstream bus + a rule + a log; accounts as a publish script | Configuration | What crosses the boundary, in both directions | — |
 
-**Not built:** stub services for the external systems, a control plane, a simulated clock, fault switches, a load driver. Short timeouts and the injection script cover the time-based scenarios instead.
+**Not built:** stub services for the external systems, a control plane, a simulated clock, runtime fault switches (faults come from **fault accounts** instead), a load driver. Short timeouts and the injection script cover the time-based scenarios instead.
 
 **Boundary rule:** only the gateways (ESGs) know about the external systems, real or simulated. The BFF and the control service can't tell the difference. Going from simulation to the real system means turning one setting off in one egress gateway (Ch. 7 › [Semantic transformation](Chapter_07_Bridging_Intersystem_Gaps.md#semantic-transformation)).
 
@@ -79,7 +79,7 @@ Each simulated response uses the external system's **own dialect**, so the ingre
 | Amount | `"100.00"` (decimal string) + `currency` | `AMT` = `100.00` | `amount_cents` = `10000` | `amount` = `100.00` |
 | Failure | `reason: insufficient-funds`, `account-closed` | `REJ_CD`: `NSF`, `ACCT_CLSD` | `failure_code`: `card_closed` | `code`: `R02` closed, `R03` no account |
 
-The account decides the outcome, the way a payment provider's test cards do: see the service specs › [Simulation mode](PaymentsServiceSpecs.md#simulation-mode-egress-esgs) for the table. In short, `C-2`, `K-3` and `B-8` fail, `B-7` settles after the deadline, and `C-1`, `K-2` and `B-9` succeed.
+The account decides the outcome, the way a payment provider's test cards do: see the service specs › [Simulation mode](PaymentsServiceSpecs.md#simulation-mode-egress-esgs) for the table. In short, `C-2`, `K-3` and `B-8` fail, `B-7` settles after the deadline, and `C-1`, `K-2` and `B-9` succeed. Fault accounts succeed but misbehave on the way: `C-5` takes core checking down for everyone for a minute, `C-7`'s debit is applied but the answer is lost, `K-6` gets its webhook twice and `B-6` its settlement file twice.
 
 | External system | The egress gateway pretends to… | …and delivers to the ingress gateway | Lesson |
 |---|---|---|---|
@@ -168,4 +168,4 @@ What should appear in the log (the contract is defined in the service specs › 
 | 2 | Do we need a load driver for a peak scenario? | Not now. Add it later if the talk shows backpressure under load |
 | 3 | Changes to [PaymentsServiceSpecs.md](PaymentsServiceSpecs.md) that this file assumes | **Done (2026-11-07):** internal and external catalogs, the payments egress ESG (7), the accounts ingress ESG (8), the egress and ingress rules on the hub, and separate change rules for each kind of event |
 | 4 | Which tools replace the book's VCR, emulator and contract-test modules? | Chosen with the framework and language |
-| 5 | Fault scenarios: an outage (circuit breaker), duplicate webhooks, the same file twice, a double debit | Later. Simulation produces success or failure only for now |
+| 5 | Fault scenarios: an outage (circuit breaker), duplicate webhooks, the same file twice, a double debit | **Done (2026-11-09):** fault accounts (service specs, decision 18): duplicate webhooks (`K-6`), the same file twice (`B-6`), a double debit (`C-7`, and a request delivered twice), an outage (`C-5`). The card processor's rate limit is always enforced by its simulation (decision 20) |

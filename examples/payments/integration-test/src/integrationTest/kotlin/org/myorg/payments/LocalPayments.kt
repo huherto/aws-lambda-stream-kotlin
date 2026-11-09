@@ -136,13 +136,60 @@ object LocalPayments {
             .map { PaymentsEventCodec.decode(it) as PaymentsEvent }
             .sortedBy { it.timestamp }
 
-    /** LocalStack sweeps expired TTL items periodically; this asks it to do it now. */
-    fun expireNow() {
-        val response = http.send(
+    const val LEDGER_TABLE = "payments-core-checking-ingress-gateway-local-ledger"
+    const val CALLS_TABLE = "payments-core-checking-egress-gateway-local-calls"
+    const val CARD_RATE_TABLE = "payments-card-processor-egress-gateway-local-rate"
+
+    /** How many 429s the simulated card processor has returned. */
+    suspend fun simulatedTooManyRequests(): Long =
+        (dynamoDb.getItem(GetItemRequest {
+            tableName = CARD_RATE_TABLE
+            key = mapOf("pk" to AttributeValue.S("SIMULATION#processor-429s"))
+            consistentRead = true
+        }).item?.get("count") as? AttributeValue.N)?.value?.toLong() ?: 0
+
+    /** How many times the core checking egress gateway's circuit breaker has opened. */
+    suspend fun breakerOpens(): Int =
+        (dynamoDb.getItem(GetItemRequest {
+            tableName = CALLS_TABLE
+            key = mapOf("pk" to AttributeValue.S("BREAKER#core-checking"))
+            consistentRead = true
+        }).item?.get("opens") as? AttributeValue.N)?.value?.toInt() ?: 0
+
+    /** Core checking's postings for a payment, by transaction type (`PMT` debit, `RFND` refund): a double debit shows here. */
+    suspend fun ledgerPostings(paymentId: String, txnType: String): Int =
+        dynamoDb.query(QueryRequest {
+            tableName = LEDGER_TABLE
+            indexName = "byReference"
+            keyConditionExpression = "REF_NO = :r AND TXN_TYP = :t"
+            expressionAttributeValues = mapOf(":r" to AttributeValue.S(paymentId), ":t" to AttributeValue.S(txnType))
+        }).count
+
+    /**
+     * Does now what DynamoDB TTL does eventually: deletes the control service's deadline items whose deadline has passed
+     * (like scripts/expire-now.sh). LocalStack's own TTL sweep is asked first, but it has proved unreliable after state
+     * resets; a deletion is a deletion, and the control service reacts the same way.
+     */
+    suspend fun expireNow() {
+        http.send(
             HttpRequest.newBuilder(URI.create("$ENDPOINT/_aws/dynamodb/expired")).DELETE().build(),
             HttpResponse.BodyHandlers.ofString(),
         )
-        logger.info { "expired items: ${response.body()}" }
+        val now = System.currentTimeMillis() / 1000
+        val expired = dynamoDb.scan(aws.sdk.kotlin.services.dynamodb.model.ScanRequest {
+            tableName = CONTROL_EVENTS_TABLE
+            filterExpression = "#e = :t AND #ttl < :now"
+            expressionAttributeNames = mapOf("#e" to "expire", "#ttl" to "ttl")
+            expressionAttributeValues = mapOf(":t" to AttributeValue.Bool(true), ":now" to AttributeValue.N(now.toString()))
+            projectionExpression = "pk, sk"
+        }).items.orEmpty()
+        expired.forEach { key ->
+            dynamoDb.deleteItem(aws.sdk.kotlin.services.dynamodb.model.DeleteItemRequest {
+                tableName = CONTROL_EVENTS_TABLE
+                this.key = key
+            })
+        }
+        if (expired.isNotEmpty()) logger.info { "expired ${expired.size} deadline items" }
     }
 
     // ----------------------------------------------------------------------------------- the downstream subsystem

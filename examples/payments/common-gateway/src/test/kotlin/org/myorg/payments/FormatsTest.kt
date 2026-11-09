@@ -15,11 +15,11 @@ class FormatsTest {
     @Test
     fun `simulated debits post, except from C-2, which is rejected for insufficient funds`() {
         // Act
-        val posted = simulatedLedgerEntry(Fixtures.payment, LedgerEntry.PAYMENT, postedAt = 5)
-        val rejected = simulatedLedgerEntry(Fixtures.payment.copy(from = Party(Party.CHECKING, "C-2")), LedgerEntry.PAYMENT, postedAt = 5)
+        val posted = simulatedLedgerEntry(Fixtures.payment, LedgerEntry.PAYMENT, postedAt = 5, entryId = "E-PMT")
+        val rejected = simulatedLedgerEntry(Fixtures.payment.copy(from = Party(Party.CHECKING, "C-2")), LedgerEntry.PAYMENT, postedAt = 5, entryId = "E-PMT")
 
         // Assert
-        posted shouldBe LedgerEntry("p-7-PMT", "C-1", "-100.00", "PMT", "p-7", "POSTED", null, "5")
+        posted shouldBe LedgerEntry("E-PMT", "C-1", "-100.00", "PMT", "p-7", "POSTED", null, "5")
         rejected.STAT shouldBe LedgerEntry.REJECTED
         rejected.REJ_CD shouldBe LedgerEntry.NSF
     }
@@ -27,18 +27,26 @@ class FormatsTest {
     @Test
     fun `a simulated refund is a positive credit to the source account`() {
         // Act
-        val refund = simulatedLedgerEntry(Fixtures.payment.copy(from = Party(Party.CHECKING, "C-2")), LedgerEntry.REFUND, postedAt = 5)
+        val refund = simulatedLedgerEntry(Fixtures.payment.copy(from = Party(Party.CHECKING, "C-2")), LedgerEntry.REFUND, postedAt = 5, entryId = "E-RFND")
 
         // Assert
         refund.AMT shouldBe "100.00"
         refund.STAT shouldBe LedgerEntry.POSTED
-        refund.ENTRY_ID shouldBe "p-7-RFND"
+        refund.ENTRY_ID shouldBe "E-RFND"
+    }
+
+    @Test
+    fun `fault accounts deliver their answer twice, everyone else once`() {
+        Simulation.deliveries(Simulation.DUPLICATE_WEBHOOK_CARD) shouldBe 2
+        Simulation.deliveries(Simulation.DUPLICATE_FILE_BANK) shouldBe 2
+        Simulation.deliveries("K-2") shouldBe 1
+        Simulation.deliveries("B-9") shouldBe 1
     }
 
     @Test
     fun `ledger rows survive the attribute round trip`() {
         // Arrange
-        val entry = simulatedLedgerEntry(Fixtures.payment, LedgerEntry.PAYMENT, postedAt = 5)
+        val entry = simulatedLedgerEntry(Fixtures.payment, LedgerEntry.PAYMENT, postedAt = 5, entryId = "E-PMT")
 
         // Act / Assert
         LedgerEntry.fromAttributes(entry.toAttributes()) shouldBe entry

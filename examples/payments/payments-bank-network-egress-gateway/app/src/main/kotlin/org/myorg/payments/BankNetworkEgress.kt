@@ -46,7 +46,11 @@ class SimulatedBankNetwork(
 ) : BankNetwork {
     override suspend fun transfer(payment: Payment) {
         val delay = if (payment.to.account == Simulation.LATE_BANK_ACCOUNT) lateDelaySeconds else delaySeconds
-        delivery.deliverLater(Json.encodeToString(SettlementLine.serializer(), simulatedSettlement(payment)), delay)
+        val line = Json.encodeToString(SettlementLine.serializer(), simulatedSettlement(payment))
+        // B-6: the network drops the same settlement file (same name, same content) more than once.
+        repeat(Simulation.deliveries(payment.to.account)) { n ->
+            delivery.deliverLater(line, delay + n * Simulation.REDELIVERY_SECONDS)
+        }
     }
 }
 

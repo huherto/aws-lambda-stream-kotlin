@@ -102,11 +102,42 @@ system.
 | `K-3` | Card credit fails (`card_closed` → `account-closed`) | 5 s |
 | `B-8` | Bank transfer rejected (`R03` → `account-not-found`) | 20 s |
 | `B-7` | Bank transfer settles after the 2-minute deadline | 180 s |
+| `C-5` | Withdrawal succeeds; core checking goes down for everyone for 60 s first (fault account) | 2 s after it's back |
+| `C-7` | Withdrawal succeeds; the call times out after the debit was applied (fault account) | 2 s |
+| `K-6` | Card credit succeeds; the webhook is delivered twice (fault account) | 5 s, again 3 s later |
+| `B-6` | Bank transfer settles; the settlement file is dropped twice (fault account) | 20 s, again 3 s later |
 | any other | Success | 2 s / 5 s / 20 s |
 
+The core checking simulation numbers every posting (`ENTRY_ID`) the way core checking does, so a second call is a
+second debit, visible in the ledger. Fault accounts (`K-6`, `B-6`) succeed but make the external system answer twice.
+
+**Called once (core checking).** Core checking has no idempotency keys, so the egress gateway never calls twice
+blindly:
+1. It claims each request (`<payment>#PMT` or `#RFND`) in its `calls` table before calling, and marks it `SENT` after.
+2. A repeat that finds `SENT` does nothing.
+3. A repeat that finds the claim still `CALLING` is in doubt. It asks core checking whether the posting exists
+   (in simulation, the ledger's `byReference` index):
+   - found: it marks the request `SENT` and doesn't call;
+   - not found yet: it fails retryably, and the request waits on the channel;
+   - still not found after 5 minutes: it becomes a `fault`.
+4. A call that certainly never left (connection refused) releases the claim, so the next attempt calls normally.
+
+**Circuit breaker (core checking).** Breaker state is one item in the egress gateway's `calls` table:
+- **Closed:** three failures in a row (timeouts, refused connections, errors; not rejections) open it.
+- **Open:** for 15 s locally (30 s elsewhere), no calls and no inquiries. An invocation sleeps until the trial time
+  (at most 20 s), then hands the request back to the stream, which keeps it in order.
+- **Half-open:** exactly one request is the trial; success closes the breaker, failure reopens it.
+- **Closed hours:** `-c coreCheckingClosedHours=22:00-06:00@America/New_York` keeps it open without any failure.
+- **Grace period:** a request in doubt gets its full grace period counted from when core checking came back.
+
+**Rate limit (card processor).** Every call takes a token from a per-second budget in the gateway's `rate` table,
+shared by all instances; with none left, it waits for the next second, so the backlog waits on the stream. A `429`
+that slips through is waited out (`Retry-After`) and retried, which is safe because the payment id is the idempotency
+key. The simulated processor always enforces the same rate (5/s locally, `-c cardProcessorRate=…` elsewhere) and counts
+its `429`s.
+
 The real-mode connectors (`HttpCoreChecking`, `HttpCardProcessor`, `S3TransferFile`) exist but are not deployed
-here. Not built: the circuit breaker, pacing under the card processor's rate limit, "called once" for core
-checking, and the nightly job that joins the transfer lines and sends the file at cut-off.
+here. Not built: leasing rate tokens in blocks for high rates, and the nightly job that joins the transfer lines and sends the file at cut-off.
 
 ### Payments egress gateway and the downstream hub
 
@@ -184,8 +215,10 @@ scripts/inject.sh deposited p-10     # → PAYMENT_COMPLETED
 scripts/publish-accounts.sh --rename
 ```
 
-`scripts/expire-now.sh` asks LocalStack to delete expired DynamoDB items immediately; without it you wait for
-LocalStack's periodic TTL sweep (`DYNAMODB_REMOVE_EXPIRED_ITEMS=1` in `docker-compose.yml`).
+`scripts/expire-now.sh` does now what DynamoDB TTL does eventually: it deletes the control service's deadline items
+whose deadline has passed, and the control service reacts as it would to a TTL deletion. It also asks LocalStack to
+sweep (`DYNAMODB_REMOVE_EXPIRED_ITEMS=1` in `docker-compose.yml`), but that sweep stopped deleting items from our tables
+after a few state resets, so the script doesn't rely on it.
 
 Every event on the bus is logged to `/aws/events/payments-event-hub-local-events` (faults to `…-faults`):
 `awslocal logs filter-log-events --log-group-name /aws/events/payments-event-hub-local-events`.
@@ -207,6 +240,10 @@ Nothing is injected.
 | `BffApiITest` | `PUT` once (`202`, repeat `202`, other body `409`), validation (`401`, `400` with the field), `404` for another customer's payment, newest-first paging and status filter, latest `ACCOUNT_CHANGED` wins |
 | `BoundaryITest` | Only curated `PAYMENTS.*` events with source `external` reach the downstream bus: no `raw`, no `triggers`, no account numbers, no `ACCOUNTS.*` forwarded |
 | `IdempotenceITest` | A redelivered webhook event and a retried `PUT` change nothing |
+| `RateLimitITest` | A burst of 20 card payments is paced at the processor's 5/s: all complete, no second sees more than 5 credits, and the simulated processor counts no `429` |
+| `CircuitBreakerITest` | During a core checking outage (`C-5`) the breaker opens; payments wait, then complete, each debited once |
+| `CalledOnceITest` | Core checking is debited once, even when its answer is lost (`C-7`) or a `WITHDRAWAL_REQUESTED` is delivered twice; checked in the ledger |
+| `DuplicatesITest` | Fault accounts: a webhook delivered twice (`K-6`) and a settlement file dropped twice (`B-6`) still give one deposit, one outcome and one external event |
 
 - **Isolated per run:** each run uses its own payment ids, customers and accounts, so runs don't interfere and
   the list endpoint sees exactly the run's payments.

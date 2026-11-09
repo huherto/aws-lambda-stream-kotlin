@@ -173,7 +173,7 @@ Ours, to make the system testable without the real external systems.
 - Every egress ESG that talks to an external system has one setting, **simulate**: off by default, and never on in production.
 - With simulate on, the egress ESG **doesn't contact the external system**. It behaves as if it had, and then produces **the response that system would have sent, in that system's own format**, and delivers it to **the ingress ESG's real input**: the same place the real system's answer would arrive.
 - **The ingress ESGs don't change** and can't tell a simulated response from a real one, so they still do their real translation and produce the real internal events.
-- **The outcome depends only on the account:** success, except for the failing accounts below. No other faults are simulated for now.
+- **The outcome depends only on the account:** success, except for the failing accounts below. **Fault accounts** still succeed, but their external system misbehaves on the way, the way it can in production (decision 18).
 - **Each response comes after a delay** that can be set per external system. An account with a long delay settles after the control service's deadline, to show `PAYMENT_EXPIRED` followed by a late deposit.
 
 | Account | Simulated outcome |
@@ -182,12 +182,16 @@ Ours, to make the system testable without the real external systems.
 | `K-3` | Card credit fails: card closed |
 | `B-8` | Bank transfer rejected: no such account |
 | `B-7` | Bank transfer settles, but **after** the deadline |
+| `C-5` | Withdrawal succeeds, but core checking **goes down for everyone** for a minute when it arrives (fault account). Every payment in flight waits, then completes |
+| `C-7` | Withdrawal succeeds, but core checking's **answer is lost**: the call times out after the debit was applied (fault account) |
+| `K-6` | Card credit succeeds, but the processor **delivers the webhook twice** (fault account) |
+| `B-6` | Bank transfer settles, but the network **drops the settlement file twice** (fault account) |
 | any other | Success |
 
 Each egress ESG section says what its simulated response is.
 
 - **Simulation pairs each egress gateway with its ingress gateway.** In simulation mode, the egress gateway is configured with its partner's input: the change feed the core checking ingress reads, the card processor ingress's webhook URL **and its signing secret**, and the file location the bank network ingress watches. With simulation off, the egress gateway needs none of these.
-- **Not testable yet in simulation:** the circuit breaker (core checking down or closed for the night), pacing under the card processor's rate limit, and "called once" when a request event is delivered twice. Those guarantees stand, but proving them needs fault simulation, which is left for later.
+- **Testable in simulation:** duplicate webhooks (`K-6`), duplicate files (`B-6`), "called once" when an answer is lost (`C-7`) or a request event is delivered twice, the circuit breaker during an outage (`C-5`), and pacing under the card processor's rate limit, which the simulated processor always enforces (decision 20). Closed hours are configuration and are not simulated.
 
 ---
 
@@ -388,9 +392,10 @@ Each step shows the event's `timestamp` (when the fact happened, not when the BF
 | `WITHDRAWAL_REQUESTED` | Withdraw `amount` from `from.account`, reference `p-7` | Never publishes "it worked" (act, then hear back) |
 | `REFUND_REQUESTED` | Credit `amount` back to `from.account`, reference `p-7` | Compensation, not a rollback: a new ledger entry |
 
-- **Called once per request:** core checking has no idempotency keys, yet each `WITHDRAWAL_REQUESTED` or `REFUND_REQUESTED` reaches it once, even when the event is delivered twice. *(Not testable yet in simulation.)*
-- **Circuit breaker:** while core checking is down or closed for the night, the ESG stops calling, and requests wait until it's back. *(Not testable yet in simulation.)*
-- **[Simulation mode](#simulation-mode-egress-esgs):** no call to core checking. The egress ESG writes the **ledger entry** core checking would have written (`REF_NO`, `AMT`, `STAT` = `POSTED` or `REJECTED`, `REJ_CD`) to the change feed the ingress ESG reads.
+- **Called once per request:** core checking has no idempotency keys, yet each `WITHDRAWAL_REQUESTED` or `REFUND_REQUESTED` reaches it once, even when the event is delivered twice. Exactly one call can't be guaranteed to a system without idempotency keys, so the ESG guarantees the next best thing: **it never calls twice blindly**. A call whose answer was lost is *in doubt*: the ESG asks core checking whether the posting exists, and calls again only if the call certainly never reached it. A call still in doubt after a grace period becomes a `fault` for an operator, and is not retried. Requests wait meanwhile; other services aren't held up.
+- **Assumes an inquiry:** core checking can be asked for the postings of a reference (ours: `GET /CHK/POSTINGS?REF_NO=p-7&TXN_TYP=PMT`). Without one, a call in doubt can only become a fault.
+- **Circuit breaker:** while core checking is down or closed for the night, the ESG stops calling, and requests wait until it's back, in order. A few failures in a row (timeouts, refused connections, errors; not rejections, which are answers) stop the calls; after a cool-down one request is let through as a trial, and its success lets the rest follow. Closed hours are configured, and no call is made during them. Inquiries about calls in doubt also wait, and a call in doubt gets its full grace period only once core checking is back, so an outage alone never turns waiting requests into faults. Only this ESG waits: the rest of the subsystem carries on (decision 19).
+- **[Simulation mode](#simulation-mode-egress-esgs):** no call to core checking. The egress ESG writes the **ledger entry** core checking would have written (`REF_NO`, `AMT`, `STAT` = `POSTED` or `REJECTED`, `REJ_CD`) to the change feed the ingress ESG reads. Like core checking, it numbers each posting itself (`ENTRY_ID`): **a second call is a second posting**, so a double debit would show in simulation too.
 
 ### Ingress: hears → produces
 
@@ -428,7 +433,8 @@ Each step shows the event's `timestamp` (when the fact happened, not when the BF
 |---|---|---|
 | `DEPOSIT_REQUESTED` | `to.kind = card` | `POST /credits` with idempotency key `p-7`; expects `202 Accepted` |
 
-- **Rate limit:** the ESG sends at the processor's allowed rate and lets the backlog wait, so it never gets `429`s. *(Not testable yet in simulation.)*
+- **Rate limit:** the ESG sends at the processor's allowed rate and lets the backlog wait, so it never gets `429`s. The rate is one budget for the whole ESG, however many instances read however many shards. A `429` that slips through anyway (the processor's clock or window differs from ours) is waited out and retried; that's safe because the processor dedups on the idempotency key. In simulation the processor enforces the same rate and counts the `429`s it returns (decision 20).
+- **Capacity:** at peak, more card payments may arrive than the processor allows per second. Then the backlog grows during the peak and drains afterwards, and "within minutes" doesn't hold for card deposits until it has drained. The allowed rate is an agreement to size with the processor.
 - A `202` is a promise, not a fact: the ESG publishes nothing.
 - **[Simulation mode](#simulation-mode-egress-esgs):** no call to the card processor. After the delay, the egress ESG posts the **signed webhook** the processor would have sent (`credit.succeeded`, or `credit.failed` with `failure_code`) to the ingress ESG's `POST /webhooks/card-processor`.
 
@@ -645,3 +651,6 @@ The internal event (ours), carrying only what the BFF needs:
 | 15 | How much of each service does the spec describe? (2026-11-07) | **Only the outside: every service is a black box.** Inputs, outputs, API, observable behaviour and guarantees; nothing about functions, tables, keys, timers or how idempotence is achieved |
 | 16 | How do we test without the external systems? (2026-11-07) | **A simulation mode in each egress ESG**, off by default. It pretends to call the external system and delivers that system's response, in its own format, to the **ingress ESG's real input**, so the ingress side is exercised unchanged. Outcomes by account (success or failure only, for now). This replaces the separate stub services |
 | 17 | Consolidation (2026-11-07) | `PUT` body, paging, `status` filter and error format defined; `publish-accounts` runs before the first payment; simulation pairs egress with ingress (including the webhook secret); guarantees that simulation can't show yet are marked; the talk's "Built in: Stage" rows removed; the account-outcome table lives here only |
+| 18 | How are faults simulated? (2026-11-09) | **Fault accounts**, in the same style as the outcome accounts: the account decides how the external system misbehaves, with no runtime switches. First: `K-6` (webhook delivered twice) and `B-6` (settlement file dropped twice). The core checking simulation numbers every posting, so calling it twice posts twice. Then (2026-11-09): `C-7`, an answer lost after the debit ("called once"), and `C-5`, an outage (circuit breaker, decision 19). Then: the card processor's rate limit, which the simulated processor always enforces (decision 20) |
+| 19 | How do requests wait while core checking is down? (2026-11-09) | **In the ESG itself:** a breaker shared by its instances; while it is open the ESG doesn't call, and gives the requests back to its channel, which keeps them in order, at a paced rate. Production refinement, not built: switch the ESG's subscription off while the breaker is open, and back on from a scheduled health check, so nothing runs during a long outage or the night (needs a health-check API on core checking). Outages are simulated with `C-5`, the first fault felt by every payment |
+| 20 | How does the card ESG keep to the processor's rate? (2026-11-09) | **A shared per-second budget:** every call takes a token first, from a budget shared by all instances of the ESG, and waits for the next second when there is none, so the backlog waits on the stream. `429` is only a safety net (retry after `Retry-After`; safe thanks to the idempotency key). Not built: leasing tokens in blocks for high rates. **Simulation:** the simulated processor always enforces the same rate and counts its `429`s; a rate limit is a property of the processor, so there is no fault account for it |

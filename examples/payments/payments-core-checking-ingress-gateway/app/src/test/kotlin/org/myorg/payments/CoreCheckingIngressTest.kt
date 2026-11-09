@@ -24,7 +24,7 @@ import java.util.Date
 
 class CoreCheckingIngressTest {
 
-    private val debit = simulatedLedgerEntry(Fixtures.payment, LedgerEntry.PAYMENT, postedAt = 1730900580000)
+    private val debit = simulatedLedgerEntry(Fixtures.payment, LedgerEntry.PAYMENT, postedAt = 1730900580000, entryId = "E-PMT")
 
     @AfterEach
     fun tearDown() = AwsGlobalRegistry.reset()
@@ -35,7 +35,7 @@ class CoreCheckingIngressTest {
         val event = ledgerEvent(debit, Fixtures.payment).shouldBeInstanceOf<FundsWithdrawn>()
 
         // Assert
-        event.id shouldBe "p-7-PMT.funds-withdrawn"
+        event.id shouldBe "E-PMT.funds-withdrawn"
         event.timestamp shouldBe 1730900580000
         event.partitionKey shouldBe "p-7"
         event.payment shouldBe Fixtures.payment
@@ -49,16 +49,16 @@ class CoreCheckingIngressTest {
 
         // Assert
         event.reason shouldBe Reasons.INSUFFICIENT_FUNDS
-        event.id shouldBe "p-7-PMT.withdrawal-failed"
+        event.id shouldBe "E-PMT.withdrawal-failed"
     }
 
     @Test
     fun `a posted refund credit is FUNDS_REFUNDED, a rejected one has no event`() {
         // Arrange
-        val refund = simulatedLedgerEntry(Fixtures.payment, LedgerEntry.REFUND, postedAt = 1)
+        val refund = simulatedLedgerEntry(Fixtures.payment, LedgerEntry.REFUND, postedAt = 1, entryId = "E-RFND")
 
         // Act / Assert
-        ledgerEvent(refund, Fixtures.payment).shouldBeInstanceOf<FundsRefunded>().id shouldBe "p-7-RFND.funds-refunded"
+        ledgerEvent(refund, Fixtures.payment).shouldBeInstanceOf<FundsRefunded>().id shouldBe "E-RFND.funds-refunded"
         shouldThrow<IllegalStateException> { ledgerEvent(refund.copy(STAT = "REJECTED"), Fixtures.payment) }
     }
 
@@ -87,7 +87,7 @@ class CoreCheckingIngressTest {
         GlobalRegistry.setFaultManager(FaultManager(publisher, skipErrorLogging = true))
         val lookup = PaymentLookup { reference -> if (reference == "p-7") Fixtures.payment else throw PaymentNotKnownYet(reference) }
         val trigger = LedgerTrigger { LedgerContainer(lookup, publisher) }
-        val refund = simulatedLedgerEntry(Fixtures.payment, LedgerEntry.REFUND, postedAt = 2)
+        val refund = simulatedLedgerEntry(Fixtures.payment, LedgerEntry.REFUND, postedAt = 2, entryId = "E-RFND")
 
         // Act
         trigger.handleRequest(DynamodbEvent().apply { records = listOf(record("INSERT", debit), record("INSERT", refund)) }, TestContext())
