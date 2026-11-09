@@ -18,6 +18,7 @@ source "$SCRIPT_DIR/common.sh"
 SEED_ACCOUNTS=(
 	"C-1 u-42 open 1730000000000"    # the running example's source: everything succeeds
 	"C-2 u-42 open 1730000000000"    # in simulation, withdrawals are rejected: insufficient funds
+	"C-5 u-42 open 1730000000000"    # fault account: core checking goes down for everyone for a minute
 	"C-7 u-42 open 1730000000000"    # fault account: core checking applies the debit, but the call times out
 	"C-3 u-77 open 1730000000000"    # another customer's account: u-42 can't use it
 	"C-9 u-42 closed 1730000000000"  # closed: payments from it get 400

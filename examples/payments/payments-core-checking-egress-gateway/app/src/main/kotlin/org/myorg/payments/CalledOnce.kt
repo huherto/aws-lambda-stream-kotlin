@@ -33,6 +33,9 @@ data class Claim(val key: String, val state: String, val claimedAt: Long) {
 }
 
 interface Claims {
+    /** The claim for [key], if there is one. */
+    suspend fun find(key: String): Claim?
+
     /** Claims [key] if nobody has; otherwise returns the existing claim. */
     suspend fun claim(key: String, now: Long): Claim?
     suspend fun markSent(key: String)
@@ -56,6 +59,10 @@ class CalledOnce(
     private val inquiryWait: Duration = 10.seconds,
     private val inquiryEvery: Duration = 1.seconds,
     private val clock: () -> Long = System::currentTimeMillis,
+    /** Calls and inquiries go through it: while core checking is down or closed, nothing is sent and requests wait. */
+    private val breaker: Breaker = Breaker.alwaysClosed(),
+    /** How long one invocation sleeps for an open breaker before giving the request back to the stream. */
+    private val maxWait: Duration = 20.seconds,
 ) {
     private val logger = KotlinLogging.logger { }
 
@@ -63,8 +70,26 @@ class CalledOnce(
 
     suspend fun credit(payment: Payment) = once(payment, LedgerEntry.REFUND) { coreChecking.credit(payment) }
 
+    /**
+     * Waits (up to [maxWait]) while the breaker is open. Then either core checking may be called, or the request goes
+     * back to the stream as [CoreCheckingUnavailable], which keeps it, in order, until core checking is back.
+     */
+    private suspend fun admit(key: String) {
+        val retryAt = breaker.admit() ?: return
+        val wait = (retryAt - clock()).coerceIn(0, maxWait.inWholeMilliseconds)
+        if (wait > 0) delay(wait)
+        breaker.admit()?.let { throw CoreCheckingUnavailable("$key: core checking is unavailable until $it; waiting") }
+    }
+
     private suspend fun once(payment: Payment, txnType: String, call: suspend () -> Unit) {
         val key = "${payment.id}#$txnType"
+        // A request already sent needs no call, so it must not consult the breaker: it could take the trial call
+        // after a cool-down and never report how it went, leaving the breaker half-open.
+        if (claims.find(key)?.state == Claim.SENT) {
+            logger.info { "$key was already sent: not calling core checking again" }
+            return
+        }
+        admit(key)
         val existing = claims.claim(key, clock())
 
         if (existing == null) {
@@ -72,10 +97,13 @@ class CalledOnce(
                 call()
             } catch (e: CallNotSent) {
                 claims.release(key)
+                breaker.failed()
                 throw e
             } catch (e: Exception) {
+                breaker.failed()
                 throw CallOutcomeUnknown("$key: core checking call failed, outcome unknown", e)
             }
+            breaker.succeeded()
             claims.markSent(key)
             return
         }
@@ -89,7 +117,14 @@ class CalledOnce(
     private suspend fun resolve(claim: Claim, payment: Payment, txnType: String) {
         val deadline = clock() + inquiryWait.inWholeMilliseconds
         while (true) {
-            if (coreChecking.posted(payment, txnType)) {
+            val posted = try {
+                coreChecking.posted(payment, txnType)
+            } catch (e: Exception) {
+                breaker.failed()
+                throw CoreCheckingUnavailable("${claim.key}: in doubt, and core checking can't be asked: ${e.message}")
+            }
+            breaker.succeeded()
+            if (posted) {
                 logger.info { "${claim.key} was in doubt; core checking shows the posting: not calling again" }
                 claims.markSent(claim.key)
                 return
@@ -97,7 +132,9 @@ class CalledOnce(
             if (clock() >= deadline) break
             delay(inquiryEvery)
         }
-        if (clock() - claim.claimedAt > grace.inWholeMilliseconds) {
+        // The grace period runs only while core checking is up: a request caught in an outage gets it in full afterwards.
+        val since = maxOf(claim.claimedAt, breaker.closedAt())
+        if (clock() - since > grace.inWholeMilliseconds) {
             throw CallUnresolved("${claim.key}: in doubt since ${claim.claimedAt} and core checking shows no posting; check it before retrying")
         }
         throw CallInDoubt("${claim.key}: in doubt and core checking shows no posting yet")
@@ -108,6 +145,15 @@ class CalledOnce(
 class DynamoDbClaims(private val client: DynamoDbClient, private val table: String) : Claims {
 
     private fun key(key: String) = mapOf("pk" to AttributeValue.S(key))
+
+    override suspend fun find(key: String): Claim? =
+        client.getItem(GetItemRequest { tableName = table; this.key = key(key); consistentRead = true }).item?.let { item ->
+            Claim(
+                key = key,
+                state = (item["state"] as AttributeValue.S).value,
+                claimedAt = (item["claimedAt"] as AttributeValue.N).value.toLong(),
+            )
+        }
 
     override suspend fun claim(key: String, now: Long): Claim? = try {
         client.putItem(PutItemRequest {

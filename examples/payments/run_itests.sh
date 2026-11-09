@@ -18,8 +18,13 @@ export PAYMENTS_BFF_URL
 echo "BFF: $PAYMENTS_BFF_URL"
 
 TASK=":examples:payments:integration-test:integrationTest"
+
+# On macOS, keep the machine awake: if it idles to sleep mid-run, everything (LocalStack included) stops.
+AWAKE=""
+command -v caffeinate > /dev/null && AWAKE="caffeinate -i"
+
 if [[ -n "$1" ]]; then
-	(set -x; $GW "$TASK" --tests "$1")
+	(set -x; $AWAKE $GW "$TASK" --tests "$1")
 else
-	(set -x; $GW "$TASK")
+	(set -x; $AWAKE $GW "$TASK")
 fi

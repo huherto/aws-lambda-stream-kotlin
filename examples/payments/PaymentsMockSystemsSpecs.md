@@ -79,7 +79,7 @@ Each simulated response uses the external system's **own dialect**, so the ingre
 | Amount | `"100.00"` (decimal string) + `currency` | `AMT` = `100.00` | `amount_cents` = `10000` | `amount` = `100.00` |
 | Failure | `reason: insufficient-funds`, `account-closed` | `REJ_CD`: `NSF`, `ACCT_CLSD` | `failure_code`: `card_closed` | `code`: `R02` closed, `R03` no account |
 
-The account decides the outcome, the way a payment provider's test cards do: see the service specs › [Simulation mode](PaymentsServiceSpecs.md#simulation-mode-egress-esgs) for the table. In short, `C-2`, `K-3` and `B-8` fail, `B-7` settles after the deadline, and `C-1`, `K-2` and `B-9` succeed. Fault accounts succeed but misbehave on the way: `C-7`'s debit is applied but the answer is lost, `K-6` gets its webhook twice and `B-6` its settlement file twice.
+The account decides the outcome, the way a payment provider's test cards do: see the service specs › [Simulation mode](PaymentsServiceSpecs.md#simulation-mode-egress-esgs) for the table. In short, `C-2`, `K-3` and `B-8` fail, `B-7` settles after the deadline, and `C-1`, `K-2` and `B-9` succeed. Fault accounts succeed but misbehave on the way: `C-5` takes core checking down for everyone for a minute, `C-7`'s debit is applied but the answer is lost, `K-6` gets its webhook twice and `B-6` its settlement file twice.
 
 | External system | The egress gateway pretends to… | …and delivers to the ingress gateway | Lesson |
 |---|---|---|---|
@@ -168,4 +168,4 @@ What should appear in the log (the contract is defined in the service specs › 
 | 2 | Do we need a load driver for a peak scenario? | Not now. Add it later if the talk shows backpressure under load |
 | 3 | Changes to [PaymentsServiceSpecs.md](PaymentsServiceSpecs.md) that this file assumes | **Done (2026-11-07):** internal and external catalogs, the payments egress ESG (7), the accounts ingress ESG (8), the egress and ingress rules on the hub, and separate change rules for each kind of event |
 | 4 | Which tools replace the book's VCR, emulator and contract-test modules? | Chosen with the framework and language |
-| 5 | Fault scenarios: an outage (circuit breaker), duplicate webhooks, the same file twice, a double debit | **In progress (2026-11-09):** fault accounts (service specs, decision 18). Done: duplicate webhooks (`K-6`), the same file twice (`B-6`), a double debit (`C-7`, and a request delivered twice). Next: an outage, the rate limit |
+| 5 | Fault scenarios: an outage (circuit breaker), duplicate webhooks, the same file twice, a double debit | **In progress (2026-11-09):** fault accounts (service specs, decision 18). Done: duplicate webhooks (`K-6`), the same file twice (`B-6`), a double debit (`C-7`, and a request delivered twice), an outage (`C-5`). Next: the rate limit |

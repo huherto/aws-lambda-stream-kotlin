@@ -78,11 +78,19 @@ class SimulatedCoreChecking(
     private val delivery: DelayedDelivery,
     private val delaySeconds: Int,
     private val postings: suspend (reference: String, txnType: String) -> Boolean = { _, _ -> false },
+    private val outage: SimulatedOutage = SimulatedOutage.none(),
     private val clock: () -> Long = System::currentTimeMillis,
     /** Core checking numbers every posting itself; a second call is a second posting. */
     private val newEntryId: () -> String = { "E" + java.util.UUID.randomUUID().toString().replace("-", "").take(16).uppercase() },
 ) : CoreChecking {
+    /** C-5 takes core checking down; while it's down, nothing reaches it: the connection is refused. */
+    private suspend fun reachable(payment: Payment, starting: Boolean = false) {
+        if (starting && payment.from.account == Simulation.OUTAGE_ACCOUNT) outage.startOnce(payment.id, clock())
+        if (outage.isDown(clock())) throw CallNotSent("simulated: core checking is down (connection refused)")
+    }
+
     override suspend fun debit(payment: Payment) {
+        reachable(payment, starting = true)
         schedule(payment, LedgerEntry.PAYMENT)
         // C-7: the debit is applied, but the answer never comes back.
         if (payment.from.account == Simulation.TIMEOUT_AFTER_DEBIT_ACCOUNT) {
@@ -90,9 +98,15 @@ class SimulatedCoreChecking(
         }
     }
 
-    override suspend fun credit(payment: Payment) = schedule(payment, LedgerEntry.REFUND)
+    override suspend fun credit(payment: Payment) {
+        reachable(payment)
+        schedule(payment, LedgerEntry.REFUND)
+    }
 
-    override suspend fun posted(payment: Payment, txnType: String): Boolean = postings(payment.id, txnType)
+    override suspend fun posted(payment: Payment, txnType: String): Boolean {
+        reachable(payment)
+        return postings(payment.id, txnType)
+    }
 
     private suspend fun schedule(payment: Payment, txnType: String) {
         val entry = simulatedLedgerEntry(payment, txnType, postedAt = clock() + delaySeconds * 1000L, entryId = newEntryId())
@@ -110,11 +124,21 @@ class EgressContainer(val calledOnce: CalledOnce) {
                     SqsDelayedDelivery.fromEnvironment(),
                     Simulation.delaySeconds(2),
                     postings = LedgerPostings(dynamoDb, System.getenv("LEDGER_TABLE_NAME") ?: error("LEDGER_TABLE_NAME is not configured")),
+                    outage = DynamoDbSimulatedOutage(
+                        dynamoDb, System.getenv("CALLS_TABLE_NAME")!!,
+                        lasts = kotlin.time.Duration.parse("${System.getenv("SIMULATED_OUTAGE_SECONDS")?.toLongOrNull() ?: 60}s"),
+                    ),
                 )
                 else HttpCoreChecking(System.getenv("CORE_CHECKING_URL") ?: error("CORE_CHECKING_URL is not configured"))
             val claims = DynamoDbClaims(dynamoDb, System.getenv("CALLS_TABLE_NAME") ?: error("CALLS_TABLE_NAME is not configured"))
             val grace = System.getenv("CALL_GRACE_SECONDS")?.toLongOrNull() ?: 300
-            return EgressContainer(CalledOnce(coreChecking, claims, grace = kotlin.time.Duration.parse("${grace}s")))
+            val breaker = Breaker(
+                store = DynamoDbBreakerStore(dynamoDb, System.getenv("CALLS_TABLE_NAME")!!),
+                threshold = System.getenv("BREAKER_THRESHOLD")?.toIntOrNull() ?: 3,
+                openFor = kotlin.time.Duration.parse("${System.getenv("BREAKER_OPEN_SECONDS")?.toLongOrNull() ?: 30}s"),
+                closedHours = ClosedHours.parse(System.getenv("CORE_CHECKING_CLOSED_HOURS")),
+            )
+            return EgressContainer(CalledOnce(coreChecking, claims, grace = kotlin.time.Duration.parse("${grace}s"), breaker = breaker))
         }
     }
 
@@ -193,7 +217,8 @@ fun installCoreCheckingFaultManager() {
         io.kopipes.core.faults.FaultManager(
             eventPublisher = AwsGlobalRegistry.eventPublisher(),
             isRetryable = {
-                it is CallOutcomeUnknown || it is CallInDoubt || it is CallNotSent || AwsGlobalRegistry.isAwsRetryable(it)
+                it is CallOutcomeUnknown || it is CallInDoubt || it is CallNotSent || it is CoreCheckingUnavailable ||
+                    AwsGlobalRegistry.isAwsRetryable(it)
             },
         )
     }

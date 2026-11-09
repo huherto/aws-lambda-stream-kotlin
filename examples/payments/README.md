@@ -102,6 +102,7 @@ system.
 | `K-3` | Card credit fails (`card_closed` → `account-closed`) | 5 s |
 | `B-8` | Bank transfer rejected (`R03` → `account-not-found`) | 20 s |
 | `B-7` | Bank transfer settles after the 2-minute deadline | 180 s |
+| `C-5` | Withdrawal succeeds; core checking goes down for everyone for 60 s first (fault account) | 2 s after it's back |
 | `C-7` | Withdrawal succeeds; the call times out after the debit was applied (fault account) | 2 s |
 | `K-6` | Card credit succeeds; the webhook is delivered twice (fault account) | 5 s, again 3 s later |
 | `B-6` | Bank transfer settles; the settlement file is dropped twice (fault account) | 20 s, again 3 s later |
@@ -121,8 +122,16 @@ blindly:
    - still not found after 5 minutes: it becomes a `fault`.
 4. A call that certainly never left (connection refused) releases the claim, so the next attempt calls normally.
 
+**Circuit breaker (core checking).** Breaker state is one item in the egress gateway's `calls` table:
+- **Closed:** three failures in a row (timeouts, refused connections, errors; not rejections) open it.
+- **Open:** for 15 s locally (30 s elsewhere), no calls and no inquiries. An invocation sleeps until the trial time
+  (at most 20 s), then hands the request back to the stream, which keeps it in order.
+- **Half-open:** exactly one request is the trial; success closes the breaker, failure reopens it.
+- **Closed hours:** `-c coreCheckingClosedHours=22:00-06:00@America/New_York` keeps it open without any failure.
+- **Grace period:** a request in doubt gets its full grace period counted from when core checking came back.
+
 The real-mode connectors (`HttpCoreChecking`, `HttpCardProcessor`, `S3TransferFile`) exist but are not deployed
-here. Not built: the circuit breaker, pacing under the card processor's rate limit, and the nightly job that joins the transfer lines and sends the file at cut-off.
+here. Not built: pacing under the card processor's rate limit, and the nightly job that joins the transfer lines and sends the file at cut-off.
 
 ### Payments egress gateway and the downstream hub
 
@@ -223,6 +232,7 @@ Nothing is injected.
 | `BffApiITest` | `PUT` once (`202`, repeat `202`, other body `409`), validation (`401`, `400` with the field), `404` for another customer's payment, newest-first paging and status filter, latest `ACCOUNT_CHANGED` wins |
 | `BoundaryITest` | Only curated `PAYMENTS.*` events with source `external` reach the downstream bus: no `raw`, no `triggers`, no account numbers, no `ACCOUNTS.*` forwarded |
 | `IdempotenceITest` | A redelivered webhook event and a retried `PUT` change nothing |
+| `CircuitBreakerITest` | During a core checking outage (`C-5`) the breaker opens; payments wait, then complete, each debited once |
 | `CalledOnceITest` | Core checking is debited once, even when its answer is lost (`C-7`) or a `WITHDRAWAL_REQUESTED` is delivered twice; checked in the ledger |
 | `DuplicatesITest` | Fault accounts: a webhook delivered twice (`K-6`) and a settlement file dropped twice (`B-6`) still give one deposit, one outcome and one external event |
 

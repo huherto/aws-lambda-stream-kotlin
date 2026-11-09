@@ -25,6 +25,9 @@ object Simulation {
 
     // Fault accounts: the outcome is still success, but the external system misbehaves on the way.
 
+    /** Core checking goes down when this account's debit arrives: every call, for every account, fails for a while. */
+    const val OUTAGE_ACCOUNT = "C-5"
+
     /** Core checking applies the debit, but the call times out: the answer is lost. */
     const val TIMEOUT_AFTER_DEBIT_ACCOUNT = "C-7"
 

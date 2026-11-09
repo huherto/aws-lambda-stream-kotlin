@@ -13,6 +13,8 @@ import kotlin.time.Duration.Companion.seconds
 class InMemoryClaims : Claims {
     val claims = mutableMapOf<String, Claim>()
 
+    override suspend fun find(key: String): Claim? = claims[key]
+
     override suspend fun claim(key: String, now: Long): Claim? {
         claims[key]?.let { return it }
         claims[key] = Claim(key, Claim.CALLING, now)

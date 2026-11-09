@@ -32,6 +32,11 @@ class CoreCheckingEgressStack(scope: Construct, serviceProps: ServiceProps) : Ba
             // A request in doubt is retried by the stream, not turned into a fault, until the grace period is over.
             "STREAM_RETRY_ENABLED" to "true",
             "CALL_GRACE_SECONDS" to "300",
+            // Circuit breaker: open after 3 failures in a row; try again after the cool-down.
+            "BREAKER_THRESHOLD" to "3",
+            "BREAKER_OPEN_SECONDS" to if (stage() == Stage.LOCAL) "15" else "30",
+            // When core checking is closed, e.g. "22:00-06:00@America/New_York". Not set locally.
+            "CORE_CHECKING_CLOSED_HOURS" to (node.tryGetContext("coreCheckingClosedHours")?.toString() ?: ""),
         )
 
         val listener = if (simulate) {
@@ -47,14 +52,17 @@ class CoreCheckingEgressStack(scope: Construct, serviceProps: ServiceProps) : Ba
                 "SIMULATION_QUEUE_URL" to queue.queueUrl,
                 "SIMULATED_DELAY_SECONDS" to "2",
                 "LEDGER_TABLE_NAME" to ledgerName,
+                // C-5 takes simulated core checking down for everyone, for this long.
+                "SIMULATED_OUTAGE_SECONDS" to "60",
             )
-            javaFunction("listener", "org.myorg.payments.Listener::handleRequest", jar, env).also { listener ->
+            // An invocation may sleep up to 20 s for an open breaker, then spend up to 10 s on an inquiry.
+            javaFunction("listener", "org.myorg.payments.Listener::handleRequest", jar, env, timeoutSeconds = 60).also { listener ->
                 queue.grantSendMessages(listener)
                 ledger.grantReadData(listener)
             }
         } else {
             val url = node.tryGetContext("coreCheckingUrl")?.toString() ?: "https://core-checking.invalid"
-            javaFunction("listener", "org.myorg.payments.Listener::handleRequest", jar, env + ("CORE_CHECKING_URL" to url))
+            javaFunction("listener", "org.myorg.payments.Listener::handleRequest", jar, env + ("CORE_CHECKING_URL" to url), timeoutSeconds = 60)
         }
 
         calls.grantReadWriteData(listener)

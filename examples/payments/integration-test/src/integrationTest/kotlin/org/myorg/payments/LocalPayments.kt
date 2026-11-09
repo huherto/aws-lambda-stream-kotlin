@@ -137,6 +137,15 @@ object LocalPayments {
             .sortedBy { it.timestamp }
 
     const val LEDGER_TABLE = "payments-core-checking-ingress-gateway-local-ledger"
+    const val CALLS_TABLE = "payments-core-checking-egress-gateway-local-calls"
+
+    /** How many times the core checking egress gateway's circuit breaker has opened. */
+    suspend fun breakerOpens(): Int =
+        (dynamoDb.getItem(GetItemRequest {
+            tableName = CALLS_TABLE
+            key = mapOf("pk" to AttributeValue.S("BREAKER#core-checking"))
+            consistentRead = true
+        }).item?.get("opens") as? AttributeValue.N)?.value?.toInt() ?: 0
 
     /** Core checking's postings for a payment, by transaction type (`PMT` debit, `RFND` refund): a double debit shows here. */
     suspend fun ledgerPostings(paymentId: String, txnType: String): Int =
