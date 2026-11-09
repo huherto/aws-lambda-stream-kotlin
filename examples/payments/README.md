@@ -103,6 +103,7 @@ system.
 | `B-8` | Bank transfer rejected (`R03` → `account-not-found`) | 20 s |
 | `B-7` | Bank transfer settles after the 2-minute deadline | 180 s |
 | `C-5` | Withdrawal succeeds; core checking goes down for everyone for 60 s first (fault account) | 2 s after it's back |
+| `C-8` | The first withdrawal call is lost; it becomes a fault an operator resolves (fault account) | after resubmission |
 | `C-7` | Withdrawal succeeds; the call times out after the debit was applied (fault account) | 2 s |
 | `K-6` | Card credit succeeds; the webhook is delivered twice (fault account) | 5 s, again 3 s later |
 | `B-6` | Bank transfer settles; the settlement file is dropped twice (fault account) | 20 s, again 3 s later |
@@ -115,12 +116,14 @@ second debit, visible in the ledger. Fault accounts (`K-6`, `B-6`) succeed but m
 blindly:
 1. It claims each request (`<payment>#PMT` or `#RFND`) in its `calls` table before calling, and marks it `SENT` after.
 2. A repeat that finds `SENT` does nothing.
-3. A repeat that finds the claim still `CALLING` is in doubt. It asks core checking whether the posting exists
-   (in simulation, the ledger's `byReference` index):
-   - found: it marks the request `SENT` and doesn't call;
-   - not found yet: it fails retryably, and the request waits on the channel;
-   - still not found after 5 minutes: it becomes a `fault`.
-4. A call that certainly never left (connection refused) releases the claim, so the next attempt calls normally.
+3. A call whose outcome is unknown leaves the claim `CALLING`, with the request kept in it: the request is *in
+   doubt*. It doesn't wait on the channel, so it never holds up other payments' withdrawals.
+4. Every minute a **reconciler** redelivers each request in doubt to the listener, which asks core checking once
+   whether the posting exists (in simulation, the ledger's `byReference` index):
+   - found: it marks the request `SENT`, without calling again;
+   - not found yet: it stays in doubt until the next round;
+   - still not found after the grace period (5 minutes; 1 minute locally): it becomes a `fault` for an operator.
+5. A call that certainly never left (connection refused) releases the claim, so the next attempt calls normally.
 
 **Circuit breaker (core checking).** Breaker state is one item in the egress gateway's `calls` table:
 - **Closed:** three failures in a row (timeouts, refused connections, errors; not rejections) open it.
@@ -223,6 +226,42 @@ after a few state resets, so the script doesn't rely on it.
 Every event on the bus is logged to `/aws/events/payments-event-hub-local-events` (faults to `…-faults`):
 `awslocal logs filter-log-events --log-group-name /aws/events/payments-event-hub-local-events`.
 
+## Faults and resubmission: an operator walkthrough
+
+A fault is an event: a unit of work that failed for a reason retrying won't fix. It goes to the faults channel, and
+the fault monitor stores it in S3 (`myorg-payments-event-fault-monitor-local-us-east-1`) with the original record, and
+sends an alert to its SNS topic. Nothing else happens until someone acts on it. That's the operator's job:
+
+```bash
+scripts/inject.sh submit p-lost --from C-8 --to K-2   # C-8: the first debit call is lost on the way
+
+# About a minute later (the grace period locally), the request in doubt becomes a fault:
+scripts/operator.sh faults
+#   2026-11-09T22:30:05Z  payments-core-checking-egress-gateway-local-listener [withdraw]
+#       p-lost#PMT: in doubt since … and core checking shows no posting; check it before retrying
+
+# Fix first: the operator checks core checking. No posting, so the request was never applied: release it.
+scripts/operator.sh release-claim p-lost
+#   p-lost#PMT (CALLING): core checking shows no posting; claim released, safe to resubmit
+# (Had core checking shown the posting, release-claim would mark the request sent instead: no second debit.)
+
+# Then resubmit the function's faults: the original record goes to the original function.
+scripts/operator.sh resubmit payments-core-checking-egress-gateway-local-listener --dry-run
+scripts/operator.sh resubmit payments-core-checking-egress-gateway-local-listener
+
+scripts/inject.sh view p-lost                          # → COMPLETED, debited once
+```
+
+- **Fix first.** Resubmitting without fixing the cause just fails again; here, the claim would still be in doubt.
+  "Fix first" also means core checking is up: `operator.sh resubmit` refuses while its breaker isn't closed.
+- **Every resubmission is checked.** A resubmission is a direct invocation: no stream retries it, and a function that
+  throws still answers `200` (the failure is in `FunctionError`). `operator.sh resubmit` checks each outcome, retries
+  with back-off, and exits `1` listing whatever still fails.
+- **Resubmitting is safe to repeat.** The fault monitor may store a fault more than once (its delivery is at least
+  once), and the resubmit tool doesn't deduplicate. Every consumer is idempotent, so a repeat changes nothing.
+- `scripts/operator.sh` runs the `operator` module, which uses the framework's `ResubmitFaults` with
+  LocalStack-aware clients.
+
 ## Integration tests
 
 `integration-test` checks the deployed subsystem end to end on LocalStack, through its real entry points: HTTP
@@ -242,6 +281,7 @@ Nothing is injected.
 | `IdempotenceITest` | A redelivered webhook event and a retried `PUT` change nothing |
 | `RateLimitITest` | A burst of 20 card payments is paced at the processor's 5/s: all complete, no second sees more than 5 credits, and the simulated processor counts no `429` |
 | `CircuitBreakerITest` | During a core checking outage (`C-5`) the breaker opens; payments wait, then complete, each debited once |
+| `FaultResubmissionITest` | A lost request (`C-8`) becomes a fault, stored and alerted; checked, released and resubmitted, the payment completes, debited once |
 | `CalledOnceITest` | Core checking is debited once, even when its answer is lost (`C-7`) or a `WITHDRAWAL_REQUESTED` is delivered twice; checked in the ledger |
 | `DuplicatesITest` | Fault accounts: a webhook delivered twice (`K-6`) and a settlement file dropped twice (`B-6`) still give one deposit, one outcome and one external event |
 

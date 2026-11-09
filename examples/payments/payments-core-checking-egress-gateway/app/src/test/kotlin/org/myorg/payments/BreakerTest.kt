@@ -144,8 +144,7 @@ class CalledOnceWithBreakerTest {
     private val breaker = Breaker(store, threshold = 2, openFor = 30.seconds, clock = { now })
     private val calledOnce = CalledOnce(
         coreChecking, claims,
-        grace = 300.seconds, inquiryWait = 0.milliseconds, inquiryEvery = 1.milliseconds,
-        clock = { now }, breaker = breaker, maxWait = 0.milliseconds,
+        grace = 300.seconds, clock = { now }, breaker = breaker, maxWait = 0.milliseconds,
     )
 
     @Test
@@ -182,7 +181,7 @@ class CalledOnceWithBreakerTest {
     fun `a request in doubt during a long outage gets its full grace period once core checking is back`() = runTest {
         // Arrange: the answer is lost, then core checking is down for 10 minutes
         coreChecking.failNext = java.net.SocketTimeoutException("timed out")
-        shouldThrow<CallOutcomeUnknown> { calledOnce.debit(Fixtures.payment) }
+        calledOnce.debit(Fixtures.payment) shouldBe Outcome.IN_DOUBT
         breaker.failed()
         now += 600_000
         breaker.admit().shouldBeNull()
@@ -192,7 +191,7 @@ class CalledOnceWithBreakerTest {
         now += 60_000
 
         // Assert: still in doubt, not a fault, and still not called again
-        shouldThrow<CallInDoubt> { calledOnce.debit(Fixtures.payment) }
+        calledOnce.debit(Fixtures.payment) shouldBe Outcome.IN_DOUBT
         coreChecking.calls shouldContainExactly listOf("debit p-7")
     }
 
@@ -216,14 +215,14 @@ class CalledOnceWithBreakerTest {
     fun `an inquiry core checking can't answer counts as a failure and the request waits`() = runTest {
         // Arrange: in doubt
         coreChecking.failNext = java.net.SocketTimeoutException("timed out")
-        shouldThrow<CallOutcomeUnknown> { calledOnce.debit(Fixtures.payment) }
+        calledOnce.debit(Fixtures.payment) shouldBe Outcome.IN_DOUBT
 
         // Act: the inquiry fails too
         val failing = object : CoreChecking by coreChecking {
             override suspend fun posted(payment: Payment, txnType: String): Boolean = throw CallNotSent("refused")
         }
         val withFailingInquiry = CalledOnce(
-            failing, claims, inquiryWait = 0.milliseconds, clock = { now }, breaker = breaker, maxWait = 0.milliseconds,
+            failing, claims, clock = { now }, breaker = breaker, maxWait = 0.milliseconds,
         )
 
         // Assert

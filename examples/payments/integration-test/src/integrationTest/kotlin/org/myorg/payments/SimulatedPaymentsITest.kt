@@ -129,7 +129,11 @@ class SimulatedPaymentsITest {
 
     @Test
     fun `late deposit - expired at the deadline, then completed when the bank settles`(): Unit = runBlocking {
-        // Act: the deadline is 2 minutes after DEPOSIT_REQUESTED; LocalStack deletes expired items when asked.
+        // Act: the deadline is 2 minutes after DEPOSIT_REQUESTED, which other scenarios running at the same time
+        // (an outage, a request in doubt) may delay; so the clock starts when the deposit is requested.
+        eventually(4.minutes, what = "$toLateBank to be sent to the bank") {
+            status(toLateBank)?.takeIf { it == "SENT_TO_BANK" || it == "EXPIRED" || it == "COMPLETED" }
+        }
         eventually(4.minutes, every = 5.seconds, what = "$toLateBank to expire") {
             LocalPayments.expireNow()
             status(toLateBank)?.takeIf { it == "EXPIRED" || it == "COMPLETED" }

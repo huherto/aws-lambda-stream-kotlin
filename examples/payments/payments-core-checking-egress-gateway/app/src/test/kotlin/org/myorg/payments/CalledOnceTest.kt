@@ -4,9 +4,14 @@ import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.Test
-import kotlin.time.Duration.Companion.milliseconds
+import java.util.Base64
 import kotlin.time.Duration.Companion.seconds
 
 /** Claims in memory, behaving like the DynamoDB ones. */
@@ -15,9 +20,9 @@ class InMemoryClaims : Claims {
 
     override suspend fun find(key: String): Claim? = claims[key]
 
-    override suspend fun claim(key: String, now: Long): Claim? {
+    override suspend fun claim(key: String, now: Long, request: String?): Claim? {
         claims[key]?.let { return it }
-        claims[key] = Claim(key, Claim.CALLING, now)
+        claims[key] = Claim(key, Claim.CALLING, now, request)
         return null
     }
 
@@ -28,6 +33,8 @@ class InMemoryClaims : Claims {
     override suspend fun release(key: String) {
         claims.remove(key)
     }
+
+    override suspend fun inDoubt(): List<Claim> = claims.values.filter { it.state == Claim.CALLING }
 }
 
 /** A core checking that records every call and can fail the way the real one does. */
@@ -56,19 +63,17 @@ class CalledOnceTest {
     private val coreChecking = FakeCoreChecking()
     private val claims = InMemoryClaims()
     private var now = 1_000_000L
-    private val calledOnce = CalledOnce(
-        coreChecking, claims,
-        grace = 300.seconds, inquiryWait = 0.milliseconds, inquiryEvery = 1.milliseconds,
-        clock = { now },
-    )
+    private val calledOnce = CalledOnce(coreChecking, claims, grace = 300.seconds, clock = { now })
     private val payment = Fixtures.payment
+    private val request = Fixtures.withdrawalRequested().toString()
 
     @Test
     fun `a request is claimed, called once and marked sent`() = runTest {
         // Act
-        calledOnce.debit(payment)
+        val outcome = calledOnce.debit(payment, request)
 
         // Assert
+        outcome shouldBe Outcome.SENT
         coreChecking.calls shouldContainExactly listOf("debit p-7")
         claims.claims["p-7#PMT"]?.state shouldBe Claim.SENT
     }
@@ -76,63 +81,81 @@ class CalledOnceTest {
     @Test
     fun `a redelivered request that was sent does not call again`() = runTest {
         // Arrange
-        calledOnce.debit(payment)
+        calledOnce.debit(payment, request)
 
         // Act
-        calledOnce.debit(payment)
-        calledOnce.debit(payment)
+        val outcomes = listOf(calledOnce.debit(payment, request), calledOnce.debit(payment, request))
 
         // Assert
+        outcomes shouldBe listOf(Outcome.ALREADY_SENT, Outcome.ALREADY_SENT)
         coreChecking.calls shouldContainExactly listOf("debit p-7")
     }
 
     @Test
     fun `a debit and a refund of the same payment are different requests`() = runTest {
         // Act
-        calledOnce.debit(payment)
-        calledOnce.credit(payment)
+        calledOnce.debit(payment, request)
+        calledOnce.credit(payment, Fixtures.refundRequested().toString())
 
         // Assert
         coreChecking.calls shouldContainExactly listOf("debit p-7", "credit p-7")
     }
 
     @Test
-    fun `a lost answer leaves the request in doubt, and the retry finds the posting instead of calling again`() = runTest {
+    fun `a lost answer leaves the request in doubt without holding up the stream, and keeps the request`() = runTest {
         // Arrange: core checking applies the debit, then the call times out (C-7)
         coreChecking.failNext = java.net.SocketTimeoutException("timed out")
         coreChecking.applyBeforeFailing = true
 
         // Act
-        shouldThrow<CallOutcomeUnknown> { calledOnce.debit(payment) }
-        calledOnce.debit(payment)
+        val outcome = calledOnce.debit(payment, request)
+
+        // Assert: no exception, so the batch moves on; the claim waits for the reconciler
+        outcome shouldBe Outcome.IN_DOUBT
+        claims.claims["p-7#PMT"]?.state shouldBe Claim.CALLING
+        claims.claims["p-7#PMT"]?.request shouldBe request
+    }
+
+    @Test
+    fun `redelivered in doubt, it finds the posting instead of calling again`() = runTest {
+        // Arrange
+        coreChecking.failNext = java.net.SocketTimeoutException("timed out")
+        coreChecking.applyBeforeFailing = true
+        calledOnce.debit(payment, request)
+
+        // Act
+        val outcome = calledOnce.debit(payment, request)
 
         // Assert
+        outcome shouldBe Outcome.RESOLVED
         coreChecking.calls shouldContainExactly listOf("debit p-7")
         claims.claims["p-7#PMT"]?.state shouldBe Claim.SENT
     }
 
     @Test
-    fun `in doubt with no posting yet, the retry waits instead of calling again`() = runTest {
-        // Arrange: the call failed and core checking shows nothing (yet)
-        coreChecking.failNext = java.net.SocketTimeoutException("timed out")
-        shouldThrow<CallOutcomeUnknown> { calledOnce.debit(payment) }
+    fun `redelivered in doubt with no posting yet, it stays in doubt and still doesn't call`() = runTest {
+        // Arrange: the request was lost; core checking shows nothing
+        coreChecking.failNext = java.net.SocketTimeoutException("lost")
+        calledOnce.debit(payment, request)
         now += 60_000
 
-        // Act / Assert
-        shouldThrow<CallInDoubt> { calledOnce.debit(payment) }
+        // Act
+        val outcome = calledOnce.debit(payment, request)
+
+        // Assert
+        outcome shouldBe Outcome.IN_DOUBT
         coreChecking.calls shouldContainExactly listOf("debit p-7")
-        claims.claims["p-7#PMT"]?.state shouldBe Claim.CALLING
     }
 
     @Test
     fun `in doubt past the grace period, it becomes a fault for an operator, still without calling again`() = runTest {
         // Arrange
-        coreChecking.failNext = java.net.SocketTimeoutException("timed out")
-        shouldThrow<CallOutcomeUnknown> { calledOnce.debit(payment) }
+        coreChecking.failNext = java.net.SocketTimeoutException("lost")
+        calledOnce.debit(payment, request)
         now += 301_000
 
         // Act / Assert
-        shouldThrow<CallUnresolved> { calledOnce.debit(payment) }
+        shouldThrow<CallUnresolved> { calledOnce.debit(payment, request) }.message shouldContain "check it before retrying"
         coreChecking.calls shouldContainExactly listOf("debit p-7")
     }
 
@@ -142,13 +165,66 @@ class CalledOnceTest {
         coreChecking.failNext = CallNotSent("connection refused")
 
         // Act
-        shouldThrow<CallNotSent> { calledOnce.debit(payment) }
+        shouldThrow<CallNotSent> { calledOnce.debit(payment, request) }
         claims.claims["p-7#PMT"].shouldBeNull()
-        calledOnce.debit(payment)
+        calledOnce.debit(payment, request)
 
         // Assert
         coreChecking.calls shouldContainExactly listOf("debit p-7", "debit p-7")
         claims.claims["p-7#PMT"]?.state shouldBe Claim.SENT
+    }
+
+    @Test
+    fun `after an operator releases an unresolved request, the resubmission calls core checking once`() = runTest {
+        // Arrange: lost, unresolved, then released by the operator
+        coreChecking.failNext = java.net.SocketTimeoutException("lost")
+        calledOnce.debit(payment, request)
+        now += 301_000
+        shouldThrow<CallUnresolved> { calledOnce.debit(payment, request) }
+        claims.release("p-7#PMT")
+
+        // Act
+        val outcome = calledOnce.debit(payment, request)
+
+        // Assert
+        outcome shouldBe Outcome.SENT
+        coreChecking.calls shouldContainExactly listOf("debit p-7", "debit p-7")
+        coreChecking.postings shouldBe setOf("p-7#PMT")
+    }
+
+    @Test
+    fun `the reconciler redelivers requests in doubt as the stream would, and leaves the rest alone`() = runTest {
+        // Arrange
+        claims.claims["p-7#PMT"] = Claim("p-7#PMT", Claim.CALLING, 1, request)
+        claims.claims["p-8#PMT"] = Claim("p-8#PMT", Claim.SENT, 1, "{}")
+        val payloads = mutableListOf<String>()
+        val reconciler = Reconciler(claims, redeliver = { payloads += it }, clock = { now })
+
+        // Act
+        val count = reconciler.reconcile()
+
+        // Assert: one Kinesis-shaped record carrying the original request
+        count shouldBe 1
+        val records = Json.parseToJsonElement(payloads.single()).jsonObject["Records"]!!.jsonArray
+        records.size shouldBe 1
+        val kinesis = records.single().jsonObject["kinesis"]!!.jsonObject
+        kinesis["partitionKey"]?.jsonPrimitive?.content shouldBe "p-7"
+        String(Base64.getDecoder().decode(kinesis["data"]!!.jsonPrimitive.content)) shouldBe request
+    }
+
+    @Test
+    fun `C-8 - the simulated request is lost the first time only, and nothing is posted`() = runTest {
+        // Arrange
+        val deliveries = mutableListOf<String>()
+        val seen = mutableSetOf<String>()
+        val simulated = SimulatedCoreChecking({ body, _ -> deliveries += body }, delaySeconds = 2, lost = { seen.add(it) })
+        val lostOne = payment.copy(from = Party(Party.CHECKING, Simulation.LOST_REQUEST_ACCOUNT))
+
+        // Act / Assert
+        shouldThrow<java.net.SocketTimeoutException> { simulated.debit(lostOne) }
+        deliveries.size shouldBe 0
+        simulated.debit(lostOne)
+        deliveries.size shouldBe 1
     }
 
     @Test

@@ -11,6 +11,28 @@ import kotlin.time.Duration
  * Simulation only: core checking being down. Unlike the other fault accounts, an outage is felt by every payment, so
  * its state is shared. A payment starts it at most once, so its own retries don't keep core checking down forever.
  */
+/** Simulation only: something that happens the first time for a key, and never again (e.g. C-8's lost request). */
+fun interface SimulatedOnce {
+    suspend fun firstTime(key: String): Boolean
+
+    companion object {
+        fun never() = SimulatedOnce { false }
+    }
+}
+
+class DynamoDbSimulatedOnce(private val client: DynamoDbClient, private val table: String) : SimulatedOnce {
+    override suspend fun firstTime(key: String): Boolean = try {
+        client.putItem(PutItemRequest {
+            tableName = table
+            item = mapOf("pk" to AttributeValue.S("SIMULATION#once#$key"))
+            conditionExpression = "attribute_not_exists(pk)"
+        })
+        true
+    } catch (e: ConditionalCheckFailedException) {
+        false
+    }
+}
+
 interface SimulatedOutage {
     suspend fun startOnce(paymentId: String, now: Long)
     suspend fun isDown(now: Long): Boolean

@@ -1,15 +1,21 @@
 package org.myorg.payments
 
+import software.amazon.awscdk.Duration
 import software.amazon.awscdk.RemovalPolicy
 import software.amazon.awscdk.services.dynamodb.Attribute
 import software.amazon.awscdk.services.dynamodb.AttributeType
 import software.amazon.awscdk.services.dynamodb.Billing
 import software.amazon.awscdk.services.dynamodb.TableV2
+import software.amazon.awscdk.services.events.Rule
+import software.amazon.awscdk.services.events.Schedule
+import software.amazon.awscdk.services.events.targets.LambdaFunction
 import software.constructs.Construct
 
 /**
  * Calls core checking for WITHDRAWAL_REQUESTED and REFUND_REQUESTED, **once**: each request is claimed in the
  * `calls` table before the call, and a request in doubt is resolved by asking core checking, never by calling again.
+ * Requests in doubt don't hold up the others: a reconciler redelivers them every minute until they are resolved or,
+ * past the grace period, become faults.
  *
  * In simulation mode it calls no one: a delayed message makes the simulator write the ledger row core checking would
  * have written to the ingress gateway's feed, and the inquiry reads that ledger.
@@ -31,7 +37,8 @@ class CoreCheckingEgressStack(scope: Construct, serviceProps: ServiceProps) : Ba
             "CALLS_TABLE_NAME" to calls.tableName,
             // A request in doubt is retried by the stream, not turned into a fault, until the grace period is over.
             "STREAM_RETRY_ENABLED" to "true",
-            "CALL_GRACE_SECONDS" to "300",
+            // How long a call may stay in doubt before it becomes a fault for an operator. Short locally, for demos.
+            "CALL_GRACE_SECONDS" to if (stage() == Stage.LOCAL) "60" else "300",
             // Circuit breaker: open after 3 failures in a row; try again after the cool-down.
             "BREAKER_THRESHOLD" to "3",
             "BREAKER_OPEN_SECONDS" to if (stage() == Stage.LOCAL) "15" else "30",
@@ -66,7 +73,24 @@ class CoreCheckingEgressStack(scope: Construct, serviceProps: ServiceProps) : Ba
         }
 
         calls.grantReadWriteData(listener)
-        // Requests wait on the channel rather than being dropped; the grace period bounds how long one can wait.
+        // While core checking is down, requests wait on the channel rather than being dropped.
         consumeFromKinesis(listener, importChannel("DefaultChannel", Channels.DEFAULT), retryAttempts = 10_000)
+
+        // Requests in doubt don't wait on the channel: every minute the reconciler redelivers them to the listener.
+        val reconciler = javaFunction(
+            "reconciler", "org.myorg.payments.ReconcilerHandler::handleRequest", jar,
+            baseLambdaEnvironment() + mapOf(
+                "CALLS_TABLE_NAME" to calls.tableName,
+                "LISTENER_FUNCTION_NAME" to listener.functionName,
+            ),
+            timeoutSeconds = 60,
+        )
+        calls.grantReadData(reconciler)
+        listener.grantInvoke(reconciler)
+        Rule.Builder.create(this, "ReconcileEveryMinute")
+            .ruleName("${service()}-${stage()}-reconcile")
+            .schedule(Schedule.rate(Duration.minutes(1)))
+            .targets(listOf(LambdaFunction(reconciler)))
+            .build()
     }
 }

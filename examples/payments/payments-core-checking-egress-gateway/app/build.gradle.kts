@@ -24,6 +24,7 @@ dependencies {
     implementation(platform(libs.aws.sdk.bom))
 
     implementation(project(":examples:payments:common-gateway"))
+    implementation(libs.aws.sdk.lambda)
     implementation(libs.kotlin.logging)
     implementation(libs.kotlinx.coroutines)
     implementation(libs.kotlinx.serialization.json)

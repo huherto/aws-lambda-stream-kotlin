@@ -54,8 +54,10 @@ open class BaseStack(scope: Construct, val serviceProps: ServiceProps) :
     /** Environment shared by every Lambda function of the subsystem. */
     fun baseLambdaEnvironment(): Map<String, String> = mapOf(
         // Tiered compilation stopped at C1 and the serial GC: faster, lighter cold starts for short-lived functions.
+        // A capped heap: LocalStack doesn't limit function containers to their memory size, so an uncapped JVM sizes
+        // its heap from the whole Docker VM, and a few dozen functions run Docker out of memory.
         "JAVA_TOOL_OPTIONS" to "-Dslf4j.provider=io.github.vitalijr2.aws.lambda.slf4j.AWSLambdaServiceProvider " +
-            "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 -XX:+UseSerialGC",
+            "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 -XX:+UseSerialGC -Xmx384m",
         "LOG_DEFAULT_LEVEL" to "DEBUG",
         "STAGE" to stage().id,
         // tags.source on every event this service publishes.

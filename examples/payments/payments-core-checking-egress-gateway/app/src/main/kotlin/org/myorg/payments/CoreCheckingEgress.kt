@@ -79,6 +79,7 @@ class SimulatedCoreChecking(
     private val delaySeconds: Int,
     private val postings: suspend (reference: String, txnType: String) -> Boolean = { _, _ -> false },
     private val outage: SimulatedOutage = SimulatedOutage.none(),
+    private val lost: SimulatedOnce = SimulatedOnce.never(),
     private val clock: () -> Long = System::currentTimeMillis,
     /** Core checking numbers every posting itself; a second call is a second posting. */
     private val newEntryId: () -> String = { "E" + java.util.UUID.randomUUID().toString().replace("-", "").take(16).uppercase() },
@@ -91,6 +92,10 @@ class SimulatedCoreChecking(
 
     override suspend fun debit(payment: Payment) {
         reachable(payment, starting = true)
+        // C-8: the first call is lost on the way; core checking never sees it.
+        if (payment.from.account == Simulation.LOST_REQUEST_ACCOUNT && lost.firstTime("lost#${payment.id}")) {
+            throw java.net.SocketTimeoutException("simulated: the call timed out and core checking never got it")
+        }
         schedule(payment, LedgerEntry.PAYMENT)
         // C-7: the debit is applied, but the answer never comes back.
         if (payment.from.account == Simulation.TIMEOUT_AFTER_DEBIT_ACCOUNT) {
@@ -124,6 +129,7 @@ class EgressContainer(val calledOnce: CalledOnce) {
                     SqsDelayedDelivery.fromEnvironment(),
                     Simulation.delaySeconds(2),
                     postings = LedgerPostings(dynamoDb, System.getenv("LEDGER_TABLE_NAME") ?: error("LEDGER_TABLE_NAME is not configured")),
+                    lost = DynamoDbSimulatedOnce(dynamoDb, System.getenv("CALLS_TABLE_NAME")!!),
                     outage = DynamoDbSimulatedOutage(
                         dynamoDb, System.getenv("CALLS_TABLE_NAME")!!,
                         lasts = kotlin.time.Duration.parse("${System.getenv("SIMULATED_OUTAGE_SECONDS")?.toLongOrNull() ?: 60}s"),
@@ -147,14 +153,14 @@ class EgressContainer(val calledOnce: CalledOnce) {
             ActionPipeline.builder()
                 .id("withdraw")
                 .eventFilter(EventFilters.name(PaymentsEvent.WITHDRAWAL_REQUESTED))
-                .action { uow -> calledOnce.debit((uow.event as PaymentEvent).payment) }
+                .action { uow -> calledOnce.debit((uow.event as PaymentEvent).payment, request = uow.event.toString()) }
                 .build()
         )
         .addPipeline(
             ActionPipeline.builder()
                 .id("refund")
                 .eventFilter(EventFilters.name(PaymentsEvent.REFUND_REQUESTED))
-                .action { uow -> calledOnce.credit((uow.event as PaymentEvent).payment) }
+                .action { uow -> calledOnce.credit((uow.event as PaymentEvent).payment, request = uow.event.toString()) }
                 .build()
         )
         .build()
@@ -209,16 +215,16 @@ class LedgerPostings(
 }
 
 /**
- * Calls in doubt are retried by the stream (with `STREAM_RETRY_ENABLED=true`) instead of becoming faults: the
- * inquiry needs time to see the posting. A call unresolved past the grace period does become a fault.
+ * While core checking is down or refuses the connection, requests are retried by the stream
+ * (with `STREAM_RETRY_ENABLED=true`) instead of becoming faults. A call unresolved past the grace period does become
+ * a fault, for an operator.
  */
 fun installCoreCheckingFaultManager() {
     AwsGlobalRegistry.setFaultManagerFactory {
         io.kopipes.core.faults.FaultManager(
             eventPublisher = AwsGlobalRegistry.eventPublisher(),
             isRetryable = {
-                it is CallOutcomeUnknown || it is CallInDoubt || it is CallNotSent || it is CoreCheckingUnavailable ||
-                    AwsGlobalRegistry.isAwsRetryable(it)
+                it is CallNotSent || it is CoreCheckingUnavailable || AwsGlobalRegistry.isAwsRetryable(it)
             },
         )
     }
