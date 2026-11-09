@@ -138,6 +138,15 @@ object LocalPayments {
 
     const val LEDGER_TABLE = "payments-core-checking-ingress-gateway-local-ledger"
     const val CALLS_TABLE = "payments-core-checking-egress-gateway-local-calls"
+    const val CARD_RATE_TABLE = "payments-card-processor-egress-gateway-local-rate"
+
+    /** How many 429s the simulated card processor has returned. */
+    suspend fun simulatedTooManyRequests(): Long =
+        (dynamoDb.getItem(GetItemRequest {
+            tableName = CARD_RATE_TABLE
+            key = mapOf("pk" to AttributeValue.S("SIMULATION#processor-429s"))
+            consistentRead = true
+        }).item?.get("count") as? AttributeValue.N)?.value?.toLong() ?: 0
 
     /** How many times the core checking egress gateway's circuit breaker has opened. */
     suspend fun breakerOpens(): Int =

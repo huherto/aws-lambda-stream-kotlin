@@ -130,8 +130,14 @@ blindly:
 - **Closed hours:** `-c coreCheckingClosedHours=22:00-06:00@America/New_York` keeps it open without any failure.
 - **Grace period:** a request in doubt gets its full grace period counted from when core checking came back.
 
+**Rate limit (card processor).** Every call takes a token from a per-second budget in the gateway's `rate` table,
+shared by all instances; with none left, it waits for the next second, so the backlog waits on the stream. A `429`
+that slips through is waited out (`Retry-After`) and retried, which is safe because the payment id is the idempotency
+key. The simulated processor always enforces the same rate (5/s locally, `-c cardProcessorRate=…` elsewhere) and counts
+its `429`s.
+
 The real-mode connectors (`HttpCoreChecking`, `HttpCardProcessor`, `S3TransferFile`) exist but are not deployed
-here. Not built: pacing under the card processor's rate limit, and the nightly job that joins the transfer lines and sends the file at cut-off.
+here. Not built: leasing rate tokens in blocks for high rates, and the nightly job that joins the transfer lines and sends the file at cut-off.
 
 ### Payments egress gateway and the downstream hub
 
@@ -232,6 +238,7 @@ Nothing is injected.
 | `BffApiITest` | `PUT` once (`202`, repeat `202`, other body `409`), validation (`401`, `400` with the field), `404` for another customer's payment, newest-first paging and status filter, latest `ACCOUNT_CHANGED` wins |
 | `BoundaryITest` | Only curated `PAYMENTS.*` events with source `external` reach the downstream bus: no `raw`, no `triggers`, no account numbers, no `ACCOUNTS.*` forwarded |
 | `IdempotenceITest` | A redelivered webhook event and a retried `PUT` change nothing |
+| `RateLimitITest` | A burst of 20 card payments is paced at the processor's 5/s: all complete, no second sees more than 5 credits, and the simulated processor counts no `429` |
 | `CircuitBreakerITest` | During a core checking outage (`C-5`) the breaker opens; payments wait, then complete, each debited once |
 | `CalledOnceITest` | Core checking is debited once, even when its answer is lost (`C-7`) or a `WITHDRAWAL_REQUESTED` is delivered twice; checked in the ledger |
 | `DuplicatesITest` | Fault accounts: a webhook delivered twice (`K-6`) and a settlement file dropped twice (`B-6`) still give one deposit, one outcome and one external event |

@@ -77,11 +77,11 @@ open class BaseStack(scope: Construct, val serviceProps: ServiceProps) :
      * [retryAttempts] times (`-1`: until it succeeds or its records expire), so this consumer waits while the others
      * carry on: each consumer has its own position on the channel.
      */
-    fun consumeFromKinesis(listener: Function, stream: IStream, retryAttempts: Int = 3) {
+    fun consumeFromKinesis(listener: Function, stream: IStream, retryAttempts: Int = 3, batchSize: Int = 100) {
         listener.addEventSource(
             KinesisEventSource.Builder.create(stream)
                 .startingPosition(StartingPosition.TRIM_HORIZON)
-                .batchSize(100)
+                .batchSize(batchSize)
                 .maxBatchingWindow(Duration.seconds(1))
                 .bisectBatchOnError(true)
                 .retryAttempts(retryAttempts)
