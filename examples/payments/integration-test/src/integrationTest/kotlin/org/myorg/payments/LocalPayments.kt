@@ -165,13 +165,31 @@ object LocalPayments {
             expressionAttributeValues = mapOf(":r" to AttributeValue.S(paymentId), ":t" to AttributeValue.S(txnType))
         }).count
 
-    /** LocalStack sweeps expired TTL items periodically; this asks it to do it now. */
-    fun expireNow() {
-        val response = http.send(
+    /**
+     * Does now what DynamoDB TTL does eventually: deletes the control service's deadline items whose deadline has passed
+     * (like scripts/expire-now.sh). LocalStack's own TTL sweep is asked first, but it has proved unreliable after state
+     * resets; a deletion is a deletion, and the control service reacts the same way.
+     */
+    suspend fun expireNow() {
+        http.send(
             HttpRequest.newBuilder(URI.create("$ENDPOINT/_aws/dynamodb/expired")).DELETE().build(),
             HttpResponse.BodyHandlers.ofString(),
         )
-        logger.info { "expired items: ${response.body()}" }
+        val now = System.currentTimeMillis() / 1000
+        val expired = dynamoDb.scan(aws.sdk.kotlin.services.dynamodb.model.ScanRequest {
+            tableName = CONTROL_EVENTS_TABLE
+            filterExpression = "#e = :t AND #ttl < :now"
+            expressionAttributeNames = mapOf("#e" to "expire", "#ttl" to "ttl")
+            expressionAttributeValues = mapOf(":t" to AttributeValue.Bool(true), ":now" to AttributeValue.N(now.toString()))
+            projectionExpression = "pk, sk"
+        }).items.orEmpty()
+        expired.forEach { key ->
+            dynamoDb.deleteItem(aws.sdk.kotlin.services.dynamodb.model.DeleteItemRequest {
+                tableName = CONTROL_EVENTS_TABLE
+                this.key = key
+            })
+        }
+        if (expired.isNotEmpty()) logger.info { "expired ${expired.size} deadline items" }
     }
 
     // ----------------------------------------------------------------------------------- the downstream subsystem

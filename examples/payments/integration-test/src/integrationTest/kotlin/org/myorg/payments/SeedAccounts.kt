@@ -4,6 +4,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.myorg.payments.LocalPayments.run
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.TimeSource
 
 /**
  * Every account the run needs, published before any test submits a payment. The default channel has one shard,
@@ -43,8 +44,11 @@ object SeedAccounts {
     suspend fun ensure() = lock.withLock {
         if (done) return@withLock
         seeds.forEach { LocalPayments.publishAccount(it.number, it.customer, it.status) }
+        // One budget for all of them: right after a deploy every function cold-starts, and the accounts' path (ingress
+        // channel, accounts gateway, bus, default channel, BFF) can take minutes to warm up. That's a one-time cost.
+        val deadline = TimeSource.Monotonic.markNow() + 8.minutes
         seeds.forEach { seed ->
-            eventually<Any>(3.minutes, what = "the BFF to know account ${seed.number}") { LocalPayments.bffAccount(seed.number) }
+            eventually<Any>((-deadline.elapsedNow()).coerceAtLeast(kotlin.time.Duration.ZERO), what = "the BFF to know account ${seed.number}") { LocalPayments.bffAccount(seed.number) }
         }
         done = true
     }

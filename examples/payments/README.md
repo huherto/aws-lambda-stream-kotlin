@@ -215,8 +215,10 @@ scripts/inject.sh deposited p-10     # → PAYMENT_COMPLETED
 scripts/publish-accounts.sh --rename
 ```
 
-`scripts/expire-now.sh` asks LocalStack to delete expired DynamoDB items immediately; without it you wait for
-LocalStack's periodic TTL sweep (`DYNAMODB_REMOVE_EXPIRED_ITEMS=1` in `docker-compose.yml`).
+`scripts/expire-now.sh` does now what DynamoDB TTL does eventually: it deletes the control service's deadline items
+whose deadline has passed, and the control service reacts as it would to a TTL deletion. It also asks LocalStack to
+sweep (`DYNAMODB_REMOVE_EXPIRED_ITEMS=1` in `docker-compose.yml`), but that sweep stopped deleting items from our tables
+after a few state resets, so the script doesn't rely on it.
 
 Every event on the bus is logged to `/aws/events/payments-event-hub-local-events` (faults to `…-faults`):
 `awslocal logs filter-log-events --log-group-name /aws/events/payments-event-hub-local-events`.
