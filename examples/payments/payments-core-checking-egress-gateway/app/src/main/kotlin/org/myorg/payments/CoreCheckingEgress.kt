@@ -55,12 +55,14 @@ class SimulatedCoreChecking(
     private val delivery: DelayedDelivery,
     private val delaySeconds: Int,
     private val clock: () -> Long = System::currentTimeMillis,
+    /** Core checking numbers every posting itself; a second call is a second posting. */
+    private val newEntryId: () -> String = { "E" + java.util.UUID.randomUUID().toString().replace("-", "").take(16).uppercase() },
 ) : CoreChecking {
     override suspend fun debit(payment: Payment) = schedule(payment, LedgerEntry.PAYMENT)
     override suspend fun credit(payment: Payment) = schedule(payment, LedgerEntry.REFUND)
 
     private suspend fun schedule(payment: Payment, txnType: String) {
-        val entry = simulatedLedgerEntry(payment, txnType, postedAt = clock() + delaySeconds * 1000L)
+        val entry = simulatedLedgerEntry(payment, txnType, postedAt = clock() + delaySeconds * 1000L, entryId = newEntryId())
         delivery.deliverLater(Json.encodeToString(LedgerEntry.serializer(), entry), delaySeconds)
     }
 }

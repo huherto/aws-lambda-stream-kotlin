@@ -51,7 +51,11 @@ class SimulatedCardProcessor(
 ) : CardProcessor {
     override suspend fun credit(payment: Payment) {
         val webhook = simulatedCardWebhook(payment, createdSeconds = clock() / 1000 + delaySeconds)
-        delivery.deliverLater(cardJson.encodeToString(CardWebhook.serializer(), webhook), delaySeconds)
+        val body = cardJson.encodeToString(CardWebhook.serializer(), webhook)
+        // K-6: the processor delivers the same webhook (same event_id) more than once.
+        repeat(Simulation.deliveries(payment.to.account)) { n ->
+            delivery.deliverLater(body, delaySeconds + n * Simulation.REDELIVERY_SECONDS)
+        }
     }
 }
 

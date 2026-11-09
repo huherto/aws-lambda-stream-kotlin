@@ -6,6 +6,7 @@ import io.kopipes.core.UnitOfWork
 import io.kopipes.core.faults.FaultManager
 import io.kopipes.core.sinks.EventPublisherInMemory
 import io.kotest.matchers.collections.shouldContainExactly
+import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
@@ -39,6 +40,20 @@ class BankNetworkEgressTest {
             SettlementLine("p-B-7", SettlementLine.SETTLED) to 180,
             SettlementLine("p-B-8", SettlementLine.REJECTED, "R03") to 20,
         )
+    }
+
+    @Test
+    fun `B-6 - the network drops the same settlement file twice`() = runTest {
+        // Arrange
+        val deliveries = mutableListOf<Pair<String, Int>>()
+        val network = SimulatedBankNetwork({ body, delay -> deliveries += body to delay }, delaySeconds = 20, lateDelaySeconds = 180)
+
+        // Act
+        network.transfer(Fixtures.toBank.copy(to = Party(Party.BANK, Simulation.DUPLICATE_FILE_BANK)))
+
+        // Assert
+        deliveries.map { it.second } shouldContainExactly listOf(20, 20 + Simulation.REDELIVERY_SECONDS)
+        deliveries.map { it.first }.toSet().size shouldBe 1
     }
 
     @Test

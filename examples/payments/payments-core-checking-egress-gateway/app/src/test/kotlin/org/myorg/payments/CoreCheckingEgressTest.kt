@@ -30,7 +30,7 @@ class CoreCheckingEgressTest {
     fun `in simulation the debit is not a call but the ledger row core checking would write, later`() = runTest {
         // Arrange
         val delivery = Recorded()
-        val coreChecking = SimulatedCoreChecking(delivery, delaySeconds = 2, clock = { 1000L })
+        val coreChecking = SimulatedCoreChecking(delivery, delaySeconds = 2, clock = { 1000L }, newEntryId = { "E-1" })
 
         // Act
         coreChecking.debit(Fixtures.payment)
@@ -39,7 +39,23 @@ class CoreCheckingEgressTest {
         val (body, delay) = delivery.deliveries.single()
         delay shouldBe 2
         Json.decodeFromString(LedgerEntry.serializer(), body) shouldBe
-            LedgerEntry("p-7-PMT", "C-1", "-100.00", "PMT", "p-7", "POSTED", null, "3000")
+            LedgerEntry("E-1", "C-1", "-100.00", "PMT", "p-7", "POSTED", null, "3000")
+    }
+
+    @Test
+    fun `like core checking, the simulation posts every call - a second debit is a second ledger row`() = runTest {
+        // Arrange
+        val delivery = Recorded()
+        val coreChecking = SimulatedCoreChecking(delivery, delaySeconds = 2)
+
+        // Act
+        coreChecking.debit(Fixtures.payment)
+        coreChecking.debit(Fixtures.payment)
+
+        // Assert
+        val entries = delivery.deliveries.map { Json.decodeFromString(LedgerEntry.serializer(), it.first) }
+        entries.map { it.REF_NO } shouldBe listOf("p-7", "p-7")
+        entries.map { it.ENTRY_ID }.toSet().size shouldBe 2
     }
 
     @Test

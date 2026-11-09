@@ -173,7 +173,7 @@ Ours, to make the system testable without the real external systems.
 - Every egress ESG that talks to an external system has one setting, **simulate**: off by default, and never on in production.
 - With simulate on, the egress ESG **doesn't contact the external system**. It behaves as if it had, and then produces **the response that system would have sent, in that system's own format**, and delivers it to **the ingress ESG's real input**: the same place the real system's answer would arrive.
 - **The ingress ESGs don't change** and can't tell a simulated response from a real one, so they still do their real translation and produce the real internal events.
-- **The outcome depends only on the account:** success, except for the failing accounts below. No other faults are simulated for now.
+- **The outcome depends only on the account:** success, except for the failing accounts below. **Fault accounts** still succeed, but their external system misbehaves on the way, the way it can in production (decision 18).
 - **Each response comes after a delay** that can be set per external system. An account with a long delay settles after the control service's deadline, to show `PAYMENT_EXPIRED` followed by a late deposit.
 
 | Account | Simulated outcome |
@@ -182,12 +182,14 @@ Ours, to make the system testable without the real external systems.
 | `K-3` | Card credit fails: card closed |
 | `B-8` | Bank transfer rejected: no such account |
 | `B-7` | Bank transfer settles, but **after** the deadline |
+| `K-6` | Card credit succeeds, but the processor **delivers the webhook twice** (fault account) |
+| `B-6` | Bank transfer settles, but the network **drops the settlement file twice** (fault account) |
 | any other | Success |
 
 Each egress ESG section says what its simulated response is.
 
 - **Simulation pairs each egress gateway with its ingress gateway.** In simulation mode, the egress gateway is configured with its partner's input: the change feed the core checking ingress reads, the card processor ingress's webhook URL **and its signing secret**, and the file location the bank network ingress watches. With simulation off, the egress gateway needs none of these.
-- **Not testable yet in simulation:** the circuit breaker (core checking down or closed for the night), pacing under the card processor's rate limit, and "called once" when a request event is delivered twice. Those guarantees stand, but proving them needs fault simulation, which is left for later.
+- **Not testable yet in simulation:** the circuit breaker (core checking down or closed for the night), pacing under the card processor's rate limit, and "called once" when a request event is delivered twice. Those guarantees stand; fault accounts for them are planned (decision 18). Duplicate webhooks and duplicate files are testable now (`K-6`, `B-6`).
 
 ---
 
@@ -390,7 +392,7 @@ Each step shows the event's `timestamp` (when the fact happened, not when the BF
 
 - **Called once per request:** core checking has no idempotency keys, yet each `WITHDRAWAL_REQUESTED` or `REFUND_REQUESTED` reaches it once, even when the event is delivered twice. *(Not testable yet in simulation.)*
 - **Circuit breaker:** while core checking is down or closed for the night, the ESG stops calling, and requests wait until it's back. *(Not testable yet in simulation.)*
-- **[Simulation mode](#simulation-mode-egress-esgs):** no call to core checking. The egress ESG writes the **ledger entry** core checking would have written (`REF_NO`, `AMT`, `STAT` = `POSTED` or `REJECTED`, `REJ_CD`) to the change feed the ingress ESG reads.
+- **[Simulation mode](#simulation-mode-egress-esgs):** no call to core checking. The egress ESG writes the **ledger entry** core checking would have written (`REF_NO`, `AMT`, `STAT` = `POSTED` or `REJECTED`, `REJ_CD`) to the change feed the ingress ESG reads. Like core checking, it numbers each posting itself (`ENTRY_ID`): **a second call is a second posting**, so a double debit would show in simulation too.
 
 ### Ingress: hears → produces
 
@@ -645,3 +647,4 @@ The internal event (ours), carrying only what the BFF needs:
 | 15 | How much of each service does the spec describe? (2026-11-07) | **Only the outside: every service is a black box.** Inputs, outputs, API, observable behaviour and guarantees; nothing about functions, tables, keys, timers or how idempotence is achieved |
 | 16 | How do we test without the external systems? (2026-11-07) | **A simulation mode in each egress ESG**, off by default. It pretends to call the external system and delivers that system's response, in its own format, to the **ingress ESG's real input**, so the ingress side is exercised unchanged. Outcomes by account (success or failure only, for now). This replaces the separate stub services |
 | 17 | Consolidation (2026-11-07) | `PUT` body, paging, `status` filter and error format defined; `publish-accounts` runs before the first payment; simulation pairs egress with ingress (including the webhook secret); guarantees that simulation can't show yet are marked; the talk's "Built in: Stage" rows removed; the account-outcome table lives here only |
+| 18 | How are faults simulated? (2026-11-09) | **Fault accounts**, in the same style as the outcome accounts: the account decides how the external system misbehaves, with no runtime switches. First: `K-6` (webhook delivered twice) and `B-6` (settlement file dropped twice). The core checking simulation numbers every posting, so calling it twice posts twice. Next: accounts for a double debit ("called once"), an outage (circuit breaker) and the card processor's rate limit |

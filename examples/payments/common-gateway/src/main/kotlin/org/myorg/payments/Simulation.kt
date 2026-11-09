@@ -23,6 +23,20 @@ object Simulation {
     /** Bank transfer settles, but after the control service's deadline. */
     const val LATE_BANK_ACCOUNT = "B-7"
 
+    // Fault accounts: the outcome is still success, but the external system misbehaves on the way.
+
+    /** The card processor delivers the same webhook twice. */
+    const val DUPLICATE_WEBHOOK_CARD = "K-6"
+
+    /** The bank network drops the same settlement file twice. */
+    const val DUPLICATE_FILE_BANK = "B-6"
+
+    /** How many times the external system delivers its answer for this account. */
+    fun deliveries(account: String): Int = if (account == DUPLICATE_WEBHOOK_CARD || account == DUPLICATE_FILE_BANK) 2 else 1
+
+    /** Seconds between repeated deliveries of the same answer. */
+    const val REDELIVERY_SECONDS = 3
+
     fun enabled(): Boolean = System.getenv("SIMULATE")?.equals("true", ignoreCase = true) == true
 
     fun delaySeconds(default: Int): Int = System.getenv("SIMULATED_DELAY_SECONDS")?.toIntOrNull() ?: default
