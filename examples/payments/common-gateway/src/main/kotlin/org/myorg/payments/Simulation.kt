@@ -25,6 +25,9 @@ object Simulation {
 
     // Fault accounts: the outcome is still success, but the external system misbehaves on the way.
 
+    /** Core checking applies the debit, but the call times out: the answer is lost. */
+    const val TIMEOUT_AFTER_DEBIT_ACCOUNT = "C-7"
+
     /** The card processor delivers the same webhook twice. */
     const val DUPLICATE_WEBHOOK_CARD = "K-6"
 

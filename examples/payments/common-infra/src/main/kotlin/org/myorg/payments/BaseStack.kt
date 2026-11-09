@@ -53,7 +53,9 @@ open class BaseStack(scope: Construct, val serviceProps: ServiceProps) :
 
     /** Environment shared by every Lambda function of the subsystem. */
     fun baseLambdaEnvironment(): Map<String, String> = mapOf(
-        "JAVA_TOOL_OPTIONS" to "-Dslf4j.provider=io.github.vitalijr2.aws.lambda.slf4j.AWSLambdaServiceProvider",
+        // Tiered compilation stopped at C1 and the serial GC: faster, lighter cold starts for short-lived functions.
+        "JAVA_TOOL_OPTIONS" to "-Dslf4j.provider=io.github.vitalijr2.aws.lambda.slf4j.AWSLambdaServiceProvider " +
+            "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 -XX:+UseSerialGC",
         "LOG_DEFAULT_LEVEL" to "DEBUG",
         "STAGE" to stage().id,
         // tags.source on every event this service publishes.
@@ -70,15 +72,19 @@ open class BaseStack(scope: Construct, val serviceProps: ServiceProps) :
         return Stream.fromStreamArn(this, id, streamArn)
     }
 
-    /** Wires a Lambda function to read a Kinesis channel at its own pace. */
-    fun consumeFromKinesis(listener: Function, stream: IStream) {
+    /**
+     * Wires a Lambda function to read a Kinesis channel at its own pace. A failed batch is retried
+     * [retryAttempts] times (`-1`: until it succeeds or its records expire), so this consumer waits while the others
+     * carry on: each consumer has its own position on the channel.
+     */
+    fun consumeFromKinesis(listener: Function, stream: IStream, retryAttempts: Int = 3) {
         listener.addEventSource(
             KinesisEventSource.Builder.create(stream)
                 .startingPosition(StartingPosition.TRIM_HORIZON)
                 .batchSize(100)
                 .maxBatchingWindow(Duration.seconds(1))
                 .bisectBatchOnError(true)
-                .retryAttempts(3)
+                .retryAttempts(retryAttempts)
                 .parallelizationFactor(1)
                 .build()
         )

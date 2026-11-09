@@ -27,6 +27,7 @@ object SeedAccounts {
         // The seed accounts of scripts/publish-accounts.sh: same ids and timestamps, so publishing again is a no-op.
         Seed("C-1", "u-42"),
         Seed("C-2", "u-42"),
+        Seed("C-7", "u-42"),
         Seed(open, customer),
         Seed(closed, customer, status = "closed"),
         Seed(toClose, customer),

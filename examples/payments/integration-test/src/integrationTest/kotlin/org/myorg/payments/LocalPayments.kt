@@ -136,6 +136,17 @@ object LocalPayments {
             .map { PaymentsEventCodec.decode(it) as PaymentsEvent }
             .sortedBy { it.timestamp }
 
+    const val LEDGER_TABLE = "payments-core-checking-ingress-gateway-local-ledger"
+
+    /** Core checking's postings for a payment, by transaction type (`PMT` debit, `RFND` refund): a double debit shows here. */
+    suspend fun ledgerPostings(paymentId: String, txnType: String): Int =
+        dynamoDb.query(QueryRequest {
+            tableName = LEDGER_TABLE
+            indexName = "byReference"
+            keyConditionExpression = "REF_NO = :r AND TXN_TYP = :t"
+            expressionAttributeValues = mapOf(":r" to AttributeValue.S(paymentId), ":t" to AttributeValue.S(txnType))
+        }).count
+
     /** LocalStack sweeps expired TTL items periodically; this asks it to do it now. */
     fun expireNow() {
         val response = http.send(

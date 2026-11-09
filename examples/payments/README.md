@@ -102,6 +102,7 @@ system.
 | `K-3` | Card credit fails (`card_closed` → `account-closed`) | 5 s |
 | `B-8` | Bank transfer rejected (`R03` → `account-not-found`) | 20 s |
 | `B-7` | Bank transfer settles after the 2-minute deadline | 180 s |
+| `C-7` | Withdrawal succeeds; the call times out after the debit was applied (fault account) | 2 s |
 | `K-6` | Card credit succeeds; the webhook is delivered twice (fault account) | 5 s, again 3 s later |
 | `B-6` | Bank transfer settles; the settlement file is dropped twice (fault account) | 20 s, again 3 s later |
 | any other | Success | 2 s / 5 s / 20 s |
@@ -109,9 +110,19 @@ system.
 The core checking simulation numbers every posting (`ENTRY_ID`) the way core checking does, so a second call is a
 second debit, visible in the ledger. Fault accounts (`K-6`, `B-6`) succeed but make the external system answer twice.
 
+**Called once (core checking).** Core checking has no idempotency keys, so the egress gateway never calls twice
+blindly:
+1. It claims each request (`<payment>#PMT` or `#RFND`) in its `calls` table before calling, and marks it `SENT` after.
+2. A repeat that finds `SENT` does nothing.
+3. A repeat that finds the claim still `CALLING` is in doubt. It asks core checking whether the posting exists
+   (in simulation, the ledger's `byReference` index):
+   - found: it marks the request `SENT` and doesn't call;
+   - not found yet: it fails retryably, and the request waits on the channel;
+   - still not found after 5 minutes: it becomes a `fault`.
+4. A call that certainly never left (connection refused) releases the claim, so the next attempt calls normally.
+
 The real-mode connectors (`HttpCoreChecking`, `HttpCardProcessor`, `S3TransferFile`) exist but are not deployed
-here. Not built: the circuit breaker, pacing under the card processor's rate limit, "called once" for core
-checking, and the nightly job that joins the transfer lines and sends the file at cut-off.
+here. Not built: the circuit breaker, pacing under the card processor's rate limit, and the nightly job that joins the transfer lines and sends the file at cut-off.
 
 ### Payments egress gateway and the downstream hub
 
@@ -212,6 +223,7 @@ Nothing is injected.
 | `BffApiITest` | `PUT` once (`202`, repeat `202`, other body `409`), validation (`401`, `400` with the field), `404` for another customer's payment, newest-first paging and status filter, latest `ACCOUNT_CHANGED` wins |
 | `BoundaryITest` | Only curated `PAYMENTS.*` events with source `external` reach the downstream bus: no `raw`, no `triggers`, no account numbers, no `ACCOUNTS.*` forwarded |
 | `IdempotenceITest` | A redelivered webhook event and a retried `PUT` change nothing |
+| `CalledOnceITest` | Core checking is debited once, even when its answer is lost (`C-7`) or a `WITHDRAWAL_REQUESTED` is delivered twice; checked in the ledger |
 | `DuplicatesITest` | Fault accounts: a webhook delivered twice (`K-6`) and a settlement file dropped twice (`B-6`) still give one deposit, one outcome and one external event |
 
 - **Isolated per run:** each run uses its own payment ids, customers and accounts, so runs don't interfere and

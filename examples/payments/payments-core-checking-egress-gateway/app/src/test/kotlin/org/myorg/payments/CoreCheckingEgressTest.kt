@@ -64,10 +64,11 @@ class CoreCheckingEgressTest {
         val publisher = EventPublisherInMemory()
         GlobalRegistry.setFaultManager(FaultManager(publisher, skipErrorLogging = true))
         val calls = mutableListOf<String>()
-        val container = EgressContainer(object : CoreChecking {
+        val container = EgressContainer(CalledOnce(object : CoreChecking {
             override suspend fun debit(payment: Payment) { calls += "debit ${payment.id}" }
             override suspend fun credit(payment: Payment) { calls += "credit ${payment.id}" }
-        })
+            override suspend fun posted(payment: Payment, txnType: String) = false
+        }, InMemoryClaims()))
         val events = listOf(Fixtures.withdrawalRequested(), Fixtures.depositRequested(), Fixtures.refundRequested())
 
         // Act
