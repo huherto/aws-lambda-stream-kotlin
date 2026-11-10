@@ -1,4 +1,4 @@
-package org.myorg.payments
+package org.myorg.payments.adapters.inbound
 
 import io.kopipes.aws.AwsGlobalRegistry
 import io.kopipes.aws.flavors.CdcPipeline
@@ -9,6 +9,9 @@ import io.kopipes.core.PipelineAssembler
 import io.kopipes.core.UnitOfWork
 import io.kopipes.core.flavors.Pipeline
 import io.kopipes.core.sinks.EventPublisher
+import org.myorg.payments.PaymentSubmitted
+import org.myorg.payments.adapters.outbound.Items
+import org.myorg.payments.adapters.outbound.paymentRecordOf
 
 /**
  * Accepted means published: `PAYMENT_SUBMITTED` comes from the table's stream, never from the request itself.

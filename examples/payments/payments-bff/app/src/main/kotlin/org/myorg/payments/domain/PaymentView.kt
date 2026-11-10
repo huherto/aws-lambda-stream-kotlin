@@ -1,6 +1,8 @@
-package org.myorg.payments
+package org.myorg.payments.domain
 
 import kotlinx.serialization.Serializable
+import org.myorg.payments.Party
+import org.myorg.payments.Payment
 import org.myorg.payments.PaymentsEvent.Companion.DEPOSIT_FAILED
 import org.myorg.payments.PaymentsEvent.Companion.DEPOSIT_REQUESTED
 import org.myorg.payments.PaymentsEvent.Companion.FUNDS_DEPOSITED

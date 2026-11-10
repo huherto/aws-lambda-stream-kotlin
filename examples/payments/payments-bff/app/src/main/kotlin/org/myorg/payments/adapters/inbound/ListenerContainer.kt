@@ -1,4 +1,4 @@
-package org.myorg.payments
+package org.myorg.payments.adapters.inbound
 
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
 import aws.sdk.kotlin.services.dynamodb.model.UpdateItemRequest
@@ -10,6 +10,8 @@ import io.kopipes.core.PipelineAssembler
 import io.kopipes.core.UnitOfWork
 import io.kopipes.core.filters.EventFilters
 import io.kopipes.core.flavors.Pipeline
+import org.myorg.payments.*
+import org.myorg.payments.adapters.outbound.Items
 
 /** The events that move the customer's view. */
 val VIEW_EVENTS = setOf(

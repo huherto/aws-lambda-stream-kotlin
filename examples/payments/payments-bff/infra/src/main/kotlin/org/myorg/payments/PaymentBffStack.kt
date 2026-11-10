@@ -54,10 +54,10 @@ class PaymentBffStack(scope: Construct, serviceProps: ServiceProps) : BaseStack(
     init {
         val bus = EventBus.fromEventBusName(this, "Bus", busName())
 
-        val restApi = newFunction("restapi", "org.myorg.payments.RestApi::handleRequest")
+        val restApi = newFunction("restapi", "org.myorg.payments.adapters.inbound.RestApi::handleRequest")
         table.grantReadWriteData(restApi)
 
-        val trigger = newFunction("trigger", "org.myorg.payments.Trigger::handleRequest")
+        val trigger = newFunction("trigger", "org.myorg.payments.adapters.inbound.Trigger::handleRequest")
         table.grantStreamRead(trigger)
         bus.grantPutEventsTo(trigger)
         trigger.addEventSource(
@@ -69,7 +69,7 @@ class PaymentBffStack(scope: Construct, serviceProps: ServiceProps) : BaseStack(
                 .build()
         )
 
-        val listener = newFunction("listener", "org.myorg.payments.Listener::handleRequest")
+        val listener = newFunction("listener", "org.myorg.payments.adapters.inbound.Listener::handleRequest")
         table.grantReadWriteData(listener)
         consumeFromKinesis(listener, importChannel("DefaultChannel", Channels.DEFAULT))
 

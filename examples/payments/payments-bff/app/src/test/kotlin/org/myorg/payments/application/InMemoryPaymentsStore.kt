@@ -1,4 +1,8 @@
-package org.myorg.payments
+package org.myorg.payments.application
+
+import org.myorg.payments.Account
+import org.myorg.payments.domain.PaymentRecord
+import org.myorg.payments.domain.ValidRequest
 
 /** A [PaymentsStore] that behaves like the DynamoDB one, for testing the API without a table. */
 class InMemoryPaymentsStore : PaymentsStore {

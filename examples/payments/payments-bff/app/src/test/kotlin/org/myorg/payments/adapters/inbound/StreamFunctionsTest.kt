@@ -1,4 +1,4 @@
-package org.myorg.payments
+package org.myorg.payments.adapters.inbound
 
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
 import io.kopipes.aws.from.RecordImage
@@ -11,6 +11,8 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import org.junit.jupiter.api.Test
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue as StreamAV
+import org.myorg.payments.*
+import org.myorg.payments.adapters.outbound.Items
 
 class StreamFunctionsTest {
 

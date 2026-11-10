@@ -1,4 +1,4 @@
-package org.myorg.payments
+package org.myorg.payments.domain
 
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.nulls.shouldBeNull
@@ -14,6 +14,7 @@ import org.myorg.payments.PaymentsEvent.Companion.PAYMENT_EXPIRED
 import org.myorg.payments.PaymentsEvent.Companion.PAYMENT_FAILED
 import org.myorg.payments.PaymentsEvent.Companion.REFUND_REQUESTED
 import org.myorg.payments.PaymentsEvent.Companion.WITHDRAWAL_FAILED
+import org.myorg.payments.*
 
 class PaymentViewTest {
 

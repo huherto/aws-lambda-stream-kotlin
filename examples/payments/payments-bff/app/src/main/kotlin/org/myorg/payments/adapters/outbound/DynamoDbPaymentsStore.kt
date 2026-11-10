@@ -1,4 +1,4 @@
-package org.myorg.payments
+package org.myorg.payments.adapters.outbound
 
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
@@ -8,6 +8,15 @@ import aws.sdk.kotlin.services.dynamodb.model.QueryRequest
 import aws.sdk.kotlin.services.dynamodb.model.UpdateItemRequest
 import io.kopipes.aws.utils.DynamoDbAttributeValueMapReader
 import io.kopipes.core.utils.AttributeValueMapReader
+import org.myorg.payments.Account
+import org.myorg.payments.Party
+import org.myorg.payments.Payment
+import org.myorg.payments.application.PaymentKey
+import org.myorg.payments.application.PaymentsPage
+import org.myorg.payments.application.PaymentsStore
+import org.myorg.payments.application.SubmitOutcome
+import org.myorg.payments.domain.PaymentRecord
+import org.myorg.payments.domain.ValidRequest
 
 /**
  * The BFF's one table. Two kinds of items:
@@ -64,26 +73,7 @@ fun accountOf(item: AttributeValueMapReader): Account? {
     )
 }
 
-/** Where a page of a customer's payments starts: the last payment of the previous page. */
-data class PaymentKey(val id: String, val submittedAt: Long)
-
-data class PaymentsPage(val records: List<PaymentRecord>, val more: Boolean)
-
-sealed interface SubmitOutcome {
-    /** The first successful `PUT` for this id. */
-    data class Accepted(val record: PaymentRecord) : SubmitOutcome
-
-    /** The id was already accepted; the caller compares the stored request with its own. */
-    data class AlreadyExists(val record: PaymentRecord?) : SubmitOutcome
-}
-
-interface PaymentsStore {
-    suspend fun findAccount(number: String): Account?
-    suspend fun findPayment(id: String): PaymentRecord?
-    suspend fun submit(request: ValidRequest, submittedAt: Long): SubmitOutcome
-    suspend fun listByCustomer(customerId: String, after: PaymentKey?, limit: Int): PaymentsPage
-}
-
+/** The [PaymentsStore] port on the BFF's DynamoDB table. */
 class DynamoDbPaymentsStore(
     private val client: DynamoDbClient,
     private val tableName: String,

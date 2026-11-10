@@ -1,4 +1,4 @@
-package org.myorg.payments
+package org.myorg.payments.adapters.inbound
 
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
@@ -9,14 +9,26 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import mu.KotlinLogging
+import org.myorg.payments.application.PaymentKey
+import org.myorg.payments.application.Submission
+import org.myorg.payments.domain.PaymentView
+import org.myorg.payments.domain.Rejection
+import org.myorg.payments.domain.Status
 import java.util.Base64
+
+/** The one error shape of the API. */
+@Serializable
+data class ApiError(val error: String, val message: String, val field: String? = null) {
+    constructor(rejection: Rejection) : this(rejection.error, rejection.message, rejection.field)
+}
 
 /** A page of a customer's payments, newest first. `next` is absent on the last page. */
 @Serializable
 data class PaymentsPageView(val items: List<PaymentView>, val next: String? = null)
 
 /**
- * The customer's only entry point.
+ * The customer's only entry point: a driving adapter that turns HTTP into calls on the `Payments` port and its
+ * answers back into HTTP. Routing, headers, query parameters, cursors and status codes live here; the use cases don't.
  *
  * | Method and path                              | Response                                   |
  * |----------------------------------------------|--------------------------------------------|
@@ -61,32 +73,18 @@ class RestApi(
         }
     }
 
-    private suspend fun put(customerId: String, id: String?, body: String?): APIGatewayProxyResponseEvent {
-        val request = when (val validation = validate(id, customerId, body)) {
-            is Validation.Invalid -> return respond(400, validation.error)
-            is Validation.Valid -> validation.request
+    private suspend fun put(customerId: String, id: String?, body: String?): APIGatewayProxyResponseEvent =
+        when (val submission = container.payments.submit(customerId, id, body)) {
+            is Submission.Accepted -> respond(202, submission.view)
+            is Submission.Invalid -> respond(400, ApiError(submission.rejection))
+            is Submission.Conflict ->
+                respond(409, ApiError("conflict", "payment ${submission.id} was already submitted with a different body"))
         }
-
-        val store = container.store
-        checkSource(request, store.findAccount(request.from.account))?.let { return respond(400, it) }
-
-        return when (val outcome = store.submit(request, container.clock())) {
-            is SubmitOutcome.Accepted -> respond(202, viewOf(outcome.record))
-            is SubmitOutcome.AlreadyExists -> {
-                val existing = outcome.record
-                if (existing != null && existing.requestHash == request.hash) respond(202, viewOf(existing))
-                else respond(409, ApiError("conflict", "payment ${request.id} was already submitted with a different body"))
-            }
-        }
-    }
 
     private suspend fun get(customerId: String, id: String?): APIGatewayProxyResponseEvent {
-        val record = id?.let { container.store.findPayment(it) }
-        // Another customer's payment is not found, not forbidden, so ids can't be probed.
-        if (record == null || record.payment.customerId != customerId) {
-            return respond(404, ApiError("not-found", "no such payment"))
-        }
-        return respond(200, viewOf(record))
+        val view = id?.let { container.payments.find(customerId, it) }
+            ?: return respond(404, ApiError("not-found", "no such payment"))
+        return respond(200, view)
     }
 
     private suspend fun list(customerId: String, input: APIGatewayProxyRequestEvent): APIGatewayProxyResponseEvent {
@@ -108,8 +106,8 @@ class RestApi(
             decodeCursor(it) ?: return respond(400, ApiError("invalid-request", "cursor is not valid", "cursor"))
         }
 
-        val page = pageOf(container.store, customerId, statuses, limit, cursor)
-        return respond(200, page)
+        val page = container.payments.list(customerId, statuses, limit, cursor)
+        return respond(200, PaymentsPageView(page.items, next = page.next?.let(::encodeCursor)))
     }
 
     private fun header(input: APIGatewayProxyRequestEvent, name: String): String? =
@@ -129,36 +127,6 @@ class RestApi(
                 .withBody(responseJson.encodeToString(body))
     }
 }
-
-/**
- * Collects up to [limit] payments matching [statuses], newest first. `status` is computed, not stored,
- * so the filter runs here, reading as many pages of the index as it takes.
- */
-suspend fun pageOf(
-    store: PaymentsStore,
-    customerId: String,
-    statuses: Set<Status>,
-    limit: Int,
-    cursor: PaymentKey?,
-): PaymentsPageView {
-    val items = mutableListOf<PaymentView>()
-    var after = cursor
-    while (true) {
-        val page = store.listByCustomer(customerId, after, limit)
-        for ((index, record) in page.records.withIndex()) {
-            val view = viewOf(record)
-            if (statuses.isEmpty() || view.status in statuses) items += view
-            if (items.size == limit) {
-                val more = index < page.records.lastIndex || page.more
-                return PaymentsPageView(items, next = if (more) encodeCursor(record.paymentKey()) else null)
-            }
-        }
-        if (!page.more || page.records.isEmpty()) return PaymentsPageView(items)
-        after = page.records.last().paymentKey()
-    }
-}
-
-private fun PaymentRecord.paymentKey() = PaymentKey(payment.id, payment.submittedAt)
 
 /** Opaque to the client. */
 fun encodeCursor(key: PaymentKey): String =
