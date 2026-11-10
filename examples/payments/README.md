@@ -6,6 +6,7 @@ between the subsystem and the outside world.
 
 - [PaymentsServiceSpecs.md](PaymentsServiceSpecs.md): what each service consumes, produces and guarantees.
 - [PaymentsMockSystemsSpecs.md](PaymentsMockSystemsSpecs.md): how to run it without the real outside world.
+- [hexagonal.md](hexagonal.md): how each service is cut into domain, application and adapters, and where kopipes fits.
 
 Running example: payment `p-7`, 100 from checking account `C-1` to card `K-2`, for customer `u-42`.
 
