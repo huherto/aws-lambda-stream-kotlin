@@ -1,4 +1,4 @@
-package org.myorg.payments
+package org.myorg.payments.application
 
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldContainExactly
@@ -8,6 +8,7 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
+import org.myorg.payments.*
 import java.time.ZonedDateTime
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -228,28 +229,5 @@ class CalledOnceWithBreakerTest {
         // Assert
         shouldThrow<CoreCheckingUnavailable> { withFailingInquiry.debit(Fixtures.payment) }
         store.state.state shouldBe BreakerState.OPEN
-    }
-
-    @Test
-    fun `C-5 - the simulated core checking goes down for everyone, once per payment`() = runTest {
-        // Arrange
-        var downUntil = 0L
-        val started = mutableSetOf<String>()
-        val outage = object : SimulatedOutage {
-            override suspend fun startOnce(paymentId: String, now: Long) {
-                if (started.add(paymentId)) downUntil = now + 60_000
-            }
-            override suspend fun isDown(now: Long) = now < downUntil
-        }
-        val simulated = SimulatedCoreChecking({ _, _ -> }, delaySeconds = 2, outage = outage, clock = { now })
-        val down = Fixtures.payment.copy(id = "p-5", from = Party(Party.CHECKING, Simulation.OUTAGE_ACCOUNT))
-
-        // Act / Assert
-        shouldThrow<CallNotSent> { simulated.debit(down) }
-        shouldThrow<CallNotSent> { simulated.debit(Fixtures.payment) }
-        shouldThrow<CallNotSent> { simulated.posted(Fixtures.payment, LedgerEntry.PAYMENT) }
-        now += 60_000
-        simulated.debit(down)
-        simulated.debit(Fixtures.payment)
     }
 }

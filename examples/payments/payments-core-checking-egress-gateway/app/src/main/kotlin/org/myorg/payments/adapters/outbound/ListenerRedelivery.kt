@@ -1,20 +1,15 @@
-package org.myorg.payments
+package org.myorg.payments.adapters.outbound
 
 import aws.sdk.kotlin.services.lambda.LambdaClient
 import aws.sdk.kotlin.services.lambda.model.InvocationType
 import aws.sdk.kotlin.services.lambda.model.InvokeRequest
 import aws.smithy.kotlin.runtime.net.url.Url
-import com.amazonaws.services.lambda.runtime.Context
-import com.amazonaws.services.lambda.runtime.RequestHandler
-import com.amazonaws.services.lambda.runtime.events.ScheduledEvent
-import io.kopipes.aws.AwsGlobalRegistry
-import io.kopipes.core.utils.loggedLazy
-import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import mu.KotlinLogging
+import org.myorg.payments.application.Claim
+import org.myorg.payments.application.Redelivery
 import java.util.Base64
 
 /**
@@ -38,38 +33,23 @@ fun redeliveryOf(claims: List<Claim>, now: Long): String {
     return buildJsonObject { put("Records", JsonArray(records)) }.toString()
 }
 
-/**
- * Requests in doubt don't wait on the stream, so nothing would look at them again. Every minute, the reconciler
- * redelivers each one to the listener, whose called-once logic asks core checking once: confirmed, still in doubt,
- * or (past the grace period) a fault for an operator. It never calls core checking itself.
- */
-class Reconciler(
-    private val claims: Claims,
-    private val redeliver: suspend (payload: String) -> Unit,
+/** Redelivers by invoking the listener function with a Kinesis-shaped event. */
+class ListenerRedelivery(
+    private val invoke: suspend (payload: String) -> Unit,
     private val clock: () -> Long = System::currentTimeMillis,
-    private val batch: Int = 10,
-) {
-    private val logger = KotlinLogging.logger { }
+) : Redelivery {
 
-    suspend fun reconcile(): Int {
-        val inDoubt = claims.inDoubt().filter { it.request != null }
-        if (inDoubt.isEmpty()) return 0
-        logger.info { "redelivering ${inDoubt.size} request(s) in doubt: ${inDoubt.map { it.key }}" }
-        inDoubt.chunked(batch).forEach { chunk -> redeliver(redeliveryOf(chunk, clock())) }
-        return inDoubt.size
-    }
+    override suspend fun redeliver(claims: List<Claim>) = invoke(redeliveryOf(claims, clock()))
 
     companion object {
-        fun build(): Reconciler {
-            val dynamoDb = AwsGlobalRegistry.dynamoDbClientFactory().getClient("reconciler")
-            val claims = DynamoDbClaims(dynamoDb, System.getenv("CALLS_TABLE_NAME") ?: error("CALLS_TABLE_NAME is not configured"))
-            val listener = System.getenv("LISTENER_FUNCTION_NAME") ?: error("LISTENER_FUNCTION_NAME is not configured")
+        private val logger = KotlinLogging.logger { }
+
+        fun lambda(listener: String): ListenerRedelivery {
             val lambda = LambdaClient {
                 region = System.getenv("AWS_REGION") ?: "us-east-1"
                 System.getenv("AWS_ENDPOINT_URL")?.let { endpointUrl = Url.parse(it) }
             }
-            val logger = KotlinLogging.logger { }
-            return Reconciler(claims, redeliver = { payload ->
+            return ListenerRedelivery(invoke = { payload ->
                 val response = lambda.invoke(InvokeRequest {
                     functionName = listener
                     invocationType = InvocationType.RequestResponse
@@ -80,13 +60,4 @@ class Reconciler(
             })
         }
     }
-}
-
-/** Scheduled every minute. */
-class ReconcilerHandler(
-    factory: () -> Reconciler = { Reconciler.build() },
-) : RequestHandler<ScheduledEvent, Int> {
-    private val reconciler by loggedLazy("Reconciler", KotlinLogging.logger { }, factory)
-
-    override fun handleRequest(event: ScheduledEvent, context: Context): Int = runBlocking { reconciler.reconcile() }
 }

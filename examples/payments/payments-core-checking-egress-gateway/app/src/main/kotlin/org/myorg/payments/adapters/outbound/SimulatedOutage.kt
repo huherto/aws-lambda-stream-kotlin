@@ -1,4 +1,4 @@
-package org.myorg.payments
+package org.myorg.payments.adapters.outbound
 
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue

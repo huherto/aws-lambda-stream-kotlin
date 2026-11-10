@@ -50,7 +50,7 @@ class CoreCheckingEgressStack(scope: Construct, serviceProps: ServiceProps) : Ba
             val ledgerName = Partners.ledgerTableName(stage())
             val ledger = TableV2.fromTableName(this, "Ledger", ledgerName)
             val simulator = javaFunction(
-                "simulator", "org.myorg.payments.Simulator::handleRequest", jar,
+                "simulator", "org.myorg.payments.adapters.outbound.Simulator::handleRequest", jar,
                 env + ("LEDGER_TABLE_NAME" to ledgerName),
             )
             ledger.grantWriteData(simulator)
@@ -63,13 +63,13 @@ class CoreCheckingEgressStack(scope: Construct, serviceProps: ServiceProps) : Ba
                 "SIMULATED_OUTAGE_SECONDS" to "60",
             )
             // An invocation may sleep up to 20 s for an open breaker, then spend up to 10 s on an inquiry.
-            javaFunction("listener", "org.myorg.payments.Listener::handleRequest", jar, env, timeoutSeconds = 60).also { listener ->
+            javaFunction("listener", "org.myorg.payments.adapters.inbound.Listener::handleRequest", jar, env, timeoutSeconds = 60).also { listener ->
                 queue.grantSendMessages(listener)
                 ledger.grantReadData(listener)
             }
         } else {
             val url = node.tryGetContext("coreCheckingUrl")?.toString() ?: "https://core-checking.invalid"
-            javaFunction("listener", "org.myorg.payments.Listener::handleRequest", jar, env + ("CORE_CHECKING_URL" to url), timeoutSeconds = 60)
+            javaFunction("listener", "org.myorg.payments.adapters.inbound.Listener::handleRequest", jar, env + ("CORE_CHECKING_URL" to url), timeoutSeconds = 60)
         }
 
         calls.grantReadWriteData(listener)
@@ -78,7 +78,7 @@ class CoreCheckingEgressStack(scope: Construct, serviceProps: ServiceProps) : Ba
 
         // Requests in doubt don't wait on the channel: every minute the reconciler redelivers them to the listener.
         val reconciler = javaFunction(
-            "reconciler", "org.myorg.payments.ReconcilerHandler::handleRequest", jar,
+            "reconciler", "org.myorg.payments.adapters.inbound.ReconcilerHandler::handleRequest", jar,
             baseLambdaEnvironment() + mapOf(
                 "CALLS_TABLE_NAME" to calls.tableName,
                 "LISTENER_FUNCTION_NAME" to listener.functionName,

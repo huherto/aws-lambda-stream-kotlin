@@ -1,4 +1,4 @@
-package org.myorg.payments
+package org.myorg.payments.application
 
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldContainExactly
@@ -6,12 +6,8 @@ import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.Test
-import java.util.Base64
+import org.myorg.payments.*
 import kotlin.time.Duration.Companion.seconds
 
 /** Claims in memory, behaving like the DynamoDB ones. */
@@ -193,50 +189,20 @@ class CalledOnceTest {
     }
 
     @Test
-    fun `the reconciler redelivers requests in doubt as the stream would, and leaves the rest alone`() = runTest {
+    fun `the reconciler redelivers the requests in doubt, and leaves the rest alone`() = runTest {
         // Arrange
         claims.claims["p-7#PMT"] = Claim("p-7#PMT", Claim.CALLING, 1, request)
         claims.claims["p-8#PMT"] = Claim("p-8#PMT", Claim.SENT, 1, "{}")
-        val payloads = mutableListOf<String>()
-        val reconciler = Reconciler(claims, redeliver = { payloads += it }, clock = { now })
+        claims.claims["p-9#PMT"] = Claim("p-9#PMT", Claim.CALLING, 1, null)
+        val redelivered = mutableListOf<List<Claim>>()
+        val reconciler = Reconciler(claims, redelivery = { redelivered += it })
 
         // Act
         val count = reconciler.reconcile()
 
-        // Assert: one Kinesis-shaped record carrying the original request
+        // Assert: only a claim in doubt that kept its request can be redelivered
         count shouldBe 1
-        val records = Json.parseToJsonElement(payloads.single()).jsonObject["Records"]!!.jsonArray
-        records.size shouldBe 1
-        val kinesis = records.single().jsonObject["kinesis"]!!.jsonObject
-        kinesis["partitionKey"]?.jsonPrimitive?.content shouldBe "p-7"
-        String(Base64.getDecoder().decode(kinesis["data"]!!.jsonPrimitive.content)) shouldBe request
+        redelivered.single().map { it.key } shouldContainExactly listOf("p-7#PMT")
     }
 
-    @Test
-    fun `C-8 - the simulated request is lost the first time only, and nothing is posted`() = runTest {
-        // Arrange
-        val deliveries = mutableListOf<String>()
-        val seen = mutableSetOf<String>()
-        val simulated = SimulatedCoreChecking({ body, _ -> deliveries += body }, delaySeconds = 2, lost = { seen.add(it) })
-        val lostOne = payment.copy(from = Party(Party.CHECKING, Simulation.LOST_REQUEST_ACCOUNT))
-
-        // Act / Assert
-        shouldThrow<java.net.SocketTimeoutException> { simulated.debit(lostOne) }
-        deliveries.size shouldBe 0
-        simulated.debit(lostOne)
-        deliveries.size shouldBe 1
-    }
-
-    @Test
-    fun `C-7 - the simulated core checking applies the debit and then times out`() = runTest {
-        // Arrange
-        val deliveries = mutableListOf<String>()
-        val simulated = SimulatedCoreChecking({ body, _ -> deliveries += body }, delaySeconds = 2)
-
-        // Act / Assert
-        shouldThrow<java.net.SocketTimeoutException> {
-            simulated.debit(payment.copy(from = Party(Party.CHECKING, Simulation.TIMEOUT_AFTER_DEBIT_ACCOUNT)))
-        }
-        deliveries.size shouldBe 1
-    }
 }

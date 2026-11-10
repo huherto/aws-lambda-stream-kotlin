@@ -1,4 +1,4 @@
-package org.myorg.payments
+package org.myorg.payments.adapters.inbound
 
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue
@@ -20,6 +20,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
+import org.myorg.payments.*
 import java.util.Date
 
 class CoreCheckingIngressTest {

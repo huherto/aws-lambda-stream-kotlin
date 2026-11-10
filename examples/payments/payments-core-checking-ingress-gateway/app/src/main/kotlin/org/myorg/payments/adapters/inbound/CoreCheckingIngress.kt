@@ -1,4 +1,4 @@
-package org.myorg.payments
+package org.myorg.payments.adapters.inbound
 
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
@@ -15,8 +15,11 @@ import io.kopipes.core.filters.EventFilters
 import io.kopipes.core.sinks.EventPublisher
 import io.kopipes.core.utils.loggedLazy
 import mu.KotlinLogging
+import org.myorg.payments.*
 
 /**
+ * An anti-corruption layer, so all of it is adapter: no policy of its own, only translation.
+ *
  * Hears core checking through change data capture on its ledger and produces our events.
  *
  * | Hears (a ledger row)                       | Produces                       |

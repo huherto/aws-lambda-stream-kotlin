@@ -1,4 +1,4 @@
-package org.myorg.payments
+package org.myorg.payments.adapters.inbound
 
 import io.kopipes.aws.AwsGlobalRegistry
 import io.kopipes.core.GlobalRegistry
@@ -13,6 +13,9 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
+import org.myorg.payments.*
+import org.myorg.payments.adapters.outbound.SimulatedCoreChecking
+import org.myorg.payments.application.*
 
 class CoreCheckingEgressTest {
 
