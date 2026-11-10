@@ -1,4 +1,6 @@
-package org.myorg.payments
+package org.myorg.payments.adapters.inbound
+
+import org.myorg.payments.*
 
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import io.kopipes.aws.AwsGlobalRegistry
@@ -17,11 +19,11 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.myorg.payments.StreamRecords.correlationItem
-import org.myorg.payments.StreamRecords.dynamodbEvent
-import org.myorg.payments.StreamRecords.eventItem
-import org.myorg.payments.StreamRecords.insert
-import org.myorg.payments.StreamRecords.ttlRemove
+import org.myorg.payments.adapters.inbound.StreamRecords.correlationItem
+import org.myorg.payments.adapters.inbound.StreamRecords.dynamodbEvent
+import org.myorg.payments.adapters.inbound.StreamRecords.eventItem
+import org.myorg.payments.adapters.inbound.StreamRecords.insert
+import org.myorg.payments.adapters.inbound.StreamRecords.ttlRemove
 
 class TriggerContainerTest {
 

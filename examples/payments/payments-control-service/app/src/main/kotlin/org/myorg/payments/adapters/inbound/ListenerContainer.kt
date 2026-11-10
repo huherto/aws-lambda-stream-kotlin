@@ -1,4 +1,4 @@
-package org.myorg.payments
+package org.myorg.payments.adapters.inbound
 
 import io.kopipes.aws.from.KinesisAdapter
 import io.kopipes.aws.sinks.DynamoDbEventsMicrostore
@@ -6,6 +6,8 @@ import io.kopipes.core.PipelineAssembler
 import io.kopipes.core.filters.EventFilters
 import io.kopipes.core.flavors.CollectPipeline
 import io.kopipes.core.sinks.EventsMicrostore
+import org.myorg.payments.PaymentEvent
+import org.myorg.payments.PaymentsEventCodec
 
 /**
  * Collects every payment event from the default channel into the events table (`pk = <event id>`, `sk = EVENT`).

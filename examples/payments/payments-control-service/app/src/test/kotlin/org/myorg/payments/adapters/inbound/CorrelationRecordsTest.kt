@@ -1,4 +1,6 @@
-package org.myorg.payments
+package org.myorg.payments.adapters.inbound
+
+import org.myorg.payments.*
 
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import io.kopipes.aws.DynamodbRaw
@@ -13,12 +15,12 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
-import org.myorg.payments.StreamRecords.correlationItem
-import org.myorg.payments.StreamRecords.eventItem
-import org.myorg.payments.StreamRecords.insert
-import org.myorg.payments.StreamRecords.ttlRemove
+import org.myorg.payments.adapters.inbound.StreamRecords.correlationItem
+import org.myorg.payments.adapters.inbound.StreamRecords.eventItem
+import org.myorg.payments.adapters.inbound.StreamRecords.insert
+import org.myorg.payments.adapters.inbound.StreamRecords.ttlRemove
 
-class RulesTest {
+class CorrelationRecordsTest {
 
     private val adapter = DynamodbAdapter()
 
@@ -101,52 +103,5 @@ class RulesTest {
         events.first().shouldBeInstanceOf<DepositFailed>()
     }
 
-    @Test
-    fun `depositIsLate is true only while no deposit outcome has been heard`() {
-        // Arrange
-        val nothingYet = UnitOfWork(correlated = listOf(Fixtures.depositRequested()))
-        val deposited = UnitOfWork(correlated = listOf(Fixtures.depositRequested(), Fixtures.fundsDeposited()))
-        val failed = UnitOfWork(correlated = listOf(Fixtures.depositRequested(), Fixtures.depositFailed()))
 
-        // Act / Assert
-        depositIsLate(nothingYet) shouldBe true
-        depositIsLate(deposited) shouldBe false
-        depositIsLate(failed) shouldBe false
-    }
-
-    @Test
-    fun `undone copies the reason of the deposit failure`() {
-        // Arrange
-        val uow = UnitOfWork(
-            event = Fixtures.fundsRefunded(),
-            correlated = listOf(Fixtures.depositFailed(reason = Reasons.ACCOUNT_NOT_FOUND), Fixtures.fundsRefunded()),
-        )
-
-        // Act
-        val emitted = undone(uow)
-
-        // Assert
-        emitted.single().shouldBeInstanceOf<PaymentFailed>().reason shouldBe Reasons.ACCOUNT_NOT_FOUND
-    }
-
-    @Test
-    fun `undone throws when there is no deposit failure to explain the refund`() {
-        // Arrange
-        val uow = UnitOfWork(event = Fixtures.fundsRefunded(), correlated = listOf(Fixtures.fundsRefunded()))
-
-        // Act / Assert
-        shouldThrow<IllegalStateException> { undone(uow) }
-    }
-
-    @Test
-    fun `nothingToUndo copies the reason of the withdrawal failure`() {
-        // Arrange
-        val uow = UnitOfWork(event = Fixtures.withdrawalFailed(reason = Reasons.ACCOUNT_CLOSED))
-
-        // Act
-        val emitted = nothingToUndo(uow)
-
-        // Assert
-        emitted.single().shouldBeInstanceOf<PaymentFailed>().reason shouldBe Reasons.ACCOUNT_CLOSED
-    }
 }

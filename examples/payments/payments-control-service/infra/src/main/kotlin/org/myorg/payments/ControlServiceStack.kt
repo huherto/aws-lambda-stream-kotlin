@@ -49,11 +49,11 @@ class ControlServiceStack(scope: Construct, serviceProps: ServiceProps) : BaseSt
     init {
         val bus = EventBus.fromEventBusName(this, "Bus", busName())
 
-        val listener = newFunction("listener", "org.myorg.payments.Listener::handleRequest")
+        val listener = newFunction("listener", "org.myorg.payments.adapters.inbound.Listener::handleRequest")
         eventsTable.grantReadWriteData(listener)
         consumeFromKinesis(listener, importChannel("DefaultChannel", Channels.DEFAULT))
 
-        val trigger = newFunction("trigger", "org.myorg.payments.Trigger::handleRequest")
+        val trigger = newFunction("trigger", "org.myorg.payments.adapters.inbound.Trigger::handleRequest")
         eventsTable.grantReadWriteData(trigger)
         eventsTable.grantStreamRead(trigger)
         bus.grantPutEventsTo(trigger)

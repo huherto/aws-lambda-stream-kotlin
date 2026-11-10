@@ -1,4 +1,6 @@
-package org.myorg.payments
+package org.myorg.payments.adapters.inbound
+
+import org.myorg.payments.*
 
 import io.kopipes.aws.AwsGlobalRegistry
 import io.kopipes.aws.testsupport.TestContext

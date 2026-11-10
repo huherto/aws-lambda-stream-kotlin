@@ -1,4 +1,4 @@
-package org.myorg.payments
+package org.myorg.payments.adapters.inbound
 
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler

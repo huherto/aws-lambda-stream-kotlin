@@ -1,4 +1,6 @@
-package org.myorg.payments
+package org.myorg.payments.adapters.inbound
+
+import org.myorg.payments.*
 
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent

@@ -1,4 +1,4 @@
-package org.myorg.payments
+package org.myorg.payments.adapters.inbound
 
 import io.kopipes.aws.AwsGlobalRegistry
 import io.kopipes.aws.from.DynamodbAdapter
@@ -12,6 +12,11 @@ import io.kopipes.core.flavors.CorrelatePipeline
 import io.kopipes.core.flavors.EvaluatePipeline
 import io.kopipes.core.sinks.EventPublisher
 import io.kopipes.core.sinks.EventsMicrostore
+import org.myorg.payments.PaymentEvent
+import org.myorg.payments.PaymentsEvent
+import org.myorg.payments.PaymentsEventCodec
+import org.myorg.payments.domain.PaymentProcess
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Reacts to the control service's events table: correlates each collected event to its payment,
@@ -45,6 +50,10 @@ class TriggerContainer(
             deadlineSeconds = System.getenv("DEADLINE_SECONDS")?.toLongOrNull() ?: DEFAULT_DEADLINE_SECONDS,
         )
     }
+
+    /** The event that triggered a rule, as the type the domain expects. */
+    private inline fun <reified T : PaymentsEvent> UnitOfWork.triggering(): T =
+        event as? T ?: error("Expected ${T::class.simpleName}, got ${event?.eventType()}")
 
     private fun paymentId(uow: UnitOfWork): String =
         (uow.event as? PaymentEvent)?.payment?.id ?: error("Not a payment event: ${uow.event?.eventType()}")
@@ -83,15 +92,15 @@ class TriggerContainer(
 
     internal fun withDeadline(uow: UnitOfWork): UnitOfWork {
         val requestedAt = uow.event?.timestamp ?: System.currentTimeMillis()
-        val deadline = requestedAt / 1000 + deadlineSeconds
+        val deadline = PaymentProcess.deadline(requestedAt, deadlineSeconds.seconds)
         return uow.copy(meta = (uow.meta ?: emptyMap()) + ("ttl" to deadline.toString()))
     }
 
     private fun rule(
         id: String,
         trigger: String,
-        emit: (UnitOfWork) -> List<Event>,
         expression: ((UnitOfWork) -> Boolean)? = null,
+        emit: (UnitOfWork) -> List<Event>,
     ): EvaluatePipeline =
         EvaluatePipeline.builder()
             .id(id)
@@ -105,14 +114,19 @@ class TriggerContainer(
             .apply { if (expression != null) expression(expression) }
             .build()
 
-    val startPipeline by lazy { rule(Rules.START, PaymentsEvent.PAYMENT_SUBMITTED, ::start) }
-    val nextStepPipeline by lazy { rule(Rules.NEXT_STEP, PaymentsEvent.FUNDS_WITHDRAWN, ::nextStep) }
-    val donePipeline by lazy { rule(Rules.DONE, PaymentsEvent.FUNDS_DEPOSITED, ::done) }
-    val nothingToUndoPipeline by lazy { rule(Rules.NOTHING_TO_UNDO, PaymentsEvent.WITHDRAWAL_FAILED, ::nothingToUndo) }
-    val compensatePipeline by lazy { rule(Rules.COMPENSATE, PaymentsEvent.DEPOSIT_FAILED, ::compensate) }
+    // Each rule pipeline hands the triggering event (and, where needed, the payment's history) to the domain.
+    val startPipeline by lazy { rule(Rules.START, PaymentsEvent.PAYMENT_SUBMITTED) { listOf(PaymentProcess.start(it.triggering())) } }
+    val nextStepPipeline by lazy { rule(Rules.NEXT_STEP, PaymentsEvent.FUNDS_WITHDRAWN) { listOf(PaymentProcess.nextStep(it.triggering())) } }
+    val donePipeline by lazy { rule(Rules.DONE, PaymentsEvent.FUNDS_DEPOSITED) { listOf(PaymentProcess.done(it.triggering())) } }
+    val nothingToUndoPipeline by lazy { rule(Rules.NOTHING_TO_UNDO, PaymentsEvent.WITHDRAWAL_FAILED) { listOf(PaymentProcess.nothingToUndo(it.triggering())) } }
+    val compensatePipeline by lazy { rule(Rules.COMPENSATE, PaymentsEvent.DEPOSIT_FAILED) { listOf(PaymentProcess.compensate(it.triggering())) } }
 
     // Needs the payment's other events (the DEPOSIT_FAILED behind the refund), so it queries the correlation.
-    val undonePipeline by lazy { rule(Rules.UNDONE, PaymentsEvent.FUNDS_REFUNDED, ::undone, expression = { true }) }
+    val undonePipeline by lazy {
+        rule(Rules.UNDONE, PaymentsEvent.FUNDS_REFUNDED, expression = { true }) {
+            listOf(PaymentProcess.undone(it.triggering(), correlatedEvents(it)))
+        }
+    }
 
     val timeoutPipeline: EvaluatePipeline by lazy {
         EvaluatePipeline.builder()
@@ -124,8 +138,8 @@ class TriggerContainer(
             .normalizer(correlationNormalizer(Rules.TIMEOUT, codec, { it.old }, ::atDeadline))
             .correlationKeySuffix(DEADLINE_SUFFIX)
             .eventFilter(EventFilters.name(PaymentsEvent.DEPOSIT_REQUESTED))
-            .expression(::depositIsLate)
-            .emit(::timeout)
+            .expression { PaymentProcess.isDepositLate(correlatedEvents(it)) }
+            .emit { listOf(PaymentProcess.expire(it.triggering())) }
             .build()
     }
 
