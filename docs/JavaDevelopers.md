@@ -40,21 +40,27 @@ public record OrderPlacedEvent(
 
 ### 2. Configure your Pipeline
 
-Use the `PipelineAssembler` builder to configure your processing logic.
+Use the `PipelineAssembler` builder to configure your processing logic. kopipes keeps no global state: an
+`AwsKopipesContext` holds the shared collaborators (env config, client factories, event publisher, fault manager), and
+you pass it to what you build. `new AwsKopipesContext()` reads the usual env vars and publishes to EventBridge.
 
 ```java
 public class OrderProcessingContainer {
     public final PipelineAssembler assembler;
+    public final DynamodbAdapter dynamoDbAdapter;
 
-    public OrderProcessingContainer() {
+    public OrderProcessingContainer(AwsKopipesContext context) {
         CdcPipeline cdcPipeline = CdcPipeline.builder()
                 .id("order-cdc")
+                .eventPublisher(context.getEventPublisher())
                 .toEventJava(this::toEvent)
                 .build();
 
         this.assembler = PipelineAssembler.builder()
+                .context(context)
                 .addPipeline(cdcPipeline)
                 .build();
+        this.dynamoDbAdapter = new DynamodbAdapter(context);
     }
 
     private Event toEvent(UnitOfWork uow) {
@@ -70,7 +76,7 @@ The `PipelineRunner` provides a Java-friendly way to execute your pipelines with
 
 ```java
 public class OrderHandler implements RequestHandler<DynamodbEvent, Void> {
-    private final OrderProcessingContainer container = new OrderProcessingContainer();
+    private final OrderProcessingContainer container = new OrderProcessingContainer(new AwsKopipesContext());
 
     @Override
     public Void handleRequest(DynamodbEvent input, Context context) {

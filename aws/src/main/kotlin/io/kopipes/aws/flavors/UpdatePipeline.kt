@@ -1,5 +1,7 @@
 package io.kopipes.aws.flavors
 
+import io.kopipes.aws.AwsKopipesContext
+
 import aws.sdk.kotlin.services.dynamodb.model.BatchGetItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.QueryRequest
 import aws.sdk.kotlin.services.dynamodb.model.UpdateItemRequest
@@ -36,9 +38,11 @@ class UpdatePipeline(
     private val toQueryRequest: ((UnitOfWork) -> QueryRequest?)?,
     private val toGetRequest: ((UnitOfWork) -> BatchGetItemRequest?)?,
     private val toUpdateRequest: suspend (UnitOfWork) -> UpdateItemRequest?,
+    private val parallel: Int = DynamoDbSink.DEFAULT_PARALLEL,
+    private val stepMetrics: Boolean = false,
 ) : Pipeline(id) {
 
-    val dynamoDbSink by lazy { DynamoDbSink(DynamoDbConnector(dynamoDbConnectorOptions)) }
+    val dynamoDbSink by lazy { DynamoDbSink(DynamoDbConnector(dynamoDbConnectorOptions), parallel, stepMetrics) }
     val dynamoDbQuery by lazy { DynamoDbQuery(dynamoDbConnectorOptions) }
 
     internal fun forCollectedEvents(uow: UnitOfWork): Boolean {
@@ -148,7 +152,9 @@ class UpdatePipeline(
     }
 
     class Builder : PipelineBuilder<UpdatePipeline, Builder>() {
-        private var dynamoDbConnectorOptions = DynamoDbConnector.Options()
+        private var dynamoDbConnectorOptions: DynamoDbConnector.Options? = null
+        private var parallel: Int = DynamoDbSink.DEFAULT_PARALLEL
+        private var stepMetrics: Boolean = false
         private var eventCodec: EventCodec? = null
         private var eventFilter: EventFilter = EventFilter.Any
         private var onContentType: (UnitOfWork) -> Boolean = { true }
@@ -158,6 +164,15 @@ class UpdatePipeline(
         private var toUpdateRequest: (suspend (UnitOfWork) -> UpdateItemRequest?)? = null
 
         fun dynamoDbConnectorOptions(options: DynamoDbConnector.Options) = apply { this.dynamoDbConnectorOptions = options }
+
+        /** Takes the DynamoDB client factory, parallelism and step-metrics switch from [context]. */
+        fun context(context: AwsKopipesContext) = apply {
+            dynamoDbConnectorOptions = DynamoDbConnector.Options(context.dynamoDbClientFactory)
+            parallel = context.envConfig.parallel() ?: DynamoDbSink.DEFAULT_PARALLEL
+            stepMetrics = context.stepMetrics
+        }
+        fun parallel(parallel: Int) = apply { this.parallel = parallel }
+        fun stepMetrics(enabled: Boolean) = apply { this.stepMetrics = enabled }
         fun eventCodec(eventCodec: EventCodec) = apply { this.eventCodec = eventCodec }
         fun eventFilter(eventFilter: EventFilter) = apply { this.eventFilter = eventFilter }
         fun onContentType(onContentType: (UnitOfWork) -> Boolean) = apply { this.onContentType = onContentType }
@@ -173,14 +188,17 @@ class UpdatePipeline(
         override fun build(): UpdatePipeline {
             return UpdatePipeline(
                 id = id ?: throw IllegalArgumentException("id is required"),
-                dynamoDbConnectorOptions = dynamoDbConnectorOptions,
+                dynamoDbConnectorOptions = dynamoDbConnectorOptions
+                    ?: throw IllegalArgumentException("dynamoDbConnectorOptions (or context) is required"),
                 eventCodec = eventCodec ?: throw IllegalArgumentException("eventCodec is required"),
                 eventFilter = eventFilter,
                 onContentType = onContentType,
                 compactRule = compactRule,
                 toQueryRequest = toQueryRequest,
                 toGetRequest = toGetRequest,
-                toUpdateRequest = toUpdateRequest ?: throw IllegalArgumentException("toUpdateRequest is required")
+                toUpdateRequest = toUpdateRequest ?: throw IllegalArgumentException("toUpdateRequest is required"),
+                parallel = parallel,
+                stepMetrics = stepMetrics,
             )
         }
     }

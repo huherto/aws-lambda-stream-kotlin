@@ -4,7 +4,7 @@ import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.StreamRecord
 import io.kopipes.aws.from.DynamodbAdapter
 import io.kopipes.aws.testsupport.TestContext
-import io.kopipes.core.GlobalRegistry
+import io.kopipes.aws.AwsKopipesContext
 import io.kopipes.core.PipelineAssembler
 import io.kopipes.core.faults.FaultManager
 import io.kopipes.core.sinks.EventPublisherInMemory
@@ -20,9 +20,9 @@ class TriggerTest {
     fun createContainer(): TriggerContainer {
         val eventPublisher = EventPublisherInMemory()
         val faultManager = FaultManager(eventPublisher, skipErrorLogging = true)
-        GlobalRegistry.setFaultManager(faultManager)
         val eventsMicrostore = EventsMicrostoreInMemory(faultManager)
         val container = TriggerContainer(
+            AwsKopipesContext(eventPublisher = eventPublisher, faultManager = faultManager),
             eventsMicrostore = eventsMicrostore,
             eventPublisher = eventPublisher
         )
@@ -44,7 +44,7 @@ class TriggerTest {
         assembler.shouldBeInstanceOf<PipelineAssembler>()
 
         assembler.getFaultManager() shouldNotBe null
-        assembler.getFaultManager() shouldBe GlobalRegistry.faultManager()
+        assembler.getFaultManager() shouldBe container.context.faultManager
 
         dynamoDBAdapter shouldNotBe null
         dynamoDBAdapter.shouldBeInstanceOf<DynamodbAdapter>()

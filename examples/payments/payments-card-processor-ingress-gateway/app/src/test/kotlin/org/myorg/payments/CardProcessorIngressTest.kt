@@ -1,13 +1,12 @@
 package org.myorg.payments
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent
-import io.kopipes.aws.AwsGlobalRegistry
+import io.kopipes.aws.AwsKopipesContext
 import io.kopipes.aws.testsupport.TestContext
 import io.kopipes.core.sinks.EventPublisherInMemory
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
-import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 
 class CardProcessorIngressTest {
@@ -24,8 +23,6 @@ class CardProcessorIngressTest {
     }
     private val webhook = Webhook { WebhookContainer(secret, lookup, publisher, clock = { nowSeconds * 1000 }) }
 
-    @AfterEach
-    fun tearDown() = AwsGlobalRegistry.reset()
 
     private fun post(body: String, signature: String? = CardSignature.sign(secret, nowSeconds, body)) =
         webhook.handleRequest(

@@ -93,11 +93,8 @@ open class AwsEnvironmentConfig : EnvironmentConfig() {
         return System.getenv("NAMESPACE")
     }
 
-    companion object {
-        val defaultInstance = AwsEnvironmentConfig()
+    open fun claimCheckBucketName(): String? {
+        return System.getenv("CLAIMCHECK_BUCKET_NAME")
     }
 }
 
-fun awsEnvConfig(): AwsEnvironmentConfig {
-    return AwsGlobalRegistry.envConfig()
-}

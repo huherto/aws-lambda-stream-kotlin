@@ -14,6 +14,8 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import io.kopipes.core.faults.FaultManager
+import io.kopipes.core.sinks.EventPublisherInMemory
 import org.junit.jupiter.api.Test
 import org.myorg.payments.adapters.inbound.StreamRecords.correlationItem
 import org.myorg.payments.adapters.inbound.StreamRecords.eventItem
@@ -22,7 +24,7 @@ import org.myorg.payments.adapters.inbound.StreamRecords.ttlRemove
 
 class CorrelationRecordsTest {
 
-    private val adapter = DynamodbAdapter()
+    private val adapter = DynamodbAdapter(FaultManager(EventPublisherInMemory(), skipErrorLogging = true))
 
     private fun uowOf(record: DynamodbEvent.DynamodbStreamRecord): UnitOfWork =
         runBlocking { adapter.fromDynamoDB(StreamRecords.dynamodbEvent(record)).first() }

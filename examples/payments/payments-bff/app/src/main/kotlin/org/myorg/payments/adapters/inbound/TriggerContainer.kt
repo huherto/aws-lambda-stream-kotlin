@@ -1,6 +1,6 @@
 package org.myorg.payments.adapters.inbound
 
-import io.kopipes.aws.AwsGlobalRegistry
+import io.kopipes.aws.AwsKopipesContext
 import io.kopipes.aws.flavors.CdcPipeline
 import io.kopipes.aws.from.DynamodbAdapter
 import io.kopipes.aws.from.RecordPair
@@ -35,12 +35,13 @@ fun toPaymentSubmitted(uow: UnitOfWork): Event? {
 }
 
 class TriggerContainer(
-    val eventPublisher: EventPublisher,
+    val context: AwsKopipesContext,
+    val eventPublisher: EventPublisher = context.eventPublisher,
 ) {
     companion object {
         const val SUBMITTED = "submitted"
 
-        fun build(): TriggerContainer = TriggerContainer(eventPublisher = AwsGlobalRegistry.eventPublisher())
+        fun build(): TriggerContainer = TriggerContainer(AwsKopipesContext())
     }
 
     val cdcPipeline: Pipeline by lazy {
@@ -53,9 +54,10 @@ class TriggerContainer(
 
     val assembler: PipelineAssembler by lazy {
         PipelineAssembler.builder()
+            .context(context)
             .addPipeline(cdcPipeline)
             .build()
     }
 
-    val dynamoDbAdapter: DynamodbAdapter by lazy { DynamodbAdapter() }
+    val dynamoDbAdapter: DynamodbAdapter by lazy { DynamodbAdapter(context) }
 }

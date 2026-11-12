@@ -1,7 +1,6 @@
 package org.myorg.payments.adapters.inbound
 
-import io.kopipes.aws.AwsGlobalRegistry
-import io.kopipes.core.GlobalRegistry
+import io.kopipes.aws.AwsKopipesContext
 import io.kopipes.core.UnitOfWork
 import io.kopipes.core.faults.FaultManager
 import io.kopipes.core.sinks.EventPublisherInMemory
@@ -11,7 +10,6 @@ import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
-import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.myorg.payments.*
 import org.myorg.payments.adapters.outbound.SimulatedCoreChecking
@@ -26,8 +24,6 @@ class CoreCheckingEgressTest {
         }
     }
 
-    @AfterEach
-    fun tearDown() = AwsGlobalRegistry.reset()
 
     @Test
     fun `in simulation the debit is not a call but the ledger row core checking would write, later`() = runTest {
@@ -65,9 +61,9 @@ class CoreCheckingEgressTest {
     fun `withdrawals debit, refunds credit, everything else is ignored, and nothing is published`() = runTest {
         // Arrange
         val publisher = EventPublisherInMemory()
-        GlobalRegistry.setFaultManager(FaultManager(publisher, skipErrorLogging = true))
+        val context = AwsKopipesContext(eventPublisher = publisher, faultManager = FaultManager(publisher, skipErrorLogging = true))
         val calls = mutableListOf<String>()
-        val container = EgressContainer(CalledOnce(object : CoreChecking {
+        val container = EgressContainer(context, CalledOnce(object : CoreChecking {
             override suspend fun debit(payment: Payment) { calls += "debit ${payment.id}" }
             override suspend fun credit(payment: Payment) { calls += "credit ${payment.id}" }
             override suspend fun posted(payment: Payment, txnType: String) = false

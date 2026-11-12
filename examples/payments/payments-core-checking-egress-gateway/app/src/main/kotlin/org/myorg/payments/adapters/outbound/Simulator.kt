@@ -5,7 +5,7 @@ import aws.sdk.kotlin.services.dynamodb.model.PutItemRequest
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.SQSEvent
-import io.kopipes.aws.AwsGlobalRegistry
+import io.kopipes.aws.AwsKopipesContext
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import mu.KotlinLogging
@@ -18,9 +18,10 @@ import org.myorg.payments.LedgerEntry
 class Simulator : RequestHandler<SQSEvent, Void?> {
     private val logger = KotlinLogging.logger { }
     private val ledgerTable = System.getenv("LEDGER_TABLE_NAME") ?: "undefined"
+    private val kopipes = AwsKopipesContext()
 
     override fun handleRequest(event: SQSEvent, context: Context): Void? = runBlocking {
-        val client = AwsGlobalRegistry.dynamoDbClientFactory().getClient("simulator")
+        val client = kopipes.dynamoDbClientFactory.getClient("simulator")
         for (message in event.records) {
             val entry = Json.decodeFromString(LedgerEntry.serializer(), message.body)
             client.putItem(PutItemRequest {

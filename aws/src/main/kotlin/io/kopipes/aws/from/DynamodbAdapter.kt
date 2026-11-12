@@ -1,10 +1,9 @@
 package io.kopipes.aws.from
 
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
-import io.kopipes.aws.AwsGlobalRegistry
+import io.kopipes.aws.AwsKopipesContext
 import io.kopipes.aws.DynamodbRaw
 import io.kopipes.core.EventCodec
-import io.kopipes.core.GlobalRegistry.envConfig
 import io.kopipes.core.TableChangeEvent
 import io.kopipes.core.UnitOfWork
 import io.kopipes.core.faults.FaultManager
@@ -17,7 +16,16 @@ import kotlinx.coroutines.flow.mapNotNull
 import mu.KotlinLogging
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue as EventAV
 
-class DynamodbAdapter(private val faultManager: FaultManager = AwsGlobalRegistry.faultManager()) {
+class DynamodbAdapter(
+    private val faultManager: FaultManager,
+    /** The event source's batch size, for the `stream.batch.utilization` gauge. */
+    private val batchSize: Int = DEFAULT_BATCH_SIZE,
+) {
+
+    constructor(context: AwsKopipesContext) : this(
+        faultManager = context.faultManager,
+        batchSize = context.envConfig.batchSize() ?: DEFAULT_BATCH_SIZE,
+    )
 
     private val pkFn = "pk"
 
@@ -29,7 +37,7 @@ class DynamodbAdapter(private val faultManager: FaultManager = AwsGlobalRegistry
 
     fun fromDynamoDB(dynamodbEvent: DynamodbEvent): Flow<UnitOfWork> {
         with(faultManager) {
-            val batchUtilization = dynamodbEvent.records.size.toDouble() / (envConfig().batchSize() ?: 100)
+            val batchUtilization = dynamodbEvent.records.size.toDouble() / batchSize
             return dynamodbEvent.records.asFlow()
                 .mapNotNull { dynamodbRecord -> UnitOfWork().copy(record = dynamodbRecord) }
                 .mapNotFaulty { uow ->

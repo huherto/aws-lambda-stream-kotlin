@@ -1,7 +1,6 @@
 package io.kopipes.aws.from
 
 import com.amazonaws.services.lambda.runtime.events.SNSEvent
-import io.kopipes.aws.AwsGlobalRegistry
 import io.kopipes.core.EventCodec
 import io.kopipes.core.UnitOfWork
 import io.kopipes.core.faults.FaultManager
@@ -13,7 +12,7 @@ import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.map
 
 class SnsAdapter(
-    private val faultManager: FaultManager = AwsGlobalRegistry.faultManager(),
+    private val faultManager: FaultManager,
     private val eventCodec: EventCodec
 ) {
     fun fromSns(event: SNSEvent): Flow<UnitOfWork> {

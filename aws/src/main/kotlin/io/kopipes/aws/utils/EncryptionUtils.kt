@@ -1,7 +1,6 @@
 package io.kopipes.aws.utils
 
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
-import io.kopipes.aws.awsEnvConfig
 import io.kopipes.aws.connectors.KmsConnector
 import io.kopipes.core.EnvelopeEncryptionMetadata
 import kotlinx.serialization.json.Json
@@ -39,7 +38,7 @@ object EncryptionUtils {
         val masterKeyAlias = eem.masterKeyAlias ?: throw IllegalArgumentException("masterKeyAlias is required")
         
         // 1. Generate data key in primary region
-        val primaryRegion = awsEnvConfig().awsRegion()
+        val primaryRegion = kms.region
         val (plaintextKey, primaryCiphertextKey) = kms.generateDataKey(masterKeyAlias, primaryRegion)
 
         // 2. Encrypt for other regions
@@ -84,7 +83,7 @@ object EncryptionUtils {
         val dataKeys = eem.dataKeys ?: throw IllegalArgumentException("dataKeys are missing in eem")
         
         // 1. Decrypt data key
-        val currentRegion = awsEnvConfig().awsRegion()
+        val currentRegion = kms.region
         val ciphertextKeyBase64 = dataKeys[currentRegion] 
             ?: dataKeys.values.firstOrNull() 
             ?: throw IllegalArgumentException("No data key found for decryption")
@@ -129,7 +128,7 @@ object EncryptionUtils {
         val masterKeyAlias = eem.masterKeyAlias ?: throw IllegalArgumentException("masterKeyAlias is required")
         
         // 1. Generate data key
-        val primaryRegion = awsEnvConfig().awsRegion()
+        val primaryRegion = kms.region
         val (plaintextKey, primaryCiphertextKey) = kms.generateDataKey(masterKeyAlias, primaryRegion)
 
         // 2. Encrypt for other regions
@@ -175,7 +174,7 @@ object EncryptionUtils {
         val dataKeys = eem.dataKeys ?: throw IllegalArgumentException("dataKeys are missing in eem")
         
         // 1. Decrypt data key
-        val currentRegion = awsEnvConfig().awsRegion()
+        val currentRegion = kms.region
         val ciphertextKeyBase64 = dataKeys[currentRegion] 
             ?: dataKeys.values.firstOrNull() 
             ?: throw IllegalArgumentException("No data key found for decryption")
@@ -223,7 +222,7 @@ object EncryptionUtils {
         val dataKeys = eem.dataKeys ?: throw IllegalArgumentException("dataKeys are missing in eem")
 
         // 1. Decrypt data key
-        val currentRegion = awsEnvConfig().awsRegion()
+        val currentRegion = kms.region
         val ciphertextKeyBase64 = dataKeys[currentRegion]
             ?: dataKeys.values.firstOrNull()
             ?: throw IllegalArgumentException("No data key found for decryption")

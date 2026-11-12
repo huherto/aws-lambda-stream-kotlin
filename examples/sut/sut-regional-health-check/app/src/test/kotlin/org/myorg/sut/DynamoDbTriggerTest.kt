@@ -7,9 +7,8 @@ import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.StreamRecord
 import io.kopipes.aws.AwsEnvironmentConfig
-import io.kopipes.aws.AwsGlobalRegistry
+import io.kopipes.aws.AwsKopipesContext
 import io.kopipes.aws.connectors.S3ClientFactory
-import io.kopipes.core.GlobalRegistry
 import io.kopipes.core.faults.FaultManager
 import io.kopipes.core.sinks.EventPublisherInMemory
 import io.kotest.matchers.shouldBe
@@ -21,19 +20,27 @@ import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeVal
 
 class DynamoDbTriggerTest {
 
+    private lateinit var envConfig: AwsEnvironmentConfig
+    private lateinit var fm: FaultManager
+
     @BeforeEach
     fun beforeEach() {
-        val envConfig = spyk<AwsEnvironmentConfig>(AwsEnvironmentConfig())
+        envConfig = spyk<AwsEnvironmentConfig>(AwsEnvironmentConfig())
         coEvery { envConfig.awsRegion() } returns "eu-west-1"
         coEvery { envConfig.bucketName() } returns "bucket-name"
-        GlobalRegistry.setEnvConfig(envConfig)
-        val fm =  FaultManager(
+        fm =  FaultManager(
             eventPublisher = EventPublisherInMemory(),
             skipErrorLogging = false,
             isStreamRetryEnabled = false,
         )
-        GlobalRegistry.setFaultManager(fm)
     }
+
+    private fun context(s3ClientFactory: S3ClientFactory) = AwsKopipesContext(
+        envConfig = envConfig,
+        s3ClientFactory = s3ClientFactory,
+        eventPublisher = fm.publisher(),
+        faultManager = fm,
+    )
 
     @Test
     fun `handleRequest should process dynamodb records through real container and put materialized events in S3`() {
@@ -42,12 +49,11 @@ class DynamoDbTriggerTest {
         val s3Client: S3Client = mockk(relaxed = true)
         val s3ClientFactory: S3ClientFactory = mockk()
         every { s3ClientFactory.getClient(any()) } returns s3Client
-        AwsGlobalRegistry.setS3ClientFactory(s3ClientFactory)
         coEvery {
             s3Client.putObject(capture(putRequestSlot))
         } returns PutObjectResponse {}
 
-        val container = DynamoDbTriggerContainer()
+        val container = DynamoDbTriggerContainer(context(s3ClientFactory))
 
         val trigger = DynamoDbTrigger({ container })
         val context: Context = mockk(relaxed = true)
@@ -87,8 +93,7 @@ class DynamoDbTriggerTest {
         val s3Client: S3Client = mockk(relaxed = true)
         val s3ClientFactory: S3ClientFactory = mockk()
         every { s3ClientFactory.getClient(any()) } returns s3Client
-        AwsGlobalRegistry.setS3ClientFactory(s3ClientFactory)
-        val container = DynamoDbTriggerContainer()
+        val container = DynamoDbTriggerContainer(context(s3ClientFactory))
 
         val trigger = DynamoDbTrigger({ container})
         val context: Context = mockk(relaxed = true)

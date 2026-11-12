@@ -6,7 +6,7 @@ import io.kopipes.core.serialization.Snapshottable
 import kotlinx.serialization.json.*
 
 class DefaultUnitOfWorkSnapshotter(
-    private val recordSnapshotters: List<RecordSnapshotter> = io.kopipes.core.GlobalRegistry.registeredRecordSnapshotters(),
+    private val recordSnapshotters: List<RecordSnapshotter> = emptyList(),
     private val awsOperationCapturer: ((UnitOfWork) -> List<AwsOperationSnapshot>?)? = null,
 ) : UnitOfWorkSnapshotter {
     override fun snapshot(uow: UnitOfWork): UnitOfWorkSnapshot {

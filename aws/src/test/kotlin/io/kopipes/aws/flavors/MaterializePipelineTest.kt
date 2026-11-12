@@ -11,7 +11,6 @@ import io.kopipes.aws.extensions.updateRequest
 import io.kopipes.aws.extensions.updateResponse
 import io.kopipes.core.EnvironmentConfig
 import io.kopipes.core.Event
-import io.kopipes.core.GlobalRegistry
 import io.kopipes.core.UnitOfWork
 import io.kopipes.core.faults.FaultManager
 import io.kopipes.core.filters.EventFilter
@@ -152,8 +151,6 @@ class MaterializePipelineTest {
     }
 
     private fun faultManager(): FaultManager {
-        val spy = spyk(EnvironmentConfig())
-        GlobalRegistry.setEnvConfig(spy)
         return FaultManager(
             eventPublisher = mockk<EventPublisher>(relaxed = true),
             skipErrorLogging = true,

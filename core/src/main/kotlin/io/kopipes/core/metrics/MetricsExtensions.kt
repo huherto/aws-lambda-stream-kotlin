@@ -1,6 +1,5 @@
 package io.kopipes.core.metrics
 
-import io.kopipes.core.GlobalRegistry.envConfig
 import io.kopipes.core.UnitOfWork
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.onCompletion
@@ -21,11 +20,13 @@ fun UnitOfWork.updateMetrics(transform: (PipelineMetrics) -> PipelineMetrics): U
     return this.withMetrics(transform(currentMetrics))
 }
 
+/** Records start and end checkpoints for [step] around [block] when [enabled] (the `step` metric is configured). */
 suspend fun UnitOfWork.withStepMetrics(
     step: String,
+    enabled: Boolean,
     block: suspend (UnitOfWork) -> UnitOfWork
 ): UnitOfWork {
-    val uowWithStart = if (envConfig().isMetricEnabled("step")) {
+    val uowWithStart = if (enabled) {
         updateMetrics { it.startStep(step) }
     } else {
         this
@@ -33,7 +34,7 @@ suspend fun UnitOfWork.withStepMetrics(
 
     val result = block(uowWithStart)
 
-    return if (envConfig().isMetricEnabled("step")) {
+    return if (enabled) {
         result.updateMetrics { it.endStep(step) }
     } else {
         result

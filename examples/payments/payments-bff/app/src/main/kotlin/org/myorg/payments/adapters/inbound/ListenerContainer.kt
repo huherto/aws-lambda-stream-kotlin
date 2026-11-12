@@ -2,7 +2,7 @@ package org.myorg.payments.adapters.inbound
 
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
 import aws.sdk.kotlin.services.dynamodb.model.UpdateItemRequest
-import io.kopipes.aws.awsEnvConfig
+import io.kopipes.aws.AwsKopipesContext
 import io.kopipes.aws.connectors.DynamoDbConnector
 import io.kopipes.aws.flavors.MaterializePipeline
 import io.kopipes.aws.from.KinesisAdapter
@@ -79,16 +79,15 @@ fun accountUpdate(table: String, uow: UnitOfWork): UpdateItemRequest? {
 }
 
 class ListenerContainer(
-    val tableName: String,
-    val dynamoDbConnectorOptions: DynamoDbConnector.Options = DynamoDbConnector.Options(),
+    val context: AwsKopipesContext,
+    val tableName: String = context.envConfig.entityTableName() ?: error("ENTITY_TABLE_NAME is not configured"),
+    val dynamoDbConnectorOptions: DynamoDbConnector.Options = DynamoDbConnector.Options(context.dynamoDbClientFactory),
 ) {
     companion object {
         const val VIEW = "view"
         const val ACCOUNTS = "accounts"
 
-        fun build(): ListenerContainer = ListenerContainer(
-            tableName = awsEnvConfig().entityTableName() ?: error("ENTITY_TABLE_NAME is not configured"),
-        )
+        fun build(): ListenerContainer = ListenerContainer(AwsKopipesContext())
     }
 
     val viewPipeline: Pipeline by lazy {
@@ -96,6 +95,7 @@ class ListenerContainer(
             .id(VIEW)
             .eventFilter(EventFilters.onContent { it.eventType() in VIEW_EVENTS })
             .toUpdateRequest { uow -> heardUpdate(tableName, uow) }
+            .context(context)
             .dynamoDbConnectorOptions(dynamoDbConnectorOptions)
             .build()
     }
@@ -105,16 +105,18 @@ class ListenerContainer(
             .id(ACCOUNTS)
             .eventFilter(EventFilters.name(PaymentsEvent.ACCOUNT_CHANGED))
             .toUpdateRequest { uow -> accountUpdate(tableName, uow) }
+            .context(context)
             .dynamoDbConnectorOptions(dynamoDbConnectorOptions)
             .build()
     }
 
     val assembler: PipelineAssembler by lazy {
         PipelineAssembler.builder()
+            .context(context)
             .addPipeline(viewPipeline)
             .addPipeline(accountsPipeline)
             .build()
     }
 
-    val kinesisAdapter: KinesisAdapter by lazy { KinesisAdapter(eventCodec = PaymentsEventCodec) }
+    val kinesisAdapter: KinesisAdapter by lazy { KinesisAdapter(context, PaymentsEventCodec) }
 }

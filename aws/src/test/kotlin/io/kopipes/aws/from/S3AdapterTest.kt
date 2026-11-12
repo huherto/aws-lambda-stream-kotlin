@@ -12,6 +12,7 @@ import io.kotest.matchers.shouldNotBe
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockkConstructor
+import io.mockk.mockk
 import io.mockk.unmockkAll
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
@@ -30,6 +31,7 @@ class S3AdapterTest {
     private val adapter = S3Adapter(
         faultManager = faultManager,
         eventCodec = eventCodec,
+        s3ConnectorOptions = S3Connector.Options(clientFactory = mockk(relaxed = true)),
     )
 
     @AfterEach

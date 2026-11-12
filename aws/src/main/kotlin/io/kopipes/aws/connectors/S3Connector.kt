@@ -6,18 +6,17 @@ import aws.sdk.kotlin.services.s3.model.*
 import aws.smithy.kotlin.runtime.content.ByteStream
 import aws.smithy.kotlin.runtime.content.toByteArray
 import aws.smithy.kotlin.runtime.net.url.Url
-import io.kopipes.aws.AwsGlobalRegistry
-import io.kopipes.aws.awsEnvConfig
+import io.kopipes.aws.AwsEnvironmentConfig
 import io.kopipes.core.UnitOfWork
 
 /** Factory for [S3Client]. */
 interface S3ClientFactory : ClientFactory<S3Client>
 
 /** Default implementation of [S3ClientFactory]. */
-class DefaultS3ClientFactory() : S3ClientFactory, AbstractClientFactory<S3Client>() {
+class DefaultS3ClientFactory(private val envConfig: AwsEnvironmentConfig) : S3ClientFactory, AbstractClientFactory<S3Client>() {
     override fun create(): S3Client {
-        val endpointUrl = awsEnvConfig().endPointUrl()
-        val region = awsEnvConfig().awsRegion()
+        val endpointUrl = envConfig.endPointUrl()
+        val region = envConfig.awsRegion()
 
         return S3Client {
             this.region = region
@@ -32,7 +31,7 @@ class S3Connector(private val options: S3Connector.Options) {
 
     /** Configuration options for [S3Connector]. */
     data class Options(
-        val clientFactory: S3ClientFactory = AwsGlobalRegistry.s3ClientFactory(),
+        val clientFactory: S3ClientFactory,
         val debug: (Any?) -> Unit = {},
     )
 

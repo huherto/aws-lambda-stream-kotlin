@@ -2,8 +2,10 @@ package io.kopipes.core.faults
 
 import io.kopipes.core.FaultException
 import io.kopipes.core.UnitOfWork
-import io.kopipes.core.envConfig
+import io.kopipes.core.EnvironmentConfig
 import io.kopipes.core.flavors.Pipeline
+import io.kopipes.core.serialization.snapshots.DefaultUnitOfWorkSnapshotter
+import io.kopipes.core.serialization.snapshots.UnitOfWorkSnapshotter
 import io.kopipes.core.sinks.EventPublisher
 import kotlinx.coroutines.flow.*
 import mu.KotlinLogging
@@ -13,12 +15,38 @@ import java.util.concurrent.ConcurrentLinkedQueue
 class FaultManager(
     private val eventPublisher: EventPublisher,
     private val skipErrorLogging: Boolean = false,
-    private val isStreamRetryEnabled: Boolean = envConfig().streamRetryEnabled(),
-    private val isItemLevelRetryEnabled: Boolean = envConfig().itemLevelRetryEnabled(),
-    private val awsLambdaFunctionName: String = envConfig().awsLambdaFunctionName() ?: "undefined",
-    private val faultEventFactory: FaultEventFactory = FaultEventFactory(awsLambdaFunctionName = awsLambdaFunctionName),
+    private val isStreamRetryEnabled: Boolean = false,
+    private val isItemLevelRetryEnabled: Boolean = false,
+    private val awsLambdaFunctionName: String = "undefined",
+    /** Turns units of work into diagnostic snapshots, for fault events and for pipeline debug logs. */
+    val unitOfWorkSnapshotter: UnitOfWorkSnapshotter = DefaultUnitOfWorkSnapshotter(),
+    private val faultEventFactory: FaultEventFactory = FaultEventFactory(
+        awsLambdaFunctionName = awsLambdaFunctionName,
+        unitOfWorkSnapshotter = unitOfWorkSnapshotter,
+    ),
     private val isRetryable: (Throwable) -> Boolean = { false },
 ) {
+
+    companion object {
+        /** A fault manager whose retry switches and function name come from [envConfig]. */
+        @JvmStatic
+        @JvmOverloads
+        fun fromConfig(
+            envConfig: EnvironmentConfig,
+            eventPublisher: EventPublisher,
+            unitOfWorkSnapshotter: UnitOfWorkSnapshotter = DefaultUnitOfWorkSnapshotter(),
+            isRetryable: (Throwable) -> Boolean = { false },
+            skipErrorLogging: Boolean = false,
+        ): FaultManager = FaultManager(
+            eventPublisher = eventPublisher,
+            skipErrorLogging = skipErrorLogging,
+            isStreamRetryEnabled = envConfig.streamRetryEnabled(),
+            isItemLevelRetryEnabled = envConfig.itemLevelRetryEnabled(),
+            awsLambdaFunctionName = envConfig.awsLambdaFunctionName() ?: "undefined",
+            unitOfWorkSnapshotter = unitOfWorkSnapshotter,
+            isRetryable = isRetryable,
+        )
+    }
 
     private val logger = KotlinLogging.logger { }
 

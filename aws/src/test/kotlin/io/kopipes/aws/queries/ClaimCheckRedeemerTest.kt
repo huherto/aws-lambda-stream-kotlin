@@ -10,7 +10,6 @@ import io.kopipes.aws.connectors.S3ClientFactory
 import io.kopipes.aws.connectors.S3Connector
 import io.kopipes.aws.extensions.s3
 import io.kopipes.core.EnvironmentConfig
-import io.kopipes.core.GlobalRegistry
 import io.kopipes.core.UnitOfWork
 import io.kopipes.core.faults.FaultManager
 import io.kopipes.core.sinks.EventPublisherInMemory
@@ -35,11 +34,6 @@ class ClaimCheckRedeemerTest {
             eventPublisher = EventPublisherInMemory(),
             skipErrorLogging = true,
         )
-    }
-
-    @BeforeEach
-    fun beforeEach() {
-        GlobalRegistry.setEnvConfig(envConfig)
     }
 
 

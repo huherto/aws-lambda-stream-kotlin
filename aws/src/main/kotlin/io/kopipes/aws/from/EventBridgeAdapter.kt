@@ -1,7 +1,6 @@
 package io.kopipes.aws.from
 
 import com.amazonaws.services.lambda.runtime.events.ScheduledEvent
-import io.kopipes.aws.AwsGlobalRegistry
 import io.kopipes.core.Event
 import io.kopipes.core.JsonEventCodec
 import io.kopipes.core.UnitOfWork
@@ -14,7 +13,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 
 class EventBridgeAdapter(
-    private val faultManager: FaultManager = AwsGlobalRegistry.faultManager(),
+    private val faultManager: FaultManager,
     private val toEvent: (Map<String, Any>) -> Event
 ) {
 

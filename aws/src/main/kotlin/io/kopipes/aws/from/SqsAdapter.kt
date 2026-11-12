@@ -1,10 +1,9 @@
 package io.kopipes.aws.from
 
 import com.amazonaws.services.lambda.runtime.events.SQSEvent
-import io.kopipes.aws.AwsGlobalRegistry
+import io.kopipes.aws.AwsKopipesContext
 import io.kopipes.aws.queries.ClaimCheckRedeemer
 import io.kopipes.core.EventCodec
-import io.kopipes.core.GlobalRegistry.envConfig
 import io.kopipes.core.UnitOfWork
 import io.kopipes.core.faults.FaultManager
 import io.kopipes.core.filters.outSkip
@@ -14,10 +13,20 @@ import io.kopipes.core.metrics.withMetrics
 import kotlinx.coroutines.flow.*
 
 class SqsAdapter(
-    private val faultManager: FaultManager = AwsGlobalRegistry.faultManager(),
+    private val faultManager: FaultManager,
     private val eventCodec: EventCodec,
-    private val claimCheckRedeemer: ClaimCheckRedeemer? = null
+    private val claimCheckRedeemer: ClaimCheckRedeemer? = null,
+    /** The event source's batch size, for the `stream.batch.utilization` gauge. */
+    private val batchSize: Int = DEFAULT_BATCH_SIZE,
 ) {
+
+    @JvmOverloads
+    constructor(context: AwsKopipesContext, eventCodec: EventCodec, claimCheckRedeemer: ClaimCheckRedeemer? = null) : this(
+        faultManager = context.faultManager,
+        eventCodec = eventCodec,
+        claimCheckRedeemer = claimCheckRedeemer,
+        batchSize = context.envConfig.batchSize() ?: DEFAULT_BATCH_SIZE,
+    )
 
     fun fromSqs(sqsEvent: SQSEvent): Flow<UnitOfWork> {
         val records = sqsEvent.records
@@ -26,7 +35,7 @@ class SqsAdapter(
             return emptyFlow()
         }
 
-        val batchUtilization = records.size.toDouble() / (envConfig().batchSize() ?: 100)
+        val batchUtilization = records.size.toDouble() / batchSize
         return records.asFlow()
             .map { record ->
                 val timestamp = record.attributes?.get("SentTimestamp")?.toLong() ?: System.currentTimeMillis()
@@ -51,7 +60,7 @@ class SqsAdapter(
         }
 
         with(faultManager) {
-            val batchUtilization = records.size.toDouble() / (envConfig().batchSize() ?: 100)
+            val batchUtilization = records.size.toDouble() / batchSize
             return records.asFlow()
                 .mapNotNull { record ->
                     val timestamp = record.attributes?.get("SentTimestamp")?.toLong() ?: System.currentTimeMillis()

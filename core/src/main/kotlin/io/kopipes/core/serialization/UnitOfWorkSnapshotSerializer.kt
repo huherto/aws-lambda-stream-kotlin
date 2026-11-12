@@ -1,8 +1,8 @@
 package io.kopipes.core.serialization
 
-import io.kopipes.core.GlobalRegistry
 import io.kopipes.core.UnitOfWork
 import io.kopipes.core.serialization.snapshots.UnitOfWorkSnapshot
+import io.kopipes.core.serialization.snapshots.UnitOfWorkSnapshotter
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.builtins.nullable
@@ -10,10 +10,8 @@ import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 
-fun UnitOfWork.toSnapshot(): UnitOfWorkSnapshot =
-    GlobalRegistry.unitOfWorkSnapshotter().snapshot(this)
-
-object UnitOfWorkSnapshotSerializer : KSerializer<UnitOfWork?> {
+/** One-way serializer writing a [UnitOfWork] as the snapshot [snapshotter] produces, for diagnostics. */
+class UnitOfWorkSnapshotSerializer(private val snapshotter: UnitOfWorkSnapshotter) : KSerializer<UnitOfWork?> {
     private val surrogateSerializer = UnitOfWorkSnapshot.serializer().nullable
 
     override val descriptor: SerialDescriptor =
@@ -22,7 +20,7 @@ object UnitOfWorkSnapshotSerializer : KSerializer<UnitOfWork?> {
     override fun serialize(encoder: Encoder, value: UnitOfWork?) {
         encoder.encodeSerializableValue(
             surrogateSerializer,
-            value?.let { GlobalRegistry.unitOfWorkSnapshotter().snapshot(it) },
+            value?.let { snapshotter.snapshot(it) },
         )
     }
 

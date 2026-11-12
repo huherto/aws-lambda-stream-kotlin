@@ -1,5 +1,8 @@
 package io.kopipes.aws.flavors
 
+import io.kopipes.aws.AwsKopipesContext
+import io.kopipes.aws.connectors.KmsConnectors
+
 import aws.sdk.kotlin.services.dynamodb.model.BatchGetItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.QueryRequest
 import io.kopipes.aws.connectors.DynamoDbConnector
@@ -28,7 +31,7 @@ import kotlinx.coroutines.flow.onEach
 /** Pipeline flavor for change-data-capture style processing. */
 class CdcPipeline(
     id: String,
-    private val dynamoDbConnectorOptions: DynamoDbConnector.Options,
+    private val dynamoDbConnectorOptions: DynamoDbConnector.Options?,
     private val eventPublisher: EventPublisher,
     private val eventFilter: EventFilter,
     private val onContentType: (UnitOfWork) -> Boolean,
@@ -41,10 +44,14 @@ class CdcPipeline(
     private val encryptionOptions: EncryptionOptions?,
     private val decrypt: Boolean,
     private val parallel: Int,
+    private val kms: KmsConnectors? = null,
 ) : Pipeline(id) {
 
+    val dynamoDbQuery by lazy {
+        DynamoDbQuery(dynamoDbConnectorOptions ?: error("CdcPipeline '$id' queries DynamoDB: set dynamoDbConnectorOptions (or context)"))
+    }
 
-    val dynamoDbQuery by lazy { DynamoDbQuery(dynamoDbConnectorOptions) }
+    private fun kms(): KmsConnectors = kms ?: error("CdcPipeline '$id' encrypts or decrypts: set kms (or context)")
 
     internal suspend fun addQueryRequest(uow: UnitOfWork): UnitOfWork {
         val queryRequest = when {
@@ -85,8 +92,8 @@ class CdcPipeline(
         with(fm) {
             var flow = fromFlow
             if (decrypt) {
-                flow = flow.let { EventEncryption.decryptEvent(fm).invoke(it) }
-                    .let { EventEncryption.decryptChangeEvent(fm).invoke(it) }
+                flow = flow.let { EventEncryption.decryptEvent(fm, kms()).invoke(it) }
+                    .let { EventEncryption.decryptChangeEvent(fm, kms()).invoke(it) }
             }
 
             val filteredFlow = flow
@@ -110,7 +117,7 @@ class CdcPipeline(
                 .buffer(parallel)
                 .let {
                     if (encryptionOptions != null) {
-                        EventEncryption.encryptEvent(encryptionOptions, fm).invoke(it)
+                        EventEncryption.encryptEvent(encryptionOptions, fm, kms()).invoke(it)
                     } else {
                         it.mapNotFaulty { uow -> encrypt(uow) }
                     }
@@ -126,7 +133,8 @@ class CdcPipeline(
     }
 
     class Builder : PipelineBuilder<CdcPipeline, Builder>() {
-        private var dynamoDbConnectorOptions = DynamoDbConnector.Options()
+        private var dynamoDbConnectorOptions: DynamoDbConnector.Options? = null
+        private var kms: KmsConnectors? = null
         private var eventPublisher: EventPublisher? = null
         private var eventFilter: EventFilter = EventFilter.Any
         private var onContentType: (UnitOfWork) -> Boolean = { true }
@@ -138,7 +146,15 @@ class CdcPipeline(
         private var encryptEvent: (suspend (UnitOfWork) -> UnitOfWork)? = null
         private var encryptionOptions: EncryptionOptions? = null
         private var decrypt: Boolean = false
-        private var parallel: Int = System.getenv("PARALLEL")?.toIntOrNull() ?: 4
+        private var parallel: Int = 4
+
+        /** Takes the DynamoDB client factory, KMS connectors and parallelism from [context]. */
+        fun context(context: AwsKopipesContext) = apply {
+            dynamoDbConnectorOptions = DynamoDbConnector.Options(context.dynamoDbClientFactory)
+            kms = context.kmsConnectors
+            parallel = context.envConfig.parallel() ?: 4
+        }
+        fun kms(kms: KmsConnectors) = apply { this.kms = kms }
 
         fun dynamoDbConnectorOptions(options: DynamoDbConnector.Options) = apply { this.dynamoDbConnectorOptions = options }
         fun eventPublisher(eventPublisher: EventPublisher) = apply { this.eventPublisher = eventPublisher }
@@ -174,7 +190,8 @@ class CdcPipeline(
                 encryptEvent = encryptEvent,
                 encryptionOptions = encryptionOptions,
                 decrypt = decrypt,
-                parallel = parallel
+                parallel = parallel,
+                kms = kms,
             )
         }
     }

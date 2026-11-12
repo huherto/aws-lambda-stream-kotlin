@@ -1,9 +1,8 @@
 package org.myorg.payments
 
 import com.amazonaws.services.lambda.runtime.events.SQSEvent
-import io.kopipes.aws.AwsGlobalRegistry
+import io.kopipes.aws.AwsKopipesContext
 import io.kopipes.aws.testsupport.TestContext
-import io.kopipes.core.GlobalRegistry
 import io.kopipes.core.JsonRaw
 import io.kopipes.core.faults.FaultManager
 import io.kopipes.core.sinks.EventPublisherInMemory
@@ -13,7 +12,6 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 
 class BankNetworkIngressTest {
@@ -25,8 +23,6 @@ class BankNetworkIngressTest {
 
     private val file = ArrivedFile("inbound-bucket", "inbound/SETTLE_20241107.csv", 1730966400000)
 
-    @AfterEach
-    fun tearDown() = AwsGlobalRegistry.reset()
 
     @Test
     fun `an S3 notification announces its files, S3's test event none`() {
@@ -55,10 +51,11 @@ class BankNetworkIngressTest {
     fun `each line of a file becomes one event, and reprocessing the file gives the same ids`() {
         // Arrange
         val publisher = EventPublisherInMemory()
-        GlobalRegistry.setFaultManager(FaultManager(publisher, skipErrorLogging = true))
+        val context = AwsKopipesContext(eventPublisher = publisher, faultManager = FaultManager(publisher, skipErrorLogging = true))
         val content = settlementFile(listOf(simulatedSettlement(Fixtures.toBank.copy(id = "p-1")), SettlementLine("p-2", "REJECTED", "R02")))
         val listener = FileListener {
             FilesContainer(
+                context,
                 files = { content },
                 lookup = { reference -> Fixtures.toBank.copy(id = reference) },
                 eventPublisher = publisher,

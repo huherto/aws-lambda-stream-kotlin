@@ -25,6 +25,10 @@ class CloudWatchSinkTest {
         return spy
     }
 
+    private val clientFactory = object : io.kopipes.aws.connectors.CloudWatchClientFactory {
+        override fun getClient(pipelineId: String) = mockk<aws.sdk.kotlin.services.cloudwatch.CloudWatchClient>(relaxed = true)
+    }
+
     @AfterEach
     fun tearDown() {
         unmockkAll()
@@ -39,7 +43,7 @@ class CloudWatchSinkTest {
 
         val envConfig = mockEnvConfig()
         val fm = FaultManager(EventPublisherInMemory())
-        val sink = CloudWatchSink()
+        val sink = CloudWatchSink(clientFactory = clientFactory)
 
         val request = PutMetricDataRequest {
             namespace = "TestNamespace"
@@ -65,7 +69,7 @@ class CloudWatchSinkTest {
 
         val envConfig = mockEnvConfig()
         val fm = FaultManager(EventPublisherInMemory())
-        val sink = CloudWatchSink()
+        val sink = CloudWatchSink(clientFactory = clientFactory)
 
         val request = PutMetricDataRequest {
             namespace = "TestNamespace"
@@ -86,7 +90,7 @@ class CloudWatchSinkTest {
         // Arrange
         val envConfig = mockEnvConfig()
         val fm = FaultManager(EventPublisherInMemory())
-        val sink = CloudWatchSink()
+        val sink = CloudWatchSink(clientFactory = clientFactory)
 
         val uow = UnitOfWork()
         val flow = flowOf(uow)

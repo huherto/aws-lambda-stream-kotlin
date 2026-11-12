@@ -6,7 +6,8 @@ import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
 import com.amazonaws.services.lambda.runtime.events.SQSEvent
-import io.kopipes.aws.AwsGlobalRegistry
+import io.kopipes.aws.AwsKopipesContext
+import io.kopipes.aws.connectors.S3ClientFactory
 import io.kopipes.aws.from.KinesisAdapter
 import io.kopipes.core.JsonRaw
 import io.kopipes.core.PipelineAssembler
@@ -81,9 +82,9 @@ fun interface FileReader {
     suspend fun read(file: ArrivedFile): String
 }
 
-class S3FileReader : FileReader {
+class S3FileReader(private val s3: S3ClientFactory) : FileReader {
     override suspend fun read(file: ArrivedFile): String {
-        val client = AwsGlobalRegistry.s3ClientFactory().getClient("files")
+        val client = s3.getClient("files")
         return client.getObject(GetObjectRequest { bucket = file.bucket; key = file.key }) { response ->
             response.body?.decodeToString() ?: ""
         }
@@ -91,19 +92,18 @@ class S3FileReader : FileReader {
 }
 
 class FilesContainer(
-    val files: FileReader,
-    val lookup: PaymentLookup,
-    val eventPublisher: EventPublisher,
+    val context: AwsKopipesContext,
+    val files: FileReader = S3FileReader(context.s3ClientFactory),
+    val lookup: PaymentLookup = DynamoDbPaymentLookup.fromContext(context),
+    val eventPublisher: EventPublisher = context.eventPublisher,
 ) {
     companion object {
-        fun build(): FilesContainer {
-            installGatewayFaultManager()
-            return FilesContainer(S3FileReader(), DynamoDbPaymentLookup.fromEnvironment(), AwsGlobalRegistry.eventPublisher())
-        }
+        fun build(): FilesContainer = FilesContainer(gatewayContext())
     }
 
     val assembler: PipelineAssembler by lazy {
         PipelineAssembler.builder()
+            .context(context)
             .addPipeline(
                 TranslatePipeline.builder()
                     .id("settlements")
@@ -134,16 +134,20 @@ class FileListener(
 }
 
 /** Default channel → the bank deposits we sent to the network. */
-class RequestsContainer(table: String) {
+class RequestsContainer(val context: AwsKopipesContext, table: String) {
     companion object {
-        fun build() = RequestsContainer(System.getenv("REQUESTS_TABLE_NAME") ?: error("REQUESTS_TABLE_NAME is not configured"))
+        fun build() = RequestsContainer(
+            AwsKopipesContext(),
+            System.getenv("REQUESTS_TABLE_NAME") ?: error("REQUESTS_TABLE_NAME is not configured"),
+        )
     }
 
     val assembler: PipelineAssembler = PipelineAssembler.builder()
-        .addPipeline(requestsPipeline("requests", table, depositsTo(Party.BANK)))
+        .context(context)
+        .addPipeline(requestsPipeline(context, "requests", table, depositsTo(Party.BANK)))
         .build()
 
-    val kinesisAdapter = KinesisAdapter(eventCodec = PaymentsEventCodec)
+    val kinesisAdapter = KinesisAdapter(context, PaymentsEventCodec)
 }
 
 class Listener(

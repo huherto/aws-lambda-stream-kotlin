@@ -1,23 +1,22 @@
 package io.kopipes.spring
 
-import io.kopipes.aws.AwsGlobalRegistry
-import io.kopipes.aws.awsEnvConfig
+import io.kopipes.aws.AwsEnvironmentConfig
+import io.kopipes.aws.AwsKopipesContext
+import io.kopipes.aws.connectors.DynamoDbClientFactory
+import io.kopipes.aws.sinks.DynamoDbEventsMicrostore
 import io.kopipes.aws.sinks.EventBridgePublisher
-import io.kopipes.core.EnvironmentConfig
-import io.kopipes.core.GlobalRegistry
 import io.kopipes.core.faults.FaultManager
 import io.kopipes.core.serialization.snapshots.RecordSnapshot
 import io.kopipes.core.serialization.snapshots.RecordSnapshotter
 import io.kopipes.core.serialization.snapshots.UnitOfWorkSnapshotter
 import io.kopipes.core.sinks.EventPublisher
 import io.kopipes.core.sinks.EventPublisherInMemory
-import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.matchers.types.shouldBeSameInstanceAs
-import org.junit.jupiter.api.AfterEach
+import io.mockk.mockk
 import org.junit.jupiter.api.Test
 import org.springframework.boot.autoconfigure.AutoConfigurations
 import org.springframework.boot.test.context.FilteredClassLoader
@@ -31,52 +30,70 @@ class KopipesAutoConfigurationTest {
     private val runner = ApplicationContextRunner()
         .withConfiguration(AutoConfigurations.of(KopipesAutoConfiguration::class.java))
 
-    @AfterEach
-    fun resetRegistry() {
-        AwsGlobalRegistry.reset()
-    }
-
     @Test
-    fun `defines the default beans and mirrors them into the registry`() {
+    fun `defines the default beans from Spring properties`() {
         // arrange
         val withProps = runner.withPropertyValues("kopipes.bus-name=my-bus", "kopipes.stream-retry-enabled=true")
 
         // act & assert
         withProps.run { context ->
-            val envConfig = context.getBean(EnvironmentConfig::class.java)
+            val envConfig = context.getBean(AwsEnvironmentConfig::class.java)
             val publisher = context.getBean(EventPublisher::class.java)
             val faultManager = context.getBean(FaultManager::class.java)
-            val snapshotter = context.getBean(UnitOfWorkSnapshotter::class.java)
 
-            envConfig.shouldBeInstanceOf<SpringEnvironmentConfig>()
+            envConfig.shouldBeInstanceOf<SpringEnvironmentConfig>().streamRetryEnabled() shouldBe true
             publisher.shouldBeInstanceOf<EventBridgePublisher>().busName shouldBe "my-bus"
             faultManager.publisher() shouldBeSameInstanceAs publisher
-
-            AwsGlobalRegistry.envConfig() shouldBeSameInstanceAs envConfig
-            GlobalRegistry.eventPublisher() shouldBeSameInstanceAs publisher
-            GlobalRegistry.faultManager() shouldBeSameInstanceAs faultManager
-            GlobalRegistry.unitOfWorkSnapshotter() shouldBeSameInstanceAs snapshotter
-            awsEnvConfig().streamRetryEnabled() shouldBe true
+            faultManager.unitOfWorkSnapshotter shouldBeSameInstanceAs context.getBean(UnitOfWorkSnapshotter::class.java)
         }
     }
 
     @Test
-    fun `an application EventPublisher replaces the default`() {
+    fun `the context bean is assembled from the other beans`() {
+        // arrange & act & assert
+        runner.run { context ->
+            val kopipes = context.getBean(AwsKopipesContext::class.java)
+
+            kopipes.envConfig shouldBeSameInstanceAs context.getBean(AwsEnvironmentConfig::class.java)
+            kopipes.faultManager shouldBeSameInstanceAs context.getBean(FaultManager::class.java)
+            kopipes.eventPublisher shouldBeSameInstanceAs context.getBean(EventPublisher::class.java)
+            kopipes.dynamoDbClientFactory shouldBeSameInstanceAs context.getBean(DynamoDbClientFactory::class.java)
+        }
+    }
+
+    @Test
+    fun `application beans replace the defaults everywhere`() {
         // arrange
-        val withUserPublisher = runner.withUserConfiguration(InMemoryPublisherConfig::class.java)
+        val withOverrides = runner.withUserConfiguration(OverridesConfig::class.java)
 
         // act & assert
-        withUserPublisher.run { context ->
+        withOverrides.run { context ->
             val publisher = context.getBean(EventPublisher::class.java)
+            val clientFactory = context.getBean(DynamoDbClientFactory::class.java)
+            val kopipes = context.getBean(AwsKopipesContext::class.java)
 
             publisher.shouldBeInstanceOf<EventPublisherInMemory>()
             context.getBean(FaultManager::class.java).publisher() shouldBeSameInstanceAs publisher
-            GlobalRegistry.eventPublisher() shouldBeSameInstanceAs publisher
+            kopipes.eventPublisher shouldBeSameInstanceAs publisher
+            kopipes.dynamoDbClientFactory shouldBeSameInstanceAs clientFactory
         }
     }
 
     @Test
-    fun `with several publishers only the primary one goes to the registry`() {
+    fun `components can be built from the context bean`() {
+        // arrange
+        val withMicrostore = runner
+            .withPropertyValues("kopipes.event-table-name=events-table")
+            .withUserConfiguration(MicrostoreConfig::class.java)
+
+        // act & assert
+        withMicrostore.run { context ->
+            context.getBean(DynamoDbEventsMicrostore::class.java).shouldNotBeNull()
+        }
+    }
+
+    @Test
+    fun `with several publishers the primary one is used`() {
         // arrange
         val withTwoPublishers = runner.withUserConfiguration(TwoPublishersConfig::class.java)
 
@@ -84,34 +101,21 @@ class KopipesAutoConfigurationTest {
         withTwoPublishers.run { context ->
             val primary = context.getBean("primaryPublisher", EventPublisher::class.java)
 
-            GlobalRegistry.eventPublisher() shouldBeSameInstanceAs primary
             context.getBean(FaultManager::class.java).publisher() shouldBeSameInstanceAs primary
         }
     }
 
     @Test
-    fun `beans built before the auto-configuration already see Spring properties`() {
+    fun `record snapshotter beans are added to the default snapshotter`() {
         // arrange
-        val withEarlyBean = runner
-            .withPropertyValues("kopipes.event-table-name=events-table")
-            .withUserConfiguration(InMemoryPublisherConfig::class.java, EarlyReaderConfig::class.java)
-
-        // act & assert
-        withEarlyBean.run { context ->
-            context.getBean(EarlyReader::class.java).tableName shouldBe "events-table"
-        }
-    }
-
-    @Test
-    fun `record snapshotter beans are registered`() {
-        // arrange
-        val withSnapshotter = runner.withUserConfiguration(InMemoryPublisherConfig::class.java, SnapshotterConfig::class.java)
+        val withSnapshotter = runner.withUserConfiguration(SnapshotterConfig::class.java)
 
         // act & assert
         withSnapshotter.run { context ->
-            val snapshotter = context.getBean(RecordSnapshotter::class.java)
+            val snapshot = context.getBean(UnitOfWorkSnapshotter::class.java)
+                .snapshot(io.kopipes.core.UnitOfWork(record = "custom-record"))
 
-            GlobalRegistry.registeredRecordSnapshotters() shouldContain snapshotter
+            snapshot.record.shouldNotBeNull().kind shouldBe "custom"
         }
     }
 
@@ -136,14 +140,17 @@ class KopipesAutoConfigurationTest {
         // act & assert
         disabled.run { context ->
             context.getBeanNamesForType(FaultManager::class.java).size shouldBe 0
-            context.getBeanNamesForType(EnvironmentConfig::class.java).size shouldBe 0
+            context.getBeanNamesForType(AwsKopipesContext::class.java).size shouldBe 0
         }
     }
 
     @Configuration(proxyBeanMethods = false)
-    class InMemoryPublisherConfig {
+    class OverridesConfig {
         @Bean
         fun inMemoryPublisher(): EventPublisher = EventPublisherInMemory()
+
+        @Bean
+        fun testDynamoDbClientFactory(): DynamoDbClientFactory = mockk()
     }
 
     @Configuration(proxyBeanMethods = false)
@@ -156,20 +163,19 @@ class KopipesAutoConfigurationTest {
         fun otherBusPublisher(): EventPublisher = EventPublisherInMemory()
     }
 
-    class EarlyReader(val tableName: String?)
-
     @Configuration(proxyBeanMethods = false)
-    class EarlyReaderConfig {
+    class MicrostoreConfig {
         @Bean
-        fun earlyReader(): EarlyReader = EarlyReader(awsEnvConfig().tableName())
+        fun eventsMicrostore(kopipes: AwsKopipesContext): DynamoDbEventsMicrostore = DynamoDbEventsMicrostore(kopipes)
     }
 
     @Configuration(proxyBeanMethods = false)
     class SnapshotterConfig {
         @Bean
         fun customRecordSnapshotter(): RecordSnapshotter = object : RecordSnapshotter {
-            override fun supports(record: Any): Boolean = false
-            override fun snapshot(record: Any): RecordSnapshot = error("unused")
+            override fun supports(record: Any): Boolean = record == "custom-record"
+            override fun snapshot(record: Any): RecordSnapshot =
+                RecordSnapshot(kind = "custom", payload = kotlinx.serialization.json.JsonObject(emptyMap()))
         }
     }
 }

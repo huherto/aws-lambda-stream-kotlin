@@ -1,5 +1,6 @@
 package org.myorg.payments.adapters.inbound
 
+import io.kopipes.aws.AwsKopipesContext
 import io.kopipes.aws.from.KinesisAdapter
 import io.kopipes.aws.sinks.DynamoDbEventsMicrostore
 import io.kopipes.core.PipelineAssembler
@@ -15,12 +16,13 @@ import org.myorg.payments.PaymentsEventCodec
  * A redelivered event writes the same item again, so it changes nothing.
  */
 class ListenerContainer(
-    val eventsMicrostore: EventsMicrostore,
+    val context: AwsKopipesContext,
+    val eventsMicrostore: EventsMicrostore = DynamoDbEventsMicrostore(context),
 ) {
     companion object {
         const val COLLECT = "collect"
 
-        fun build(): ListenerContainer = ListenerContainer(eventsMicrostore = DynamoDbEventsMicrostore())
+        fun build(): ListenerContainer = ListenerContainer(AwsKopipesContext())
     }
 
     val collectPipeline: CollectPipeline by lazy {
@@ -35,9 +37,10 @@ class ListenerContainer(
 
     val assembler: PipelineAssembler by lazy {
         PipelineAssembler.builder()
+            .context(context)
             .addPipeline(collectPipeline)
             .build()
     }
 
-    val kinesisAdapter: KinesisAdapter by lazy { KinesisAdapter(eventCodec = PaymentsEventCodec) }
+    val kinesisAdapter: KinesisAdapter by lazy { KinesisAdapter(context, PaymentsEventCodec) }
 }

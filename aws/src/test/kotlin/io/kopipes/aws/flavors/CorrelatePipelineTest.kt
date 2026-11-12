@@ -94,18 +94,6 @@ class CorrelatePipelineTest {
         )
     }
 
-    private val envConfig: AwsEnvironmentConfig by lazy {
-        val spy = spyk(AwsEnvironmentConfig())
-        every { spy.awsRegion() } returns "us-east-1"
-        every { spy.tableName() } returns "test-table"
-        spy
-    }
-
-    @BeforeEach
-    fun beforeEach() {
-        GlobalRegistry.setEnvConfig(envConfig)
-    }
-
     private fun createEventsMicrostore(): EventsMicrostoreInMemory {
         return EventsMicrostoreInMemory()
     }

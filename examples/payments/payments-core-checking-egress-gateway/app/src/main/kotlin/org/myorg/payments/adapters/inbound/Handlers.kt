@@ -4,7 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
 import com.amazonaws.services.lambda.runtime.events.ScheduledEvent
-import io.kopipes.aws.AwsGlobalRegistry
+import io.kopipes.aws.AwsKopipesContext
 import io.kopipes.core.utils.loggedLazy
 import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging
@@ -35,7 +35,7 @@ class ReconcilerHandler(
 }
 
 private fun reconciler(): Reconciler {
-    val dynamoDb = AwsGlobalRegistry.dynamoDbClientFactory().getClient("reconciler")
+    val dynamoDb = AwsKopipesContext().dynamoDbClientFactory.getClient("reconciler")
     val claims = DynamoDbClaims(dynamoDb, System.getenv("CALLS_TABLE_NAME") ?: error("CALLS_TABLE_NAME is not configured"))
     val listener = System.getenv("LISTENER_FUNCTION_NAME") ?: error("LISTENER_FUNCTION_NAME is not configured")
     return Reconciler(claims, ListenerRedelivery.lambda(listener))

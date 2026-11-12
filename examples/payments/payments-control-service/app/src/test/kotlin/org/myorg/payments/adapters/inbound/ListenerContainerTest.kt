@@ -2,9 +2,8 @@ package org.myorg.payments.adapters.inbound
 
 import org.myorg.payments.*
 
-import io.kopipes.aws.AwsGlobalRegistry
+import io.kopipes.aws.AwsKopipesContext
 import io.kopipes.aws.testsupport.TestContext
-import io.kopipes.core.GlobalRegistry
 import io.kopipes.core.faults.FaultManager
 import io.kopipes.core.sinks.EventPublisherInMemory
 import io.kopipes.core.sinks.EventsMicrostoreInMemory
@@ -12,23 +11,17 @@ import io.kopipes.core.sinks.saveOptions
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 
 class ListenerContainerTest {
-
-    @AfterEach
-    fun tearDown() {
-        AwsGlobalRegistry.reset()
-    }
 
     @Test
     fun `payment events are collected by event id and keyed to their payment, other events are skipped`() {
         // Arrange
         val publisher = EventPublisherInMemory()
-        GlobalRegistry.setFaultManager(FaultManager(publisher, skipErrorLogging = true))
+        val context = AwsKopipesContext(eventPublisher = publisher, faultManager = FaultManager(publisher, skipErrorLogging = true))
         val microstore = EventsMicrostoreInMemory()
-        val listener = Listener { ListenerContainer(eventsMicrostore = microstore) }
+        val listener = Listener { ListenerContainer(context, eventsMicrostore = microstore) }
         val kinesisEvent = StreamRecords.kinesisEvent(
             Fixtures.paymentSubmitted(),
             Fixtures.fundsWithdrawn(),

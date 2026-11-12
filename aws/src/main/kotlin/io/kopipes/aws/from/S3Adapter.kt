@@ -2,7 +2,7 @@ package io.kopipes.aws.from
 
 import aws.sdk.kotlin.services.s3.model.GetObjectRequest
 import com.amazonaws.services.lambda.runtime.events.SQSEvent
-import io.kopipes.aws.AwsGlobalRegistry
+import io.kopipes.aws.AwsKopipesContext
 import io.kopipes.aws.connectors.S3Connector
 import io.kopipes.aws.extensions.copyS3
 import io.kopipes.aws.extensions.s3
@@ -16,10 +16,19 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 class S3Adapter(
-    private val faultManager: FaultManager = AwsGlobalRegistry.faultManager(),
+    private val faultManager: FaultManager,
     private val eventCodec: EventCodec,
-    private val s3ConnectorOptions: S3Connector.Options = S3Connector.Options(),
+    private val s3ConnectorOptions: S3Connector.Options,
+    /** Region stamped on the S3 records built by [toS3Records]. */
+    private val awsRegion: String = "us-west-2",
 ) {
+
+    constructor(context: AwsKopipesContext, eventCodec: EventCodec) : this(
+        faultManager = context.faultManager,
+        eventCodec = eventCodec,
+        s3ConnectorOptions = S3Connector.Options(context.s3ClientFactory),
+        awsRegion = context.envConfig.awsRegion(),
+    )
     private val json = Json {
         ignoreUnknownKeys = true
     }
@@ -190,7 +199,7 @@ class S3Adapter(
             records = notifications.mapIndexed { index, notification ->
                 S3Record(
                     eventSource = "aws:s3",
-                    awsRegion = System.getenv("AWS_REGION") ?: "us-west-2",
+                    awsRegion = this@S3Adapter.awsRegion,
                     responseElements = mapOf(
                         "x-amz-request-id" to "000000000000000$index",
                     ),

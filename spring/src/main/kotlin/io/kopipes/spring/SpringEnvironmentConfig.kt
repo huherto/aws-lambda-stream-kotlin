@@ -94,6 +94,8 @@ open class SpringEnvironmentConfig(private val env: Environment) : AwsEnvironmen
 
     override fun nameSpace(): String? = property("namespace", "NAMESPACE")
 
+    override fun claimCheckBucketName(): String? = property("claim-check-bucket-name", "CLAIMCHECK_BUCKET_NAME")
+
     companion object {
         const val PREFIX = "kopipes"
     }

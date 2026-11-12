@@ -1,7 +1,6 @@
 package org.myorg.urls;
 
-import io.kopipes.aws.connectors.DefaultDynamoDbClientFactory;
-import io.kopipes.aws.connectors.DynamoDbClientFactory;
+import io.kopipes.aws.AwsKopipesContext;
 import io.kopipes.aws.from.KinesisAdapter;
 import io.kopipes.aws.sinks.DynamoDbEventsMicrostore;
 import io.kopipes.core.PipelineAssembler;
@@ -13,7 +12,7 @@ public class ControlListenerContainer {
     public final PipelineAssembler assembler;
     public final KinesisAdapter kinesisAdapter;
 
-    public ControlListenerContainer(EventsMicrostore eventsMicrostore) {
+    public ControlListenerContainer(AwsKopipesContext context, EventsMicrostore eventsMicrostore) {
         this.eventsMicrostore = eventsMicrostore;
         CollectPipeline collectPipeline = CollectPipeline
                 .builder()
@@ -22,15 +21,14 @@ public class ControlListenerContainer {
                 .build();
         this.assembler = PipelineAssembler
                 .builder()
+                .context(context)
                 .addPipeline(collectPipeline)
                 .build();
-        this.kinesisAdapter = new KinesisAdapter(JacksonEventCodec.INSTANCE);
+        this.kinesisAdapter = new KinesisAdapter(context, JacksonEventCodec.INSTANCE);
     }
 
     public static ControlListenerContainer build() {
-        DynamoDbClientFactory factory = new DefaultDynamoDbClientFactory();
-        EventsMicrostore eventsMicrostore = new DynamoDbEventsMicrostore(factory);
-
-        return new ControlListenerContainer(eventsMicrostore);
+        AwsKopipesContext context = new AwsKopipesContext();
+        return new ControlListenerContainer(context, new DynamoDbEventsMicrostore(context));
     }
 }

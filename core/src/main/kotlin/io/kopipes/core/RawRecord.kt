@@ -5,6 +5,7 @@ import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.*
+import java.util.ServiceLoader
 import java.util.concurrent.ConcurrentHashMap
 
 const val RAW_DYNAMODB = "dynamodb"
@@ -25,6 +26,11 @@ data class JsonRaw(
     val value: JsonElement,
 ) : RawRecord
 
+/** Supplies [RawRecord] variants to [RawRecordSerializer]; implementations are found with [ServiceLoader]. */
+interface RawRecordTypeProvider {
+    fun rawRecordTypes(): Map<String, KSerializer<out RawRecord>>
+}
+
 @OptIn(InternalSerializationApi::class)
 object RawRecordSerializer : KSerializer<RawRecord> {
     private val serializers = ConcurrentHashMap<String, KSerializer<out RawRecord>>()
@@ -36,6 +42,9 @@ object RawRecordSerializer : KSerializer<RawRecord> {
 
     init {
         register(RAW_JSON, JsonRaw.serializer())
+        // Platform modules contribute their raw record types through META-INF/services.
+        ServiceLoader.load(RawRecordTypeProvider::class.java, RawRecordTypeProvider::class.java.classLoader)
+            .forEach { provider -> provider.rawRecordTypes().forEach { (name, serializer) -> register(name, serializer) } }
     }
 
     override val descriptor: SerialDescriptor = JsonElement.serializer().descriptor

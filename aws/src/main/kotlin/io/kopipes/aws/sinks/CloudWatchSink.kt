@@ -1,9 +1,8 @@
 package io.kopipes.aws.sinks
 
-import io.kopipes.aws.awsEnvConfig
+import io.kopipes.aws.AwsKopipesContext
 import io.kopipes.aws.connectors.CloudWatchClientFactory
 import io.kopipes.aws.connectors.CloudWatchConnector
-import io.kopipes.aws.connectors.DefaultCloudWatchClientFactory
 import io.kopipes.aws.extensions.copyCloudWatch
 import io.kopipes.aws.extensions.putMetricDataRequest
 import io.kopipes.core.UnitOfWork
@@ -14,9 +13,17 @@ import kotlinx.coroutines.flow.Flow
 import mu.KotlinLogging
 
 class CloudWatchSink(
-    private val clientFactory: CloudWatchClientFactory = DefaultCloudWatchClientFactory(),
-    private val parallel: Int = awsEnvConfig().cloudWatchParallel() ?: awsEnvConfig().parallel() ?: 8,
+    private val clientFactory: CloudWatchClientFactory,
+    private val parallel: Int = 8,
+    private val stepMetrics: Boolean = false,
 ) {
+
+    constructor(context: AwsKopipesContext) : this(
+        clientFactory = context.cloudWatchClientFactory,
+        parallel = context.envConfig.cloudWatchParallel() ?: context.envConfig.parallel() ?: 8,
+        stepMetrics = context.stepMetrics,
+    )
+
     private val logger = KotlinLogging.logger {}
 
     fun putMetrics(fm: FaultManager, source: Flow<UnitOfWork>): Flow<UnitOfWork> =
@@ -28,7 +35,7 @@ class CloudWatchSink(
             }
             logger.debug { "Sending metrics to CloudWatch: $request" }
             fm.faulty(uow) { item ->
-                item.withStepMetrics("put-metrics") { uowWithMetrics ->
+                item.withStepMetrics("put-metrics", stepMetrics) { uowWithMetrics ->
                     val connector = CloudWatchConnector(
                         pipelineId = uowWithMetrics.pipeline?.id ?: "undefined",
                         clientFactory = clientFactory

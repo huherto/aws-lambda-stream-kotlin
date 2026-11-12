@@ -17,15 +17,6 @@ import kotlin.test.assertTrue
 
 class PipelineRunnerTest {
 
-    @BeforeEach
-    fun beforeEach() {
-        GlobalRegistry.reset()
-        GlobalRegistry.setEnvConfig(object : EnvironmentConfig() {
-            override fun isMetricEnabled(key: String): Boolean = false
-        })
-        GlobalRegistry.setFaultManager(FaultManager(eventPublisher = EventPublisherInMemory()))
-    }
-
     private class PassThroughPipeline(id: String) : Pipeline(id) {
         override fun connect(fm: FaultManager, fromFlow: Flow<UnitOfWork>): Flow<UnitOfWork> {
             return fromFlow

@@ -28,6 +28,10 @@ class EventBridgePublisherTest {
         return spy
     }
 
+    private val clientFactory = object : io.kopipes.aws.connectors.EventBridgeClientFactory {
+        override fun getClient(pipelineId: String) = mockk<aws.sdk.kotlin.services.eventbridge.EventBridgeClient>(relaxed = true)
+    }
+
     @AfterEach
     fun tearDown() {
         unmockkAll()
@@ -41,6 +45,7 @@ class EventBridgePublisherTest {
             // Arrange
 
             val publisher = EventBridgePublisher(
+                clientFactory = clientFactory,
                 busName = "test-bus",
                 source = "test-source")
 
@@ -73,7 +78,7 @@ class EventBridgePublisherTest {
         fun `should handle batch correctly based on entries presence`() {
             // Arrange
 
-            val publisher = EventBridgePublisher(endpointId = "test-endpoint")
+            val publisher = EventBridgePublisher(clientFactory = clientFactory, endpointId = "test-endpoint")
 
             val entry1 = PutEventsRequestEntry.Companion { source = "source1" }
 
@@ -112,7 +117,7 @@ class EventBridgePublisherTest {
             val mockResponse = mockk<ConnectorResponse>()
             coEvery { anyConstructed<EventBridgeConnector>().putEvents(any()) } returns mockResponse
 
-            val publisher = EventBridgePublisher()
+            val publisher = EventBridgePublisher(clientFactory = clientFactory)
 
             val request = PutEventsRequest.Companion { endpointId = "test-endpoint" }
             val uowWithRequest = UnitOfWork().withPublishRequest(request)
@@ -141,6 +146,7 @@ class EventBridgePublisherTest {
             coEvery { anyConstructed<EventBridgeConnector>().putEvents(any()) } returns mockResponse
 
             val publisher = EventBridgePublisher(
+                clientFactory = clientFactory,
                 busName = "flow-bus",
                 source = "flow-source",
                 batchSize = 2)

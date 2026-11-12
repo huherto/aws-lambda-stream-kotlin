@@ -1,7 +1,6 @@
 package io.kopipes.aws.queries
 
 import aws.sdk.kotlin.services.s3.model.GetObjectRequest
-import io.kopipes.aws.AwsGlobalRegistry
 import io.kopipes.aws.connectors.S3Connector
 import io.kopipes.aws.extensions.copyS3
 import io.kopipes.aws.extensions.s3
@@ -17,8 +16,8 @@ typealias ClaimCheck = io.kopipes.aws.ClaimCheck
 
 /** Implements the Claim-Check pattern by fetching full event payloads from S3. */
 class ClaimCheckRedeemer(
-    s3ConnectorOptions: S3Connector.Options = S3Connector.Options(),
-    private val faultManager: FaultManager = AwsGlobalRegistry.faultManager(),
+    s3ConnectorOptions: S3Connector.Options,
+    private val faultManager: FaultManager,
     private val eventCodec: EventCodec,
     private val claimCheck: (UnitOfWork) -> ClaimCheck? = { uow ->
         uow.event?.raw as? ClaimCheck

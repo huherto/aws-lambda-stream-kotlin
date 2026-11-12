@@ -5,7 +5,7 @@ import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
-import io.kopipes.aws.AwsGlobalRegistry
+import io.kopipes.aws.AwsKopipesContext
 import io.kopipes.aws.from.KinesisAdapter
 import io.kopipes.core.JsonRaw
 import io.kopipes.core.PipelineAssembler
@@ -48,11 +48,11 @@ class WebhookContainer(
 ) {
     companion object {
         fun build(): WebhookContainer {
-            installGatewayFaultManager()
+            val context = gatewayContext()
             return WebhookContainer(
                 secret = System.getenv("WEBHOOK_SECRET") ?: error("WEBHOOK_SECRET is not configured"),
-                lookup = DynamoDbPaymentLookup.fromEnvironment(),
-                eventPublisher = AwsGlobalRegistry.eventPublisher(),
+                lookup = DynamoDbPaymentLookup.fromContext(context),
+                eventPublisher = context.eventPublisher,
             )
         }
     }
@@ -107,21 +107,26 @@ class Webhook(
 }
 
 /** Default channel → the card deposits we asked the processor for. */
-class RequestsContainer(table: String) {
+class RequestsContainer(val context: AwsKopipesContext, table: String) {
     companion object {
-        fun build() = RequestsContainer(System.getenv("REQUESTS_TABLE_NAME") ?: error("REQUESTS_TABLE_NAME is not configured"))
+        fun build() = RequestsContainer(
+            AwsKopipesContext(),
+            System.getenv("REQUESTS_TABLE_NAME") ?: error("REQUESTS_TABLE_NAME is not configured"),
+        )
     }
 
     val assembler: PipelineAssembler = PipelineAssembler.builder()
+        .context(context)
         .addPipeline(
             requestsPipeline(
+                context,
                 "requests", table,
                 depositsTo(Party.CARD),
             )
         )
         .build()
 
-    val kinesisAdapter = KinesisAdapter(eventCodec = PaymentsEventCodec)
+    val kinesisAdapter = KinesisAdapter(context, PaymentsEventCodec)
 }
 
 class Listener(

@@ -15,7 +15,9 @@ class PipelineAssembler private constructor(builder : Builder) {
 
     private val pipelines = builder.pipelines
 
-    private val faultManager = builder.faultManager?: throw RuntimeException("faultManager is required")
+    private val faultManager = builder.faultManager ?: throw IllegalArgumentException("faultManager is required")
+
+    private val pipelineMetrics = builder.pipelineMetrics
 
     fun getFaultManager(): FaultManager {
         return faultManager
@@ -25,23 +27,29 @@ class PipelineAssembler private constructor(builder : Builder) {
     class Builder {
         internal val pipelines = mutableListOf<Pipeline>()
 
-        internal var envConfig = GlobalRegistry.envConfig()
-
         internal var faultManager: FaultManager? = null
+
+        internal var pipelineMetrics: Boolean = false
 
         fun addPipeline(pipeline: Pipeline): Builder {
             pipelines.add(pipeline)
             return this
         }
 
-        fun envConfig(envConfig: EnvironmentConfig) = apply { this.envConfig = envConfig }
+        /** Takes the fault manager and metric switches from [context]. */
+        fun context(context: KopipesContext) = apply {
+            faultManager(context.faultManager)
+            envConfig(context.envConfig)
+        }
+
+        /** Enables pipeline metrics when the `pipeline` metric is configured. */
+        fun envConfig(envConfig: EnvironmentConfig) = apply { this.pipelineMetrics = envConfig.isMetricEnabled("pipeline") }
+
+        fun pipelineMetrics(enabled: Boolean) = apply { this.pipelineMetrics = enabled }
 
         fun faultManager(faultManager: FaultManager) = apply { this.faultManager = faultManager }
 
         fun build(): PipelineAssembler {
-            if (faultManager == null) {
-                faultManager = GlobalRegistry.faultManager()
-            }
             return PipelineAssembler(this)
         }
     }
@@ -84,14 +92,14 @@ class PipelineAssembler private constructor(builder : Builder) {
     }
 
     fun startPipeline(uow: UnitOfWork): UnitOfWork {
-        if (!envConfig().isMetricEnabled("pipeline")) return uow
+        if (!pipelineMetrics) return uow
         return uow.updateMetrics { pm ->
             pm.startPipeline(uow.pipeline?.id ?: "default")
         }
     }
 
     fun endPipeline(uow: UnitOfWork): UnitOfWork {
-        if (!envConfig().isMetricEnabled("pipeline")) return uow
+        if (!pipelineMetrics) return uow
         return uow.updateMetrics { pm ->
             pm.endPipeline()
         }

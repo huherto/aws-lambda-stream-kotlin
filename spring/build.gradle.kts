@@ -39,6 +39,8 @@ dependencies {
     testImplementation(kotlin("test"))
     testImplementation(libs.kotest.assertions)
     testImplementation(libs.kotlinx.coroutines)
+    testImplementation(libs.kotlinx.serialization.json)
+    testImplementation(libs.mockk)
     testImplementation(libs.slf4j.simple)
 }
 

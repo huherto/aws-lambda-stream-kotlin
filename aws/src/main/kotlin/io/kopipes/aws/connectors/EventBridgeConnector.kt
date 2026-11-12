@@ -5,8 +5,7 @@ import aws.sdk.kotlin.services.eventbridge.EventBridgeClient
 import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequest
 import aws.sdk.kotlin.services.eventbridge.model.PutEventsResponse
 import aws.smithy.kotlin.runtime.net.url.Url
-import io.kopipes.aws.AwsGlobalRegistry
-import io.kopipes.aws.awsEnvConfig
+import io.kopipes.aws.AwsEnvironmentConfig
 import io.kopipes.core.resilience.RetryConfig
 import io.kopipes.core.resilience.RetryExecutor
 import kotlin.time.Duration
@@ -33,10 +32,10 @@ data class ConnectorResponse(
 
 interface EventBridgeClientFactory : ClientFactory<EventBridgeClient>
 
-class DefaultEventBridgeClientFactory() : EventBridgeClientFactory, AbstractClientFactory<EventBridgeClient>() {
+class DefaultEventBridgeClientFactory(private val envConfig: AwsEnvironmentConfig) : EventBridgeClientFactory, AbstractClientFactory<EventBridgeClient>() {
     override fun create(): EventBridgeClient {
-        val endpointUrl = awsEnvConfig().endPointUrl()?.ifEmpty { null }
-        val region = awsEnvConfig().awsRegion()
+        val endpointUrl = envConfig.endPointUrl()?.ifEmpty { null }
+        val region = envConfig.awsRegion()
         return EventBridgeClient {
             this.region = region
             this.credentialsProvider = EnvironmentCredentialsProvider()
@@ -50,7 +49,7 @@ class EventBridgeConnector(
     timeout: Duration,
     private val retryConfig: RetryConfig,
     private val opt: ConnectorOptions = ConnectorOptions(),
-    private val clientFactory: EventBridgeClientFactory = AwsGlobalRegistry.eventBridgeClientFactory(),
+    private val clientFactory: EventBridgeClientFactory,
 ) {
     private val client: EventBridgeClient = clientFactory.getClient(pipelineId)
     private val logger = mu.KotlinLogging.logger {}

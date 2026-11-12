@@ -1,6 +1,6 @@
 package org.myorg.payments
 
-import io.kopipes.aws.AwsGlobalRegistry
+import io.kopipes.aws.AwsKopipesContext
 import io.kopipes.aws.flavors.CdcPipeline
 import io.kopipes.aws.from.KinesisAdapter
 import io.kopipes.core.Event
@@ -52,12 +52,13 @@ fun toAccountChanged(uow: UnitOfWork): Event? {
 }
 
 class ListenerContainer(
-    val eventPublisher: EventPublisher,
+    val context: AwsKopipesContext,
+    val eventPublisher: EventPublisher = context.eventPublisher,
 ) {
     companion object {
         const val TRANSLATE = "translate"
 
-        fun build(): ListenerContainer = ListenerContainer(eventPublisher = AwsGlobalRegistry.eventPublisher())
+        fun build(): ListenerContainer = ListenerContainer(AwsKopipesContext())
     }
 
     val translatePipeline: Pipeline by lazy {
@@ -71,9 +72,10 @@ class ListenerContainer(
 
     val assembler: PipelineAssembler by lazy {
         PipelineAssembler.builder()
+            .context(context)
             .addPipeline(translatePipeline)
             .build()
     }
 
-    val kinesisAdapter: KinesisAdapter by lazy { KinesisAdapter(eventCodec = AccountsEventCodec) }
+    val kinesisAdapter: KinesisAdapter by lazy { KinesisAdapter(context, AccountsEventCodec) }
 }

@@ -3,9 +3,8 @@ package org.myorg.payments.adapters.inbound
 import org.myorg.payments.*
 
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
-import io.kopipes.aws.AwsGlobalRegistry
+import io.kopipes.aws.AwsKopipesContext
 import io.kopipes.aws.testsupport.TestContext
-import io.kopipes.core.GlobalRegistry
 import io.kopipes.core.faults.FaultManager
 import io.kopipes.core.sinks.EventPublisherInMemory
 import io.kopipes.core.sinks.EventsMicrostoreInMemory
@@ -16,7 +15,6 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
-import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.myorg.payments.adapters.inbound.StreamRecords.correlationItem
@@ -37,19 +35,14 @@ class TriggerContainerTest {
     fun setUp() {
         publisher = EventPublisherInMemory()
         val faultManager = FaultManager(publisher, skipErrorLogging = true)
-        GlobalRegistry.setFaultManager(faultManager)
         microstore = EventsMicrostoreInMemory(faultManager)
         val container = TriggerContainer(
+            context = AwsKopipesContext(eventPublisher = publisher, faultManager = faultManager),
             eventsMicrostore = microstore,
             eventPublisher = publisher,
             deadlineSeconds = deadlineSeconds,
         )
         trigger = Trigger { container }
-    }
-
-    @AfterEach
-    fun tearDown() {
-        AwsGlobalRegistry.reset()
     }
 
     private fun handle(vararg records: DynamodbEvent.DynamodbStreamRecord) {

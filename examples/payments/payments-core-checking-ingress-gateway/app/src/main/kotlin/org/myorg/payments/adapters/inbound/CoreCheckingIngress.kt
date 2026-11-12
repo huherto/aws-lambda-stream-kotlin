@@ -4,7 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
-import io.kopipes.aws.AwsGlobalRegistry
+import io.kopipes.aws.AwsKopipesContext
 import io.kopipes.aws.from.DynamodbAdapter
 import io.kopipes.aws.from.KinesisAdapter
 import io.kopipes.core.Event
@@ -55,18 +55,17 @@ fun newLedgerEntry(uow: UnitOfWork): LedgerEntry? {
 }
 
 class LedgerContainer(
-    val lookup: PaymentLookup,
-    val eventPublisher: EventPublisher,
+    val context: AwsKopipesContext,
+    val lookup: PaymentLookup = DynamoDbPaymentLookup.fromContext(context),
+    val eventPublisher: EventPublisher = context.eventPublisher,
 ) {
     companion object {
-        fun build(): LedgerContainer {
-            installGatewayFaultManager()
-            return LedgerContainer(DynamoDbPaymentLookup.fromEnvironment(), AwsGlobalRegistry.eventPublisher())
-        }
+        fun build(): LedgerContainer = LedgerContainer(gatewayContext())
     }
 
     val assembler: PipelineAssembler by lazy {
         PipelineAssembler.builder()
+            .context(context)
             .addPipeline(
                 TranslatePipeline.builder()
                     .id("ledger")
@@ -80,7 +79,7 @@ class LedgerContainer(
             .build()
     }
 
-    val dynamoDbAdapter: DynamodbAdapter by lazy { DynamodbAdapter() }
+    val dynamoDbAdapter: DynamodbAdapter by lazy { DynamodbAdapter(context) }
 }
 
 /** The ledger's change feed → our events. */
@@ -96,15 +95,19 @@ class LedgerTrigger(
 }
 
 /** Default channel → the payments we asked core checking about. */
-class RequestsContainer(table: String) {
+class RequestsContainer(val context: AwsKopipesContext, table: String) {
     companion object {
-        fun build() = RequestsContainer(System.getenv("REQUESTS_TABLE_NAME") ?: error("REQUESTS_TABLE_NAME is not configured"))
+        fun build() = RequestsContainer(
+            AwsKopipesContext(),
+            System.getenv("REQUESTS_TABLE_NAME") ?: error("REQUESTS_TABLE_NAME is not configured"),
+        )
     }
 
     val assembler: PipelineAssembler = PipelineAssembler.builder()
+        .context(context)
         .addPipeline(
             requestsPipeline(
-                "requests", table,
+                context, "requests", table,
                 EventFilters.anyOf(
                     EventFilters.name(PaymentsEvent.WITHDRAWAL_REQUESTED),
                     EventFilters.name(PaymentsEvent.REFUND_REQUESTED),
@@ -113,7 +116,7 @@ class RequestsContainer(table: String) {
         )
         .build()
 
-    val kinesisAdapter = KinesisAdapter(eventCodec = PaymentsEventCodec)
+    val kinesisAdapter = KinesisAdapter(context, PaymentsEventCodec)
 }
 
 class Listener(

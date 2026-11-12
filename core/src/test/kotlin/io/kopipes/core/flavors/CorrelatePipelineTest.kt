@@ -22,16 +22,6 @@ import org.junit.jupiter.api.Test
 
 class CorrelatePipelineTest {
 
-    val envConfig = spyk<EnvironmentConfig> {
-        every { awsRegion() } returns "eu-west-1"
-        every { ttl() } returns 30
-    }
-
-    @BeforeEach
-    fun beforeEach() {
-        GlobalRegistry.setEnvConfig(envConfig)
-    }
-
     data class TestEvent(
         override val id: String? = "event-1",
         override val timestamp: Long? = Clock.System.now().toEpochMilliseconds(),
@@ -92,7 +82,7 @@ class CorrelatePipelineTest {
         saveOptions.suffix shouldBe "-suffix"
         saveOptions.data shouldBe "evt-100"
         saveOptions.pipelineId shouldBe "correlate-1"
-        saveOptions.awsRegion shouldBe "eu-west-1"
+        saveOptions.awsRegion shouldBe null // the microstore fills in its own region
     }
 
     @Test

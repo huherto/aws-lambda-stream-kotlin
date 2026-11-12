@@ -1,8 +1,7 @@
 package org.myorg.urls;
 
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient;
-import io.kopipes.aws.connectors.DefaultDynamoDbClientFactory;
-import io.kopipes.aws.connectors.DynamoDbClientFactory;
+import io.kopipes.aws.AwsKopipesContext;
 import io.kopipes.aws.from.DynamodbAdapter;
 import io.kopipes.aws.sinks.DynamoDbEventsMicrostore;
 import io.kopipes.core.Event;
@@ -20,7 +19,7 @@ public class ControlTriggerContainer {
     public final DynamodbAdapter dynamoDbAdapter;
     public final UrlDao urlDao;
 
-    public ControlTriggerContainer(EventsMicrostore eventsMicrostore, UrlDao urlDao) {
+    public ControlTriggerContainer(AwsKopipesContext context, EventsMicrostore eventsMicrostore, UrlDao urlDao) {
         this.urlDao = urlDao;
         CorrelatePipeline correlate = CorrelatePipeline
                 .builder()
@@ -42,10 +41,11 @@ public class ControlTriggerContainer {
                 .build();
 
         this.assembler = PipelineAssembler.builder()
+                .context(context)
                 .addPipeline(correlate)
                 .addPipeline(evaluate)
                 .build();
-        this.dynamoDbAdapter = new DynamodbAdapter();
+        this.dynamoDbAdapter = new DynamodbAdapter(context);
     }
 
     private String correlationKey(UnitOfWork uow) {
@@ -66,12 +66,12 @@ public class ControlTriggerContainer {
     public static ControlTriggerContainer build() {
         String urlsTableName = System.getenv("ENTITY_TABLE_NAME");
         if (urlsTableName == null) urlsTableName = "urls-dev-entities";
-        DynamoDbClientFactory factory = new DefaultDynamoDbClientFactory();
-        DynamoDbClient client = factory.getClient("urls-control-service");
+        AwsKopipesContext context = new AwsKopipesContext();
+        DynamoDbClient client = context.getDynamoDbClientFactory().getClient("urls-control-service");
 
-        EventsMicrostore eventsMicrostore = new DynamoDbEventsMicrostore(factory);
+        EventsMicrostore eventsMicrostore = new DynamoDbEventsMicrostore(context);
         UrlDao urlDao = new UrlDao(client, urlsTableName);
 
-        return new ControlTriggerContainer(eventsMicrostore, urlDao);
+        return new ControlTriggerContainer(context, eventsMicrostore, urlDao);
     }
 }

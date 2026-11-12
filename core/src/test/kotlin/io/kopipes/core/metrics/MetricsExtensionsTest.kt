@@ -1,12 +1,8 @@
 package io.kopipes.core.metrics
 
-import io.kopipes.core.EnvironmentConfig
-import io.kopipes.core.GlobalRegistry
 import io.kopipes.core.UnitOfWork
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import io.mockk.every
-import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
 
@@ -14,12 +10,8 @@ class MetricsExtensionsTest {
 
     @Test
     fun `withStepMetrics should add start and end checkpoints when enabled`(): Unit = runBlocking {
-        val envConfig = mockk<EnvironmentConfig>()
-        every { envConfig.isMetricEnabled("step") } returns true
-        GlobalRegistry.setEnvConfig(envConfig)
-
         val uow = UnitOfWork()
-        val result = uow.withStepMetrics("test-step") {
+        val result = uow.withStepMetrics("test-step", enabled = true) {
             val waitTime = it.metrics?.timer?.checkpoints?.get("default|test-step|stream.pipeline.io.wait.time")
             waitTime shouldNotBe null
             it
@@ -31,12 +23,8 @@ class MetricsExtensionsTest {
 
     @Test
     fun `withStepMetrics should not add checkpoints when disabled`(): Unit = runBlocking {
-        val envConfig = mockk<EnvironmentConfig>()
-        every { envConfig.isMetricEnabled("step") } returns false
-        GlobalRegistry.setEnvConfig(envConfig)
-
         val uow = UnitOfWork()
-        val result = uow.withStepMetrics("test-step") {
+        val result = uow.withStepMetrics("test-step", enabled = false) {
             val waitTime = it.metrics?.timer?.checkpoints?.get("default|test-step|stream.pipeline.io.wait.time")
             waitTime shouldBe null
             it

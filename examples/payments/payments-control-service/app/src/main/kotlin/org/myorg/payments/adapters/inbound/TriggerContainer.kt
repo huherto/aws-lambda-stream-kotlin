@@ -1,6 +1,6 @@
 package org.myorg.payments.adapters.inbound
 
-import io.kopipes.aws.AwsGlobalRegistry
+import io.kopipes.aws.AwsKopipesContext
 import io.kopipes.aws.from.DynamodbAdapter
 import io.kopipes.aws.sinks.DynamoDbEventsMicrostore
 import io.kopipes.core.Event
@@ -33,8 +33,9 @@ import kotlin.time.Duration.Companion.seconds
  * | timeout         | DEPOSIT_REQUESTED, and by the deadline no outcome   | PAYMENT_EXPIRED        |
  */
 class TriggerContainer(
-    val eventsMicrostore: EventsMicrostore,
-    val eventPublisher: EventPublisher,
+    val context: AwsKopipesContext,
+    val eventsMicrostore: EventsMicrostore = DynamoDbEventsMicrostore(context),
+    val eventPublisher: EventPublisher = context.eventPublisher,
     /** How long a deposit may take before PAYMENT_EXPIRED. 2 days in production, minutes in demos. */
     val deadlineSeconds: Long = DEFAULT_DEADLINE_SECONDS,
     val codec: EventCodec = PaymentsEventCodec,
@@ -45,8 +46,7 @@ class TriggerContainer(
         const val DEFAULT_DEADLINE_SECONDS = 2 * 24 * 60 * 60L
 
         fun build(): TriggerContainer = TriggerContainer(
-            eventsMicrostore = DynamoDbEventsMicrostore(),
-            eventPublisher = AwsGlobalRegistry.eventPublisher(),
+            context = AwsKopipesContext(),
             deadlineSeconds = System.getenv("DEADLINE_SECONDS")?.toLongOrNull() ?: DEFAULT_DEADLINE_SECONDS,
         )
     }
@@ -145,6 +145,7 @@ class TriggerContainer(
 
     val assembler: PipelineAssembler by lazy {
         PipelineAssembler.builder()
+            .context(context)
             .addPipeline(correlatePipeline)
             .addPipeline(deadlinePipeline)
             .addPipeline(startPipeline)
@@ -157,5 +158,5 @@ class TriggerContainer(
             .build()
     }
 
-    val dynamoDbAdapter: DynamodbAdapter by lazy { DynamodbAdapter() }
+    val dynamoDbAdapter: DynamodbAdapter by lazy { DynamodbAdapter(context) }
 }

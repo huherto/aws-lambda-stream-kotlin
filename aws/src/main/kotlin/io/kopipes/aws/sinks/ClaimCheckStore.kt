@@ -4,8 +4,7 @@ package io.kopipes.aws.sinks
 import aws.sdk.kotlin.services.s3.model.PutObjectRequest
 import aws.sdk.kotlin.services.s3.model.PutObjectResponse
 import aws.smithy.kotlin.runtime.content.ByteStream
-import io.kopipes.aws.AwsGlobalRegistry
-import io.kopipes.aws.awsEnvConfig
+import io.kopipes.aws.AwsEnvironmentConfig
 import io.kopipes.aws.connectors.S3ClientFactory
 import io.kopipes.aws.extensions.copyS3
 import io.kopipes.core.*
@@ -18,14 +17,28 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.Serializable
 
-/** S3-backed Claim Check store. */
+/**
+ * S3-backed Claim Check store.
+ *
+ * The fault manager is supplied lazily because the store usually sits inside the [EventPublisher] the fault manager
+ * itself publishes through: `EventBridgePublisher(..., claimCheckStore = ClaimCheckStore(..., faultManager = { ctx.faultManager }))`.
+ */
 class ClaimCheckStore(
-    private val s3ClientFactory: S3ClientFactory = AwsGlobalRegistry.s3ClientFactory(),
-    private val faultManager: FaultManager = AwsGlobalRegistry.faultManager(),
-    private val claimCheckBucketName: String? = java.lang.System.getenv("CLAIMCHECK_BUCKET_NAME"),
+    private val s3ClientFactory: S3ClientFactory,
+    private val faultManager: () -> FaultManager,
+    private val claimCheckBucketName: String?,
+    private val region: String,
     private val clock: Clock = kotlinx.datetime.Clock.System,
     private val bufferCapacity: Int = Channel.BUFFERED,
 ) {
+
+    constructor(envConfig: AwsEnvironmentConfig, s3ClientFactory: S3ClientFactory, faultManager: () -> FaultManager) : this(
+        s3ClientFactory = s3ClientFactory,
+        faultManager = faultManager,
+        claimCheckBucketName = envConfig.claimCheckBucketName(),
+        region = envConfig.awsRegion(),
+    )
+
     /** Pointer to an event payload in S3. */
     @Serializable
     data class ClaimCheck(
@@ -84,7 +97,6 @@ class ClaimCheckStore(
     }
 
     fun formatKey(event: Event): String {
-        val region = awsEnvConfig().awsRegion()
         val instant = clock.now()
         val dateTime = instant.toLocalDateTime(TimeZone.UTC)
         val year = dateTime.year
@@ -133,7 +145,7 @@ class ClaimCheckStore(
             return flow
         }
 
-        with(faultManager) {
+        with(faultManager()) {
             return flow
                 .mapNotFaulty { uow -> storeBatchOrSingle(uow, bucket) }
                 .buffer(bufferCapacity)

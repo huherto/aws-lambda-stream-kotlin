@@ -1,7 +1,6 @@
 package org.myorg.payments
 
-import io.kopipes.aws.AwsGlobalRegistry
-import io.kopipes.core.GlobalRegistry
+import io.kopipes.aws.AwsKopipesContext
 import io.kopipes.core.JsonRaw
 import io.kopipes.core.UnitOfWork
 import io.kopipes.core.faults.FaultManager
@@ -16,13 +15,10 @@ import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
-import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 
 class PaymentsEgressTest {
 
-    @AfterEach
-    fun tearDown() = AwsGlobalRegistry.reset()
 
     @Test
     fun `PAYMENT_COMPLETED becomes PAYMENTS_PAYMENT_COMPLETED with only what we choose to share`() {
@@ -66,8 +62,8 @@ class PaymentsEgressTest {
     fun `only outcomes go out, PAYMENT_EXPIRED and the steps stay inside`() = runTest {
         // Arrange
         val publisher = EventPublisherInMemory()
-        GlobalRegistry.setFaultManager(FaultManager(publisher, skipErrorLogging = true))
-        val container = EgressContainer(publisher)
+        val context = AwsKopipesContext(eventPublisher = publisher, faultManager = FaultManager(publisher, skipErrorLogging = true))
+        val container = EgressContainer(context)
         val events = listOf(
             Fixtures.paymentSubmitted(), Fixtures.fundsWithdrawn(), Fixtures.paymentExpired(),
             Fixtures.paymentCompleted(), Fixtures.paymentFailed(),

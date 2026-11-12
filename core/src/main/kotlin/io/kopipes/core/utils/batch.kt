@@ -119,7 +119,7 @@ data class BatchSizeOptions(
     val getRequestEntry: (UnitOfWork) -> Any?,
     val setRequestEntryDetail: (UnitOfWork, Any) -> Unit = { _, _ -> },
     val setPutClaimcheckRequest: (UnitOfWork, Any) -> Unit = { _, _ -> },
-    val claimCheckBucketName: String? = System.getenv("CLAIMCHECK_BUCKET_NAME"),
+    val claimCheckBucketName: String? = null,
     val metricsEnabled: Boolean = false
 )
 

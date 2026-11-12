@@ -1,6 +1,5 @@
 package io.kopipes.aws.from
 
-import io.kopipes.aws.AwsGlobalRegistry
 import io.kopipes.core.*
 import io.kopipes.core.faults.FaultManager
 import kotlinx.coroutines.flow.Flow
@@ -11,7 +10,7 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import java.util.*
 
-class CognitoAdapter(private val faultManager: FaultManager = AwsGlobalRegistry.faultManager()) {
+class CognitoAdapter(private val faultManager: FaultManager) {
 
     fun fromCognito(event: Any, eventTypePrefix: String = "aws-cognito"): Flow<UnitOfWork> {
         with(faultManager) {

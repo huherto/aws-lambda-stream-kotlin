@@ -1,9 +1,9 @@
 package org.myorg.payments.adapters.inbound
 
-import io.kopipes.aws.AwsGlobalRegistry
+import io.kopipes.aws.AwsKopipesContext
+import io.kopipes.aws.isAwsRetryable
 import io.kopipes.aws.from.KinesisAdapter
 import io.kopipes.core.PipelineAssembler
-import io.kopipes.core.faults.FaultManager
 import io.kopipes.core.filters.EventFilters
 import org.myorg.payments.ActionPipeline
 import org.myorg.payments.PaymentEvent
@@ -30,11 +30,11 @@ import kotlin.time.Duration.Companion.seconds
  * of the called-once policy. `build()` is the composition root: it picks the real or the simulated core checking and
  * plugs the DynamoDB adapters into the ports.
  */
-class EgressContainer(val calledOnce: CalledOnce) {
+class EgressContainer(val context: AwsKopipesContext, val calledOnce: CalledOnce) {
     companion object {
         fun build(): EgressContainer {
-            installCoreCheckingFaultManager()
-            val dynamoDb = AwsGlobalRegistry.dynamoDbClientFactory().getClient("calls")
+            val context = coreCheckingContext()
+            val dynamoDb = context.dynamoDbClientFactory.getClient("calls")
             val callsTable = System.getenv("CALLS_TABLE_NAME") ?: error("CALLS_TABLE_NAME is not configured")
             val coreChecking =
                 if (Simulation.enabled()) SimulatedCoreChecking(
@@ -56,11 +56,12 @@ class EgressContainer(val calledOnce: CalledOnce) {
                 openFor = (System.getenv("BREAKER_OPEN_SECONDS")?.toLongOrNull() ?: 30).seconds,
                 closedHours = ClosedHours.parse(System.getenv("CORE_CHECKING_CLOSED_HOURS")),
             )
-            return EgressContainer(CalledOnce(coreChecking, claims, grace = grace.seconds, breaker = breaker))
+            return EgressContainer(context, CalledOnce(coreChecking, claims, grace = grace.seconds, breaker = breaker))
         }
     }
 
     val assembler: PipelineAssembler = PipelineAssembler.builder()
+        .context(context)
         .addPipeline(
             ActionPipeline.builder()
                 .id("withdraw")
@@ -77,7 +78,7 @@ class EgressContainer(val calledOnce: CalledOnce) {
         )
         .build()
 
-    val kinesisAdapter = KinesisAdapter(eventCodec = PaymentsEventCodec)
+    val kinesisAdapter = KinesisAdapter(context, PaymentsEventCodec)
 }
 
 /**
@@ -85,13 +86,5 @@ class EgressContainer(val calledOnce: CalledOnce) {
  * (with `STREAM_RETRY_ENABLED=true`) instead of becoming faults. A call unresolved past the grace period does become
  * a fault, for an operator.
  */
-fun installCoreCheckingFaultManager() {
-    AwsGlobalRegistry.setFaultManagerFactory {
-        FaultManager(
-            eventPublisher = AwsGlobalRegistry.eventPublisher(),
-            isRetryable = {
-                it is CallNotSent || it is CoreCheckingUnavailable || AwsGlobalRegistry.isAwsRetryable(it)
-            },
-        )
-    }
-}
+fun coreCheckingContext(): AwsKopipesContext =
+    AwsKopipesContext(isRetryable = { it is CallNotSent || it is CoreCheckingUnavailable || isAwsRetryable(it) })

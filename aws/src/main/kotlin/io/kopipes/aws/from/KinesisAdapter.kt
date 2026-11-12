@@ -1,11 +1,10 @@
 package io.kopipes.aws.from
 
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
-import io.kopipes.aws.AwsGlobalRegistry
+import io.kopipes.aws.AwsKopipesContext
 import io.kopipes.aws.queries.ClaimCheckRedeemer
 import io.kopipes.core.Event
 import io.kopipes.core.EventCodec
-import io.kopipes.core.GlobalRegistry.envConfig
 import io.kopipes.core.UnitOfWork
 import io.kopipes.core.faults.FaultManager
 import io.kopipes.core.metrics.PipelineMetrics
@@ -17,19 +16,27 @@ import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.mapNotNull
 
 class KinesisAdapter(
-    private val faultManager: FaultManager = AwsGlobalRegistry.faultManager(),
+    private val faultManager: FaultManager,
     private val eventCodec: EventCodec,
-    private val claimCheckRedeemer: ClaimCheckRedeemer? = null
+    private val claimCheckRedeemer: ClaimCheckRedeemer? = null,
+    /** The event source's batch size, for the `stream.batch.utilization` gauge. */
+    private val batchSize: Int = DEFAULT_BATCH_SIZE,
 ) {
 
-    constructor(eventCodec: EventCodec) : this(AwsGlobalRegistry.faultManager(), eventCodec)
+    @JvmOverloads
+    constructor(context: AwsKopipesContext, eventCodec: EventCodec, claimCheckRedeemer: ClaimCheckRedeemer? = null) : this(
+        faultManager = context.faultManager,
+        eventCodec = eventCodec,
+        claimCheckRedeemer = claimCheckRedeemer,
+        batchSize = context.envConfig.batchSize() ?: DEFAULT_BATCH_SIZE,
+    )
 
     fun fromKinesis(kinesisEvent: KinesisEvent): Flow<UnitOfWork> {
         if (kinesisEvent.records.isNullOrEmpty()) {
             return emptyFlow()
         }
         with(faultManager) {
-            val batchUtilization = kinesisEvent.records.size.toDouble() / (envConfig().batchSize() ?: 100)
+            val batchUtilization = kinesisEvent.records.size.toDouble() / batchSize
             return kinesisEvent.records.asFlow()
                 .mapNotNull { record ->
                     val timestamp = record.kinesis?.approximateArrivalTimestamp?.time ?: System.currentTimeMillis()
