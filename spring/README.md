@@ -45,6 +45,27 @@ With several `EventPublisher` beans, mark the default one `@Primary`.
 
 Turn it all off with `kopipes.enabled=false`.
 
+## Spring Framework without Boot
+
+Import `KopipesConfiguration` instead. It needs only `spring-context` (no Boot jars) and defines two beans: the
+`AwsEnvironmentConfig`, read from the Spring `Environment` the same way, and the `AwsKopipesContext` built from it with
+its defaults. To change a collaborator, declare your own `AwsKopipesContext` bean instead of importing it.
+
+```kotlin
+dependencies {
+    implementation(project(":spring"))
+    implementation("org.springframework:spring-context:7.0.10")
+    implementation("org.jetbrains.kotlin:kotlin-reflect")
+}
+
+@Configuration(proxyBeanMethods = false)
+@Import(KopipesConfiguration::class)
+class ControlServiceConfiguration { /* beans built from AwsKopipesContext */ }
+```
+
+Without Boot, `application.properties` is not loaded: the `kopipes.*` keys come from the env vars and system
+properties, or from your own `@PropertySource`.
+
 ## Running on Lambda
 
 Declare a `Consumer` bean per function, then a handler class per function that names your application:
@@ -69,7 +90,8 @@ class Listener : SpringKinesisHandler(ControlServiceApplication::class.java)   /
   adapter into a `java.util.function.Consumer`. That is also the shape Spring Cloud Function expects, if you later
   move to its `FunctionInvoker`.
 - `SpringKinesisHandler`, `SpringDynamoDbHandler` and `SpringSqsHandler` start the application once per Lambda
-  container, during init, and hand each event to the `Consumer<EventType>` bean. With several consumers of the same
+  container, during init, and hand each event to the `Consumer<EventType>` bean. A `@SpringBootApplication` starts
+  with Spring Boot; a plain `@Configuration` starts in an `AnnotationConfigApplicationContext`, without Boot. With several consumers of the same
   event type, pass the bean name: `SpringKinesisHandler(App::class.java, "audit")`.
 - Set `spring.main.lazy-initialization=true` so each function builds only the beans its consumer needs.
 

@@ -10,13 +10,19 @@ import org.springframework.boot.Banner
 import org.springframework.boot.WebApplicationType
 import org.springframework.boot.builder.SpringApplicationBuilder
 import org.springframework.context.ConfigurableApplicationContext
+import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import org.springframework.core.ResolvableType
+import org.springframework.core.annotation.MergedAnnotations
 import java.util.concurrent.ConcurrentHashMap
 import java.util.function.Consumer
 
 /**
  * One Spring application context per application class per JVM: a Lambda container starts it on its first (init) call
  * and reuses it for every invocation after that.
+ *
+ * A `@SpringBootApplication` (any `@SpringBootConfiguration`) starts as a Spring Boot application. Any other
+ * `@Configuration` starts in a plain `AnnotationConfigApplicationContext`, so Spring Framework apps without Boot need
+ * only `spring-context` on the classpath.
  */
 object SpringLambdaContexts {
     private val logger = KotlinLogging.logger { }
@@ -25,12 +31,19 @@ object SpringLambdaContexts {
     fun get(application: Class<*>): ConfigurableApplicationContext =
         contexts.computeIfAbsent(application) {
             val started = System.currentTimeMillis()
-            SpringApplicationBuilder(application)
-                .web(WebApplicationType.NONE)
-                .bannerMode(Banner.Mode.OFF)
-                .run()
-                .also { logger.info { "Spring context for ${application.simpleName} started in ${System.currentTimeMillis() - started} ms" } }
+            val boot = isSpringBootApplication(application)
+            val context = if (boot) BootContexts.start(application) else AnnotationConfigApplicationContext(application)
+            logger.info {
+                "Spring ${if (boot) "Boot " else ""}context for ${application.simpleName} started in " +
+                    "${System.currentTimeMillis() - started} ms"
+            }
+            context
         }
+
+    // By name: reading the annotation must not load Spring Boot classes when Boot isn't on the classpath.
+    internal fun isSpringBootApplication(application: Class<*>): Boolean =
+        MergedAnnotations.from(application, MergedAnnotations.SearchStrategy.TYPE_HIERARCHY)
+            .isPresent("org.springframework.boot.SpringBootConfiguration")
 
     /** The `Consumer<eventType>` bean of [application]: the one named [beanName], or the only one of that type. */
     fun <E> consumer(application: Class<*>, eventType: Class<E>, beanName: String? = null): Consumer<E> {
@@ -49,6 +62,15 @@ object SpringLambdaContexts {
         contexts.values.forEach { it.close() }
         contexts.clear()
     }
+}
+
+/** The only code that touches Spring Boot classes; loaded only for Spring Boot applications. */
+private object BootContexts {
+    fun start(application: Class<*>): ConfigurableApplicationContext =
+        SpringApplicationBuilder(application)
+            .web(WebApplicationType.NONE)
+            .bannerMode(Banner.Mode.OFF)
+            .run()
 }
 
 /*
