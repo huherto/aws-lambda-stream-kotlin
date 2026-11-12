@@ -89,6 +89,8 @@ public class OrderHandler implements RequestHandler<DynamodbEvent, Void> {
 }
 ```
 
+For tests, custom retry rules and the full list of settings, see [Wiring a kopipes Lambda](Wiring.md).
+
 ## Core Concepts for Java Developers
 
 ### Unit of Work (UOW)

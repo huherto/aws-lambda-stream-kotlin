@@ -42,14 +42,34 @@ data class OrderPlacedEvent(
 
 ### 2. Configure your Pipeline
 
-Choose a "flavor" that fits your use case. For example, use `CollectPipeline` to store events in a Microstore.
+Choose a "flavor" that fits your use case. For example, use `CollectPipeline` to store events in a Microstore. The
+`AwsKopipesContext` holds the collaborators every pipeline shares (fault manager, publisher, AWS clients);
+`AwsKopipesContext()` reads the usual env vars. See [Wiring a kopipes Lambda](Wiring.md).
 
 ```kotlin
-val collectPipeline = CollectPipeline(
-    pipelineId = "order-collection",
-    eventsMicrostore = eventsMicrostore,
-    eventFilter = EventFilters.classes(OrderPlacedEvent::class)
-)
+class OrderContainer(
+    val context: AwsKopipesContext,
+    val eventsMicrostore: EventsMicrostore = DynamoDbEventsMicrostore(context),
+) {
+    companion object {
+        fun build() = OrderContainer(AwsKopipesContext())
+    }
+
+    val assembler: PipelineAssembler by lazy {
+        PipelineAssembler.builder()
+            .context(context)
+            .addPipeline(
+                CollectPipeline.builder()
+                    .id("order-collection")
+                    .eventFilter(EventFilters.classes(OrderPlacedEvent::class))
+                    .eventsMicrostore(eventsMicrostore)
+                    .build()
+            )
+            .build()
+    }
+
+    val kinesisAdapter by lazy { KinesisAdapter(context, OrderEventCodec) }
+}
 ```
 
 ### 3. Assemble and Run in Lambda
@@ -58,21 +78,26 @@ Adapters turn AWS Lambda events into a Kotlin `Flow`. The `PipelineAssembler` ru
 
 ```kotlin
 class OrderHandler(
-    private val container: MyContainer = MyContainer.build()
+    containerFactory: () -> OrderContainer = { OrderContainer.build() },
 ) : RequestHandler<KinesisEvent, Void?> {
+
+    private val container by lazy(containerFactory)
 
     override fun handleRequest(input: KinesisEvent, context: Context): Void? = runBlocking {
         val flow = container.kinesisAdapter.fromKinesis(input)
-        
+
         container.assembler
             .assemble(flow)
-            .collect { uow -> 
+            .collect { uow ->
                 println("Processed ${uow.event?.id}")
             }
         null
     }
 }
 ```
+
+On Spring Boot, the [spring module](../spring/README.md) provides the context as a bean and handler classes that run
+a Spring application as a Lambda.
 
 ## Core Concepts for Developers
 
@@ -93,19 +118,26 @@ Zero-boilerplate integration with AWS event sources:
 *   **Materialize**: Sink events to S3, DynamoDB, or EventBridge.
 
 ## Testing
-Test your logic without mocks or complex infrastructure using `EventsMicrostoreInMemory` and `TestContext`.
+Test your logic without mocks or complex infrastructure: give the container a context with an in-memory publisher,
+and in-memory fakes for its ports.
 
 ```kotlin
 @Test
-fun `should process order`() = runTest {
-    val uow = UnitOfWork(event = OrderPlacedEvent(orderId = "123"))
-    val result = pipeline.process(flowOf(uow)).toList()
-    result.size shouldBe 1
+fun `should collect the order`() {
+    val publisher = EventPublisherInMemory()
+    val context = AwsKopipesContext(eventPublisher = publisher)
+    val microstore = EventsMicrostoreInMemory()
+    val handler = OrderHandler { OrderContainer(context, microstore) }
+
+    handler.handleRequest(kinesisEventOf(OrderPlacedEvent(id = "e-1", orderId = "123")), TestContext())
+
+    microstore.getStored().keys shouldBe setOf("e-1")
 }
 ```
 
 ## Documentation for Developers
 
+* [Wiring a kopipes Lambda](Wiring.md)
 * [Framework Features](Features.md)
 * [Understanding Events and Event Types](Events.md)
 * [Envelope Encryption](Encryption.md)
