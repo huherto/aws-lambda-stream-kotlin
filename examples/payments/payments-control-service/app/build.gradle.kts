@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.serialization)
     alias(libs.plugins.shadow)
     `jvm-test-suite`
+    `java-test-fixtures`
 }
 
 group = "org.myorg"
@@ -27,6 +28,11 @@ dependencies {
     implementation(project(":aws"))
     implementation(project(":examples:payments:common-app"))
     testImplementation(testFixtures(project(":examples:payments:common-app")))
+
+    // StreamRecords: stream records shaped like the events table's items, shared with :spring-app's tests.
+    testFixturesImplementation(project(":aws"))
+    testFixturesImplementation(project(":examples:payments:common-app"))
+    testFixturesImplementation(libs.aws.java.events)
 
     implementation(libs.aws.java.core)
     implementation(libs.aws.java.events)

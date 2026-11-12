@@ -23,7 +23,17 @@ import software.constructs.Construct
  */
 class ControlServiceStack(scope: Construct, serviceProps: ServiceProps) : BaseStack(scope, serviceProps) {
 
-    private val jarFile: Code = Code.fromAsset("../app/build/libs/payments-control-service.jar")
+    /**
+     * `cdk deploy -c spring=true` deploys the Spring Boot build of the same service (`:spring-app`): same domain and
+     * containers, Spring as the composition root. Both builds pass the same integration tests.
+     */
+    private val spring: Boolean = node.tryGetContext("spring")?.toString()?.toBooleanStrictOrNull() ?: false
+
+    private val jarFile: Code = Code.fromAsset(
+        if (spring) "../spring-app/build/libs/payments-control-service-spring.jar"
+        else "../app/build/libs/payments-control-service.jar"
+    )
+    private val handlers: String = if (spring) "org.myorg.payments.spring" else "org.myorg.payments.adapters.inbound"
     private val runtime: Runtime = Runtime.JAVA_21
 
     /** 2 days in production; short locally, so PAYMENT_EXPIRED shows up in a demo. */
@@ -49,11 +59,11 @@ class ControlServiceStack(scope: Construct, serviceProps: ServiceProps) : BaseSt
     init {
         val bus = EventBus.fromEventBusName(this, "Bus", busName())
 
-        val listener = newFunction("listener", "org.myorg.payments.adapters.inbound.Listener::handleRequest")
+        val listener = newFunction("listener", "$handlers.Listener::handleRequest")
         eventsTable.grantReadWriteData(listener)
         consumeFromKinesis(listener, importChannel("DefaultChannel", Channels.DEFAULT))
 
-        val trigger = newFunction("trigger", "org.myorg.payments.adapters.inbound.Trigger::handleRequest")
+        val trigger = newFunction("trigger", "$handlers.Trigger::handleRequest")
         eventsTable.grantReadWriteData(trigger)
         eventsTable.grantStreamRead(trigger)
         bus.grantPutEventsTo(trigger)

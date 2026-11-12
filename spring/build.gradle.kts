@@ -25,6 +25,11 @@ dependencies {
     compileOnly(libs.aws.sdk.eventbridge)
 
     implementation(libs.kotlin.logging)
+    implementation(libs.kotlinx.coroutines)
+
+    // The Lambda handlers; every kopipes Lambda already has these.
+    compileOnly(libs.aws.java.core)
+    compileOnly(libs.aws.java.events)
 
     testImplementation(platform(libs.spring.boot.bom))
     testImplementation(libs.spring.boot.autoconfigure)
@@ -36,6 +41,9 @@ dependencies {
     testImplementation(libs.aws.sdk.dynamodb)
     testImplementation(libs.aws.sdk.kinesis)
     testImplementation(libs.aws.sdk.sqs)
+    testImplementation(libs.aws.java.core)
+    testImplementation(libs.aws.java.events)
+    testImplementation(libs.aws.lambda.java.tests)
     testImplementation(kotlin("test"))
     testImplementation(libs.kotest.assertions)
     testImplementation(libs.kotlinx.coroutines)

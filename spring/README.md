@@ -45,6 +45,62 @@ With several `EventPublisher` beans, mark the default one `@Primary`.
 
 Turn it all off with `kopipes.enabled=false`.
 
+## Running on Lambda
+
+Declare a `Consumer` bean per function, then a handler class per function that names your application:
+
+```kotlin
+@Configuration(proxyBeanMethods = false)
+class ControlServiceConfiguration {
+    @Bean
+    fun listenerContainer(kopipes: AwsKopipesContext) = ListenerContainer(kopipes)
+
+    @Bean
+    fun listener(c: ListenerContainer): Consumer<KinesisEvent> = kinesisConsumer(c.assembler, c.kinesisAdapter)
+}
+
+@SpringBootApplication(proxyBeanMethods = false)
+class ControlServiceApplication
+
+class Listener : SpringKinesisHandler(ControlServiceApplication::class.java)   // handler: ...Listener::handleRequest
+```
+
+- `kinesisConsumer`, `dynamoDbConsumer`, `sqsConsumer` and the general `pipelineConsumer` turn an assembler and an
+  adapter into a `java.util.function.Consumer`. That is also the shape Spring Cloud Function expects, if you later
+  move to its `FunctionInvoker`.
+- `SpringKinesisHandler`, `SpringDynamoDbHandler` and `SpringSqsHandler` start the application once per Lambda
+  container, during init, and hand each event to the `Consumer<EventType>` bean. With several consumers of the same
+  event type, pass the bean name: `SpringKinesisHandler(App::class.java, "audit")`.
+- Set `spring.main.lazy-initialization=true` so each function builds only the beans its consumer needs.
+
+No Spring Cloud dependency is needed: the handlers are plain `RequestHandler`s, so the Lambda runtime converts the
+events exactly as it does for a kopipes function without Spring.
+
+### Packaging: merge Spring's metadata in the shadow jar
+
+Several jars ship `META-INF/spring.factories` and `META-INF/spring/*.imports`. A fat jar must keep every jar's
+entries, and Shadow 9 drops duplicates before its transformers run unless told otherwise. Without this the app starts
+without kopipes' (or Boot's) auto-configuration, or without loading `application.properties`:
+
+```kotlin
+tasks.shadowJar {
+    filesMatching(listOf("META-INF/services/**", "META-INF/spring.factories", "META-INF/spring/**")) {
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    }
+    mergeServiceFiles()
+    append("META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports")
+    transform(PropertiesFileTransformer::class.java) {
+        paths.addAll("META-INF/spring.factories", "META-INF/spring/aot.factories")
+        mergeStrategy.set(PropertiesFileTransformer.MergeStrategy.Append)
+        mergeSeparator.set(",")
+    }
+}
+```
+
+`examples/payments/payments-control-service/spring-app` is a complete example: the plain control service's domain
+and containers with Spring as the composition root. Deploy it with
+`CDK_CONTEXT="spring=true" ./deploy_stacks.sh -d` in `examples/payments`.
+
 ## Configuration
 
 Each setting is read as a `kopipes.*` property first, then under its existing env var name, so deployed Lambdas need no change:
