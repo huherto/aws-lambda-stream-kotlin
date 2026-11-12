@@ -1,10 +1,9 @@
 package org.myorg.sut
 
 import io.kopipes.aws.AwsEnvironmentConfig
-import io.kopipes.aws.AwsGlobalRegistry
+import io.kopipes.aws.AwsKopipesContext
 import io.kopipes.aws.connectors.S3ClientFactory
 import io.kopipes.aws.from.DynamodbAdapter
-import io.kopipes.core.GlobalRegistry
 import io.kopipes.core.PipelineAssembler
 import io.kopipes.core.faults.FaultManager
 import io.kopipes.core.flavors.Pipeline
@@ -32,11 +31,9 @@ class DynamoDbTriggerContainerTest {
         val faultManager: FaultManager = mockk(relaxed = true)
         val s3ClientFactory: S3ClientFactory = mockk(relaxed = true)
         val envConfig = mockEnvConfig()
-        GlobalRegistry.setEnvConfig(envConfig)
-        GlobalRegistry.setFaultManager(faultManager)
-        AwsGlobalRegistry.setS3ClientFactory(s3ClientFactory)
-
-        val container = DynamoDbTriggerContainer()
+        val container = DynamoDbTriggerContainer(
+            AwsKopipesContext(envConfig = envConfig, s3ClientFactory = s3ClientFactory, faultManager = faultManager)
+        )
 
         // Act
         val dynamoDbAdapter = container.dynamoDbAdapter
@@ -53,9 +50,7 @@ class DynamoDbTriggerContainerTest {
         // Arrange
         val envConfig = mockEnvConfig()
         val s3ClientFactory : S3ClientFactory = mockk(relaxed = true)
-        GlobalRegistry.setEnvConfig(envConfig)
-        AwsGlobalRegistry.setS3ClientFactory(s3ClientFactory)
-        val container = DynamoDbTriggerContainer()
+        val container = DynamoDbTriggerContainer(AwsKopipesContext(envConfig = envConfig, s3ClientFactory = s3ClientFactory))
 
         // Act
         val firstAssembler = container.assembler

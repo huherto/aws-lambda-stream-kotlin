@@ -1,6 +1,5 @@
 package io.kopipes.aws.metrics
 
-import io.kopipes.core.EnvironmentConfig
 import io.kopipes.core.metrics.MetricStats
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
@@ -8,19 +7,13 @@ import org.junit.jupiter.api.Test
 class EmfReporterTest {
     @Test
     fun `should format metrics into EMF structure`() {
-        val envConfig = object : EnvironmentConfig() {
-            override fun metrics() : String {
-                return "test-ns"
-            }
-        }
-
         val metrics = mapOf(
             "stream.uow.count" to 2.0,
             "p1|stream.pipeline.time" to MetricStats(150.0, 100.0, 200.0, 300.0, 2),
             "p1|s1|stream.pipeline.io.time" to MetricStats(50.0, 40.0, 60.0, 100.0, 2)
         )
 
-        val entries = EmfReporter.formatMetrics(metrics)
+        val entries = EmfReporter(namespace = "test-ns").formatMetrics(metrics)
 
         entries.size shouldBe 3 // function level, p1 level, p1|s1 level
 

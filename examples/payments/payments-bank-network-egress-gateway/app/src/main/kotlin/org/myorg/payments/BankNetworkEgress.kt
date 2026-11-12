@@ -6,7 +6,8 @@ import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
 import com.amazonaws.services.lambda.runtime.events.SQSEvent
-import io.kopipes.aws.AwsGlobalRegistry
+import io.kopipes.aws.AwsKopipesContext
+import io.kopipes.aws.connectors.S3ClientFactory
 import io.kopipes.aws.from.KinesisAdapter
 import io.kopipes.core.PipelineAssembler
 import io.kopipes.core.utils.loggedLazy
@@ -24,9 +25,13 @@ fun interface BankNetwork {
  * so a payment appears once even if DEPOSIT_REQUESTED arrives twice. Not deployed in this example; still to build:
  * the nightly job that joins tonight's lines into `PAY_<date>.csv` and sends it at the network's cut-off.
  */
-class S3TransferFile(private val bucket: String, private val clock: () -> Long = System::currentTimeMillis) : BankNetwork {
+class S3TransferFile(
+    private val s3: S3ClientFactory,
+    private val bucket: String,
+    private val clock: () -> Long = System::currentTimeMillis,
+) : BankNetwork {
     override suspend fun transfer(payment: Payment) {
-        val client = AwsGlobalRegistry.s3ClientFactory().getClient("transfers")
+        val client = s3.getClient("transfers")
         client.putObject(PutObjectRequest {
             this.bucket = this@S3TransferFile.bucket
             key = "outbound/PAY_${fileDate(clock())}/${payment.id}.csv"
@@ -54,19 +59,26 @@ class SimulatedBankNetwork(
     }
 }
 
-class EgressContainer(val bankNetwork: BankNetwork) {
+class EgressContainer(val context: AwsKopipesContext, val bankNetwork: BankNetwork) {
     companion object {
-        fun build(): EgressContainer = EgressContainer(
+        fun build(): EgressContainer = build(AwsKopipesContext())
+
+        private fun build(context: AwsKopipesContext) = EgressContainer(
+            context,
             if (Simulation.enabled()) SimulatedBankNetwork(
                 SqsDelayedDelivery.fromEnvironment(),
                 delaySeconds = Simulation.delaySeconds(20),
                 lateDelaySeconds = System.getenv("SIMULATED_LATE_DELAY_SECONDS")?.toIntOrNull() ?: 180,
             )
-            else S3TransferFile(System.getenv("OUTBOUND_BUCKET_NAME") ?: error("OUTBOUND_BUCKET_NAME is not configured")),
+            else S3TransferFile(
+                context.s3ClientFactory,
+                System.getenv("OUTBOUND_BUCKET_NAME") ?: error("OUTBOUND_BUCKET_NAME is not configured"),
+            ),
         )
     }
 
     val assembler: PipelineAssembler = PipelineAssembler.builder()
+        .context(context)
         .addPipeline(
             ActionPipeline.builder()
                 .id("transfer")
@@ -76,7 +88,7 @@ class EgressContainer(val bankNetwork: BankNetwork) {
         )
         .build()
 
-    val kinesisAdapter = KinesisAdapter(eventCodec = PaymentsEventCodec)
+    val kinesisAdapter = KinesisAdapter(context, PaymentsEventCodec)
 }
 
 class Listener(
@@ -94,9 +106,10 @@ class Listener(
 class Simulator : RequestHandler<SQSEvent, Void?> {
     private val logger = KotlinLogging.logger { }
     private val inbound = System.getenv("INBOUND_BUCKET_NAME") ?: "undefined"
+    private val kopipes = AwsKopipesContext()
 
     override fun handleRequest(event: SQSEvent, context: Context): Void? = runBlocking {
-        val client = AwsGlobalRegistry.s3ClientFactory().getClient("simulator")
+        val client = kopipes.s3ClientFactory.getClient("simulator")
         for (message in event.records) {
             val line = Json.decodeFromString(SettlementLine.serializer(), message.body)
             val key = "inbound/SETTLE_${fileDate(System.currentTimeMillis())}_${line.reference}.csv"

@@ -10,7 +10,7 @@ interface EventsMicrostore {
         val sk: String,
         val discriminator : String,
         val timeStamp : Long?,
-        val awsRegion : String? = null,
+        val awsRegion : String? = null, // null: the microstore writes its own region
         val sequenceNumber : String? = null,
         val ttl: Long? = null, // Epoch in seconds.
         val expire: Boolean,

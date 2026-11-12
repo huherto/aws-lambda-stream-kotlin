@@ -5,8 +5,7 @@ import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
 import aws.sdk.kotlin.services.dynamodb.model.PutItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.QueryRequest
 import aws.sdk.kotlin.services.dynamodb.model.QueryResponse
-import io.kopipes.aws.AwsGlobalRegistry
-import io.kopipes.aws.awsEnvConfig
+import io.kopipes.aws.AwsKopipesContext
 import io.kopipes.aws.connectors.DynamoDbClientFactory
 import io.kopipes.aws.extensions.*
 import io.kopipes.aws.utils.nullableBool
@@ -23,18 +22,29 @@ import io.kopipes.core.sinks.queryParams
 import io.kopipes.core.sinks.saveOptions
 import io.kopipes.core.utils.mapParallel
 import io.kopipes.core.utils.omit
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import mu.KotlinLogging
 
 /** DynamoDB-backed implementation of [EventsMicrostore]. */
 open class DynamoDbEventsMicrostore @JvmOverloads constructor(
-    private val dynamoDbClientFactory: DynamoDbClientFactory = AwsGlobalRegistry.dynamoDbClientFactory(),
-    private val faultManager: FaultManager = AwsGlobalRegistry.faultManager(),
-    @Suppress("UNUSED_PARAMETER") bufferCapacity: Int = Channel.BUFFERED,
-    private val tableName: String = awsEnvConfig().tableName() ?: "events",
-    private val parallel: Int = awsEnvConfig().parallel() ?: 4,
+    private val dynamoDbClientFactory: DynamoDbClientFactory,
+    private val faultManager: FaultManager,
+    private val tableName: String = "events",
+    private val parallel: Int = 4,
+    /** Written as `awsregion` when the save options don't name a region. */
+    private val awsRegion: String? = null,
+    private val stepMetrics: Boolean = false,
 ) : EventsMicrostore {
+
+    /** Uses the events table (`EVENT_TABLE_NAME`, else `ENTITY_TABLE_NAME`) and settings from [context]. */
+    constructor(context: AwsKopipesContext) : this(
+        dynamoDbClientFactory = context.dynamoDbClientFactory,
+        faultManager = context.faultManager,
+        tableName = context.envConfig.tableName() ?: "events",
+        parallel = context.envConfig.parallel() ?: 4,
+        awsRegion = context.envConfig.awsRegion(),
+        stepMetrics = context.stepMetrics,
+    )
 
     private val logger = KotlinLogging.logger { }
 
@@ -111,7 +121,7 @@ open class DynamoDbEventsMicrostore @JvmOverloads constructor(
                 "sk" to nullableS(sk),
                 "discriminator" to nullableS(discriminator),
                 "timestamp" to nullableN(timeStamp?.toString()),
-                "awsregion" to nullableS(awsRegion),
+                "awsregion" to nullableS(awsRegion ?: this@DynamoDbEventsMicrostore.awsRegion),
                 "sequenceNumber" to nullableS(sequenceNumber),
                 "ttl" to nullableN(ttl?.toString()),
                 "expire" to nullableBool(expire),
@@ -134,7 +144,7 @@ open class DynamoDbEventsMicrostore @JvmOverloads constructor(
         flow.mapParallel(parallel) { uow ->
             faultManager.faulty(uow) { item ->
                 val prepared = putRequest(item)
-                prepared.withStepMetrics("save") { uowWithMetrics ->
+                prepared.withStepMetrics("save", stepMetrics) { uowWithMetrics ->
                     putDynamoDb(uowWithMetrics)
                 }
             }
@@ -144,7 +154,7 @@ open class DynamoDbEventsMicrostore @JvmOverloads constructor(
         flow.mapParallel(parallel) { uow ->
             faultManager.faulty(uow) { item ->
                 val prepared = toQueryRequest(item)
-                val queried = prepared.withStepMetrics("query") { uowWithMetrics ->
+                val queried = prepared.withStepMetrics("query", stepMetrics) { uowWithMetrics ->
                     queryDynamoDb(uowWithMetrics)
                 }
                 toCorrelated(queried)

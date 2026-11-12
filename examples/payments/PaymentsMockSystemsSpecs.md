@@ -79,7 +79,7 @@ Each simulated response uses the external system's **own dialect**, so the ingre
 | Amount | `"100.00"` (decimal string) + `currency` | `AMT` = `100.00` | `amount_cents` = `10000` | `amount` = `100.00` |
 | Failure | `reason: insufficient-funds`, `account-closed` | `REJ_CD`: `NSF`, `ACCT_CLSD` | `failure_code`: `card_closed` | `code`: `R02` closed, `R03` no account |
 
-The account decides the outcome, the way a payment provider's test cards do: see the service specs › [Simulation mode](PaymentsServiceSpecs.md#simulation-mode-egress-esgs) for the table. In short, `C-2`, `K-3` and `B-8` fail, `B-7` settles after the deadline, and `C-1`, `K-2` and `B-9` succeed. Fault accounts succeed but misbehave on the way: `C-5` takes core checking down for everyone for a minute, `C-7`'s debit is applied but the answer is lost, `K-6` gets its webhook twice and `B-6` its settlement file twice.
+The account decides the outcome, the way a payment provider's test cards do: see the service specs › [Simulation mode](PaymentsServiceSpecs.md#simulation-mode-egress-esgs) for the table. In short, `C-2`, `K-3` and `B-8` fail, `B-7` settles after the deadline, and `C-1`, `K-2` and `B-9` succeed. Fault accounts succeed but misbehave on the way: `C-5` takes core checking down for everyone for a minute, `C-8`'s first request is lost and needs an operator, `C-7`'s debit is applied but the answer is lost, `K-6` gets its webhook twice and `B-6` its settlement file twice.
 
 | External system | The egress gateway pretends to… | …and delivers to the ingress gateway | Lesson |
 |---|---|---|---|
@@ -156,6 +156,7 @@ What should appear in the log (the contract is defined in the service specs › 
 | Refund | Payment to `K-3` | `DEPOSIT_FAILED` → `REFUND_REQUESTED` → `FUNDS_REFUNDED` → `PAYMENT_FAILED` | Compensation (Ch. 8) |
 | Not enough money | Payment from `C-2` | `WITHDRAWAL_FAILED` → `PAYMENT_FAILED`, nothing to undo | Abort events (Ch. 8) |
 | Late deposit | Payment to `B-7` | `PAYMENT_EXPIRED` in our lake and the BFF's view (status `EXPIRED`), then `PAYMENT_COMPLETED`; the downstream log shows only `PAYMENTS.PAYMENT_COMPLETED` | Timeouts aren't outcomes (Ch. 8); external events (Ch. 2, 7) |
+| Fault and resubmission | Payment from `C-8`; then `operator.sh faults`, `operator.sh release-claim`, `operator.sh resubmit` | The lost request stays in doubt, becomes a `fault` (stored in S3, alerted); after the operator checks core checking and resubmits, the payment completes, debited once | Faults are events; fix first, then resubmit (Ch. 4, 12) |
 | Contract change | `publish-accounts --rename` | Only the accounts ingress ESG changes | Anti-corruption layer, Robustness principle (Ch. 7, 11) |
 
 ---

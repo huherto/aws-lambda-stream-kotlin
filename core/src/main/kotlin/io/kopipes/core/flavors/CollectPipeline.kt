@@ -1,7 +1,6 @@
 package io.kopipes.core.flavors
 
 import io.kopipes.core.Event
-import io.kopipes.core.GlobalRegistry.envConfig
 import io.kopipes.core.PipelineBuilder
 import io.kopipes.core.UnitOfWork
 import io.kopipes.core.faults.FaultManager
@@ -27,7 +26,6 @@ class CollectPipeline(
 
     internal fun Flow<UnitOfWork>.save(): Flow<UnitOfWork> {
 
-        val awsRegion = envConfig().awsRegion()
         val flow = this.map { uow ->
             val event: Event = uow.event ?: return@map uow
             val eventId = event.id ?: return@map uow
@@ -37,7 +35,6 @@ class CollectPipeline(
                 sk = "EVENT",
                 discriminator = "EVENT",
                 timeStamp = event.timestamp,
-                awsRegion = awsRegion,
                 sequenceNumber = uow.sequenceNumber,
                 ttl = ttlRule(uow),
                 expire = expire,
@@ -57,7 +54,7 @@ class CollectPipeline(
     }
 
     private fun ttlRule(uow: UnitOfWork): Long {
-        val ttl = this.ttlDays ?: envConfig().ttl() ?: 33
+        val ttl = this.ttlDays ?: DEFAULT_TTL_DAYS
         return uow.event?.timestamp?.let { it / 1000 + daysInSecs(ttl) } ?: 0
     }
 
@@ -76,6 +73,8 @@ class CollectPipeline(
     }
 
     companion object {
+        const val DEFAULT_TTL_DAYS = 33
+
         @JvmStatic
         fun builder() = Builder()
     }

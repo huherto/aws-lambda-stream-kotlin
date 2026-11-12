@@ -1,6 +1,6 @@
 package io.kopipes.aws.sinks
 
-import io.kopipes.aws.awsEnvConfig
+import io.kopipes.aws.AwsKopipesContext
 import io.kopipes.aws.connectors.S3Connector
 import io.kopipes.aws.extensions.copyS3
 import io.kopipes.aws.extensions.s3
@@ -10,16 +10,23 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 class S3Sink(
-    private val s3ConnectorOptions: S3Connector.Options = S3Connector.Options(),
+    private val s3ConnectorOptions: S3Connector.Options,
     private val bucketName: String? = null,
+    private val stepMetrics: Boolean = false,
 ) {
+
+    constructor(context: AwsKopipesContext) : this(
+        s3ConnectorOptions = S3Connector.Options(context.s3ClientFactory),
+        bucketName = context.envConfig.bucketName(),
+        stepMetrics = context.stepMetrics,
+    )
 
     private fun getConnector(): S3Connector {
         return S3Connector(s3ConnectorOptions)
     }
 
     private fun resolveBucketName(): String {
-        return bucketName ?: awsEnvConfig().bucketName() ?: error("bucketName is not set")
+        return bucketName ?: error("bucketName is not set")
     }
 
     fun Flow<UnitOfWork>.rateLimit(): Flow<UnitOfWork> = this
@@ -62,7 +69,7 @@ class S3Sink(
             .map { uow -> ensurePutRequestBucket(uow) }
             .map { uow ->
                 val putRequest = uow.s3.putRequest ?: return@map uow
-                uow.withStepMetrics("save") { uowWithMetrics ->
+                uow.withStepMetrics("save", stepMetrics) { uowWithMetrics ->
                     val response = getConnector().putObject(putRequest, uowWithMetrics)
                     uowWithMetrics.copyS3 {
                         copy(putResponse = response)
@@ -76,7 +83,7 @@ class S3Sink(
             .map { uow -> ensureDeleteRequestBucket(uow) }
             .map { uow ->
                 val deleteRequest = uow.s3.deleteRequest ?: return@map uow
-                uow.withStepMetrics("delete") { uowWithMetrics ->
+                uow.withStepMetrics("delete", stepMetrics) { uowWithMetrics ->
                     val response = getConnector().deleteObject(uowWithMetrics.s3.deleteRequest!!, uowWithMetrics)
                     uowWithMetrics.copyS3 {
                         copy(deleteResponse = response)
@@ -90,7 +97,7 @@ class S3Sink(
             .map { uow -> ensureCopyRequestBucket(uow) }
             .map { uow ->
                 val request = uow.s3.copyRequest ?: return@map uow
-                uow.withStepMetrics("copy") { uowWithMetrics ->
+                uow.withStepMetrics("copy", stepMetrics) { uowWithMetrics ->
                     val response = getConnector().copyObject(uowWithMetrics.s3.copyRequest!!, uowWithMetrics)
                     uowWithMetrics.copyS3 {
                         copy(copyResponse = response)

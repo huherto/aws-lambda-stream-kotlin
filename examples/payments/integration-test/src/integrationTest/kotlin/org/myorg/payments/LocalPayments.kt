@@ -139,6 +139,22 @@ object LocalPayments {
     const val LEDGER_TABLE = "payments-core-checking-ingress-gateway-local-ledger"
     const val CALLS_TABLE = "payments-core-checking-egress-gateway-local-calls"
     const val CARD_RATE_TABLE = "payments-card-processor-egress-gateway-local-rate"
+    const val FAULT_ALERTS_QUEUE = "payments-event-fault-monitor-local-notification-verification.fifo"
+
+    /** The fault alerts the fault monitor sent (subject and message), read without removing them. */
+    suspend fun faultAlerts(): List<String> {
+        val queueUrl = sqs.getQueueUrl(GetQueueUrlRequest { queueName = FAULT_ALERTS_QUEUE }).queueUrl
+        val bodies = mutableListOf<String>()
+        repeat(5) {
+            sqs.receiveMessage(ReceiveMessageRequest {
+                this.queueUrl = queueUrl
+                maxNumberOfMessages = 10
+                visibilityTimeout = 0
+                waitTimeSeconds = 1
+            }).messages.orEmpty().forEach { bodies += it.body.orEmpty() }
+        }
+        return bodies
+    }
 
     /** How many 429s the simulated card processor has returned. */
     suspend fun simulatedTooManyRequests(): Long =
@@ -176,13 +192,21 @@ object LocalPayments {
             HttpResponse.BodyHandlers.ofString(),
         )
         val now = System.currentTimeMillis() / 1000
-        val expired = dynamoDb.scan(aws.sdk.kotlin.services.dynamodb.model.ScanRequest {
-            tableName = CONTROL_EVENTS_TABLE
-            filterExpression = "#e = :t AND #ttl < :now"
-            expressionAttributeNames = mapOf("#e" to "expire", "#ttl" to "ttl")
-            expressionAttributeValues = mapOf(":t" to AttributeValue.Bool(true), ":now" to AttributeValue.N(now.toString()))
-            projectionExpression = "pk, sk"
-        }).items.orEmpty()
+        // A scan reads at most 1 MB per page and filters page by page: read every page, or late items are missed.
+        val expired = mutableListOf<Map<String, AttributeValue>>()
+        var startKey: Map<String, AttributeValue>? = null
+        do {
+            val page = dynamoDb.scan(aws.sdk.kotlin.services.dynamodb.model.ScanRequest {
+                tableName = CONTROL_EVENTS_TABLE
+                filterExpression = "#e = :t AND #ttl < :now"
+                expressionAttributeNames = mapOf("#e" to "expire", "#ttl" to "ttl")
+                expressionAttributeValues = mapOf(":t" to AttributeValue.Bool(true), ":now" to AttributeValue.N(now.toString()))
+                projectionExpression = "pk, sk"
+                exclusiveStartKey = startKey
+            })
+            expired += page.items.orEmpty()
+            startKey = page.lastEvaluatedKey?.takeIf { it.isNotEmpty() }
+        } while (startKey != null)
         expired.forEach { key ->
             dynamoDb.deleteItem(aws.sdk.kotlin.services.dynamodb.model.DeleteItemRequest {
                 tableName = CONTROL_EVENTS_TABLE

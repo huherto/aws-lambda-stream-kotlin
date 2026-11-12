@@ -5,6 +5,7 @@
 #   ./deploy_stacks.sh                       # test, build and deploy everything
 #   ./deploy_stacks.sh payments-bff          # only these stacks
 #   ./deploy_stacks.sh -d                    # delete localstack state (and leftover Lambda containers) first
+#   CDK_CONTEXT="spring=true" ./deploy_stacks.sh -d   # the control service's Spring Boot build
 #
 # After the first deploy, run scripts/publish-accounts.sh: the BFF only accepts payments
 # from accounts it has heard of through ACCOUNT_CHANGED.
@@ -60,7 +61,10 @@ cdklocal_deploy() {
 	(
 		cd "$SCRIPT_DIR/$1/infra"
 		cdklocal bootstrap
-		cdklocal deploy "$1-local" --require-approval never
+		# CDK_CONTEXT: space-separated key=value pairs passed to every stack as `-c key=value`.
+		local context_args=()
+		for pair in ${CDK_CONTEXT:-}; do context_args+=(-c "$pair"); done
+		cdklocal deploy "$1-local" --require-approval never "${context_args[@]}"
 	)
 }
 

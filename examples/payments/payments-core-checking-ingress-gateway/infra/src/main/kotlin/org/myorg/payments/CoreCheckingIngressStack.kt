@@ -24,7 +24,7 @@ class CoreCheckingIngressStack(scope: Construct, serviceProps: ServiceProps) : B
         val requests = requestsTable()
         val env = baseLambdaEnvironment() + ("REQUESTS_TABLE_NAME" to requests.tableName)
 
-        val listener = javaFunction("listener", "org.myorg.payments.Listener::handleRequest", jar, env)
+        val listener = javaFunction("listener", "org.myorg.payments.adapters.inbound.Listener::handleRequest", jar, env)
         requests.grantReadWriteData(listener)
         consumeFromKinesis(listener, importChannel("DefaultChannel", Channels.DEFAULT))
 
@@ -49,7 +49,7 @@ class CoreCheckingIngressStack(scope: Construct, serviceProps: ServiceProps) : B
 
         // A row may arrive before its request was recorded: retry the batch instead of faulting.
         val trigger = javaFunction(
-            "ledger-trigger", "org.myorg.payments.LedgerTrigger::handleRequest", jar,
+            "ledger-trigger", "org.myorg.payments.adapters.inbound.LedgerTrigger::handleRequest", jar,
             env + ("STREAM_RETRY_ENABLED" to "true"),
         )
         requests.grantReadData(trigger)

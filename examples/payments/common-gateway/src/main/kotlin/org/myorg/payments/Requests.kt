@@ -4,7 +4,8 @@ import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
 import aws.sdk.kotlin.services.dynamodb.model.GetItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.UpdateItemRequest
-import io.kopipes.aws.AwsGlobalRegistry
+import io.kopipes.aws.AwsKopipesContext
+import io.kopipes.aws.isAwsRetryable
 import io.kopipes.aws.flavors.MaterializePipeline
 import io.kopipes.core.UnitOfWork
 import io.kopipes.core.faults.FaultManager
@@ -27,9 +28,10 @@ fun requestUpdate(table: String, uow: UnitOfWork): UpdateItemRequest? {
     }
 }
 
-fun requestsPipeline(id: String, table: String, eventFilter: EventFilter): Pipeline =
+fun requestsPipeline(context: AwsKopipesContext, id: String, table: String, eventFilter: EventFilter): Pipeline =
     MaterializePipeline.builder()
         .id(id)
+        .context(context)
         .eventFilter(eventFilter)
         .toUpdateRequest { uow -> requestUpdate(table, uow) }
         .build()
@@ -57,22 +59,16 @@ class DynamoDbPaymentLookup(
     }
 
     companion object {
-        fun fromEnvironment(): DynamoDbPaymentLookup = DynamoDbPaymentLookup(
-            client = AwsGlobalRegistry.dynamoDbClientFactory().getClient("lookup"),
+        fun fromContext(context: AwsKopipesContext): DynamoDbPaymentLookup = DynamoDbPaymentLookup(
+            client = context.dynamoDbClientFactory.getClient("lookup"),
             table = System.getenv("REQUESTS_TABLE_NAME") ?: error("REQUESTS_TABLE_NAME is not configured"),
         )
     }
 }
 
 /**
- * Makes [PaymentNotKnownYet] retryable, so with `STREAM_RETRY_ENABLED=true` the batch is retried by its source
- * (stream or queue) instead of becoming a fault. Call before building any container.
+ * The context an ingress gateway runs with: [PaymentNotKnownYet] is retryable, so with `STREAM_RETRY_ENABLED=true` the
+ * batch is retried by its source (stream or queue) instead of becoming a fault.
  */
-fun installGatewayFaultManager() {
-    AwsGlobalRegistry.setFaultManagerFactory {
-        FaultManager(
-            eventPublisher = AwsGlobalRegistry.eventPublisher(),
-            isRetryable = { it is PaymentNotKnownYet || AwsGlobalRegistry.isAwsRetryable(it) },
-        )
-    }
-}
+fun gatewayContext(): AwsKopipesContext =
+    AwsKopipesContext(isRetryable = { it is PaymentNotKnownYet || isAwsRetryable(it) })

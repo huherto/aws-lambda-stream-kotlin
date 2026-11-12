@@ -1,11 +1,29 @@
 package io.kopipes.aws.metrics
 
-import io.kopipes.aws.awsEnvConfig
+import io.kopipes.aws.AwsEnvironmentConfig
 import io.kopipes.core.metrics.MetricStats
-import io.kopipes.core.utils.envTags
+import io.kopipes.core.metrics.MetricsReporter
+import io.kopipes.core.utils.StandardTags
 import mu.KotlinLogging
 
-object EmfReporter {
+/** Logs pipeline metrics in CloudWatch Embedded Metric Format when [enabled] (the `emf` metric is configured). */
+class EmfReporter(
+    private val namespace: String = DEFAULT_NAMESPACE,
+    private val tags: StandardTags = StandardTags(),
+    private val enabled: Boolean = true,
+) : MetricsReporter {
+
+    constructor(envConfig: AwsEnvironmentConfig) : this(
+        namespace = envConfig.nameSpace() ?: DEFAULT_NAMESPACE,
+        tags = StandardTags(envConfig),
+        enabled = envConfig.isMetricEnabled("emf"),
+    )
+
+    companion object {
+        const val DEFAULT_NAMESPACE = "lambda-stream/metrics"
+    }
+
+    override fun report(metrics: Map<String, Any>) = logMetrics(metrics)
 
     private val logger = KotlinLogging.logger { }
 
@@ -45,8 +63,7 @@ object EmfReporter {
         metrics: Map<String, Any>,
     ): List<Map<String, Any>> {
         val timestamp = System.currentTimeMillis()
-        val namespace = awsEnvConfig().nameSpace() ?: "lambda-stream/metrics"
-        val tags = envTags(null).toMutableMap()
+        val tags = tags.envTags(null).toMutableMap()
         tags.remove("pipeline")
 
         val functionMetrics = mutableListOf<FormattedMetric>()
@@ -133,7 +150,7 @@ object EmfReporter {
     private val StepDimensions = listOf(listOf("step", "pipeline", "functionname", "source", "stage", "region", "account"))
 
     fun logMetrics(metrics: Map<String, Any>) {
-        if (awsEnvConfig().isMetricEnabled("emf")) {
+        if (enabled) {
             val emf = formatMetrics(metrics)
             emf.forEach { m ->
                 logger.info { m }

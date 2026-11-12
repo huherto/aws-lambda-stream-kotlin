@@ -2,9 +2,8 @@ package org.myorg.sut
 
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
 import io.kopipes.aws.AwsEnvironmentConfig
-import io.kopipes.aws.AwsGlobalRegistry
+import io.kopipes.aws.AwsKopipesContext
 import io.kopipes.aws.testsupport.TestContext
-import io.kopipes.core.GlobalRegistry
 import io.kopipes.core.faults.FaultManager
 import io.kopipes.core.sinks.EventPublisherInMemory
 import io.kopipes.core.sinks.EventsMicrostoreInMemory
@@ -29,20 +28,19 @@ class ListenerTest {
     private lateinit var microstore: EventsMicrostoreInMemory
     private lateinit var container: ListenerContainer
     private lateinit var listener: Listener
+    private lateinit var kopipes: AwsKopipesContext
 
     @BeforeEach
     fun beforeEach() {
-        AwsGlobalRegistry.init()
         val envConfig = spyk(AwsEnvironmentConfig())
         every { envConfig.awsRegion() } returns "eu-west-1"
         every { envConfig.tableName() } returns "events-table-name"
-        GlobalRegistry.setEnvConfig(envConfig)
-        val eventPublisher = EventPublisherInMemory()
-        val faultManager = FaultManager(eventPublisher, skipErrorLogging = true)
-        GlobalRegistry.setFaultManager(faultManager)
-        microstore = EventsMicrostoreInMemory(faultManager)
-        
+        // The context's fault manager snapshots AWS records into its faults, which these tests check.
+        kopipes = AwsKopipesContext(envConfig = envConfig, eventPublisher = EventPublisherInMemory())
+        microstore = EventsMicrostoreInMemory(kopipes.faultManager)
+
         container = ListenerContainer(
+            kopipes,
             eventsMicrostore = microstore,
         )
         
@@ -86,7 +84,7 @@ class ListenerTest {
         uow.event shouldNotBe null
         uow.event?.id shouldBe "test-event-123"
 
-        val publisher = GlobalRegistry.faultManager().publisher() as EventPublisherInMemory
+        val publisher = kopipes.faultManager.publisher() as EventPublisherInMemory
         publisher shouldNotBe null
         publisher.uows().size shouldBe 1
         val fault = publisher.faults().first()
@@ -116,7 +114,7 @@ class ListenerTest {
             uow.event?.id shouldBe "test-event-123"
         }
 
-        val fm = GlobalRegistry.faultManager()
+        val fm = kopipes.faultManager
         val faults = fm.getFaults()
         faults.size shouldBe 1
         val fault = faults[0]

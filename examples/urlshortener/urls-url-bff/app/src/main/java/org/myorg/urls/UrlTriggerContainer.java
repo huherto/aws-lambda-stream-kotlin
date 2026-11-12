@@ -1,6 +1,6 @@
 package org.myorg.urls;
 
-import io.kopipes.aws.connectors.DefaultEventBridgeClientFactory;
+import io.kopipes.aws.AwsKopipesContext;
 import io.kopipes.aws.flavors.CdcPipeline;
 import io.kopipes.aws.from.DynamodbAdapter;
 import io.kopipes.aws.from.RecordImage;
@@ -20,37 +20,28 @@ public class UrlTriggerContainer {
     public final PipelineAssembler assembler;
     public final DynamodbAdapter dynamoDbAdapter;
 
-    public UrlTriggerContainer(EventPublisher eventPublisher) {
+    public UrlTriggerContainer(AwsKopipesContext context, EventPublisher eventPublisher) {
         this.eventPublisher = eventPublisher;
         CdcPipeline cdcPipeline = CdcPipeline
                 .builder()
                 .id("cdc1")
+                .eventPublisher(eventPublisher)
                 .toEventJava(this::toEvent)
                 .build();
 
         this.assembler = PipelineAssembler
                 .builder()
+                .context(context)
                 .addPipeline(cdcPipeline)
                 .build();
-        this.dynamoDbAdapter = new DynamodbAdapter();
+        this.dynamoDbAdapter = new DynamodbAdapter(context);
     }
 
     public static UrlTriggerContainer build() {
-        String busName = System.getenv("BUS_NAME");
-        if (busName == null) busName = "urls-dev-bus";
-
+        AwsKopipesContext context = new AwsKopipesContext(UrlsConfig.envConfig());
         EventPublisher eventPublisher = new EventBridgePublisher(
-            busName,
-            "urls-url-bff",
-            256 * 1024,
-            10,
-            8,
-            null,
-            true,
-            new DefaultEventBridgeClientFactory(),
-            null
-        );
-        return new UrlTriggerContainer(eventPublisher);
+            context.getEnvConfig(), context.getEventBridgeClientFactory(), null, "urls-url-bff");
+        return new UrlTriggerContainer(context, eventPublisher);
     }
 
     public Event toEvent(UnitOfWork uow) {

@@ -28,7 +28,7 @@ dependencies {
 }
 
 application {
-    mainClass.set("org.myorg.tools.replay.MainKt")
+    mainClass.set("io.kopipes.tools.replay.MainKt")
 }
 
 tasks.shadowJar {

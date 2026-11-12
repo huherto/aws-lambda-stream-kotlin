@@ -4,8 +4,7 @@ import aws.sdk.kotlin.runtime.auth.credentials.EnvironmentCredentialsProvider
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.*
 import aws.smithy.kotlin.runtime.net.url.Url
-import io.kopipes.aws.AwsGlobalRegistry
-import io.kopipes.aws.awsEnvConfig
+import io.kopipes.aws.AwsEnvironmentConfig
 import io.kopipes.core.UnitOfWork
 import io.kopipes.core.resilience.RetryConfig
 import io.kopipes.core.resilience.RetryExecutor
@@ -14,10 +13,10 @@ import io.kopipes.core.resilience.RetryExecutor
 interface DynamoDbClientFactory : ClientFactory<DynamoDbClient>
 
 /** Default implementation of [DynamoDbClientFactory]. */
-class DefaultDynamoDbClientFactory() : DynamoDbClientFactory, AbstractClientFactory<DynamoDbClient>() {
+class DefaultDynamoDbClientFactory(private val envConfig: AwsEnvironmentConfig) : DynamoDbClientFactory, AbstractClientFactory<DynamoDbClient>() {
     override fun create(): DynamoDbClient {
-        val endpointUrl = awsEnvConfig().endPointUrl()
-        val region = awsEnvConfig().awsRegion()
+        val endpointUrl = envConfig.endPointUrl()
+        val region = envConfig.awsRegion()
         return DynamoDbClient {
             this.region = region
             this.credentialsProvider = EnvironmentCredentialsProvider()
@@ -33,9 +32,9 @@ class DynamoDbConnector(private val options: Options) {
 
     /** Options for [DynamoDbConnector]. */
     data class Options(
+        val dynamoDbClientFactory: DynamoDbClientFactory,
         val debug: (Any?) -> Unit = {},
         val throwConditionFailure: Boolean = false,
-        val dynamoDbClientFactory: DynamoDbClientFactory = AwsGlobalRegistry.dynamoDbClientFactory(),
         val retryConfig: RetryConfig = RetryConfig(),
     )
 

@@ -2,8 +2,7 @@ package io.kopipes.aws.sinks
 
 import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequest
 import aws.sdk.kotlin.services.eventbridge.model.PutEventsRequestEntry
-import io.kopipes.aws.awsEnvConfig
-import io.kopipes.aws.connectors.DefaultEventBridgeClientFactory
+import io.kopipes.aws.AwsEnvironmentConfig
 import io.kopipes.aws.connectors.EventBridgeClientFactory
 import io.kopipes.aws.connectors.EventBridgeConnector
 import io.kopipes.aws.extensions.*
@@ -11,6 +10,7 @@ import io.kopipes.core.UnitOfWork
 import io.kopipes.core.metrics.withStepMetrics
 import io.kopipes.core.resilience.RetryConfig
 import io.kopipes.core.sinks.EventPublisher
+import io.kopipes.core.utils.StandardTags
 import io.kopipes.core.utils.adornStandardTags
 import io.kopipes.core.utils.chunked
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -18,22 +18,45 @@ import kotlinx.coroutines.flow.*
 import kotlin.time.Duration.Companion.milliseconds
 
 class EventBridgePublisher(
-    val busName: String = awsEnvConfig().busName() ?: "undefined",
-    val source: String = awsEnvConfig().busSource() ?: "custom",
-    val maxPublishRequestSize: Int = awsEnvConfig().maxPublishRequestSize()
-        ?: awsEnvConfig().maxRequestSize() ?: (256 * 1024),
-    val batchSize: Int = awsEnvConfig().publishBatchSize() ?: awsEnvConfig().batchSize() ?: 10,
-    val parallel: Int = (awsEnvConfig().publishParallel() ?: awsEnvConfig().parallel() ?: 8),
-    val endpointId: String? = awsEnvConfig().busEndPointId(),
+    val clientFactory: EventBridgeClientFactory,
+    val busName: String = "undefined",
+    val source: String = "custom",
+    val maxPublishRequestSize: Int = 256 * 1024,
+    val batchSize: Int = 10,
+    val parallel: Int = 8,
+    val endpointId: String? = null,
+    val timeoutMillis: Long = 1000,
     val handleErrors: Boolean = true,
-    val clientFactory: EventBridgeClientFactory = DefaultEventBridgeClientFactory(),
     val claimCheckStore: ClaimCheckStore? = null,
+    val tags: StandardTags = StandardTags(),
+    val stepMetrics: Boolean = false,
 ) : EventPublisher {
+
+    /** Bus, sizes, tags and metrics from [envConfig]; [source] defaults to `BUS_SRC`. */
+    @JvmOverloads
+    constructor(
+        envConfig: AwsEnvironmentConfig,
+        clientFactory: EventBridgeClientFactory,
+        claimCheckStore: ClaimCheckStore? = null,
+        source: String = envConfig.busSource() ?: "custom",
+    ) : this(
+        clientFactory = clientFactory,
+        busName = envConfig.busName() ?: "undefined",
+        source = source,
+        maxPublishRequestSize = envConfig.maxPublishRequestSize() ?: envConfig.maxRequestSize() ?: (256 * 1024),
+        batchSize = envConfig.publishBatchSize() ?: envConfig.batchSize() ?: 10,
+        parallel = envConfig.publishParallel() ?: envConfig.parallel() ?: 8,
+        endpointId = envConfig.busEndPointId(),
+        timeoutMillis = envConfig.timeout() ?: 1000,
+        claimCheckStore = claimCheckStore,
+        tags = StandardTags(envConfig),
+        stepMetrics = envConfig.isMetricEnabled("step"),
+    )
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun publish(flow: Flow<UnitOfWork>): Flow<UnitOfWork> {
         return flow
-            .map { adornStandardTags(it) }
+            .map { adornStandardTags(it, tags) }
             .map { toPublishRequestEntry(it) }
             .chunked(batchSize)
             .map { batchedList -> UnitOfWork(pipeline = batchedList.first().pipeline, batch = batchedList) }
@@ -94,11 +117,11 @@ class EventBridgePublisher(
 
     internal suspend fun putEvents(batchUow: UnitOfWork): UnitOfWork {
         if (batchUow.publishRequest != null) {
-            return batchUow.withStepMetrics("publish") { uow ->
+            return batchUow.withStepMetrics("publish", stepMetrics) { uow ->
                 val connector = EventBridgeConnector(
                     pipelineId = uow.pipeline?.id ?: "undefined",
                     retryConfig = RetryConfig(),
-                    timeout = awsEnvConfig().timeout()?.milliseconds ?: 1000.milliseconds,
+                    timeout = timeoutMillis.milliseconds,
                     clientFactory = clientFactory
                 )
                 val publishResponse = connector.putEvents(uow.publishRequest!!)

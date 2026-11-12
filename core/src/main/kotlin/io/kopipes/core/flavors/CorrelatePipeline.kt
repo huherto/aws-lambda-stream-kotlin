@@ -2,7 +2,6 @@ package io.kopipes.core.flavors
 
 import io.kopipes.core.Event
 import io.kopipes.core.EventCodec
-import io.kopipes.core.GlobalRegistry.envConfig
 import io.kopipes.core.PipelineBuilder
 import io.kopipes.core.UnitOfWork
 import io.kopipes.core.faults.FaultManager
@@ -55,9 +54,8 @@ class CorrelatePipeline(
                     sk = eventId,
                     discriminator = "CORREL",
                     timeStamp = event?.timestamp ?: System.currentTimeMillis(),
-                    awsRegion = envConfig().awsRegion(),
                     sequenceNumber = uow.meta?.get("sequenceNumber")?.toString() ?: uow.sequenceNumber,
-                    ttl = uow.meta?.get("ttl")?.toString()?.toLongOrNull() ?: ttlDays?.toLong() ?: envConfig().ttl()?.toLong() ?: 33L,
+                    ttl = uow.meta?.get("ttl")?.toString()?.toLongOrNull() ?: ttlDays?.toLong() ?: CollectPipeline.DEFAULT_TTL_DAYS.toLong(),
                     includeRaw = false,
                     expire = expire,
                     suffix = correlationKeySuffix,

@@ -33,35 +33,44 @@ The `dataKeys` map allows storing the encrypted DEK for multiple AWS regions. Th
 
 ### Encrypting Events
 
-You can encrypt specific fields of an event before publishing it by using the `encryptEvent` operator or by configuring the `CdcPipeline`.
+You can encrypt specific fields of an event before publishing it by configuring the `CdcPipeline` or by using the
+`encryptEvent` step. Both need KMS connectors: `context.kmsConnectors` (see [Wiring](Wiring.md)) uses the context's
+KMS client factory, with the context's region as the region where data keys are generated.
 
 #### Using CdcPipeline
 
 ```kotlin
-CdcPipeline(
-    // ...
-    encryptionOptions = EncryptionOptions(
-        eem = EnvelopeEncryptionMetadata(
-            masterKeyAlias = "alias/my-key",
-            fields = listOf("email", "phoneNumber")
-        ),
-        regions = listOf("us-east-1", "eu-west-1")
+CdcPipeline.builder()
+    .id("publish")
+    .context(context)                 // KMS connectors (and the DynamoDB client, for queries)
+    .eventPublisher(context.eventPublisher)
+    .toEvent(::toEvent)
+    .encryptionOptions(
+        EncryptionOptions(
+            eem = EnvelopeEncryptionMetadata(
+                masterKeyAlias = "alias/my-key",
+                fields = listOf("email", "phoneNumber")
+            ),
+            regions = listOf("us-east-1", "eu-west-1")
+        )
     )
-)
+    .build()
 ```
 
-#### Using the Operator
+#### Using the step
 
 ```kotlin
-val encryptedFlow = flow.encryptEvent(
+val encrypt = EventEncryption.encryptEvent(
     options = EncryptionOptions(
         eem = EnvelopeEncryptionMetadata(
             masterKeyAlias = "alias/my-key",
             fields = listOf("sensitiveData")
         )
     ),
-    fm = faultManager
+    fm = faultManager,
+    kms = context.kmsConnectors,
 )
+val encryptedFlow = encrypt(flow)
 ```
 
 ### Decrypting Events
@@ -70,25 +79,26 @@ Incoming events can be automatically decrypted if they contain `eem` metadata.
 
 #### Using CdcPipeline
 
-Set `decrypt = true` in the `CdcPipeline` configuration to automatically decrypt incoming events.
+Call `decrypt()` on the `CdcPipeline` builder to automatically decrypt incoming events.
 
 ```kotlin
-CdcPipeline(
+CdcPipeline.builder()
     // ...
-    decrypt = true
-)
+    .context(context)
+    .decrypt()
+    .build()
 ```
 
-#### Using the Operator
+#### Using the step
 
 ```kotlin
-val decryptedFlow = flow.decryptEvent(fm = faultManager)
+val decryptedFlow = EventEncryption.decryptEvent(fm = faultManager, kms = context.kmsConnectors)(flow)
 ```
 
 For DynamoDB Stream events (CDC), use `decryptChangeEvent`:
 
 ```kotlin
-val decryptedFlow = flow.decryptChangeEvent(fm = faultManager)
+val decryptedFlow = EventEncryption.decryptChangeEvent(fm = faultManager, kms = context.kmsConnectors)(flow)
 ```
 
 ## Manual Encryption/Decryption
@@ -106,14 +116,15 @@ val options = EncryptionOptions(
     )
 )
 
-val encryptedItem = EventEncryption.encryptData(item, options)
+val kms = context.kmsConnectors.forPipeline("manual")
+val encryptedItem = EventEncryption.encryptData(item, options, kms)
 // encryptedItem now contains an 'eem' field and the 'secret' field is encrypted
 ```
 
 ### Decrypting DynamoDB Maps
 
 ```kotlin
-val decryptedItem = EventEncryption.decryptData(item)
+val decryptedItem = EventEncryption.decryptData(item, kms)
 ```
 
 ## Fault Handling

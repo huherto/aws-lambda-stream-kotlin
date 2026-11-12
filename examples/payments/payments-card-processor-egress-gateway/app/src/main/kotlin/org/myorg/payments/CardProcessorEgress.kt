@@ -4,7 +4,8 @@ import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
 import com.amazonaws.services.lambda.runtime.events.SQSEvent
-import io.kopipes.aws.AwsGlobalRegistry
+import io.kopipes.aws.AwsKopipesContext
+import io.kopipes.aws.isAwsRetryable
 import io.kopipes.aws.from.KinesisAdapter
 import io.kopipes.core.PipelineAssembler
 import io.kopipes.core.utils.loggedLazy
@@ -67,11 +68,11 @@ class SimulatedCardProcessor(
     }
 }
 
-class EgressContainer(val cardProcessor: CardProcessor) {
+class EgressContainer(val context: AwsKopipesContext, val cardProcessor: CardProcessor) {
     companion object {
         fun build(): EgressContainer {
-            installCardFaultManager()
-            val dynamoDb = AwsGlobalRegistry.dynamoDbClientFactory().getClient("rate")
+            val context = cardContext()
+            val dynamoDb = context.dynamoDbClientFactory.getClient("rate")
             val rateTable = System.getenv("RATE_TABLE_NAME") ?: error("RATE_TABLE_NAME is not configured")
             val processor =
                 if (Simulation.enabled()) SimulatedCardProcessor(
@@ -90,11 +91,12 @@ class EgressContainer(val cardProcessor: CardProcessor) {
                 DynamoDbRateStore(dynamoDb, rateTable, "RATE#card-processor"),
                 perSecond = System.getenv("CARD_PROCESSOR_RATE")?.toIntOrNull() ?: 5,
             )
-            return EgressContainer(PacedCardProcessor(processor, bucket))
+            return EgressContainer(context, PacedCardProcessor(processor, bucket))
         }
     }
 
     val assembler: PipelineAssembler = PipelineAssembler.builder()
+        .context(context)
         .addPipeline(
             ActionPipeline.builder()
                 .id("credit")
@@ -104,7 +106,7 @@ class EgressContainer(val cardProcessor: CardProcessor) {
         )
         .build()
 
-    val kinesisAdapter = KinesisAdapter(eventCodec = PaymentsEventCodec)
+    val kinesisAdapter = KinesisAdapter(context, PaymentsEventCodec)
 }
 
 class Listener(
@@ -169,11 +171,5 @@ class DynamoDbSimulatedRateLimit(private val store: DynamoDbRateStore, private v
 }
 
 /** A 429 the in-invocation retries couldn't absorb goes back to the stream instead of becoming a fault. */
-fun installCardFaultManager() {
-    io.kopipes.aws.AwsGlobalRegistry.setFaultManagerFactory {
-        io.kopipes.core.faults.FaultManager(
-            eventPublisher = io.kopipes.aws.AwsGlobalRegistry.eventPublisher(),
-            isRetryable = { it is RateLimited || io.kopipes.aws.AwsGlobalRegistry.isAwsRetryable(it) },
-        )
-    }
-}
+fun cardContext(): AwsKopipesContext =
+    AwsKopipesContext(isRetryable = { it is RateLimited || isAwsRetryable(it) })

@@ -25,15 +25,6 @@ class CollectionPipelineTest {
         val TIMESTAMP = Clock.System.now().toEpochMilliseconds()
     }
 
-    val envConfig = spyk<EnvironmentConfig> {
-        every { awsRegion() } returns "eu-west-1"
-    }
-
-    @BeforeEach
-    fun beforeEach() {
-        GlobalRegistry.setEnvConfig(envConfig)
-    }
-
     private val eventsMicrostore = mockk<EventsMicrostore>()
 
     private fun createPipeline(
@@ -141,7 +132,7 @@ class CollectionPipelineTest {
         options.sk shouldBe "EVENT"
         options.discriminator shouldBe "EVENT"
         options.timeStamp  shouldBe TIMESTAMP
-        options.awsRegion shouldBe "eu-west-1"
+        options.awsRegion shouldBe null // the microstore fills in its own region
         options.sequenceNumber shouldBe "seq-1"
         options.ttl?.shouldBeGreaterThan(TIMESTAMP / 1000)
         options.expire shouldBe true
@@ -151,9 +142,8 @@ class CollectionPipelineTest {
     }
 
     @Test
-    fun `save should use env ttl when ttlDays is not provided and copy null event fields safely`() : Unit = runBlocking {
+    fun `save should use the default ttl when ttlDays is not provided and copy null event fields safely`() : Unit = runBlocking {
         // Arrange
-        every { envConfig.ttl() } returns 5
         val pipeline = createPipeline(
             pipelineId = "pipeline-2",
             ttlDays = null,
@@ -179,7 +169,7 @@ class CollectionPipelineTest {
 
         options.pk shouldBe "event-1"
         options.timeStamp!! shouldBeGreaterThan Clock.System.now().toEpochMilliseconds() - 5_000L
-        options.ttl shouldNotBe null
+        options.ttl shouldBe uow.event!!.timestamp!! / 1000 + pipeline.daysInSecs(CollectPipeline.DEFAULT_TTL_DAYS)
         options.expire shouldBe false
         options.data shouldBe null
         options.includeRaw shouldBe true

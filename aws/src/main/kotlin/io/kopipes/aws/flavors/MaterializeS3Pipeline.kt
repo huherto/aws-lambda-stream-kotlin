@@ -1,5 +1,7 @@
 package io.kopipes.aws.flavors
 
+import io.kopipes.aws.AwsKopipesContext
+
 import aws.sdk.kotlin.services.s3.model.DeleteObjectRequest
 import aws.sdk.kotlin.services.s3.model.GetObjectRequest
 import aws.sdk.kotlin.services.s3.model.PutObjectRequest
@@ -26,10 +28,12 @@ class MaterializeS3Pipeline(
     private val toGetRequest: ((UnitOfWork) -> GetObjectRequest?)?,
     private val toPutRequest: ((UnitOfWork) -> PutObjectRequest?)?,
     private val toDeleteRequest: ((UnitOfWork) -> DeleteObjectRequest?)?,
+    bucketName: String? = null,
+    stepMetrics: Boolean = false,
 ) : Pipeline(pipelineId) {
 
     private val s3Query: S3Query = S3Query(s3ConnectorOptions)
-    private val s3Sink: S3Sink = S3Sink(s3ConnectorOptions)
+    private val s3Sink: S3Sink = S3Sink(s3ConnectorOptions, bucketName, stepMetrics)
 
     override fun connect(
         fm: FaultManager,
@@ -92,7 +96,18 @@ class MaterializeS3Pipeline(
         private var eventFilter: EventFilter = EventFilter.Any
         private var onContentType: (UnitOfWork) -> Boolean = { true }
         private var splitObject: (Flow<UnitOfWork>) -> Flow<UnitOfWork> = { it }
-        private var s3ConnectorOptions: S3Connector.Options = S3Connector.Options()
+        private var s3ConnectorOptions: S3Connector.Options? = null
+        private var bucketName: String? = null
+        private var stepMetrics: Boolean = false
+
+        /** Takes the S3 client factory, default bucket and step-metrics switch from [context]. */
+        fun context(context: AwsKopipesContext) = apply {
+            s3ConnectorOptions = S3Connector.Options(context.s3ClientFactory)
+            bucketName = context.envConfig.bucketName()
+            stepMetrics = context.stepMetrics
+        }
+        fun bucketName(bucketName: String) = apply { this.bucketName = bucketName }
+        fun stepMetrics(enabled: Boolean) = apply { this.stepMetrics = enabled }
         private var toGetRequest: ((UnitOfWork) -> GetObjectRequest?)? = null
         private var toPutRequest: ((UnitOfWork) -> PutObjectRequest?)? = null
         private var toDeleteRequest: ((UnitOfWork) -> DeleteObjectRequest?)? = null
@@ -116,10 +131,13 @@ class MaterializeS3Pipeline(
                 eventFilter = eventFilter,
                 onContentType = onContentType,
                 splitObject = splitObject,
-                s3ConnectorOptions = s3ConnectorOptions,
+                s3ConnectorOptions = s3ConnectorOptions
+                    ?: throw IllegalArgumentException("s3ConnectorOptions (or context) is required"),
                 toGetRequest = toGetRequest,
                 toPutRequest = toPutRequest,
-                toDeleteRequest = toDeleteRequest
+                toDeleteRequest = toDeleteRequest,
+                bucketName = bucketName,
+                stepMetrics = stepMetrics,
             )
         }
     }

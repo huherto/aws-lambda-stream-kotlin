@@ -15,6 +15,9 @@ services:
       # LocalStack only deletes expired items when this is on, and then periodically (not to the second):
       # scripts/expire-now.sh asks it to delete them right away.
       - DYNAMODB_REMOVE_EXPIRED_ITEMS=1
+      # Right after a deploy every function cold-starts at once (about 25 JVMs). With LocalStack's short default,
+      # some environments time out during startup, and cancelling them can crash its Lambda runtime emulator.
+      - LAMBDA_RUNTIME_ENVIRONMENT_TIMEOUT=60
     volumes:
       - "${LOCALSTACK_VOLUME_DIR:-./.volume}:/var/lib/localstack"
       - "/var/run/docker.sock:/var/run/docker.sock"

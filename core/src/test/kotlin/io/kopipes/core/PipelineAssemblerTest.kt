@@ -9,19 +9,14 @@ import io.mockk.spyk
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.*
-import org.junit.jupiter.api.BeforeEach
+import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.matchers.nulls.shouldNotBeNull
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeSameInstanceAs
 import org.junit.jupiter.api.Test
 
 class PipelineAssemblerTest {
 
-
-    @BeforeEach
-    fun beforeEach() {
-        val spy = spyk<EnvironmentConfig>()
-        every { spy.awsRegion() } returns "us-east-1"
-        every { spy.isMetricEnabled(match { true }) } returns true
-        GlobalRegistry.setEnvConfig(spy)
-    }
 
     // A mock pipeline to test how the assembler routes flows
     class MockPipeline(id: String) : Pipeline(id) {
@@ -152,6 +147,7 @@ class PipelineAssemblerTest {
     fun `test startPipeline and endPipeline add metrics`() {
         val assembler = PipelineAssembler.builder()
             .faultManager(FaultManager(eventPublisher = EventPublisherInMemory()))
+            .pipelineMetrics(true)
             .build()
         val uow = UnitOfWork(key = "test")
 
@@ -164,24 +160,41 @@ class PipelineAssemblerTest {
     }
 
     @Test
-    fun `test build uses GlobalRegistry defaults`() {
-        GlobalRegistry.reset()
-        val customFm = FaultManager(eventPublisher = EventPublisherInMemory())
-        GlobalRegistry.setFaultManager(customFm)
-        
-        val assembler = PipelineAssembler.builder().build()
-        
-        assertEquals(customFm, assembler.getFaultManager())
+    fun `build requires a fault manager`() {
+        // arrange
+        val builder = PipelineAssembler.builder()
+
+        // act & assert
+        shouldThrow<IllegalArgumentException> { builder.build() }
     }
 
     @Test
-    fun `test builder defaults envConfig from GlobalRegistry`() {
-        GlobalRegistry.reset()
-        val customConfig = object : EnvironmentConfig() {}
-        GlobalRegistry.setEnvConfig(customConfig)
-        
-        val builder = PipelineAssembler.builder()
-        // Accessing internal property is allowed in the same package
-        assertEquals(customConfig, builder.envConfig)
+    fun `context supplies the fault manager and the pipeline metric switch`() {
+        // arrange
+        val envConfig = spyk<EnvironmentConfig>()
+        every { envConfig.isMetricEnabled("pipeline") } returns true
+        val context = BasicKopipesContext(envConfig = envConfig)
+
+        // act
+        val assembler = PipelineAssembler.builder().context(context).build()
+        val started = assembler.startPipeline(UnitOfWork())
+
+        // assert
+        assembler.getFaultManager() shouldBeSameInstanceAs context.faultManager
+        started.metrics.shouldNotBeNull()
+    }
+
+    @Test
+    fun `pipeline metrics are off unless enabled`() {
+        // arrange
+        val assembler = PipelineAssembler.builder()
+            .faultManager(FaultManager(eventPublisher = EventPublisherInMemory()))
+            .build()
+
+        // act
+        val started = assembler.startPipeline(UnitOfWork())
+
+        // assert
+        started.metrics shouldBe null
     }
 }

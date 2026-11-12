@@ -5,11 +5,9 @@ import aws.sdk.kotlin.services.kms.model.DecryptResponse
 import aws.sdk.kotlin.services.kms.model.EncryptResponse
 import aws.sdk.kotlin.services.kms.model.GenerateDataKeyResponse
 import io.kopipes.aws.AwsEnvironmentConfig
-import io.kopipes.aws.AwsGlobalRegistry
 import io.kopipes.aws.connectors.KmsClientFactory
 import io.kopipes.aws.connectors.KmsConnector
 import io.kopipes.core.EnvelopeEncryptionMetadata
-import io.kopipes.core.GlobalRegistry
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
@@ -32,11 +30,6 @@ class EncryptionTest {
 
     @BeforeEach
     fun setup() {
-        val config = mockk<AwsEnvironmentConfig>()
-        every { config.awsRegion() } returns "us-east-1"
-        every { config.endPointUrl() } returns null
-        GlobalRegistry.setEnvConfig(config)
-
         every { kmsClientFactory.getClient(any(), any()) } returns kmsClient
         coEvery { kmsClient.generateDataKey(any()) } returns GenerateDataKeyResponse {
             plaintext = plaintextKey
@@ -48,7 +41,6 @@ class EncryptionTest {
         coEvery { kmsClient.encrypt(any()) } returns EncryptResponse {
             ciphertextBlob = "encrypted-key-other-region".toByteArray()
         }
-        AwsGlobalRegistry.setKmsClientFactory(kmsClientFactory)
     }
 
     @Test
@@ -62,7 +54,7 @@ class EncryptionTest {
                 masterKeyAlias = "alias/test",
                 fields = listOf("secret")
             )
-            val kms = KmsConnector("test", kmsClientFactory)
+            val kms = KmsConnector("test", kmsClientFactory, region = "us-east-1")
 
             // Encrypt
             val (encrypted, newEem) = EncryptionUtils.encryptJsonObject(json, eem, kms)
@@ -85,7 +77,7 @@ class EncryptionTest {
         runBlocking {
             val json = JsonObject(mapOf("secret" to JsonPrimitive("hush")))
             val eem = EnvelopeEncryptionMetadata(masterKeyAlias = "alias/test", fields = listOf("secret"))
-            val kms = KmsConnector("test", kmsClientFactory)
+            val kms = KmsConnector("test", kmsClientFactory, region = "us-east-1")
 
             val (encrypted, newEem) = EncryptionUtils.encryptJsonObject(json, eem, kms, regions = listOf("us-east-1", "us-west-2"))
 
@@ -106,7 +98,7 @@ class EncryptionTest {
                 masterKeyAlias = "alias/test",
                 fields = listOf("secret")
             )
-            val kms = KmsConnector("test", kmsClientFactory)
+            val kms = KmsConnector("test", kmsClientFactory, region = "us-east-1")
 
             // Encrypt
             val (encrypted, newEem) = EncryptionUtils.encryptMap(map, eem, kms)

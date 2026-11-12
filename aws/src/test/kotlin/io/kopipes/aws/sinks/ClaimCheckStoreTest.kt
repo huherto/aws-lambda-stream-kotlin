@@ -8,7 +8,6 @@ import io.kopipes.aws.AwsEnvironmentConfig
 import io.kopipes.aws.MyEventA
 import io.kopipes.aws.connectors.S3ClientFactory
 import io.kopipes.aws.extensions.s3
-import io.kopipes.core.GlobalRegistry
 import io.kopipes.core.UnitOfWork
 import io.kopipes.core.faults.FaultManager
 import io.kopipes.core.sinks.EventPublisherInMemory
@@ -28,32 +27,17 @@ import org.junit.jupiter.api.Test
 
 class ClaimCheckStoreTest {
 
-    private val envConfig = spyk<AwsEnvironmentConfig>()
     private val s3Client = mockk<S3Client>()
     private val s3ClientFactory = RecordingS3ClientFactory(s3Client)
     private val clock = object : Clock {
         override fun now(): Instant = Instant.parse("2024-03-05T06:07:08Z")
     }
 
-    @BeforeEach
-    fun beforeEach() {
-        GlobalRegistry.reset()
-        GlobalRegistry.setEnvConfig(envConfig)
-        val faultManager = FaultManager(
-            eventPublisher = EventPublisherInMemory(),
-            skipErrorLogging = true,
-        )
-        GlobalRegistry.setFaultManager(faultManager)
-        GlobalRegistry.setEventPublisher(EventPublisherInMemory())
-    }
-
     @Test
     fun `formatKey uses region clock and event id`() {
         // arrange
-        val store = claimCheckStore()
+        val store = claimCheckStore(region = "us-west-2")
         val event = MyEventA(id = "event-123")
-
-        every { envConfig.awsRegion() } returns "us-west-2"
 
         // act
         val key = store.formatKey(event)
@@ -65,10 +49,8 @@ class ClaimCheckStoreTest {
     @Test
     fun `formatKey fails when event id is missing`() {
         // arrange
-        val store = claimCheckStore()
+        val store = claimCheckStore(region = "us-west-2")
         val event = MyEventA()
-
-        every { envConfig.awsRegion() } returns "us-west-2"
 
         // act
         val error = shouldThrow<IllegalStateException> {
@@ -82,7 +64,7 @@ class ClaimCheckStoreTest {
     @Test
     fun `toClaimCheckEvent keeps event metadata and points to s3 object`() {
         // arrange
-        val store = claimCheckStore()
+        val store = claimCheckStore(region = "eu-central-1")
         val event = MyEventA(
             foo = "foo",
             bar = "bar",
@@ -91,8 +73,6 @@ class ClaimCheckStoreTest {
             timestamp = 123456789L,
             tags = mapOf("source" to "test")
         )
-
-        every { envConfig.awsRegion() } returns "eu-central-1"
 
         // act
         val claimCheckEvent = store.toClaimCheckEvent(event, "claim-check-bucket")
@@ -114,10 +94,8 @@ class ClaimCheckStoreTest {
     @Test
     fun `toPutClaimCheckRequest creates request with bucket key and encoded event body`() = runTest {
         // arrange
-        val store = claimCheckStore()
+        val store = claimCheckStore(region = "ap-southeast-2")
         val event = MyEventA(foo = "foo", bar = "bar", id = "event-123")
-
-        every { envConfig.awsRegion() } returns "ap-southeast-2"
 
         // act
         val request = store.toPutClaimCheckRequest(event, "claim-check-bucket")
@@ -149,13 +127,12 @@ class ClaimCheckStoreTest {
     @Test
     fun `storeClaimCheck stores single event and leaves eventless unit of work unchanged`() = runTest {
         // arrange
-        val store = claimCheckStore()
+        val store = claimCheckStore(region = "us-east-1")
         val response = PutObjectResponse {}
         val event = MyEventA(foo = "foo", id = "event-123")
         val eventUow = UnitOfWork(key = "with-event", event = event)
         val eventlessUow = UnitOfWork(key = "without-event")
 
-        every { envConfig.awsRegion() } returns "us-east-1"
         coEvery { s3Client.putObject(any<PutObjectRequest>()) } returns response
 
         // act
@@ -190,7 +167,7 @@ class ClaimCheckStoreTest {
     @Test
     fun `storeClaimCheck stores every event inside a batch and preserves batch wrapper`() = runTest {
         // arrange
-        val store = claimCheckStore()
+        val store = claimCheckStore(region = "us-east-1")
         val response1 = PutObjectResponse { eTag = "etag-1" }
         val response2 = PutObjectResponse { eTag = "etag-2" }
         val event1 = MyEventA(foo = "foo-1", id = "event-1")
@@ -203,7 +180,6 @@ class ClaimCheckStoreTest {
             ),
         )
 
-        every { envConfig.awsRegion() } returns "us-east-1"
         coEvery {
             s3Client.putObject(match<PutObjectRequest> { it.key?.endsWith("/event-1") == true })
         } returns response1
@@ -251,10 +227,13 @@ class ClaimCheckStoreTest {
         confirmVerified(s3Client)
     }
 
-    private fun claimCheckStore(bucket: String? = "claim-check-bucket"): ClaimCheckStore {
+    private fun claimCheckStore(bucket: String? = "claim-check-bucket", region: String = "us-east-1"): ClaimCheckStore {
+        val faultManager = FaultManager(eventPublisher = EventPublisherInMemory(), skipErrorLogging = true)
         return ClaimCheckStore(
             s3ClientFactory = s3ClientFactory,
+            faultManager = { faultManager },
             claimCheckBucketName = bucket,
+            region = region,
             clock = clock,
             bufferCapacity = 1,
         )

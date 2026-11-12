@@ -1,5 +1,6 @@
 package io.kopipes.aws.java;
 
+import io.kopipes.aws.AwsKopipesContext;
 import io.kopipes.aws.flavors.CdcPipeline;
 import io.kopipes.aws.flavors.UpdatePipeline;
 import io.kopipes.core.EventCodec;
@@ -37,6 +38,7 @@ public class PipelineBuilderTest {
     public void testUpdatePipelineBuilder() {
         UpdatePipeline pipeline = UpdatePipeline.builder()
                 .id("test-update")
+                .context(new AwsKopipesContext())
                 .eventCodec(new EventCodec() {
                     @Override
                     public io.kopipes.core.Event decode(String event) { return null; }

@@ -3,7 +3,7 @@ package org.myorg.payments
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
-import io.kopipes.aws.awsEnvConfig
+import io.kopipes.aws.AwsKopipesContext
 import io.kopipes.aws.flavors.CdcPipeline
 import io.kopipes.aws.from.KinesisAdapter
 import io.kopipes.aws.sinks.EventBridgePublisher
@@ -110,13 +110,23 @@ fun toExternal(uow: UnitOfWork): Event? {
     )
 }
 
-class EgressContainer(val eventPublisher: EventPublisher) {
+class EgressContainer(
+    val context: AwsKopipesContext,
+    val eventPublisher: EventPublisher = context.eventPublisher,
+) {
     companion object {
         /** `source = external` on the bus: the egress rule forwards these, and the default channel skips them. */
-        fun build() = EgressContainer(EventBridgePublisher(source = "external", busName = awsEnvConfig().busName() ?: "undefined"))
+        fun build(): EgressContainer {
+            val context = AwsKopipesContext()
+            return EgressContainer(
+                context,
+                EventBridgePublisher(context.envConfig, context.eventBridgeClientFactory, source = "external"),
+            )
+        }
     }
 
     val assembler: PipelineAssembler = PipelineAssembler.builder()
+        .context(context)
         .addPipeline(
             CdcPipeline.builder()
                 .id("outcomes")
@@ -132,7 +142,7 @@ class EgressContainer(val eventPublisher: EventPublisher) {
         )
         .build()
 
-    val kinesisAdapter = KinesisAdapter(eventCodec = PaymentsEventCodec)
+    val kinesisAdapter = KinesisAdapter(context, PaymentsEventCodec)
 }
 
 class Listener(

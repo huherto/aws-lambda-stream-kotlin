@@ -18,7 +18,6 @@ class EventsFiltersTest {
     @BeforeEach
     fun beforeEach() {
         val envConfig = spyk(EnvironmentConfig())
-        GlobalRegistry.setEnvConfig(envConfig)
     }
 
     @Test

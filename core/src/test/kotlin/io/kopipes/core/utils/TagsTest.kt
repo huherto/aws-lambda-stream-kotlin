@@ -1,7 +1,6 @@
 package io.kopipes.core.utils
 
 import io.kopipes.core.EnvironmentConfig
-import io.kopipes.core.GlobalRegistry
 import io.kopipes.core.UnitOfWork
 import io.kopipes.core.faults.FaultEvent
 import io.kopipes.core.faults.FaultManager
@@ -22,9 +21,9 @@ class TagsTest {
         every { envConfig.stage() } returns "dev"
         every { envConfig.service() } returns "test-service"
         every { envConfig.awsLambdaFunctionName() } returns "test-function"
-        GlobalRegistry.setEnvConfig(envConfig)
+        every { envConfig.skip() } returns false
 
-        envTags("test-pipeline") shouldBe mapOf(
+        StandardTags(envConfig).envTags("test-pipeline") shouldBe mapOf(
             "account" to "test-account",
             "region" to "eu-west-1",
             "stage" to "dev",
@@ -46,9 +45,9 @@ class TagsTest {
         every { envConfig.project() } returns null
         every { envConfig.serverlessProject() } returns null
         every { envConfig.awsLambdaFunctionName() } returns null
-        GlobalRegistry.setEnvConfig(envConfig)
+        every { envConfig.skip() } returns false
 
-        envTags(null) shouldBe mapOf(
+        StandardTags(envConfig).envTags(null) shouldBe mapOf(
             "account" to "undefined",
             "region" to "undefined",
             "stage" to "undefined",
@@ -78,9 +77,8 @@ class TagsTest {
         every { envConfig.service() } returns "test-service"
         every { envConfig.awsLambdaFunctionName() } returns "test-function"
         every { envConfig.skip() } returns true
-        GlobalRegistry.setEnvConfig(envConfig)
 
-        val result = adornStandardTags(uow)
+        val result = adornStandardTags(uow, StandardTags(envConfig))
 
         result.fault?.tags shouldBe mapOf(
             "account" to "test-account",
@@ -96,11 +94,9 @@ class TagsTest {
 
     @Test
     fun `adornStandardTags should return unchanged unit of work when event is missing`() {
-        val envConfig = mockk<EnvironmentConfig>()
         val uow = UnitOfWork()
-        GlobalRegistry.setEnvConfig(envConfig)
 
-        adornStandardTags(uow) shouldBe uow
+        adornStandardTags(uow, StandardTags()) shouldBe uow
     }
 
 }

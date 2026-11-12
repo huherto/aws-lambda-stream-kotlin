@@ -2,12 +2,11 @@ package org.myorg.sut
 
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import io.kopipes.aws.AwsEnvironmentConfig
-import io.kopipes.aws.awsEnvConfig
 import kotlinx.coroutines.runBlocking
 
 class CheckHealthApiContainer(
     val dynamoDBClient: DynamoDbClient,
-    val envConfig: AwsEnvironmentConfig = awsEnvConfig(),
+    val envConfig: AwsEnvironmentConfig = AwsEnvironmentConfig(),
 ) {
 
     companion object {
@@ -19,7 +18,7 @@ class CheckHealthApiContainer(
 
             return CheckHealthApiContainer(
                 dynamoDBClient = dynamoDbClient,
-                envConfig = awsEnvConfig(),
+                envConfig = AwsEnvironmentConfig(),
             )
         }
     }

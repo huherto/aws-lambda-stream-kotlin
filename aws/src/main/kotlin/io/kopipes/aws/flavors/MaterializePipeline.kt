@@ -1,5 +1,7 @@
 package io.kopipes.aws.flavors
 
+import io.kopipes.aws.AwsKopipesContext
+
 import aws.sdk.kotlin.services.dynamodb.model.UpdateItemRequest
 import io.kopipes.aws.connectors.DynamoDbConnector
 import io.kopipes.aws.extensions.withUpdateRequest
@@ -22,9 +24,13 @@ class MaterializePipeline(
     private val compact: (Flow<UnitOfWork>) -> Flow<UnitOfWork>,
     private val toUpdateRequest: suspend (UnitOfWork) -> UpdateItemRequest?,
     private val dynamoDbConnectorOptions: DynamoDbConnector.Options,
+    private val parallel: Int = DynamoDbSink.DEFAULT_PARALLEL,
+    private val stepMetrics: Boolean = false,
 ) : Pipeline(pipelineId) {
 
-    private val dynamoDbSink: DynamoDbSink by lazy { DynamoDbSink(DynamoDbConnector(dynamoDbConnectorOptions)) }
+    private val dynamoDbSink: DynamoDbSink by lazy {
+        DynamoDbSink(DynamoDbConnector(dynamoDbConnectorOptions), parallel, stepMetrics)
+    }
 
     override fun connect(
         fm: FaultManager,
@@ -57,7 +63,18 @@ class MaterializePipeline(
         private var onContentType: (UnitOfWork) -> Boolean = { true }
         private var compact: (Flow<UnitOfWork>) -> Flow<UnitOfWork> = { it }
         private var toUpdateRequest: (suspend (UnitOfWork) -> UpdateItemRequest?)? = null
-        private var dynamoDbConnectorOptions: DynamoDbConnector.Options = DynamoDbConnector.Options()
+        private var dynamoDbConnectorOptions: DynamoDbConnector.Options? = null
+        private var parallel: Int = DynamoDbSink.DEFAULT_PARALLEL
+        private var stepMetrics: Boolean = false
+
+        /** Takes the DynamoDB client factory, parallelism and step-metrics switch from [context]. */
+        fun context(context: AwsKopipesContext) = apply {
+            dynamoDbConnectorOptions = DynamoDbConnector.Options(context.dynamoDbClientFactory)
+            parallel = context.envConfig.parallel() ?: DynamoDbSink.DEFAULT_PARALLEL
+            stepMetrics = context.stepMetrics
+        }
+        fun parallel(parallel: Int) = apply { this.parallel = parallel }
+        fun stepMetrics(enabled: Boolean) = apply { this.stepMetrics = enabled }
 
         fun eventFilter(eventFilter: EventFilter) = apply { this.eventFilter = eventFilter }
         fun onContentType(onContentType: (UnitOfWork) -> Boolean) = apply { this.onContentType = onContentType }
@@ -76,6 +93,9 @@ class MaterializePipeline(
                 compact = compact,
                 toUpdateRequest = toUpdateRequest ?: throw IllegalArgumentException("toUpdateRequest is required"),
                 dynamoDbConnectorOptions = dynamoDbConnectorOptions
+                    ?: throw IllegalArgumentException("dynamoDbConnectorOptions (or context) is required"),
+                parallel = parallel,
+                stepMetrics = stepMetrics,
             )
         }
     }

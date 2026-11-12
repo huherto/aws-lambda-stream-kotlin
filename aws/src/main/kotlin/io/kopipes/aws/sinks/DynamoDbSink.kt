@@ -1,6 +1,6 @@
 package io.kopipes.aws.sinks
 
-import io.kopipes.aws.awsEnvConfig
+import io.kopipes.aws.AwsKopipesContext
 import io.kopipes.aws.connectors.DynamoDbConnector
 import io.kopipes.aws.extensions.putRequest
 import io.kopipes.aws.extensions.updateRequest
@@ -15,8 +15,19 @@ import kotlinx.coroutines.flow.Flow
 /** Sink for applying DynamoDB write operations. */
 class DynamoDbSink(
     private val connector: DynamoDbConnector,
-    private val parallel: Int = awsEnvConfig().parallel() ?: 4,
+    private val parallel: Int = DEFAULT_PARALLEL,
+    private val stepMetrics: Boolean = false,
 ) {
+
+    constructor(context: AwsKopipesContext) : this(
+        connector = DynamoDbConnector(DynamoDbConnector.Options(context.dynamoDbClientFactory)),
+        parallel = context.envConfig.parallel() ?: DEFAULT_PARALLEL,
+        stepMetrics = context.stepMetrics,
+    )
+
+    companion object {
+        const val DEFAULT_PARALLEL = 4
+    }
 
     fun getConnector(): DynamoDbConnector {
         return connector
@@ -27,7 +38,7 @@ class DynamoDbSink(
             .mapParallel(parallel) { uow ->
                 val request = uow.updateRequest ?: return@mapParallel uow
                 fm.faulty(uow) { item ->
-                    item.withStepMetrics("update") { uowWithMetrics ->
+                    item.withStepMetrics("update", stepMetrics) { uowWithMetrics ->
                         val updateResponse = getConnector().update(uowWithMetrics.updateRequest!!, uowWithMetrics)
                         uowWithMetrics.withUpdateResponse(updateResponse)
                     }
@@ -39,7 +50,7 @@ class DynamoDbSink(
             .mapParallel(parallel) { uow ->
                 val request = uow.putRequest ?: return@mapParallel uow
                 fm.faulty(uow) { item ->
-                    item.withStepMetrics("put") { uowWithMetrics ->
+                    item.withStepMetrics("put", stepMetrics) { uowWithMetrics ->
                         val putResponse = getConnector().put(uowWithMetrics.putRequest!!, uowWithMetrics)
                         uowWithMetrics.withPutResponse(putResponse)
                     }

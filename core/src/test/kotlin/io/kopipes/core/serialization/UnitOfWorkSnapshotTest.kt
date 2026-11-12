@@ -3,6 +3,7 @@ package io.kopipes.core.serialization
 import io.kopipes.core.*
 import io.kopipes.core.faults.FaultManager
 import io.kopipes.core.flavors.Pipeline
+import io.kopipes.core.serialization.snapshots.DefaultUnitOfWorkSnapshotter
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.flow.Flow
@@ -51,7 +52,7 @@ class UnitOfWorkSnapshotTest {
         val event = SimpleEvent()
         val uow = UnitOfWork(pipeline = pipeline, event = event, key = "key-1")
 
-        val snapshot = uow.toSnapshot()
+        val snapshot = DefaultUnitOfWorkSnapshotter().snapshot(uow)
 
         snapshot.pipeline.shouldNotBeNull().id shouldBe "test-p"
         val eventSnapshot = snapshot.event.shouldNotBeNull()
@@ -63,7 +64,7 @@ class UnitOfWorkSnapshotTest {
 
     @Test
     fun `should leave record and raw absent when the unit of work has neither`() {
-        val snapshot = UnitOfWork().toSnapshot()
+        val snapshot = DefaultUnitOfWorkSnapshotter().snapshot(UnitOfWork())
 
         snapshot.record shouldBe null
         snapshot.event shouldBe null

@@ -40,6 +40,8 @@ testing {
                 implementation(libs.slf4j.simple)
 
                 implementation(project(":examples:payments:common-app"))
+                implementation(project(":examples:payments:operator"))
+                implementation(project(":aws"))
             }
             targets {
                 all {

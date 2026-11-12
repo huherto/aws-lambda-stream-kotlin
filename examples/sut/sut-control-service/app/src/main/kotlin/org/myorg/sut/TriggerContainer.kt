@@ -1,9 +1,8 @@
 package org.myorg.sut
 
-import io.kopipes.aws.connectors.DefaultDynamoDbClientFactory
+import io.kopipes.aws.AwsKopipesContext
 import io.kopipes.aws.from.DynamodbAdapter
 import io.kopipes.aws.sinks.DynamoDbEventsMicrostore
-import io.kopipes.aws.sinks.EventBridgePublisher
 import io.kopipes.core.Event
 import io.kopipes.core.PipelineAssembler
 import io.kopipes.core.UnitOfWork
@@ -15,8 +14,9 @@ import io.kopipes.core.sinks.EventsMicrostore
 import mu.KotlinLogging.logger
 
 class TriggerContainer(
-    val eventsMicrostore: EventsMicrostore,
-    val eventPublisher: EventPublisher,
+    val context: AwsKopipesContext,
+    val eventsMicrostore: EventsMicrostore = DynamoDbEventsMicrostore(context),
+    val eventPublisher: EventPublisher = context.eventPublisher,
     val correlatePipeline: CorrelatePipeline = CorrelatePipeline.builder()
         .id("corre1")
         .eventFilter(EventFilters.classes(TrackedUnitEvent::class))
@@ -52,11 +52,12 @@ class TriggerContainer(
         .expression { uow -> true }
         .build(),
     val assembler: PipelineAssembler = PipelineAssembler.builder()
+        .context(context)
         .addPipeline(correlatePipeline)
         .addPipeline(evaluatePipeline1)
         .addPipeline(evaluatePipeline2)
         .build(),
-    val dynamoDbAdapter: DynamodbAdapter = DynamodbAdapter(),
+    val dynamoDbAdapter: DynamodbAdapter = DynamodbAdapter(context),
 ) {
     companion object {
         private val log = logger {}
@@ -73,15 +74,6 @@ class TriggerContainer(
             return emptyList()
         }
 
-        fun build(): TriggerContainer {
-            val eventsMicrostore = DynamoDbEventsMicrostore(
-                DefaultDynamoDbClientFactory(),
-            )
-            val eventPublisher = EventBridgePublisher()
-            return TriggerContainer(
-                eventsMicrostore = eventsMicrostore,
-                eventPublisher = eventPublisher,
-            )
-        }
+        fun build(): TriggerContainer = TriggerContainer(AwsKopipesContext())
     }
 }

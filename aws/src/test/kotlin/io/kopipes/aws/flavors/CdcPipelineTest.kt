@@ -26,7 +26,7 @@ import org.junit.jupiter.api.Test
 
 class CdcPipelineTest {
 
-    private val dynamoDbConnectorOptions = DynamoDbConnector.Options()
+    private val dynamoDbConnectorOptions = DynamoDbConnector.Options(dynamoDbClientFactory = mockk())
     private val eventPublisher = mockk<EventPublisher>()
 
     private fun createPipeline(

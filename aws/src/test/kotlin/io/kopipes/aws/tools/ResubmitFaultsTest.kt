@@ -1,7 +1,14 @@
 package io.kopipes.aws.tools
 
 import aws.sdk.kotlin.services.lambda.model.InvocationType
+import aws.sdk.kotlin.services.lambda.LambdaClient
 import aws.sdk.kotlin.services.lambda.model.InvokeRequest
+import aws.sdk.kotlin.services.lambda.model.InvokeResponse
+import io.kotest.matchers.types.shouldBeInstanceOf
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.mockk
+import kotlinx.coroutines.runBlocking
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.maps.shouldContainExactly
@@ -354,6 +361,58 @@ class ResubmitFaultsTest {
         // Assert
         result.err shouldBe regularError
         thrown shouldBe expiredTokenError
+    }
+
+    private fun invokeResponse(functionError: String? = null): InvokeResponse = InvokeResponse {
+        statusCode = 200
+        this.functionError = functionError
+        payload = if (functionError != null) """{"errorMessage":"boom"}""".toByteArray() else null
+    }
+
+    private fun invocable(): ResubmitFaults.UnitOfWork =
+        unitOfWork().copy(invokeRequest = InvokeRequest { functionName = "target-lambda" })
+
+    @Test
+    fun `a function that throws is retried and, once it succeeds, counted as invoked`() = runBlocking {
+        // Arrange
+        val lambda = mockk<LambdaClient>()
+        coEvery { lambda.invoke(any()) } returnsMany listOf(invokeResponse("Unhandled"), invokeResponse())
+
+        // Act
+        val result = subject.invokeLambdaWithRetry(lambda, invocable(), maxAttempts = 3, baseDelayMillis = 1, maxDelayMillis = 2)
+
+        // Assert
+        result.err.shouldBeNull()
+        result.invokeResponseStatusCode shouldBe 200
+        coVerify(exactly = 2) { lambda.invoke(any()) }
+    }
+
+    @Test
+    fun `a function that keeps throwing ends as an error, not a successful resubmission`() = runBlocking {
+        // Arrange
+        val lambda = mockk<LambdaClient>()
+        coEvery { lambda.invoke(any()) } returns invokeResponse("Unhandled")
+
+        // Act
+        val result = subject.invokeLambdaWithRetry(lambda, invocable(), maxAttempts = 3, baseDelayMillis = 1, maxDelayMillis = 2)
+
+        // Assert
+        val error = result.err.shouldBeInstanceOf<ResubmitFaults.FunctionErrorException>()
+        error.functionError shouldBe "Unhandled"
+        error.payload shouldBe """{"errorMessage":"boom"}"""
+        result.invokeResponseStatusCode.shouldBeNull()
+        coVerify(exactly = 3) { lambda.invoke(any()) }
+    }
+
+    @Test
+    fun `invokeLambdaOnce raises a function error instead of reporting status 200`() = runBlocking {
+        // Arrange
+        val lambda = mockk<LambdaClient>()
+        coEvery { lambda.invoke(any()) } returns invokeResponse("Handled")
+
+        // Act & Assert
+        shouldThrow<ResubmitFaults.FunctionErrorException> { subject.invokeLambdaOnce(lambda, invocable()) }
+        Unit
     }
 
     @Test

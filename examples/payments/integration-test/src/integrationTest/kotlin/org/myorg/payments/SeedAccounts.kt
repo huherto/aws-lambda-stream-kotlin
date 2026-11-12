@@ -30,6 +30,7 @@ object SeedAccounts {
         Seed("C-2", "u-42"),
         Seed("C-5", "u-42"),
         Seed("C-7", "u-42"),
+        Seed("C-8", "u-42"),
         Seed(open, customer),
         Seed(closed, customer, status = "closed"),
         Seed(toClose, customer),

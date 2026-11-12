@@ -1,9 +1,8 @@
 package org.myorg.payments
 
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent
-import io.kopipes.aws.AwsGlobalRegistry
+import io.kopipes.aws.AwsKopipesContext
 import io.kopipes.aws.testsupport.TestContext
-import io.kopipes.core.GlobalRegistry
 import io.kopipes.core.JsonRaw
 import io.kopipes.core.UnitOfWork
 import io.kopipes.core.faults.FaultManager
@@ -15,7 +14,6 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import java.nio.ByteBuffer
 import java.util.Date
@@ -30,10 +28,6 @@ class AccountsIngressTest {
 
     private fun translate(json: String) = toAccountChanged(UnitOfWork(event = AccountsEventCodec.decode(json)))
 
-    @AfterEach
-    fun tearDown() {
-        AwsGlobalRegistry.reset()
-    }
 
     @Test
     fun `ACCOUNT_OPENED becomes ACCOUNT_CHANGED with our names and only what the BFF needs`() {
@@ -90,8 +84,8 @@ class AccountsIngressTest {
     fun `the listener publishes ACCOUNT_CHANGED for each external event on the ingress channel`() {
         // Arrange
         val publisher = EventPublisherInMemory()
-        GlobalRegistry.setFaultManager(FaultManager(publisher, skipErrorLogging = true))
-        val listener = Listener { ListenerContainer(eventPublisher = publisher) }
+        val context = AwsKopipesContext(eventPublisher = publisher, faultManager = FaultManager(publisher, skipErrorLogging = true))
+        val listener = Listener { ListenerContainer(context) }
         val kinesisEvent = KinesisEvent().apply {
             records = listOf(external(), external(type = AccountsEvent.ACCOUNT_CLOSED)).mapIndexed { i, json ->
                 KinesisEvent.KinesisEventRecord().apply {

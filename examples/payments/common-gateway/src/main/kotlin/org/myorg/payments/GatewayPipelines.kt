@@ -77,7 +77,7 @@ class TranslatePipeline(
         val translated = fromFlow.flatMapConcat { uow ->
             fm.faulty(uow) { toEvents(it) }?.map { uow.copy(event = it) }?.asFlow() ?: emptyFlow()
         }
-        return eventPublisher.publish(translated).onEach { printEndPipeline(it) }
+        return eventPublisher.publish(translated).onEach { with(fm) { printEndPipeline(it) } }
     }
 
     companion object {

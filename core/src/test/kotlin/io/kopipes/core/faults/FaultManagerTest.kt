@@ -2,7 +2,6 @@ package io.kopipes.core.faults
 
 import io.kopipes.core.EnvironmentConfig
 import io.kopipes.core.FaultException
-import io.kopipes.core.GlobalRegistry
 import io.kopipes.core.UnitOfWork
 import io.kopipes.core.sinks.EventPublisherInMemory
 import io.kotest.assertions.throwables.shouldThrow
@@ -87,10 +86,9 @@ class FaultManagerTest {
         val envConfig = spyk<EnvironmentConfig>()
         every { envConfig.awsLambdaFunctionName() } returns "test-function"
         every { envConfig.streamRetryEnabled() } returns true
-        GlobalRegistry.setEnvConfig(envConfig)
 
         val eventPublisher = EventPublisherInMemory()
-        val faultManager = spyk(FaultManager(eventPublisher, isRetryable = { it is TestRetryableException }))
+        val faultManager = spyk(FaultManager.fromConfig(envConfig, eventPublisher, isRetryable = { it is TestRetryableException }))
         every { faultManager.logError(any()) } returns Unit
 
         val uow = UnitOfWork()
@@ -109,10 +107,9 @@ class FaultManagerTest {
         val envConfig = spyk<EnvironmentConfig>()
         every { envConfig.awsLambdaFunctionName() } returns "test-function"
         every { envConfig.streamRetryEnabled() } returns true
-        GlobalRegistry.setEnvConfig(envConfig)
 
         val eventPublisher = EventPublisherInMemory()
-        val faultManager = spyk(FaultManager(eventPublisher, isRetryable = { it is TestRetryableException }))
+        val faultManager = spyk(FaultManager.fromConfig(envConfig, eventPublisher, isRetryable = { it is TestRetryableException }))
         every { faultManager.logError(any()) } returns Unit
 
         val uow = UnitOfWork()
@@ -132,10 +129,9 @@ class FaultManagerTest {
         every { envConfig.awsLambdaFunctionName() } returns "test-function"
         every { envConfig.streamRetryEnabled() } returns true
         every { envConfig.itemLevelRetryEnabled() } returns true
-        GlobalRegistry.setEnvConfig(envConfig)
 
         val eventPublisher = EventPublisherInMemory()
-        val faultManager = spyk(FaultManager(eventPublisher, isRetryable = { it is TestRetryableException }))
+        val faultManager = spyk(FaultManager.fromConfig(envConfig, eventPublisher, isRetryable = { it is TestRetryableException }))
         every { faultManager.logError(any()) } returns Unit
 
         val uow = UnitOfWork(sequenceNumber = "seq-123")

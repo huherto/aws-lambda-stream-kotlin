@@ -11,6 +11,7 @@ Choose the guide that best fits your role to get started:
 - [**Kotlin Developers**](docs/KotlinDevelopers.md) — Deep dive into Kotlin features, coroutines, and Flow.
 - [**Java Developers**](docs/JavaDevelopers.md) — How to use the framework in Java projects.
 - [**Software Architects**](docs/SoftwareArchitects.md) — Value proposition and architectural patterns.
+- [**Wiring a kopipes Lambda**](docs/Wiring.md) — The context, plain Lambdas, tests, configuration and Spring Boot.
 
 ## About the Framework
 
@@ -20,7 +21,9 @@ This framework follows the serverless architecture patterns described by John Gi
 
 ## Project Structure
 
-- [core](core) — Framework code and reusable components.
+- [core](core) — Framework code and reusable components, with no AWS or Spring dependency.
+- [aws](aws) — AWS adapters, connectors, sinks and pipeline flavors.
+- [spring](spring/README.md) — Optional Spring Boot support: auto-configuration and Lambda handlers.
 - [tools](tools) — Utilities for managing events.
 - [examples](examples) — Example applications (Kotlin and Java).
 - [docs](docs) — Detailed documentation.

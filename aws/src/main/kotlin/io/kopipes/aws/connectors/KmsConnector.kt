@@ -7,8 +7,7 @@ import aws.sdk.kotlin.services.kms.model.DecryptRequest
 import aws.sdk.kotlin.services.kms.model.EncryptRequest
 import aws.sdk.kotlin.services.kms.model.GenerateDataKeyRequest
 import aws.smithy.kotlin.runtime.net.url.Url
-import io.kopipes.aws.AwsGlobalRegistry
-import io.kopipes.aws.awsEnvConfig
+import io.kopipes.aws.AwsEnvironmentConfig
 import java.util.concurrent.ConcurrentHashMap
 
 /** Options for [KmsConnector]. */
@@ -22,14 +21,14 @@ interface KmsClientFactory {
 }
 
 /** Default implementation for [KmsClientFactory]. */
-class DefaultKmsClientFactory : KmsClientFactory {
+class DefaultKmsClientFactory(private val envConfig: AwsEnvironmentConfig) : KmsClientFactory {
     private val clients = ConcurrentHashMap<String, KmsClient>()
 
     override fun getClient(pipelineId: String, region: String?): KmsClient {
-        val effectiveRegion = region ?: awsEnvConfig().awsRegion()
+        val effectiveRegion = region ?: envConfig.awsRegion()
         val key = "$pipelineId-$effectiveRegion"
         return clients.computeIfAbsent(key) {
-            val endpointUrl = awsEnvConfig().endPointUrl()?.ifEmpty { null }
+            val endpointUrl = envConfig.endPointUrl()?.ifEmpty { null }
             KmsClient {
                 this.region = effectiveRegion
                 this.credentialsProvider = EnvironmentCredentialsProvider()
@@ -39,10 +38,19 @@ class DefaultKmsClientFactory : KmsClientFactory {
     }
 }
 
-/** Connector for AWS KMS. */
+/** Makes [KmsConnector]s that share a client factory and a home [region]. */
+class KmsConnectors(
+    private val clientFactory: KmsClientFactory,
+    val region: String,
+) {
+    fun forPipeline(pipelineId: String): KmsConnector = KmsConnector(pipelineId, clientFactory, region)
+}
+
+/** Connector for AWS KMS. [region] is the home region: where data keys are generated and decrypted. */
 class KmsConnector(
     private val pipelineId: String,
-    private val clientFactory: KmsClientFactory = AwsGlobalRegistry.kmsClientFactory(),
+    private val clientFactory: KmsClientFactory,
+    val region: String,
 ) {
     suspend fun generateDataKey(keyAlias: String, region: String? = null): Pair<ByteArray, ByteArray> {
         val client = clientFactory.getClient(pipelineId, region)

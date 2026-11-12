@@ -12,6 +12,10 @@ This project provides Kotlin utilities and pipeline abstractions for AWS Lambda 
 - Add or update tests for behavior changes.
 - Use Kotlin idioms and coroutines/Flow consistently.
 - Avoid introducing new dependencies unless necessary.
+- Keep the framework free of global state: components take their collaborators in constructors or builders,
+  usually from an `AwsKopipesContext` (see docs/Wiring.md). Don't add registries, singletons or env var reads
+  outside `EnvironmentConfig`.
+- `core` and `aws` must not depend on Spring; Spring support belongs in the `spring` module.
 
 ## Unit tests
 - Use arrange-act-assert style.
@@ -30,9 +34,14 @@ This project provides Kotlin utilities and pipeline abstractions for AWS Lambda 
 
 
 ## Running integration tests
+Always start from a clean LocalStack: a long-running one can hang mid-run and fail tests for no code reason.
+`examples/sut` and `examples/payments` share the `localstack-main` container, so test one system at a time,
+restarting LocalStack in between.
+
 ```bash
-cd examples/sut
-docker compose up
+cd examples/sut   # or examples/payments
+docker compose down
+docker compose up -d
 # deploy all stacks
 ./deploy_stacks.sh -d
 

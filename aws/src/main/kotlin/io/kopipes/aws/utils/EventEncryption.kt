@@ -1,10 +1,10 @@
 package io.kopipes.aws.utils
 
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
-import io.kopipes.aws.AwsGlobalRegistry
 import io.kopipes.aws.DynamodbRaw
 import io.kopipes.aws.ImagesRaw
 import io.kopipes.aws.connectors.KmsConnector
+import io.kopipes.aws.connectors.KmsConnectors
 import io.kopipes.aws.from.RecordPair
 import io.kopipes.core.EnvelopeEncryptionMetadata
 import io.kopipes.core.JsonEvent
@@ -23,7 +23,6 @@ import kotlinx.serialization.serializerOrNull
 data class EncryptionOptions(
     val eem: EnvelopeEncryptionMetadata? = null,
     val regions: List<String>? = null,
-    val kmsConnector: KmsConnector? = null
 )
 
 /**
@@ -35,11 +34,11 @@ object EventEncryption {
     /**
      * Flow operator that encrypts the event in each [UnitOfWork].
      */
-    fun encryptEvent(options: EncryptionOptions, fm: FaultManager): (Flow<UnitOfWork>) -> Flow<UnitOfWork> = { flow ->
+    fun encryptEvent(options: EncryptionOptions, fm: FaultManager, kms: KmsConnectors): (Flow<UnitOfWork>) -> Flow<UnitOfWork> = { flow ->
         with(fm) {
             flow.mapNotFaulty { uow ->
                 val eem = options.eem ?: return@mapNotFaulty uow
-                val kms = options.kmsConnector ?: KmsConnector(uow.pipeline?.id ?: "default", AwsGlobalRegistry.kmsClientFactory())
+                val kms = kms.forPipeline(uow.pipeline?.id ?: "default")
 
                 val event = uow.event!!
                 val jsonEvent = when (event) {
@@ -68,11 +67,11 @@ object EventEncryption {
     /**
      * Flow operator that decrypts the event in each [UnitOfWork].
      */
-    fun decryptEvent(fm: FaultManager): (Flow<UnitOfWork>) -> Flow<UnitOfWork> = { flow ->
+    fun decryptEvent(fm: FaultManager, kms: KmsConnectors): (Flow<UnitOfWork>) -> Flow<UnitOfWork> = { flow ->
         with(fm) {
             flow.mapNotFaulty { uow ->
                 val eem = uow.event?.eem ?: return@mapNotFaulty uow
-                val kms = KmsConnector(uow.pipeline?.id ?: "default", AwsGlobalRegistry.kmsClientFactory())
+                val kms = kms.forPipeline(uow.pipeline?.id ?: "default")
 
                 val event = uow.event!!
                 val jsonEvent = when (event) {
@@ -101,14 +100,14 @@ object EventEncryption {
     /**
      * Flow operator that decrypts change events (DynamoDB streams).
      */
-    fun decryptChangeEvent(fm: FaultManager): (Flow<UnitOfWork>) -> Flow<UnitOfWork> = { flow ->
+    fun decryptChangeEvent(fm: FaultManager, kms: KmsConnectors): (Flow<UnitOfWork>) -> Flow<UnitOfWork> = { flow ->
         with(fm) {
             flow.mapNotFaulty { uow ->
                 val event = uow.event
                 val eemMetadata = event?.eem ?: return@mapNotFaulty uow
                 val recordPair = event.raw as? RecordPair ?: return@mapNotFaulty uow
 
-                val kms = KmsConnector(uow.pipeline?.id ?: "default", AwsGlobalRegistry.kmsClientFactory())
+                val kms = kms.forPipeline(uow.pipeline?.id ?: "default")
 
                 val newImage = recordPair.new?.let {
                     EncryptionUtils.decryptRecordImage(it, eemMetadata, kms)
@@ -134,9 +133,8 @@ object EventEncryption {
     /**
      * Manual encryption of data.
      */
-    suspend fun encryptData(data: Map<String, AttributeValue>, options: EncryptionOptions): Map<String, AttributeValue> {
+    suspend fun encryptData(data: Map<String, AttributeValue>, options: EncryptionOptions, kms: KmsConnector): Map<String, AttributeValue> {
         val eem = options.eem ?: return data
-        val kms = options.kmsConnector ?: KmsConnector("manual", AwsGlobalRegistry.kmsClientFactory())
         val (encrypted, newEem) = EncryptionUtils.encryptMap(data, eem, kms, options.regions)
 
         val result = encrypted.toMutableMap()
@@ -158,7 +156,7 @@ object EventEncryption {
     /**
      * Manual decryption of data.
      */
-    suspend fun decryptData(data: Map<String, AttributeValue>, kmsConnector: KmsConnector? = null): Map<String, AttributeValue> {
+    suspend fun decryptData(data: Map<String, AttributeValue>, kms: KmsConnector): Map<String, AttributeValue> {
         val eemValue = data["eem"] ?: return data
         val eemMap = (eemValue as? AttributeValue.M)?.value ?: return data
 
@@ -169,7 +167,6 @@ object EventEncryption {
             algorithm = (eemMap["algorithm"] as? AttributeValue.S)?.value
         )
 
-        val kms = kmsConnector ?: KmsConnector("manual", AwsGlobalRegistry.kmsClientFactory())
         return EncryptionUtils.decryptMap(data.filterKeys { it != "eem" }, eem, kms)
     }
 }
