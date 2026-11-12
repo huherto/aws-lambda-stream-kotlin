@@ -28,7 +28,7 @@ dependencies {
 }
 
 application {
-    mainClass.set("org.myorg.tools.resubmit.MainKt")
+    mainClass.set("io.kopipes.tools.resubmit.MainKt")
 }
 
 tasks.shadowJar {

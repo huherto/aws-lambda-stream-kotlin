@@ -538,7 +538,7 @@ class ResubmitFaults {
                     throw error
                 }
 
-                if (attempt >= safeMaxAttempts || !isRetryable(error)) {
+                if (attempt >= safeMaxAttempts || !(error is FunctionErrorException || isRetryable(error))) {
                     return errors(error, uow)
                 }
 
@@ -558,10 +558,20 @@ class ResubmitFaults {
         val request = uow.invokeRequest ?: return uow
         val response = lambda.invoke(request)
 
+        // A function that throws still answers 200: the failure is in FunctionError. Raising it lets the caller retry
+        // and, if it keeps failing, count it as an error instead of a successful resubmission.
+        response.functionError?.let { functionError ->
+            throw FunctionErrorException(functionError, response.payload?.decodeToString())
+        }
+
         return uow.copy(
             invokeResponseStatusCode = response.statusCode,
         )
     }
+
+    /** The resubmitted function ran and failed ([functionError] is `Unhandled` or `Handled`; [payload] has the error). */
+    class FunctionErrorException(val functionError: String, val payload: String?) :
+        RuntimeException("Function error ($functionError): ${payload?.take(500)}")
 
     internal fun isRetryable(error: Throwable): Boolean {
         val message = error.message.orEmpty()
