@@ -11,6 +11,7 @@ rootProject.name = "aws-lambda-stream-kotlin"
 
 include("core")
 include("aws")
+include("spring")
 
 include(":tools:resubmit-events")
 include(":tools:replay-events")
