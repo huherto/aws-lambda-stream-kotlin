@@ -49,7 +49,7 @@ class EntityStoreInMemory : EntityStore {
         }
 
     /** Applies [update] atomically; false when its `onlyIfNewer` condition rejects it. */
-    internal fun apply(update: EntityStore.Update): Boolean {
+    fun apply(update: EntityStore.Update): Boolean {
         var applied = false
         entities.compute(update.key) { key, current ->
             val newer = update.onlyIfNewer
@@ -59,6 +59,7 @@ class EntityStoreInMemory : EntityStore {
             applied = true
             val next = (current ?: mapOf("pk" to key.pk, "sk" to key.sk)).toMutableMap()
             next.putAll(update.set)
+            update.setIfMissing.forEach { (name, value) -> if (!next.containsKey(name)) next[name] = value }
             update.add.forEach { (name, delta) -> next[name] = plus(next[name] as Number?, delta) }
             update.remove.forEach { next.remove(it) }
             next

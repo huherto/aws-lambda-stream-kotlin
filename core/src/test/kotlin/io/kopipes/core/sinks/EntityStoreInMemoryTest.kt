@@ -51,6 +51,20 @@ class EntityStoreInMemoryTest {
     }
 
     @Test
+    fun `apply with setIfMissing keeps the first value`() {
+        // Arrange
+        val store = EntityStoreInMemory()
+        fun heard(at: Long) = EntityStore.Update(key, setIfMissing = mapOf("at_HEARD" to at))
+
+        // Act
+        store.apply(heard(1))
+        store.apply(heard(2))
+
+        // Assert
+        store.get(key)!!["at_HEARD"] shouldBe 1L
+    }
+
+    @Test
     fun `apply with onlyIfNewer applies only over an older or missing value`() {
         // Arrange
         val store = EntityStoreInMemory().apply { put(mapOf("pk" to "thing", "sk" to "1", "timestamp" to 200L)) }
@@ -125,6 +139,9 @@ class EntityStoreInMemoryTest {
         }
         shouldThrow<IllegalArgumentException> {
             EntityStore.Update(key, set = mapOf("status" to "x"), remove = setOf("status"))
+        }
+        shouldThrow<IllegalArgumentException> {
+            EntityStore.Update(key, set = mapOf("status" to "x"), setIfMissing = mapOf("status" to "y"))
         }
     }
 }

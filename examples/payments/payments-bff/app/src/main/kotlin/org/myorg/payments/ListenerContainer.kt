@@ -1,13 +1,13 @@
 package org.myorg.payments
 
-import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
-import aws.sdk.kotlin.services.dynamodb.model.UpdateItemRequest
 import io.kopipes.aws.AwsKopipesContext
-import io.kopipes.aws.flavors.MaterializePipeline
 import io.kopipes.aws.from.KinesisAdapter
+import io.kopipes.aws.sinks.DynamoDbEntityStore
 import io.kopipes.core.PipelineAssembler
 import io.kopipes.core.UnitOfWork
 import io.kopipes.core.filters.EventFilters
+import io.kopipes.core.flavors.MaterializePipeline
+import io.kopipes.core.sinks.EntityStore
 
 /** The events that move the customer's view. */
 val VIEW_EVENTS = setOf(
@@ -20,30 +20,20 @@ val VIEW_EVENTS = setOf(
 
 /**
  * Records that the payment heard [UnitOfWork.event]: `at_<TYPE>` is the event's timestamp, and a failure's reason goes
- * in `reason_<TYPE>`. `if_not_exists` keeps the first one, so a repeat changes nothing and the view never goes back.
+ * in `reason_<TYPE>`. `setIfMissing` keeps the first one, so a repeat changes nothing and the view never goes back.
  */
-fun heardUpdate(table: String, uow: UnitOfWork): UpdateItemRequest? {
+fun heardUpdate(uow: UnitOfWork): EntityStore.Update? {
     val event = uow.event as? PaymentEvent ?: return null
     val type = event.eventType()
     if (type !in VIEW_EVENTS) return null
     val timestamp = event.timestamp ?: error("$type ${event.id} has no timestamp")
 
     val heardAs = if (event is PaymentExpired) Items.EXPIRED_PREFIX + event.step else Items.HEARD_PREFIX + type
-    val names = mutableMapOf("#at" to heardAs)
-    val values = mutableMapOf<String, AttributeValue>(":at" to AttributeValue.N(timestamp.toString()))
-    val sets = mutableListOf("#at = if_not_exists(#at, :at)")
-    if (event is Failure) {
-        names["#reason"] = Items.REASON_PREFIX + type
-        values[":reason"] = AttributeValue.S(event.reason)
-        sets += "#reason = if_not_exists(#reason, :reason)"
-    }
-    return UpdateItemRequest {
-        tableName = table
-        key = Items.key(event.payment.id)
-        updateExpression = "SET " + sets.joinToString(", ")
-        expressionAttributeNames = names
-        expressionAttributeValues = values
-    }
+    val reason = if (event is Failure) mapOf(Items.REASON_PREFIX + type to event.reason) else emptyMap()
+    return EntityStore.Update(
+        key = EntityStore.Key(event.payment.id, Items.PAYMENT),
+        setIfMissing = mapOf(heardAs to timestamp) + reason,
+    )
 }
 
 /** The listener's wiring: the default channel → materialize what was heard into the views table. */
@@ -59,9 +49,9 @@ class ListenerContainer(val context: AwsKopipesContext, val tableName: String) {
 
     val viewPipeline: MaterializePipeline = MaterializePipeline.builder()
         .id(VIEW)
-        .context(context)
+        .entityStore(DynamoDbEntityStore(context, tableName))
         .eventFilter(EventFilters.onContent { it.eventType() in VIEW_EVENTS })
-        .toUpdateRequest { uow -> heardUpdate(tableName, uow) }
+        .toUpdate(::heardUpdate)
         .build()
 
     val assembler: PipelineAssembler = PipelineAssembler.builder()

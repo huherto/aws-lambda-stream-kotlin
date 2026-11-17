@@ -10,8 +10,8 @@ Ready-made pipeline flavors you configure with a builder. See [Pipelines](Pipeli
   own [events microstore](EventsMicrostore.md), group them by entity, and run rules that emit higher-order events.
 - **Deadlines without schedulers:** a correlated item with a TTL fires an expiry rule when DynamoDB deletes it. See
   [Deadlines](Deadlines.md).
-- **Read models:** `MaterializePipeline` (DynamoDB), `MaterializeS3Pipeline` (S3) and `UpdatePipeline` (one event,
-  many entities, through an `EntityStore`: DynamoDB or in memory).
+- **Read models:** `MaterializePipeline` (one event, one entity), `UpdatePipeline` (one event, many entities), both
+  through an `EntityStore` (DynamoDB or in memory), and `MaterializeS3Pipeline` (S3).
 - **Outbox:** `CdcPipeline` publishes events from a table's own changes.
 - **Gateways:** `TranslatePipeline` turns an outside system's records into internal events; `ActionPipeline` calls
   an outside system for each event.

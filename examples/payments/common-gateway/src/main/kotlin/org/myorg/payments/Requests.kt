@@ -3,8 +3,8 @@ package org.myorg.payments
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
 import aws.sdk.kotlin.services.dynamodb.model.GetItemRequest
-import aws.sdk.kotlin.services.dynamodb.model.UpdateItemRequest
 import io.kopipes.core.UnitOfWork
+import io.kopipes.core.sinks.EntityStore
 
 /*
  * An outside system answers with a reference, never with our payment: a ledger row knows its own entry, not the card
@@ -16,15 +16,12 @@ import io.kopipes.core.UnitOfWork
  */
 
 /** Remembers the payment of a request event heard on the default channel. */
-fun rememberPayment(table: String, uow: UnitOfWork): UpdateItemRequest? {
+fun rememberPayment(uow: UnitOfWork): EntityStore.Update? {
     val payment = (uow.event as? PaymentEvent)?.payment ?: return null
-    return UpdateItemRequest {
-        tableName = table
-        key = paymentKey(payment.id)
-        updateExpression = "SET #p = :p"
-        expressionAttributeNames = mapOf("#p" to "payment")
-        expressionAttributeValues = mapOf(":p" to AttributeValue.S(paymentsJson.encodeToString(Payment.serializer(), payment)))
-    }
+    return EntityStore.Update(
+        key = EntityStore.Key(payment.id, "PAYMENT"),
+        set = mapOf("payment" to paymentsJson.encodeToString(Payment.serializer(), payment)),
+    )
 }
 
 private fun paymentKey(id: String) = mapOf("pk" to AttributeValue.S(id), "sk" to AttributeValue.S("PAYMENT"))

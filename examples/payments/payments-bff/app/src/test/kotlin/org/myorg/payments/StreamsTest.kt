@@ -4,6 +4,8 @@ import io.kopipes.aws.from.RecordImage
 import io.kopipes.aws.from.RecordPair
 import io.kopipes.aws.from.DynamoDbChangeEvent
 import io.kopipes.core.UnitOfWork
+import io.kopipes.core.sinks.EntityStore
+import io.kopipes.core.sinks.EntityStoreInMemory
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
@@ -56,17 +58,32 @@ class StreamsTest {
         val expired = PaymentExpired(p7, Steps.DEPOSIT, timestamp = 8L)
 
         // Act
-        val failure = heardUpdate("views", UnitOfWork(event = failed))!!
-        val expiry = heardUpdate("views", UnitOfWork(event = expired))!!
+        val failure = heardUpdate(UnitOfWork(event = failed))!!
+        val expiry = heardUpdate(UnitOfWork(event = expired))!!
 
         // Assert
-        failure.updateExpression shouldBe "SET #at = if_not_exists(#at, :at), #reason = if_not_exists(#reason, :reason)"
-        failure.expressionAttributeNames shouldBe mapOf("#at" to "at_DEPOSIT_FAILED", "#reason" to "reason_DEPOSIT_FAILED")
-        expiry.expressionAttributeNames shouldBe mapOf("#at" to "at_PAYMENT_EXPIRED_deposit")
+        failure.key shouldBe EntityStore.Key("p-7", "PAYMENT")
+        failure.setIfMissing shouldBe mapOf("at_DEPOSIT_FAILED" to 7L, "reason_DEPOSIT_FAILED" to Reasons.CARD_DECLINED)
+        expiry.setIfMissing shouldBe mapOf("at_PAYMENT_EXPIRED_deposit" to 8L)
+    }
+
+    @Test
+    fun `hearing an event again leaves the view as it was`() {
+        // Arrange
+        val store = EntityStoreInMemory()
+        val first = FundsWithdrawn(p7, timestamp = 5L)
+        val repeat = FundsWithdrawn(p7, timestamp = 9L)
+
+        // Act
+        store.apply(heardUpdate(UnitOfWork(event = first))!!)
+        store.apply(heardUpdate(UnitOfWork(event = repeat))!!)
+
+        // Assert
+        store.get(EntityStore.Key("p-7", "PAYMENT"))!!["at_FUNDS_WITHDRAWN"] shouldBe 5L
     }
 
     @Test
     fun `the BFF ignores events that don't move the view`() {
-        heardUpdate("views", UnitOfWork(event = WithdrawalRequested(p7, timestamp = 1L))).shouldBeNull()
+        heardUpdate(UnitOfWork(event = WithdrawalRequested(p7, timestamp = 1L))).shouldBeNull()
     }
 }

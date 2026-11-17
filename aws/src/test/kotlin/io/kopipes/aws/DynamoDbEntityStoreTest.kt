@@ -100,6 +100,18 @@ class DynamoDbEntityStoreTest {
     }
 
     @Test
+    fun `toUpdateItemRequest writes setIfMissing as if_not_exists`() {
+        // Act
+        val request = store.toUpdateItemRequest(
+            EntityStore.Update(key, set = mapOf("status" to "done"), setIfMissing = mapOf("at" to 7L))
+        )
+
+        // Assert
+        request.updateExpression shouldBe "SET #status = :status, #at = if_not_exists(#at, :at)"
+        request.expressionAttributeValues shouldBe mapOf(":status" to AttributeValue.S("done"), ":at" to AttributeValue.N("7"))
+    }
+
+    @Test
     fun `toUpdateItemRequest of a remove only sends no attribute values`() {
         // Act
         val request = store.toUpdateItemRequest(EntityStore.Update(key, remove = setOf("latched")))

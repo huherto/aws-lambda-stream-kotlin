@@ -14,7 +14,7 @@ wants with `eventFilter(...)` (by class, type name, regex or content; see `Event
 | [`CollectPipeline`](#collect) | `core` | Events from a channel | Saves each event in the events microstore, under its id | A microstore item | A control service's listener |
 | [`CorrelatePipeline`](#correlate) | `core` | The microstore's stream | Saves each collected event again under its correlation key; with a TTL, starts a deadline | A correlation item | A control service's trigger |
 | [`EvaluatePipeline`](#evaluate) | `core` | The microstore's stream | Queries everything heard for the key, runs your rule, emits higher-order events | Events on the bus | A control service's trigger |
-| [`MaterializePipeline`](#materialize) | `aws` | Events from a channel | Turns each event into a DynamoDB update | A read-model item | A BFF's listener |
+| [`MaterializePipeline`](#materialize) | `core` | Events from a channel | Turns each event into an entity update | A read-model item (DynamoDB, in memory) | A BFF's listener |
 | [`MaterializeS3Pipeline`](#materialize) | `aws` | Events from a channel | Turns each event into an S3 put or delete | An S3 object | A read model in S3 |
 | [`UpdatePipeline`](#update) | `core` | Events | Queries the entities an event affects, then updates each one | Entity updates (DynamoDB, in memory) | Fanning one event out to many items |
 | [`CdcPipeline`](#cdc) | `aws` | A table's stream | Turns a row change into an event, optionally encrypting it | Events on the bus | A BFF's trigger (outbox) |
@@ -83,16 +83,25 @@ EvaluatePipeline.builder()
 
 ## Materialize
 
-Keeps a read model up to date. Return an `UpdateItemRequest` (or `null` to skip) for each event:
+Keeps a read model up to date. Return an `EntityStore.Update` (or `null` to skip) for each event; the
+[`EntityStore`](#update) applies it, so the same function works with DynamoDB and in memory:
 
 ```kotlin
 MaterializePipeline.builder()
     .id("view")
-    .context(context)
+    .entityStore(DynamoDbEntityStore(context, tableName))   // ENTITY_TABLE_NAME without a table name
     .eventFilter(EventFilters.classes(PaymentEvent::class))
-    .toUpdateRequest { uow -> viewUpdate(uow.event as PaymentEvent) }
+    .toUpdate { uow ->
+        val event = uow.event as PaymentEvent
+        EntityStore.Update(
+            key = EntityStore.Key(event.payment.id, "PAYMENT"),
+            setIfMissing = mapOf("at_${event.eventType()}" to event.timestamp),  // a repeat changes nothing
+        )
+    }
     .build()
 ```
+
+Items the pipeline wrote itself (`pipelineId` is its id) are skipped, so it can listen to its own table's stream.
 
 `MaterializeS3Pipeline` does the same for S3 objects, with `toPutRequest`, `toDeleteRequest` and `bucketName`.
 
@@ -119,7 +128,8 @@ UpdatePipeline.builder()
     .build()
 ```
 
-An update can `set`, `add` (counters) and `remove` attributes, and creates the entity if it's missing. Without
+An update can `set`, `setIfMissing` (keeps the first value), `add` (counters) and `remove` attributes, and
+creates the entity if it's missing. Without
 `toQuery`, or when the query finds nothing, `toUpdate` runs once with no `entity`. Collected events (items of an
 events table) are unwrapped into the event they carry first; pass `isCollectedEvent(DynamodbAdapter::forCollectedEvents)`
 and `normalizer(DynamodbAdapter.normalize(codec))` to match DynamoDB stream records exactly.

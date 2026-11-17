@@ -1,13 +1,14 @@
 package org.myorg.sut
 
-import aws.sdk.kotlin.services.dynamodb.model.UpdateItemRequest
 import io.kopipes.aws.AwsKopipesContext
-import io.kopipes.aws.flavors.MaterializePipeline
 import io.kopipes.aws.from.KinesisAdapter
+import io.kopipes.aws.sinks.DynamoDbEntityStore
 import io.kopipes.core.PipelineAssembler
 import io.kopipes.core.UnitOfWork
 import io.kopipes.core.filters.EventFilters
+import io.kopipes.core.flavors.MaterializePipeline
 import io.kopipes.core.flavors.Pipeline
+import io.kopipes.core.sinks.EntityStore
 
 class ListenerContainer(val context: AwsKopipesContext) {
 
@@ -21,7 +22,7 @@ class ListenerContainer(val context: AwsKopipesContext) {
         KinesisAdapter(context, TrackedUnitEventCodec)
     }
 
-    suspend fun toUpdateRequest(uow: UnitOfWork): UpdateItemRequest? {
+    suspend fun toUpdate(uow: UnitOfWork): EntityStore.Update? {
 
         val event = uow.event as? TrackedUnitEvent ?: return null
         val entity = event.entity ?: return null
@@ -32,9 +33,9 @@ class ListenerContainer(val context: AwsKopipesContext) {
     private val materializePipeline: Pipeline by lazy {
         MaterializePipeline.builder()
             .id("m1")
-            .context(context)
+            .entityStore(DynamoDbEntityStore(context))
             .eventFilter(EventFilters.classes(TrackedUnitEvent::class))
-            .toUpdateRequest(::toUpdateRequest)
+            .toUpdate(::toUpdate)
             .build()
     }
 

@@ -31,8 +31,10 @@ interface EntityStore {
     )
 
     /**
-     * Changes to one entity, created if it doesn't exist: [set] attributes (null stores a null), [add] to numeric
-     * attributes (a missing one counts as 0) and [remove] attributes. An attribute appears in at most one of them.
+     * Changes to one entity, created if it doesn't exist: [set] attributes (null stores a null), [setIfMissing]
+     * attributes the entity doesn't have yet (the first value stays, so a repeated event changes nothing), [add] to
+     * numeric attributes (a missing one counts as 0) and [remove] attributes. An attribute appears in at most one of
+     * them.
      *
      * With [onlyIfNewer], the update applies only when the entity lacks that attribute or holds a smaller value than
      * the one in [set], so a late or replayed event can't overwrite newer state. A rejected update is not a fault:
@@ -44,11 +46,14 @@ interface EntityStore {
         val add: Map<String, Number> = emptyMap(),
         val remove: Set<String> = emptySet(),
         val onlyIfNewer: String? = null,
+        val setIfMissing: Map<String, Any?> = emptyMap(),
     ) {
         init {
-            require(set.isNotEmpty() || add.isNotEmpty() || remove.isNotEmpty()) { "an update needs set, add or remove" }
-            require(set.keys.intersect(add.keys).isEmpty() && set.keys.intersect(remove).isEmpty() &&
-                    add.keys.intersect(remove).isEmpty()) { "an attribute appears in at most one of set, add and remove" }
+            val names = set.keys.toList() + setIfMissing.keys + add.keys + remove
+            require(names.isNotEmpty()) { "an update needs set, setIfMissing, add or remove" }
+            require(names.size == names.toSet().size) {
+                "an attribute appears in at most one of set, setIfMissing, add and remove"
+            }
             require(onlyIfNewer == null || set[onlyIfNewer] != null) { "onlyIfNewer '$onlyIfNewer' must be set to a value" }
         }
     }

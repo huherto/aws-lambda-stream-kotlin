@@ -2,12 +2,13 @@ package org.myorg.payments
 
 import io.kopipes.aws.AwsEnvironmentConfig
 import io.kopipes.aws.AwsKopipesContext
-import io.kopipes.aws.flavors.MaterializePipeline
 import io.kopipes.aws.from.KinesisAdapter
 import io.kopipes.aws.isAwsRetryable
+import io.kopipes.aws.sinks.DynamoDbEntityStore
 import io.kopipes.core.JsonRaw
 import io.kopipes.core.PipelineAssembler
 import io.kopipes.core.filters.EventFilters
+import io.kopipes.core.flavors.MaterializePipeline
 import io.kopipes.core.flavors.TranslatePipeline
 import kotlinx.serialization.json.JsonPrimitive
 
@@ -37,9 +38,9 @@ class ListenerContainer(val context: AwsKopipesContext, val tableName: String) {
         .addPipeline(
             MaterializePipeline.builder()
                 .id("remember")
-                .context(context)
+                .entityStore(DynamoDbEntityStore(context, tableName))
                 .eventFilter(CARD_DEPOSITS)
-                .toUpdateRequest { uow -> rememberPayment(tableName, uow) }
+                .toUpdate(::rememberPayment)
                 .build()
         )
         .build()

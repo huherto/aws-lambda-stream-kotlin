@@ -15,6 +15,9 @@ sealed interface DynamoDbUpdateValue {
     /** SET operation. */
     data class DbSet(val value: AttributeValue) : DynamoDbUpdateValue
 
+    /** SET operation that keeps the attribute's value when it already has one (`if_not_exists`). */
+    data class DbSetIfNotExists(val value: AttributeValue) : DynamoDbUpdateValue
+
     /** REMOVE operation. */
     data object DbRemove : DynamoDbUpdateValue
 
@@ -46,6 +49,11 @@ fun updateExpression(item: Map<String, DynamoDbUpdateValue>): DynamoDbUpdateExpr
                 is DynamoDbUpdateValue.DbSet -> {
                     expressionAttributeValues[valuePlaceholder] = updateValue.value
                     setClauses += "$namePlaceholder = $valuePlaceholder"
+                }
+
+                is DynamoDbUpdateValue.DbSetIfNotExists -> {
+                    expressionAttributeValues[valuePlaceholder] = updateValue.value
+                    setClauses += "$namePlaceholder = if_not_exists($namePlaceholder, $valuePlaceholder)"
                 }
 
                 DynamoDbUpdateValue.DbRemove -> {

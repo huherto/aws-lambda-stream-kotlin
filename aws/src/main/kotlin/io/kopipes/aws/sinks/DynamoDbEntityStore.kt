@@ -37,11 +37,15 @@ open class DynamoDbEntityStore @JvmOverloads constructor(
     private val stepMetrics: Boolean = false,
 ) : EntityStore {
 
-    /** Uses the entity table (`ENTITY_TABLE_NAME`) and settings from [context]. */
-    constructor(context: AwsKopipesContext) : this(
+    /** Uses [tableName], by default the entity table (`ENTITY_TABLE_NAME`), and settings from [context]. */
+    @JvmOverloads
+    constructor(
+        context: AwsKopipesContext,
+        tableName: String = context.envConfig.entityTableName() ?: DEFAULT_TABLE_NAME,
+    ) : this(
         connector = DynamoDbConnector(DynamoDbConnector.Options(context.dynamoDbClientFactory)),
         faultManager = context.faultManager,
-        tableName = context.envConfig.entityTableName() ?: DEFAULT_TABLE_NAME,
+        tableName = tableName,
         parallel = context.envConfig.parallel() ?: DynamoDbSink.DEFAULT_PARALLEL,
         stepMetrics = context.stepMetrics,
     )
@@ -79,6 +83,7 @@ open class DynamoDbEntityStore @JvmOverloads constructor(
     internal fun toUpdateItemRequest(update: EntityStore.Update): UpdateItemRequest {
         val expression = updateExpression(
             update.set.mapValues { (_, value) -> DynamoDbUpdateValue.DbSet(entityValueToAttributeValue(value)) } +
+                update.setIfMissing.mapValues { (_, value) -> DynamoDbUpdateValue.DbSetIfNotExists(entityValueToAttributeValue(value)) } +
                 update.add.mapValues { (_, value) -> DynamoDbUpdateValue.DbAdd(entityValueToAttributeValue(value)) } +
                 update.remove.associateWith { DynamoDbUpdateValue.DbRemove }
         )
