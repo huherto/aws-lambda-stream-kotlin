@@ -8,32 +8,50 @@ kopipes (packages `io.kopipes.*`) brings John Gilbert's
 > **Status:** a work in progress, not yet published to Maven Central. Feedback, ideas and experimental use are
 > welcome.
 
-## Why
+## The approach
+
+kopipes follows one idea from John Gilbert's book: **autonomous services with fortified boundaries, connected only
+by events.** Five concepts carry it:
+
+1. **Event-first.** A service records what happened as a domain event and doesn't decide what happens next. A new
+   feature is a new consumer; existing services stay untouched.
+2. **Autonomous services.** A service owns its datastore and never calls another service synchronously. It keeps its
+   own copy of what it needs from other services' events, so it keeps working while they are down: *command,
+   publish, consume, query*.
+3. **Three kinds of service.** A **BFF** serves a human actor, an **external service gateway** connects an outside
+   system, and a **control service** runs the business process by correlating events and emitting new ones.
+4. **One shape for every service.** A *listener* saves incoming events in the service's table, a *trigger* turns the
+   table's changes into outgoing events, and a command/query API serves the service's own frontend.
+5. **Failures stay where they happen.** Every boundary is a bulkhead. A bad record becomes a fault event instead of
+   blocking a stream; consumers are idempotent, so retries, resubmissions and replays are safe; an event lake keeps
+   every event, so history can be replayed.
+
+![An autonomous subsystem: BFFs, control services and gateways around an event hub](docs/images/AutonomousSubsystem.svg)
+
+More in [Architectural Approach](docs/ArchitecturalApproach.md), [Autonomous Service
+Patterns](docs/AutonomousServicePatterns.md) and [how each book pattern maps to kopipes](docs/BookPatterns.md).
+
+## What kopipes provides
 
 Every event-driven Lambda needs the same plumbing: decode a batch, filter it, call AWS in parallel and in batches,
-retry what's transient, stop one bad record from blocking a stream, recover it once the bug is fixed, replay
-history, keep consumers idempotent. Teams that write it by hand write it differently every time.
+retry what's transient, stop one bad record from blocking a stream, emit metrics. kopipes gives you that plumbing as
+ready-made pieces, one for each part of the approach:
 
-kopipes gives you that plumbing as ready-made **pipelines** you configure with your rules, and a set of
-**service patterns** that tell you how to put them together:
-
-- **One bad record never blocks a stream.** It becomes a fault event with a full snapshot. Fix the bug, then
-  resubmit the record to the function that failed it.
-- **Services that keep working when others don't.** Each service records what it hears in its own events table
-  and acts from there, never calling another service synchronously.
-- **Idempotent by design**, so retries, redeliveries and replays are safe.
-- **Deadlines without schedulers**, built from DynamoDB TTL.
-- **Testable without AWS.** No global state, in-memory fakes, plain unit tests.
-- **Batteries included:** envelope encryption, claim check, circuit breaker, rate limiter, EMF metrics, CDK
-  constructs and optional Spring Boot support.
-
-## How it works
+| For | kopipes gives you |
+|---|---|
+| Listeners | Adapters for Kinesis, SQS, SNS, S3, EventBridge, DynamoDB Streams and more; `CollectPipeline` for a control service, `MaterializePipeline` and `UpdatePipeline` for a BFF's read models |
+| Triggers | `CdcPipeline` (outbox); `CorrelatePipeline` and `EvaluatePipeline` to run rules over everything a service has heard, with deadlines built from DynamoDB TTL |
+| Gateways | `TranslatePipeline` for ingress; `ActionPipeline` for egress, with a circuit breaker and a rate limiter |
+| Failures and recovery | Fault events with a full snapshot of the record; stream and item-level retries; the `resubmit-events` and `replay-events` tools |
+| Cross-cutting concerns | Envelope encryption, claim check, EMF metrics, standard tags on every event |
+| Infrastructure | CDK constructs for the event hub, event lake, fault monitor, events tables, functions and REST APIs |
+| Developer experience | Kotlin coroutines and `Flow`, Java-friendly builders, optional Spring Boot; no global state, so tests run on in-memory fakes without AWS |
 
 ![How a batch flows: adapter, assembler, pipelines, sinks, and faults](docs/images/BatchFlow.svg)
 
-An adapter turns the Lambda's batch into a `Flow` of units of work; each pipeline picks the events it wants and does
-one job; failures become fault events, and the rest of the batch carries on. [How kopipes works](docs/Concepts.md)
-explains it in one page, with a glossary.
+Inside a function, an adapter turns the Lambda's batch into a `Flow` of units of work; each pipeline picks the events
+it wants and does one job; failures become fault events, and the rest of the batch carries on. See [How kopipes
+works](docs/Concepts.md), [Pipelines](docs/Pipelines.md) and the full [feature list](docs/Features.md).
 
 ## A taste
 
